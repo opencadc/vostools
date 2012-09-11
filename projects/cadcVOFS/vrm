@@ -1,0 +1,47 @@
+#!python
+"""Create a directory (ContainerNode) in the VOSpace repositotry"""
+
+
+import vos
+import time
+import optparse, os, sys, logging
+
+usage="""
+	vrm vos:/root/node   -- deletes a data node
+"""
+
+
+parser=optparse.OptionParser(usage)
+parser.add_option("-v","--verbose",action="store_true")
+parser.add_option("-d","--debug",action="store_true")
+parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
+(opt,args)=parser.parse_args()
+
+
+if opt.verbose:
+    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
+if opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
+
+
+try:
+    client=vos.Client(certFile=opt.certfile)
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+    sys.exit(e.errno)
+
+for arg in args:
+    if arg[0:4]!="vos:":
+       logging.error("%s is not a valid VOSpace handle" % (arg))
+    try:
+        if client.isfile(arg):
+            logging.info("deleting %s" %(arg))
+            client.delete(arg)
+        elif client.isdir(arg):
+            logging.error("%s is a directory" % (arg))
+        else:
+            logging.error("%s file not found" % (arg))
+    except Exception as e:
+        logging.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),e.errno))
+        sys.exit(e.errno)

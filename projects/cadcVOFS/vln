@@ -1,0 +1,56 @@
+#!python
+
+"""vls:  list the contents of a voSpace"""
+import vos
+import optparse
+import logging
+import os,sys
+
+usage="""
+  vln source vos:VOSpaceTarget
+  
+
+examples:  
+
+vln vos:vospace/junk.txt vos:vospace/linkToJunk.txt
+vln vos:vospace/directory vos:vospace/linkToDirectory
+vln http://external.data.source vos:vospace/linkToExternalDataSource
+
+"""
+
+
+parser=optparse.OptionParser(usage)
+
+parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
+parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
+parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
+(opt,args)=parser.parse_args()
+
+if opt.verbose:
+    logging.basicConfig(level=logging.INFO,format="%(module)s: %(message)s")
+elif opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="%(module)s: %(message)s")
+
+if len(args) !=  2:
+    parser.error("You must specifiy a source file and a target file")
+    sys.exit(-1)
+
+if args[1][0:4] != "vos:":
+    parser.error("The target to source must be in vospace")
+    sys.exit(-1)
+
+logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
+
+try:
+    vos=vos.Client(certFile=opt.certfile)
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+    sys.exit(-1)
+
+
+vos.link(args[0],args[1])
+
+

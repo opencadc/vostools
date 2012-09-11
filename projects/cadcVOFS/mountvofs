@@ -1,0 +1,881 @@
+#!/Library/Frameworks/EPD64.framework/Versions/7.1/bin/python
+"""A FUSE based filesystem view of VOSpace."""
+
+from sys import argv, exit, platform
+import time
+from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
+import vos.fuse
+import tempfile
+from threading import Lock
+from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED
+ENOATTR=93
+import os
+import vos
+from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
+import logging
+import sqlite3
+READBUF=2**20
+
+
+def flag2mode(flags):
+    md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
+    m = md[flags & (O_RDONLY | O_WRONLY | O_RDWR)]
+
+    if flags | O_APPEND:
+        m = m.replace('w', 'a', 1)
+
+    return m
+
+
+class VOFS(LoggingMixIn, Operations):
+#class VOFS(Operations):
+    """The VOFS filesystem opperations class.  Requires the vos (VOSpace) python package.
+
+    To use this you will also need a VOSpace account from the CADC.
+    """
+    ### VOSpace doesn't support these so I've disabled these operations.
+    chown = None
+    link = None
+    mknode = None
+    readlink = None
+    rmdir = None
+    symlink = None
+    getxattr = None
+    listxattr = None
+    removexattr = None
+    setxattr = None
+    
+    def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024, cache_nodes=False):
+        """Initialize the VOFS.  
+
+        The style here is to use dictionaries to contain information
+        about the Node.  The full VOSpace path is used as the Key for
+        most of these dictionaries."""
+
+        # This dictionary contains the Node data about the VOSpace node in question
+        self.node = {}
+        # Standard attribtutes of the Node
+        self.attr={}
+        # Where in the file system this Node is currently located
+	self.path={}
+        # How old is a given reference
+        self.cache_nodes=cache_nodes
+
+        # These next dictionaries keep track of pointers 
+
+        # A dictionary or properties about the cached version of the
+        # file.  the name of the dictionary should be something else
+        # but I started calling this fh for other reasons.
+        # Refactoring would help here.
+        self.fh={}
+
+        # What is the 'root' of the VOSpace? (eg vos:MyVOSpace) 
+        self.root = root
+        # VOSpace is a bit slow so we do some cahcing.
+        self.cache_limit=cache_limit
+        self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
+        self.cache_db = os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#"))
+        
+        if not os.access(self.cache_dir,os.F_OK):
+            os.makedirs(self.cache_dir)
+
+        ## initialize the md5Cache db
+        sqlConn = sqlite3.connect(self.cache_db)
+        sqlConn.execute("create table if not exists md5_cache (fname text, md5 text, st_mtime int)")
+        sqlConn.commit()
+        sqlConn.close()
+        ## build cache lookup if doesn't already exists
+
+
+        ## All communication with the VOSpace goes through this client connection.
+	try:
+           self.client = vos.Client(rootNode=root,conn=conn)
+        except Exception as e:
+           e=FuseOSError(e.errno)
+           e.filename=path
+           e.strerror=e.strerror
+           raise e
+
+
+    def __call__(self, op, path, *args):
+        return super(VOFS, self).__call__(op, path, *args)
+
+    def __del__(self):
+        self.node=None
+
+    def setPath(self,fh,path):
+        self.path[path]=fh
+
+    def delPath(self,path):
+        self.path.pop(path,None)
+
+    def delNode(self,path,force=False):
+        """Delete the references associated with this Node"""
+        if not self.cache_nodes or force or self.node[path].isdir() :
+            self.node.pop(path,None)
+            self.attr.pop(path,None)
+        
+
+    def access(self, path, mode):
+        if path in self.node:
+	   return 0
+	try:
+           if self.client.access(path,mode):
+              return 0
+        except Exception as e:
+           e=FuseOSError(e.errno)
+           e.filename=path
+           e.strerror=e.strerror
+           raise e
+        return -1
+
+    def chmod(self, path, mode):
+        """Set the read/write groups on the VOSpace node based on chmod style modes.
+
+        This function is a bit funny as the VOSpace spec sets the name
+        of the read and write groups instead of having mode setting as
+        a separate action.  A chmod that adds group permission thus
+        becomes a chgrp action.  
+
+        Here I use the logic that the new group will be inherited from
+        the container group information.
+        """
+        logging.debug("Changing mode for %s to %d" % ( path, mode))
+
+        node = self.getNode(path)
+        parent = self.getNode(os.path.dirname(path))
+
+        if node.groupread == "NONE":
+            node.groupread=parent.groupread
+        if node.groupwrite == "NONE":
+            node.groupwrite=parent.groupwrite
+        # The 'node' object returned by getNode has a chmod method
+        # that we now call to set the mod, since we set the group(s)
+        # above.  NOTE: If the parrent doesn't have group then NONE is
+        # passed up and the groupwrite and groupread will be set to
+        # the string NONE.
+        if node.chmod(mode):
+            # Now set the time of change/modification on the path...
+            self.getattr(path)['st_ctime']=time.time()
+            ## if node.chmod returns false then no changes were made.
+	    try:
+               self.client.update(node)
+               self.getNode(path)
+            except Exception as e:
+               e=FuseOSError(e.errno)
+               e.filename=path
+               e.strerror=e.strerror
+               raise e
+
+        # Need to also update the cache properties.
+        fname=os.path.normpath(self.cache_dir+path)
+        if os.access(fname,os.F_OK):
+            os.chmod(fname,mode)
+            
+
+
+        
+    def create(self, path, flags):
+        """Create a node. Currently ignors the ownership mode"""
+        import re,os
+
+        logging.debug("Creating a node: %s with mode %s" % (path, os.O_CREAT))
+
+        # Create is handle by the client. 
+        # This should fail if the basepath doesn't exist
+        if self.access(path,os.F_OK) < 0:
+            try: 
+                self.client.open(path,os.O_CREAT).close()
+
+                node = self.getNode(path)
+                parent=  self.getNode(os.path.dirname(path))
+
+                # Here I force inheritance of group settings. 
+                node.groupread = parent.groupread
+                node.groupwrite = parent.groupwrite
+                if node.chmod(flags):
+                    ## chmod returns True if the mode changed but doesn't do update.
+                    self.client.update(node)
+
+            except Exception as e:
+                logging.debug(str(e))
+                logging.debug("Error trying to create Node %s" %(path))
+                f=FuseOSError(e.errno)
+                f.strerror=e.strerror
+                f.message=e.strerror
+                raise f
+
+        ## now we can just open the file in the usual way and return the handle
+        return self.open(path,os.O_WRONLY)
+
+    def flushnode(self,path,fh):
+        """Flush the data associated with this fh to the Node at path
+        in VOSpace.
+        
+        Flushing the VOSpace object involves pushing the entire file
+        back over the network. This should only be done when really
+        needed as the network connection can be slow."""
+
+        self.fsync(path,False,fh)
+        node=self.getNode(path)
+        import hashlib
+        loopCount=0
+        success=False
+        while not success:
+            size=os.fstat(fh).st_size
+            logging.debug("Writing %d bytes to %s, attempt: %d" % (size, path,loopCount+1))
+            md5=hashlib.md5()
+            try:
+                self.client.delete(node.uri)
+                w=self.client.open(node.uri,os.O_WRONLY,size=size)
+                os.lseek(fh,0,0)
+                while True:
+                    buf=os.read(fh,READBUF)
+                    if not buf:
+                        break
+                    if w.write(buf)!=len(buf):
+                        raise FuseOSError(EIO)
+                    md5.update(buf)
+            except Exception as e:
+                logging.error(str(e))
+                logging.error("Failed during VOSpace copy, retrying")
+            finally:                
+                w.close()
+            voMD5=self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            cacheMD5 = md5.hexdigest()
+            logging.debug("%s ==> %s" %( cacheMD5, voMD5))
+            if voMD5 == cacheMD5:
+                success=True
+            elif loopCount > 3:
+                logging.error("Failed to write to vospace during nodeflush")
+                raise FuseOSError(EIO)
+            else:
+                loopCount += 1
+        self.delNode(path,force=True)
+        return
+
+    def flush(self,path,fh):
+        """Flush the cached version of the file.
+
+        This could be a problem since users expect the file in VOSpace
+        to be updated too.  But we only do that with a flushnode call
+        which we do on close of the file."""
+        return os.fsync(fh) 
+        #self.fsync(path,False,fh)
+  
+    def fsync(self,path,datasync,fh):
+        mode=''
+        if self.fh.get(fh,None) is not None:
+            mode = flag2mode(self.fh[fh]['flags'])
+        if 'w' in mode or 'a' in mode:
+            try:
+                os.fsync(fh)
+                # set the modification time on this node..
+                # if the system asks for information about this node
+                # we need to know that this node was modified.
+                self.getattr(path)['st_mtime']=time.time()
+            except:
+                logging.critical("Failed to sync fh %d?" % ( fh))
+                pass
+
+
+    def getNode(self,path,force=False,limit=0):
+        """Use the client and pull the node from VOSpace.  
+        
+        Currently force=False is the default... so we never check
+        VOSpace to see if the node metadata is different from what we
+        have.  This doesn't keep the node metadata current but is
+        faster if VOSpace is slow.
+        """
+
+        logging.debug("force? -> %s path -> %s" % ( force, path))
+
+        if path in self.node and not force:
+            logging.debug("Sending back chached metadata for %s" % ( path))
+            return self.node[path]
+
+        ## Pull the node meta data from VOSpace.
+        try:
+            logging.debug("requesting node %s from VOSpace" % ( path))
+            node=self.client.getNode(path,limit=limit)
+        except OSError as e:
+            logging.debug(str(e))
+            return self.getNode(path.force,limit)
+        except Exception as e:
+	    logging.debug(str(e))
+	    logging.debug(type(e))
+            ex=FuseOSError(e.errno)
+	    ex.filename=path
+            ex.strerror=e.strerror
+            raise ex
+
+        self.node[path]=node
+        self.attr[path]=node.attr
+        if self.node[path].isdir() and self.node[path]._nodeList is not None:
+            for node in self.node[path]._nodeList:
+               subPath=os.path.join(path,node.name)
+               self.node[subPath]=node
+               self.attr[subPath]=node.attr
+        return self.node[path]
+
+    def getPath(self,path):
+        """Return the path element for a given cached filehandle"""
+        return self.path.get(path,None)
+
+    def getattr(self, path, fh=None):
+        """Build some attributes for this file, we have to make-up some stuff"""
+        logging.debug("getting attributes of %s" % ( path))
+	if not path in self.attr:
+            logging.debug("Node %s not already in attribute list, so retrieving." % ( path))
+            try:
+                node=self.client.getNode(path,limit=0)
+            except IOError as e:
+                ex=FuseOSError(e.errno)
+                ex.strerror=e.strerror
+                ex.filename=path
+                raise ex
+	    self.attr[path]=node.attr
+            #logging.debug("Got %s for %s" % (node, path))
+        atime=self.attr[path].get('st_atime',time.time())
+        mtime=self.attr[path].get('st_mtime',atime)
+        ctime=self.attr[path].get('st_ctime',atime)
+        #logging.debug("Got times atime: %d mtime: %d ctime: %d" % ( atime,mtime,ctime))
+        if mtime > atime or ctime > atime:
+            ### the modification/change times are after the last access
+            ### so we should access this VOSpace node again.
+            #logging.debug("Getting node details for stale node %s" % ( path))
+	    try:
+               node=self.client.getNode(path,limit=0)
+	    except IOError as e:
+               raise FuseOSError(e.errno)
+            self.attr[path]=node.attr
+	    #self.attr[path].update(self.getNode(path).attr)
+        return self.attr[path]
+
+    def dead_getxattr(self, path, name, position=0):
+        """Get the value of an extended attribute"""
+        value=self.getNode(path).xattr.get(name,None)
+        if value is None:
+            raise FuseOSError(ENOATTR)
+        import binascii
+        return binascii.a2b_base64(value)
+
+    def dead_listxattr(self, path):
+        """Send back the list of extended attributes"""
+        return self.getNode(path).xattr.keys()
+        
+
+    def mkdir(self, path, mode):
+        """Create a container node in the VOSpace at the correct location.
+
+        set the mode after creation. """
+        try:
+           self.client.mkdir(path)
+           self.chmod(path,mode)
+        except Exception as e:
+           ex=FuseOSError(e.errno)
+           ex.filename=path
+           ex.strerror=e.strerror
+           raise ex
+        return
+
+
+    def open(self, path, flags, *mode):
+        """Open file with the desidred modes
+
+        Here we return a handle to the cached version of the file
+        which is updated if older than the one stored in VOSpace. 
+
+        If someone changes the VOSpace file while we are updating the
+        cached one some confusion will occur as the cache can be newer 
+        than the vospace stored version..
+        """
+
+	logging.debug("Openning %s with flags %s" % ( path, flag2mode(flags)))
+        # if len(mode)>0:
+        #    logging.debug("got mode %s" % ( mode))
+        #    self.chmod(path,mode)
+
+        # Create the full path to the cached version.
+        fname=os.path.normpath(self.cache_dir+path)
+        dirs=os.path.dirname(fname)
+        if not os.path.exists(dirs):
+            os.makedirs(dirs)
+
+        cached=False
+
+        ## Create the cache file, if it doesn't already exist
+        if not os.access(fname,os.O_RDWR):
+            try:
+                th=os.open(fname,os.O_CREAT | os.O_RDWR)
+            except OSError as e:
+                e=FuseOSError(e.errno)
+                e.strerror=e.strerror
+                e.message="Not able to write cache (Permission denied: %s)" % ( fname) 
+                raise e
+            os.close(th)
+
+        ## check that internally stored md5 is recent enough
+        md5Row = self.get_md5_db(fname)
+        if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
+            self.update_md5_db(fname)
+
+        ## Check if the disk cache matches the vospace copy
+        md5Row = self.get_md5_db(fname)
+        if md5Row['md5']==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
+            cached=True
+        else:
+            os.unlink(fname)
+
+        ## OK, we've cleared the cache if need be, so now open the file as needed
+        ## Don't pull a copy into the cache here, that's done only if a read or write
+        ## is called on the handle.  
+        ## Cache files are always openned oin RDWR mode with optional create 
+
+        fh = os.open(fname,os.O_CREAT | os.O_RDWR )
+	os.lseek(fh,0,os.SEEK_SET)
+        self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
+	self.setPath(fh,path)
+
+        return fh
+    
+    def read(self, path, size=0, offset=0, fh=None):
+        """ Read the entire file from the VOSpace server, place in a temporary file and then offset
+        to the desired location.  
+
+        """
+        ## Read from the requested filehandle, which was set during 'open'
+        if fh is None:
+            raise FuseOSError(EIO)
+        logging.debug("Using fh %d",fh)
+
+        # load the file from VOSpace as we might be appending
+        # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
+        # this routine needs good time sych between the OS and the VOSpace... 
+        logging.debug("cache "+str(self.fh[fh]['cached']))
+                
+        ## get a copy from VOSpace if the version we have is not currnet or cached.
+        vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+        cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+        loopCount = 0
+        while ( not self.fh[fh]['cached'] and ( cacheMD5 is None or cacheMD5['md5'] != vosMD5 )):
+            if loopCount > 5 :
+                raise FuseOSError(EIO)
+            else:
+                loopCount += 1
+            logging.debug("getting %s from VOSpace, attempt %s" % (path,loopCount))
+
+            os.ftruncate(fh,0)
+            os.fsync(fh)
+            try:
+                r=self.client.open(path,mode=os.O_RDONLY,view="data")
+                fpos=0
+                logging.debug("writing to %s " % ( self.fh[fh]['name']))
+                while True:
+                    buf=r.read(READBUF)
+                    if not buf:
+                        break
+                    if os.write(fh,buf)!=len(buf):
+                        raise FuseOSError(EIO)
+            except Exception as e:
+                logging.debug(str(e))
+            finally :
+                r.close()
+            os.fsync(fh)
+            self.update_md5_db(self.fh[fh]['name'])
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+
+        self.fh[fh]['cached']=True
+        logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
+	r=open(self.fh[fh]['name'],'r')
+	r.seek(offset,os.SEEK_SET)
+	buff=r.read(size)
+	r.close()
+
+        ## fh is the 'master' reference to the cached version, push the file pointer
+        ## to the correct location in the  cached file
+
+        os.lseek(fh,offset+len(buff),os.SEEK_SET)
+        return buff
+
+    def get_md5_db(self,fname):
+        """Get the MD5 for this fname from the SQL cache"""
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory = sqlite3.Row
+        cursor= sqlConn.cursor()
+        cursor.execute("SELECT * FROM md5_cache WHERE fname = ?", (fname,))
+        md5Row=cursor.fetchone()
+        cursor.close()
+        sqlConn.close()
+        return md5Row
+
+    def delete_md5_db(self,fname):
+        """Delete a record from the cache MD5 database"""
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory =  sqlite3.Row
+        cursor = sqlConn.cursor()
+        cursor.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
+        sqlConn.commit()
+        cursor.close()
+        sqlConn.close()
+        return 
+        
+
+    def update_md5_db(self,fname):
+        """Update a record in the cache MD5 database"""
+        import hashlib
+        md5=hashlib.md5()
+        r=open(fname,'r')
+        while True:
+            buf=r.read(READBUF)
+            if len(buf)==0:
+                break
+            md5.update(buf)
+        r.close()
+
+        ## UPDATE the MD5 database
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory = sqlite3.Row
+        cursor=sqlConn.cursor()
+        cursor.execute("DELETE FROM md5_cache WHERE fname = ?", (fname,))
+        if md5 is not None:
+            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5.hexdigest(), os.stat(fname).st_mtime))
+        sqlConn.commit()
+        cursor.close()
+        sqlConn.close()
+        return 
+
+
+    def readdir(self, path, fh):
+        """Send a list of entried in this directory"""
+        logging.debug("Getting direcotry list for %s " % ( path))
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True,limit=500).getNodeList() ]
+
+    def release(self, path, fh):
+        """Close the file, but if this was a holding spot for writes, then write the file to the node"""
+        import os
+
+        ## get the MODE of the oringal open, if 'w/a/w+/a+' we should write to VOSpace
+        ## we do that here before closing the filehandle since we delete the reference to 
+        ## the file handle at this point.
+        if self.fh.get(fh,None) is not None:
+            mode = self.fh[fh]['flags']
+
+        ## On close, if this was a WRITE opperation then update VOSpace
+        ## unless the VOSpace is actually newer than this cache file.
+        ### copy the staging file to VOSpace if needed
+        logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
+        if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ):
+            
+            ## check if the cache MD5 is up-to-date
+            md5Row = self.get_md5_db(self.fh[fh]['name'])
+            if md5Row is None or md5Row['st_mtime'] < os.stat(self.fh[fh]['name']).st_mtime:
+                self.update_md5_db(self.fh[fh]['name'])
+
+            ## now compare the cache MD5 to the VOSpace value
+            md5Row = self.get_md5_db(self.fh[fh]['name'])
+            voMD5 = self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            if md5Row['md5'] != voMD5:
+                logging.debug("cache MD5 %s",md5Row['md5'])
+                logging.debug("VOSpace MD5 %s",voMD5)
+                logging.debug("PUSHING contents of %s to VOSpace location %s " % (self.fh[fh]['name'],path))
+                ## replace VOSpace copy with cache version.
+                self.flushnode(path,fh)
+
+        ## remove references to this file handle.
+        self.fh.pop(fh,None)
+        self.fh.pop(path,None)
+        self.delNode(path)
+        self.delPath(path)
+        ##  now close the fh
+        try:
+            os.close(fh)
+        except Exception as e:
+            logging.debug(str(e))
+            raise FuseOSError(EIO)
+        ## clear up the cache
+        self.clear_cache()
+        return 
+
+
+
+    def dead_removexattr(self, path, name):
+        """Remove the named attribute from the xattr dictionary"""
+        node=self.getNode(path)
+        node.changeProp(name,None)
+        try:
+            del self.getNode(path).attr[name]
+        except KeyError:
+            raise FuseOSError(ENOATTR)
+        return 0
+
+    def rename(self,src,dest):
+	"""Rename a data node into a new container"""
+        logging.debug("Original %s -> %s" % ( src,dest))
+	#if not self.client.isfile(src):
+	#   return -1
+        #if not self.client.isdir(os.path.dirname(dest)):
+        #    return -1
+        logging.debug("Moving %s to %s" % ( src,dest))
+        result=self.client.move(src,dest)
+        logging.debug(str(result))
+        if result:
+           srcPath=os.path.normpath(self.cache_dir+src)
+           destPath=os.path.normpath(self.cache_dir+dest)
+           if os.access(srcPath,os.F_OK):
+	      # only rename if the destination exists and is a directory
+               dirs=os.path.dirname(destPath)
+               if not os.path.exists(dirs):
+                   os.makedirs(dirs)
+               os.rename(srcPath,destPath)
+        return 0
+    
+    def dead_setxattr(self, path, name, value, size, options, *args):
+        """Simple xattr setting, ignorring options for now"""
+        node=self.getNode(path)
+        ### call changeProp on the node so that the XML is updated
+        import binascii
+        value=binascii.b2a_base64(value)
+        if node.changeProp(name,value)==1:
+            """The node properties changed so force node update back to VOSpace"""
+            self.client.update(node)
+        return 0
+
+        
+
+    def cache_size(self):
+        """Determine how much disk space is being used by the local cache"""
+        import os
+        start_path = self.cache_dir
+        total_size = 0
+        self.atimes={}
+        oldest_time=time.time()
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if oldest_time > os.stat(fp).st_atime and fp not in self.path.values():
+                    oldest_time = os.stat(fp).st_atime
+                    self.oldest_file = fp
+                total_size += os.path.getsize(fp)
+        return total_size
+
+    def clear_cache(self):
+        """Clear the oldest files until cache_size < cache_limit"""
+        while ( self.cache_size() > self.cache_limit) :
+            logging.debug("Removing file %s from the local cache" % ( self.oldest_file))
+            os.unlink(self.oldest_file)
+            self.oldest_file=None
+
+    def rmdir(self,path):
+        node=self.getNode(path)
+        #if not node.isdir():
+        #    raise FuseOSError(ENOTDIR)
+        #if len(node.getNodeList())>0:
+        #    raise FuseOSError(ENOTEMPTY)
+        fname=os.path.normpath(self.cache_dir+path)
+        if os.access(fname,os.F_OK):
+	    os.rmdir(fname)
+        self.client.delete(path)
+        self.delNode(path,force=True)
+
+        
+    def statfs(self, path):
+        node=self.getNode(path)
+        block_size=512
+        bytes=2**33
+        free=2**33
+        
+        if 'quota' in node.props:
+            bytes=int(node.props.get('quota',2**33))
+            used=int(node.props.get('length',2**33))
+            free=bytes-used
+        sfs={}
+        sfs['f_bsize']=block_size
+        sfs['f_frsize']=block_size
+        sfs['f_blocks']=int(bytes/block_size)
+        sfs['f_bfree']=int(free/block_size)
+        sfs['f_bavail']=int(free/block_size)
+        sfs['f_files']=len(node.getNodeList())
+        sfs['f_ffree']=2*10
+        sfs['f_favail']=2*10
+        sfs['f_flags']=0
+        sfs['f_namemax']=256
+        return sfs
+            
+    
+    def truncate(self, path, length, fh=None):
+        """Perform a file truncation to length bytes"""
+        logging.debug("Attempting to truncate %s (%d)" % ( path,length))
+
+        close=False
+        ## check if we have an active fildes for this path
+        if fh is None:
+            fh = self.path.get(path,None)
+            logging.debug("truncating %s" %(str(fh)))
+
+        ## do we have a cache file handle? If not then we need to open one
+        if fh is None:
+            logging.debug("don't have an open file handle, so creating one")
+            close=True
+            fh=self.open(path,os.O_RDWR)
+        
+        ## Check if we have a valid cached version of this file.
+        ## but don't use standard read since we only want at most 'length' of this file
+        if length > 0 :
+            voMD5  = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+            if cacheMD5 is None :
+                self.update_md5_db(self.fh[fh]['name'])
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+            if not self.fh[fh].get('cached',False) and ( cacheMD5 is None or cacheMD5['md5'] != voMD5) : 
+                ## cache file  (really we don't need the entire file, just upto length
+                success=False
+                while not success:
+                    os.lseek(fh,0,os.SEEK_SET)
+                    try:
+                        r = self.client.open(path,mode=os.O_RDONLY,view='data')
+                        fpos=0
+                        while fpos < length:
+                            buf=r.read(READBUF)
+                            if not buf :
+                                ## stop reading at end of file.
+                                success=True
+                                break
+                            chunk=min(length-fpos,len(READBUF)) 
+                            if os.write(fh,buf[:chunk])!=chunk:
+                                raise FuseOSError(EIO)
+                            fpos=fpos+chunk
+                            if fpos >= length:
+                                success=True
+                                break
+                    except:
+                        logging.error("Failed during truncate read, try again")
+                    finally: 
+                        r.close()
+
+        ## now we can truncate the file.
+        os.ftruncate(fh,length)
+        if close :
+            ### truncate can be called on file, so perhaps that's what happened.
+            self.release(path,fh)
+        ## Update the access/mod times 
+        self.utimens(path)
+        return
+
+    def unlink(self,path):
+        fname=os.path.normpath(self.cache_dir+path)
+        if os.access(fname,os.F_OK):
+            os.unlink(fname)
+        if self.getNode(path):
+            self.client.delete(path)
+        self.delNode(path,force=True)
+        ## update the access times on the parrent node
+
+
+    def utimens(self, path, times=None):
+	"""Set the access and modification times of path"""
+	logging.debug("Setting the access and modification times for %s " % ( path))
+	logging.debug("%s" % (str(times)))
+        if times is None:
+	  logging.debug("No times specified so using the current system time for access and modifcation")
+          t=time.time()
+          times = (t,t)
+	else:
+	  logging.debug("Setting the access and modification times using times provided")
+	logging.debug("Getting cache file name")
+        fname=os.path.normpath(self.cache_dir+path)
+	logging.debug("Setting access times on cached version at location %s" % ( fname))
+        if os.access(fname,os.W_OK):
+	    logging.debug("Setting access times on cached version at location %s" % ( fname))
+            try:
+              os.utime(fname,times)
+            except Exception as e:
+              raise e
+        logging.debug("Attempting to set the st_mtime and st_atime attributes")
+        self.getattr(path)['st_mtime']=times[1]
+        self.getattr(path)['st_atime']=times[0]
+        return 
+
+    def write(self, path, data, offset, fh=None):
+        logging.debug("%s -> %d" % ( path,fh))
+        if not self.fh[fh].get('cached',False) and offset > 0 :
+            ## we are writing but never cached the original file, do that now
+            try:
+                logging.debug("Getting data from VOSpace cause the cache is empty")
+                self.read(path,fh=fh)
+            except IOError as e:
+                f=FuseOSError(e.errno)
+                f.strerror=e.strerror
+                raise f
+
+        ## Update the access/mod times and delete the md5 from the cache db
+        ##self.utimens(path)
+        logging.debug("%d --> %d" % ( offset, offset+len(data)))
+        self.delete_md5_db(self.fh[fh]['name'])
+        self.fh[fh]['cached']=True
+        os.lseek(fh, offset, os.SEEK_SET)
+        return os.write(fh, data)
+
+
+if __name__ == "__main__":
+
+    import optparse
+
+    #usage="%prog <root> <mountpoint>"
+
+
+    parser = optparse.OptionParser(description='mount vospace as a filesystem.')
+
+    parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
+    parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
+    parser.add_option("-d","--debug",action="store_true")
+    parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
+    parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
+    parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
+    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
+    parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
+
+    (opt,args)=parser.parse_args()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    if opt.debug:
+        logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(module)s.%(funcName)s %(message)s",filename=opt.log)
+        forground=True
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+    else:
+        logging.basicConfig(level=logging.ERROR,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+
+    logging.debug("Checking connetion to VOSpace ")
+    if not os.access(opt.certfile,os.F_OK):
+        certfile=None
+    else:
+        certfile=opt.certfile
+    conn=vos.Connection(certfile=certfile)
+    logging.debug("Got a certificate, connections should work")
+
+    root = opt.vospace
+    mount = opt.mountpoint
+    if opt.cache_dir is None:
+	opt.cache_dir=os.path.normpath(os.path.join(os.getenv('HOME',default='.'),root.replace(":","_")))
+    if not os.access(mount,os.F_OK):
+	os.makedirs(mount)
+    if platform=="darwin":
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root,
+                    volname=root,
+                    defer_permissions=True,
+                    daemon_timeout=6000,
+                    readonly=opt.readonly,
+                    #auto_cache=True,
+		    noapplexattr=True,
+	            noappledouble=True,
+                    foreground=opt.foreground)
+    else:
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root, 
+                    readonly=opt.readonly,
+		    #auto_cache=True,
+                    foreground=opt.foreground)
+
