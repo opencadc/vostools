@@ -86,6 +86,12 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public interface JobManager 
 {
+    /**
+     * Shutdown and release any resources. This includes ThreadPools, connections, open files, etc.
+     */
+    public void terminate()
+        throws InterruptedException;
+
     public void setJobExecutor(JobExecutor je);
 
     public void setJobPersistence(JobPersistence jp);

@@ -80,6 +80,12 @@ import ca.nrc.cadc.uws.Job;
 public interface JobExecutor 
 {
     /**
+     * Shutdown and release any resources. This includes ThreadPools, connections, open files, etc.
+     */
+    public void terminate()
+        throws InterruptedException;
+    
+    /**
      * Execute the specified job in asynchronous mode.
      *
      * @param job the details of this intance of the job

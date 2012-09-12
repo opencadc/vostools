@@ -167,6 +167,22 @@ public class SyncServlet extends HttpServlet
         }
     }
 
+    @Override
+    public void destroy()
+    {
+        if (jobManager != null)
+        {
+            try
+            {
+                jobManager.terminate();
+            }
+            catch(Throwable t)
+            {
+                log.error("failed to terminate Jobmanager", t);
+            }
+        }
+    }
+
     /**
      * Instantiate a JobManager. The default implementation simply looks for a
      * servlet init-param with name <code>ca.nrc.cadc.uws.server.JobManager</code>

@@ -163,6 +163,7 @@ public class UWSAsyncApplication extends Application
     }
 
 
+
     /**
      * This method does the setup of the restlet application. It loads a JobManager
      * implementation and stores it as a context attribute and then creates and
@@ -209,5 +210,16 @@ public class UWSAsyncApplication extends Application
             log.error("CONFIGURATION ERROR: failed to load InlineContentHandler class: " +  cname);
         }
         return new JobRouter(ctx);
+    }
+
+    @Override
+    public void stop()
+        throws Exception
+    {
+        super.stop();
+        JobManager jm = (JobManager) getContext().getAttributes().get(UWS_JOB_MANAGER);
+        if (jm != null)
+            jm.terminate();
+        getContext().getAttributes().clear();
     }
 }

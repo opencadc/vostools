@@ -107,8 +107,14 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
     public MemoryJobPersistence(StringIDGenerator idGenerator, IdentityManager identityManager)
     {
         this.idGenerator = idGenerator;
-	this.identityManager = identityManager;
+        this.identityManager = identityManager;
     }
+
+    public void terminate()
+    {
+        // no op
+    }
+
 
     public void addParameters(String jobID, List<Parameter> params)
         throws JobNotFoundException

@@ -149,6 +149,17 @@ public class ThreadPoolExecutor extends AbstractExecutor
         init(poolSize, poolName, priorityComparator);
     }
 
+    @Override
+    public void terminate()
+        throws InterruptedException
+    {
+        log.info("shutting down ThreadPool...");
+        threadPool.shutdown();
+        threadPool.awaitTermination(120, TimeUnit.SECONDS);
+        log.info("shutting down ThreadPool... [OK]");
+    }
+
+
     private void init(int poolSize, String poolName, Comparator<CurrentJob> priorityComparator)
     {
         

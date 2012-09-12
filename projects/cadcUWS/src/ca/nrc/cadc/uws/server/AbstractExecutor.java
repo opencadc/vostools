@@ -97,6 +97,12 @@ public abstract class AbstractExecutor  implements JobExecutor
         this.jobRunnerClass = jobRunnerClass;
     }
 
+    public void terminate()
+        throws InterruptedException
+    {
+        // no-op
+    }
+
     public void setJobUpdater(JobUpdater jobUpdater)
     {
         this.jobUpdater = jobUpdater;

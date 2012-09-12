@@ -80,6 +80,12 @@ import java.util.List;
 public interface JobPersistence
 {
     /**
+     * Shutdown and release any resources. This includes ThreadPools, connections, open files, etc.
+     */
+    public void terminate()
+        throws InterruptedException;
+    
+    /**
      * Obtain a Job from the persistence layer. Normally the job has
      * only the top-level job fields and the caller needs to call getDetails
      * if the parameters and results are needed.

@@ -110,6 +110,15 @@ public class SimpleJobManager implements JobManager
         this.jobExecutor = jobExecutor;
     }
 
+    public void terminate()
+        throws InterruptedException
+    {
+        if (jobPersistence != null)
+            jobPersistence.terminate();
+        if (jobExecutor != null)
+            jobExecutor.terminate();
+    }
+    
     public void setJobExecutor(JobExecutor je)
     {
         this.jobExecutor = je;

@@ -120,6 +120,12 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
         this.identityManager = identityManager;
     }
 
+    public void terminate() throws InterruptedException
+    {
+        // no-op: assume this relies on JNDI data sources that are managed externally
+    }
+
+
     protected JobDAO getDAO()
     {
         return new JobDAO(getDataSource(), getJobSchema(), identityManager, idGenerator);
