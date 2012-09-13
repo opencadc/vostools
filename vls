@@ -139,10 +139,6 @@ for node in args:
         logging.error("Error getting listing of %s ( %s )" % (node,str(e)))
         sys.exit(-1)
         
-    if not len(infoList)>0:
-        #logging.critical("Failed to get listing for %s " % ( node ))
-        sys.exit(-1)
-
     if sortKey:
         infoList=sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
 

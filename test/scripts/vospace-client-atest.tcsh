@@ -52,7 +52,6 @@ if ( $status == 0) then
 	echo " [OK]"
 else
 	echo -n ", creating base URI"
-	echo "TODO"
 	exit
         $CMD $CERT --create --target=$BASE || echo " [FAIL]" && exit -1
 	echo " [OK]"
@@ -74,15 +73,14 @@ $LSCMD $CERT $VOROOT > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view non-existent node "
-$LSCMD $CERT $CONTAINER > /dev/null && echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "create private container "
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view created container "
-echo "$LSCMD $CERT $CONTAINER"
-$LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" #TODO && exit -1
+$LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 #TODO vchmod
@@ -112,8 +110,8 @@ echo -n "check inherit certain properties "
 echo "[TODO]"
 
 echo -n "check recursive create (non-existant parents) "
-$MKDIRCMD $CERT $CONTAINER/foo/bar/baz || echo " [FAIL]" #TODO && exit -1
-$LSCMD $CERT $CONTAINER/foo/bar/baz > /dev/null || echo " [FAIL]" #TODO && exit -1
+$MKDIRCMD $CERT $CONTAINER/foo/bar/baz || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/foo/bar/baz > /dev/null || echo " [FAIL]" #TODO add -p option&& exit -1
 echo "[OK]"
 
 echo -n "copy file to existing container and non-existent data node "
@@ -158,7 +156,7 @@ $LSCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "delete non-existent data node "
-$RMCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" #TODO&& exit -1
+$RMCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "delete non-empty container "
@@ -169,7 +167,7 @@ echo " [OK]"
 
 echo -n "delete empty container "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" #TODO&& exit -1
+$LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 $RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"

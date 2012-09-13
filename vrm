@@ -42,6 +42,7 @@ for arg in args:
             logging.error("%s is a directory" % (arg))
         else:
             logging.error("%s file not found" % (arg))
+	    sys.exit(-1)
     except Exception as e:
         logging.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),e.errno))
         sys.exit(e.errno)

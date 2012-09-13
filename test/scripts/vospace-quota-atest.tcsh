@@ -23,14 +23,16 @@ if ( ${?1} ) then
         endif
 endif
 
-set CMD = "java ${LOCAL} -jar ${CADC_ROOT}/lib/cadcVOSClient.jar"
-set CERT = "--cert=$A/test-certificates/x509_CADCAuthtest2.crt --key=$A/test-certificates/x509_CADCAuthtest2.key"
+set MKDIRCMD = "$CADC_ROOT/bin/vmkdir"
+set CPCMD = "$CADC_ROOT/bin/vcp"
+set LSCMD = "$CADC_ROOT/bin/vls"
+set RMDIRCMD = "$CADC_ROOT/bin/vrmdir"
+set CERT = "--cert=$A/test-certificates/x509_CADCAuthtest2.pem"
 
-echo "command: " $CMD $CERT
 echo
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOHOME = "vos://cadc.nrc.ca\!vospace/CADCAuthtest2"
+set VOHOME = "vos:CADCAuthtest2"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
@@ -38,28 +40,28 @@ set CONTAINER = $BASE/$TIMESTAMP
 
 
 echo -n "** checking base URI"
-$CMD -v $CERT --view --target=$BASE > /dev/null
+$LSCMD -v $CERT $BASE > /dev/null
 if ( $status == 0) then
 	echo " [OK]"
 else
 	echo -n ", creating base URI"
-        $CMD $CERT --create --target=$BASE || echo " [FAIL]" && exit -1
+        $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
 	echo " [OK]"
 endif
 
 echo "*** starting test sequence for $CONTAINER ***"
 
 echo -n "Create container"
-$CMD $CERT --create --target=$CONTAINER || (echo " [FAIL]" ; exit -1)
+$MKDIRCMD $CERT $CONTAINER || (echo " [FAIL]" ; exit -1)
 echo " [OK]"
 
-echo -n "Upload data node in excess of quota"
-$CMD $CERT --copy --src=something.png --dest=$CONTAINER/testdata.png --prop=something.props --content-type=image/png | grep -qi "quota" && echo " [FAIL]" && exit -1
+echo -n "Upload data node in excess of quota (expect error)"
+$CPCMD $CERT something.png $CONTAINER/testdata.png | grep -qi "quota" && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 
 echo -n "delete container "
-$CMD $CERT --delete --target=$CONTAINER || echo " [FAIL]" && exit -1
+$RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 
