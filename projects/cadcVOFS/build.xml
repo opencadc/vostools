@@ -1,0 +1,72 @@
+<!DOCTYPE project>
+<project default="build" basedir=".">
+
+<!-- Generic properties -->
+<property environment="env"/>
+<property file="${env.A}/compilers/setup.ant.python.properties" />
+<import file="${env.A}/compilers/setup.ant.python.targets.xml"/>
+
+<!--*+
+************************************************************************
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+*
+*   System Name:	build.xml
+*
+*   Purpose:
+*	Over-ride default ant behaviour.
+*
+*   Date		: Nov 5, 2009
+*
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+************************************************************************
+*-->
+
+<!-- project-specific properties -->
+<property name="project"    value="cadcVOFS" />
+<property file="local.build.properties" />
+
+
+<!-- Where and how to identify installed versions of python -->
+<property name="pythonbin" value="/usr/bin"/>
+<!-- This version would allow ant to do the build for all versions of python2
+     in /usr/bin.
+     <property name="pythonpattern" value="python2.?"/>
+     For cadcVOFS, we only want python2.7 -->
+<property name="pythonpattern" value="python2.7"/>
+
+<target name="test">
+    <foreachversion executablebin="${pythonbin}"
+                    executablepattern="${pythonpattern}"
+                    propertyname="python.executable"
+                    target="test_executable"/>
+</target>
+
+<target name="test_executable" depends="compile">
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="test"
+           failonerror="true">
+        <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
+        <fileset dir="test" includes="test*.py"/>
+    </apply>
+</target>
+
+<target name="test_all">
+    <foreachversion executablebin="${pythonbin}"
+                    executablepattern="${pythonpattern}"
+                    propertyname="python.executable"
+                    target="test_all_executable"/>
+</target>
+
+<target name="test_all_executable" depends="compile">
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="test">
+        <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
+        <fileset dir="test" includes="test*.py"/>
+    </apply>
+</target>
+
+<target name="build" depends="compile" />
+
+</project>

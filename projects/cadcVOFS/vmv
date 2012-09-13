@@ -34,4 +34,8 @@ except Exception as e:
 source=args[0]
 dest = args[1]
 
-client.move(source,dest)
+try:
+    client.move(source,dest)
+except Exception as e:
+    logging.error("Cannot move %s to %s: %s" % (source, dest, (str(e))))
+    sys.exit(-1)
