@@ -297,7 +297,7 @@ public class AsyncPullFromVOSpaceTest extends VOSTransferTest
         }
         catch (Exception unexpected)
         {
-            log.error("unexpected exception: " + unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
