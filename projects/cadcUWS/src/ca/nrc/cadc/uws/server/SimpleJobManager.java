@@ -188,17 +188,17 @@ public class SimpleJobManager implements JobManager
     }
     
     public void execute(String jobID) 
-            throws JobNotFoundException, JobPersistenceException, JobPhaseException
-        {
-            Job job = jobPersistence.get(jobID);
-            doAuthorizationCheck(job);
-            execute(job);
-        }
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+    {
+        Job job = jobPersistence.get(jobID);
+        doAuthorizationCheck(job);
+        execute(job);
+    }
 
     public void execute(Job job) 
         throws JobNotFoundException, JobPersistenceException, JobPhaseException
     {
-        jobPersistence.getDetails(job);
+        // assume they used get which does auth check and getDetails
         jobExecutor.execute(job);
     }
 
@@ -214,7 +214,7 @@ public class SimpleJobManager implements JobManager
     public void execute(Job job, SyncOutput output)
         throws JobNotFoundException, JobPersistenceException, JobPhaseException
     {
-        // assume they used get which does auth check and getDetails
+        
         jobExecutor.execute(job, output);
     }
 

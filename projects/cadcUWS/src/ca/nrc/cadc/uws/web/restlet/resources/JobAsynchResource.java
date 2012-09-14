@@ -106,7 +106,7 @@ import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
  */
 public class JobAsynchResource extends BaseJobResource
 {
-    private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
+    private static final Logger LOGGER = Logger.getLogger(JobAsynchResource.class);
 
     private static final String RUN = "RUN";
     private static final String ABORT = "ABORT";

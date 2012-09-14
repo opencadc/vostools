@@ -126,7 +126,7 @@
 
     <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easyMock}:${ext.dev}/objenesis.jar:${junit}:${xerces}" />
     
-    <target name="test" depends="xml-test,dao-test">
+    <target name="test" depends="build,xml-test,dao-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
