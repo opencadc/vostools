@@ -70,18 +70,21 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import java.io.IOException;
+import java.security.PrivilegedAction;
+
+import javax.security.auth.Subject;
+
+import org.jdom.Document;
+import org.restlet.data.MediaType;
 import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
 
 import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
-
-import java.io.IOException;
-import java.security.PrivilegedAction;
-import javax.security.auth.Subject;
-import org.jdom.Document;
+import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
 
 
 /**
@@ -128,12 +131,10 @@ public class ErrorResource extends BaseJobResource
                 redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
             else
             {
-                // redirect back to the job to show the error summary
-                // TODO: should we just write out the errorSummary element?
-                String path = getRequestPath();
-                path = path.replace("/error", "");
-                redirectSeeOther(getHostPart() + path);
-
+                String summaryMessage = errorSummary.getSummaryMessage();
+                Representation representation = new StringRepresentation(summaryMessage);
+                representation.setMediaType(MediaType.TEXT_PLAIN);
+                return representation;
             }
             return null;
         }
