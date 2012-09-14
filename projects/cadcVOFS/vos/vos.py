@@ -559,6 +559,7 @@ class VOFile:
             self.resp=self.httpCon.getresponse()
 	    import time
 	    time.sleep(0.1)
+	    logging.warning("closing connection for %s" %(self.url))
             self.httpCon.close()
         except Exception as e:
 	    raise IOError(errno.ENOTCONN,str(e))
@@ -576,6 +577,7 @@ class VOFile:
                    409: errno.EEXIST }
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in codes:
+	    logging.warning("Got status code: %s for %s" %(self.resp.status, self.url))
             from html2text import html2text
             msg = self.resp.read()
             if msg is not None:
@@ -638,6 +640,7 @@ class VOFile:
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
         self.httpCon.endheaders()
+	logging.warning("Opening connection for %s to %s" %(URL,method))
         logging.debug("Done setting headers")
 
 
