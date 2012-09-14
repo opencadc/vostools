@@ -69,37 +69,32 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
+
 import com.meterware.httpunit.WebResponse;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * Test case for sending data to a service (pushToVoSpace).
@@ -156,11 +151,11 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
                 // Get the Transfer endpoint and make sure it's a valid URL.
                 try
                 {
-                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_PUT));
                 }
                 catch (MalformedURLException e)
                 {
-                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_PUT));
                 }
             }
             else
@@ -217,11 +212,11 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
                 // Get the Transfer endpoint and make sure it's a valid URL.
                 try
                 {
-                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_PUT));
                 }
                 catch (MalformedURLException e)
                 {
-                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTPS_PUT));
                 }
             }
             else
@@ -289,7 +284,9 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             if (phase == ExecutionPhase.ERROR)
             {
                 // ErrorSummary should be 'View Not Supported'.
-                assertEquals("View Not Supported", result.job.getErrorSummary().getSummaryMessage());
+                // TODO: Change to 'View Not Supported' when UWS supports text error representations
+                //assertEquals("View Not Supported", result.job.getErrorSummary().getSummaryMessage());
+                Assert.assertTrue("View Not Supported", result.job.getErrorSummary().getSummaryMessage().startsWith("ViewNotSupported"));
             }
             else
             {

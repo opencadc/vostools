@@ -69,6 +69,25 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayInputStream;
+import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -81,20 +100,8 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
+
 import com.meterware.httpunit.WebResponse;
-import java.io.ByteArrayInputStream;
-import java.io.StringReader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -294,10 +301,9 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
 
             assertEquals("Job error", ExecutionPhase.ERROR, job.getExecutionPhase());
             log.debug("Job Error message: " + job.getErrorSummary().getSummaryMessage());
-            assertTrue("Path contains invalid links", 
+            assertTrue("Link Exception", 
                     job.getErrorSummary().getSummaryMessage().
-                    contains("Path contains invalid links"));
-
+                    contains("Link Exception"));
 
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
@@ -360,9 +366,9 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
 
             assertEquals("Job error", ExecutionPhase.ERROR, job.getExecutionPhase());
             log.debug("Job Error message: " + job.getErrorSummary().getSummaryMessage());
-            assertTrue("Path contains invalid links", 
+            assertTrue("Link Exception", 
                     job.getErrorSummary().getSummaryMessage().
-                    contains("Path contains invalid links"));
+                    contains("Link Exception"));
 
 
             // Delete the node
@@ -423,7 +429,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
             
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue(result.transfer.getProtocols().isEmpty());
+            assertTrue("no protocols", result.transfer.getProtocols() == null || result.transfer.getProtocols().isEmpty());
             
             // Get the Job.
             response = get(result.location);
@@ -435,7 +441,10 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
             
             // ErrorSummary should be 'View Not Supported'.
-            assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
+            // TODO: Change 'ViewNotSupported' to 'View Not Supported' when UWS supports
+            // error representations
+            //assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
+            assertTrue("ViewNotSupported", job.getErrorSummary().getSummaryMessage().startsWith("ViewNotSupported"));
 
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);

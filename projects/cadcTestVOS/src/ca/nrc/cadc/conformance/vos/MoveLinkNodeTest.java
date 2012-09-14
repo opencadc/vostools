@@ -68,30 +68,26 @@
 */
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferWriter;
-import com.meterware.httpunit.WebResponse;
-import java.io.StringReader;
-import java.io.StringWriter;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Transfer;
+
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Test case for moving LinkNodes.
@@ -264,10 +260,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
+            // TODO: Modify UWS to allow separate error summary and text representation fields
+            //       (summary with spaces, representation without)
+            // This assertion is commented out until then.
             // Get the ErrorSummary.
             ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
-            assertEquals("ErrorSummary message should be Permission Denied", "Permission Denied", message);
+            //assertEquals("ErrorSummary message should be Permission Denied", "Permission Denied", message);
+            assertEquals("ErrorSummary message should be PermissionDenied", "PermissionDenied", message);
             
             // Get the error endpoint.
             response = get(result.location + "/error");
@@ -324,10 +324,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
+            // TODO: Modify UWS to allow separate error summary and text representation fields
+            //       (summary with spaces, representation without)
+            // This assertion is commented out until then.
             // Get the ErrorSummary.
             ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
-            assertEquals("ErrorSummary message should be Node Not Found", "Node Not Found", message);
+            //assertEquals("ErrorSummary message should be Node Not Found", "Node Not Found", message);
+            assertEquals("ErrorSummary message should be NodeNotFound", "NodeNotFound", message);
             
             // Get the error endpoint.
             response = get(result.location + "/error");
@@ -375,7 +379,7 @@ public class MoveLinkNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination LinkNode.
-            LinkNode destinationNode = getSampleLinkNode(new URI("http://www.yahoo.com"));
+            LinkNode destinationNode = getSampleLinkNode(new URI("vos://cadc.nrc.ca~vospace/CADCAuthtest1"));
             response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -386,10 +390,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
+            // TODO: Modify UWS to allow separate error summary and text representation fields
+            //       (summary with spaces, representation without)
+            // This assertion is commented out until then.
             // Get the ErrorSummary.
             ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
-            assertThat(message, JUnitMatchers.containsString("Duplicate Node"));
+            //assertThat(message, JUnitMatchers.containsString("Duplicate Node"));
+            assertThat(message, JUnitMatchers.containsString("DuplicateNode"));
             
             // Get the error endpoint.
             response = get(result.location + "/error");
@@ -451,10 +459,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             // Phase should be ERROR.
             assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
+            // TODO: Modify UWS to allow separate error summary and text representation fields
+            //       (summary with spaces, representation without)
+            // This assertion is commented out until then.
             // Get the ErrorSummary.
             ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
-            assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
+            //assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
+            assertEquals("ErrorSummary message should be DuplicateNode", "DuplicateNode", message);
             
             // Get the error endpoint.
             response = get(result.location + "/error");

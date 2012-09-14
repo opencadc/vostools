@@ -69,6 +69,24 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -81,19 +99,8 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
+
 import com.meterware.httpunit.WebResponse;
-import java.io.StringReader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * Test case for sending data to a service (pushToVoSpace).
@@ -300,7 +307,7 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             assertEquals("direction", Direction.pushToVoSpace, result.transfer.getDirection());
             
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue(result.transfer.getProtocols().isEmpty());
+            assertTrue("no protocols", result.transfer.getProtocols() == null || result.transfer.getProtocols().isEmpty());
             
             // Get the Job.
             response = get(result.location);
@@ -312,7 +319,9 @@ public class SyncPushToVOSpaceTest extends VOSTransferTest
             assertEquals("Job phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
             
             // ErrorSummary should be 'View Not Supported'.
-            assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
+            // TODO: change to 'View Not Supported' when UWS supports error representation text.
+            //assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
+            assertTrue("View Not Supported", job.getErrorSummary().getSummaryMessage().startsWith("ViewNotSupported"));
 
             // Delete the node
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
