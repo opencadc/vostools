@@ -110,10 +110,10 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("createDataNode");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -125,15 +125,15 @@ public class CreateDataNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Get the node from vospace
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Check accepts
-            List<URI> accepts = node.accepts();
+            List<URI> accepts = node.sampleNode.accepts();
             assertNotNull("accepts should not be null", accepts);
             
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("createDataNode passed.");
@@ -157,10 +157,10 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("duplicateNodeFault");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
 
             // Add DataNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -172,11 +172,11 @@ public class CreateDataNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Get the node from vospace
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Try and add the same DataNode to the VOSpace
-            response = put(node);
+            response = put(node.sampleNode);
 
             // Should get back a 409 status code.
             assertEquals("PUT response code should be 409 when creating a duplicate node", 409, response.getResponseCode());
@@ -185,7 +185,7 @@ public class CreateDataNodeTest extends VOSNodeTest
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
 
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("duplicateNodeFault passed.");
@@ -210,17 +210,17 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("invalidURI");
 
             // Create a node.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
 
             // Add DataNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 400 for a InvalidURI", 400, response.getResponseCode());
 
             // Response entity body should contain 'InvalidURI'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidURI"));
             
             // Check that the node wasn't created
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("invalidURI passed.");
@@ -244,17 +244,17 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("typeNotSupportedFault");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
 
             // Add Node to the VOSpace.
-            WebResponse response = put(node, new InvalidTypeNodeWriter());
+            WebResponse response = put(node.sampleNode, new InvalidTypeNodeWriter());
             assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
 
             // Response entity body should contain 'TypeNotSupported'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("TypeNotSupported"));
 
             // Check that the node wasn't created
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("typeNotSupportedFault passed.");
@@ -279,17 +279,17 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("permissionDeniedFault");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
             
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 401", 401, response.getResponseCode());
 
             // Response message body should be 'PermissionDenied'
             assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
 
             // Check that the node wasn't created
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
@@ -303,8 +303,8 @@ public class CreateDataNodeTest extends VOSNodeTest
 
     /**
      * If a parent node in the URI path does not exist then the service MUST
-     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
+     * throw a HTTP 404 status code including a ContainerNotFound fault in the entity body.
+     * For example, given the URI path /a/b/c, the service must throw a HTTP 404
      * status code including a ContainerNotFound fault in the entity body if
      * either /a or /a/b do not exist.
      */
@@ -316,17 +316,17 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = getSampleDataNode("/A/B");
+            TestNode nodeAB = getSampleDataNode("/A/B");
 
             // Try and add the Node to the VOSpace.
-            WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+            WebResponse response = put(nodeAB.sampleNode);
+            assertEquals("PUT response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
 
             // Check that the node wasn't created
-            response = get(nodeAB);
+            response = get(nodeAB.sampleNode);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("containerNotFoundFault passed.");
@@ -350,6 +350,12 @@ public class CreateDataNodeTest extends VOSNodeTest
         try
         {
             log.debug("linkFoundFault");
+            
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             log.info("linkFoundFault passed.");
         }

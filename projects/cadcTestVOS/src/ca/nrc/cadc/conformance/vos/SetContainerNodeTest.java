@@ -110,12 +110,12 @@ public class SetContainerNodeTest extends VOSNodeTest
         try
         {
             log.debug("updateContainerNode - START");
-
+            
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
             
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("updateContainerNode: PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -127,8 +127,8 @@ public class SetContainerNodeTest extends VOSNodeTest
             
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
-            node.getProperties().add(nodeProperty);
-            response = post(node);
+            testNode.sampleNode.getProperties().add(nodeProperty);
+            response = post(testNode.sampleNode);
             assertEquals("updateContainerNode: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -142,7 +142,7 @@ public class SetContainerNodeTest extends VOSNodeTest
             assertEquals("", (numDefaultProps + 1), updatedNode.getProperties().size());
 
             // Delete the node
-            response = delete(node);
+            response = delete(testNode.sampleNode);
             assertEquals("updateContainerNode: DELETE response code should be 200", 200, response.getResponseCode());
             
             log.info("updateContainerNode passed.");
@@ -165,10 +165,10 @@ public class SetContainerNodeTest extends VOSNodeTest
             log.debug("updateContainerNodeDeleteProperty - START");
 
             // Create a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("updateContainerNodeDeleteProperty: PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -185,9 +185,9 @@ public class SetContainerNodeTest extends VOSNodeTest
             List<NodeProperty> del = new ArrayList<NodeProperty>();
             NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, null);
             np.setMarkedForDeletion(true);
-            node.setProperties(del);
+            testNode.sampleNode.setProperties(del);
 
-            response = post(node);
+            response = post(testNode.sampleNode);
             assertEquals("updateContainerNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -224,26 +224,26 @@ public class SetContainerNodeTest extends VOSNodeTest
             log.debug("permissionDeniedFault");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning thing");
             nodeProperty.setReadOnly(true);
-            node.getProperties().add(nodeProperty);
+            testNode.sampleNode.getProperties().add(nodeProperty);
 
             // TODO: how to update a node without permissions?
-            response = post(node);
+            response = post(testNode.sampleNode);
             assertEquals("POST response code should be 401", 401, response.getResponseCode());
 
             // Response entity body should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));  
 
             // Delete the node
-            response = delete(node);
+            response = delete(testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
@@ -268,10 +268,10 @@ public class SetContainerNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -322,10 +322,10 @@ public class SetContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode node = getSampleContainerNode("/A/B");
+            TestNode testNode = getSampleContainerNode("/A/B");
 
             // Try and get the Node from the VOSpace.
-            WebResponse response = post(node);
+            WebResponse response = post(testNode.sampleNode);
             assertEquals("POST response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response entity body should contain 'NodeNotFound'
@@ -353,26 +353,26 @@ public class SetContainerNodeTest extends VOSNodeTest
             log.debug("invalidArgumentFault");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: add an invalid Property
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vo space/core#length", "My invalid property");
             nodeProperty.setReadOnly(false);
-            node.getProperties().add(nodeProperty);
+            testNode.sampleNode.getProperties().add(nodeProperty);
 
             // Update the node.
-            response = post(node);
+            response = post(testNode.sampleNode);
             assertEquals("POST response code should be 400 for a node with an invalid property", 400, response.getResponseCode());
             
             // Response entity body should contain 'InvalidArgument'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidArgument"));
 
             // Delete the node
-            response = delete(node);
+            response = delete(testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("invalidArgumentFault passed.");

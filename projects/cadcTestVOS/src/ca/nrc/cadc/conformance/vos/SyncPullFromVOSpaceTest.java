@@ -73,21 +73,17 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
 import com.meterware.httpunit.WebResponse;
 import java.io.ByteArrayInputStream;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -127,63 +123,28 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             log.debug("testPullFromVOSpace");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-            // Create a Transfer.
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace,protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pullFromVoSpace, null, protocols);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
             
-            // Parse out the path to the Job.
-            int index = location.indexOf("/results/transferDetails");
-            String jobPath = location.substring(0, index);
-
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-            
-            // Get the Transfer XML.
-            String xml = response.getText();
-            log.debug("GET XML :\r\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
-            assertNotNull("protocols", transfer.getProtocols());
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
+            assertNotNull("protocols", result.transfer.getProtocols());
             
             // Invalid Protocol should not be returned.
-            assertTrue("has some protocols", !transfer.getProtocols().isEmpty());
+            assertTrue("has some protocols", !result.transfer.getProtocols().isEmpty());
             String endpoint = null;
-            for (Protocol p : transfer.getProtocols())
+            for (Protocol p : result.transfer.getProtocols())
             {
                 try 
                 {
@@ -198,7 +159,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             }
             
             // Get the Job.
-            response = get(jobPath);
+            response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             
             // Job phase should be EXECUTING.
@@ -207,7 +168,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("Job phase should be EXECUTING", ExecutionPhase.EXECUTING, job.getExecutionPhase());
             
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("testPullFromVOSpace passed.");
@@ -220,76 +181,51 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
     }
 
     @Test
-    public void testSyncPullWithLinkNode()
+    public void testPullLinkNodeFromVOSpace()
     {
         try
         {
-            log.debug("testSyncPullWithLinkNode");
+            log.debug("testPullLinkNodeFromVOSpace");
 
+            if (!supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+            
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a LinkNode to the DataNode
-            LinkNode linkNode = getSampleLinkNode(dataNode);
+            LinkNode linkNode = getSampleLinkNode(dataNode.sampleNode);
             response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-                        
-            // Create a Transfer.
+
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pullFromVoSpace, protocols);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
 
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // read the response transfer doc
-            String xml = response.getText();
-            log.debug("testSyncPullWithLinkNode response from POST: \n\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
-            assertNotNull("protocols", transfer.getProtocols());
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
+            assertNotNull("protocols", result.transfer.getProtocols());
             // that bogus one should not be here, so only 0 to 2 protocols
-            assertTrue("has some protocols", !transfer.getProtocols().isEmpty());
-            for (Protocol p : transfer.getProtocols())
+            assertTrue("has some protocols", !result.transfer.getProtocols().isEmpty());
+            for (Protocol p : result.transfer.getProtocols())
             {
                 try 
                 {
                     URL actualURL = new URL(p.getEndpoint());
                     log.debug("endpoint url: " + actualURL);
                     assertTrue("URL not resolved: " +  actualURL, 
-                            actualURL.getPath().contains(dataNode.getName()));
+                            actualURL.getPath().contains(dataNode.sampleNode.getName()));
                 }
                 catch(MalformedURLException mex)
                 {
@@ -300,10 +236,10 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             // Delete the nodes
             response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
-            log.info("pullJob passed.");
+            log.info("testPullLinkNodeFromVOSpace passed.");
         }
         catch (Exception unexpected)
         {
@@ -319,65 +255,37 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
         {
             log.debug("testSyncPullWithLinkNodeExtTarget");
 
+            if (!supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a LinkNode to the DataNode
             LinkNode linkNode = getSampleLinkNode(new URI("www.google.com"));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-                        
-            // Create a Transfer.
+
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace, null, protocols);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
 
-            // POST the XML to the transfer endpoint.
-            log.debug("POST to transfer end point");
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            String jobLocation = location.substring(0, location.indexOf("/results/transferDetails"));
-            // Transfer failed so transferDetails should not be found
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
+            assertTrue("no protocols", result.transfer.getProtocols() == null);
+            
+            // get job details
+            log.debug("Check job details at: " + result.location);
+            response = get(result.location);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // read the response transfer doc
             String xml = response.getText();
-            log.debug("testSyncPullWithLinkNodeExtTarget response from POST: \n\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
-            assertTrue("no protocols", transfer.getProtocols() == null);
-            
-            // get job details
-            log.debug("Check job details at: " + jobLocation);
-            response = get(jobLocation);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // read the response transfer doc
-            xml = response.getText();
             log.debug("testSyncTransfer response from POST: \n\n" + xml);
 
             // Create a Job from Job XML.
@@ -413,65 +321,37 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             // target link of the LinkNode points to an external vos 
             log.debug("testSyncPullWithLinkNodeExtVOSTarget");
 
+            if (!supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a LinkNode to the DataNode
             LinkNode linkNode = getSampleLinkNode(new URI("vos://some.other.vos!vospace/"));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-                        
-            // Create a Transfer.
+            
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace, null, protocols);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
 
-            // POST the XML to the transfer endpoint.
-            log.debug("POST to transfer end point");
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            String jobLocation = location.substring(0, location.indexOf("/results/transferDetails"));
-            // Transfer failed so transferDetails should not be found
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
+            assertTrue("no protocols", result.transfer.getProtocols() == null);
+            
+            // get job details
+            log.debug("Check job details at: " + result.location);
+            response = get(result.location);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // read the response transfer doc
             String xml = response.getText();
-            log.debug("testSyncPullWithLinkNodeExtVOSTarget response from POST: \n\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
-            assertTrue("no protocols", transfer.getProtocols() == null);
-            
-            // get job details
-            log.debug("Check job details at: " + jobLocation);
-            response = get(jobLocation);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // read the response transfer doc
-            xml = response.getText();
             log.debug("testSyncTransfer response from POST: \n\n" + xml);
 
             // Create a Job from Job XML.
@@ -525,63 +405,28 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             log.debug("viewNotSupportedFault");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-            // Create a Transfer.
+            // Create the Transfer.
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace, view, protocols);
-            
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pullFromVoSpace, view, protocols);
 
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
 
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            // Parse out the path to the Job.
-            int index = location.indexOf("/results/transferDetails");
-            String jobPath = location.substring(0, index);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-            
-            // Get the Transfer XML.
-            String xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
             
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue(transfer.getProtocols().isEmpty());
+            assertTrue(result.transfer.getProtocols().isEmpty());
             
             // Get the Job.
-            response = get(jobPath);
+            response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
@@ -593,7 +438,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("viewNotSupportedFault passed.");
@@ -614,59 +459,24 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             log.debug("NodeNotFoundFault");
 
             // Get a DataNode, don't persist.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-
-            // Create a Transfer.
+            TestNode testNode = getSampleDataNode();
+            testNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace, protocols);
-            
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri(), Direction.pullFromVoSpace, null, protocols);
 
-            // POST the XML to the transfer endpoint.
-            WebResponse response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
 
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            // Parse out the path to the Job.
-            int index = location.indexOf("/results/transferDetails");
-            String jobPath = location.substring(0, index);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-            
-            // Get the Transfer XML.
-            String xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
             
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue(transfer.getProtocols().isEmpty());
+            assertTrue(result.transfer.getProtocols().isEmpty());
             
             // Get the Job.
-            response = get(jobPath);
+            WebResponse response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
@@ -696,61 +506,26 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             log.debug("protocolNotSupportedFault");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode testNode = getSampleDataNode();
+            testNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,testNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-            // Create a Transfer.
+            // Create the Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace, protocols);
+            Transfer transfer = new Transfer(testNode.sampleNode.getUri(), Direction.pullFromVoSpace, null, protocols);
+
+            // Start the transfer.
+            TransferResult result = doSyncTransfer(transfer);
             
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            assertTrue("../results/transferDetails location expected: ", 
-                    location.endsWith("/results/transferDetails"));
-
-            // Parse out the path to the Job.
-            int index = location.indexOf("/results/transferDetails");
-            String jobPath = location.substring(0, index);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-            
-            // Get the Transfer XML.
-            String xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Create a Transfer from Transfer XML.
-            TransferReader reader = new TransferReader();
-            transfer = reader.read(xml);
-
-            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
             
             // Should be no Protocols if Job in ERROR phase.
-            assertTrue(transfer.getProtocols().isEmpty());
+            assertTrue(result.transfer.getProtocols().isEmpty());
             
             // Get the Job.
-            response = get(jobPath);
+            response = get(result.location);
             assertEquals("GET of Job response code should be 200", 200, response.getResponseCode());
             JobReader jobReader = new JobReader();
             Job job = jobReader.read(new StringReader(response.getText()));
@@ -762,7 +537,7 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             assertEquals("Protocol Not Supported", job.getErrorSummary().getSummaryMessage());
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("protocolNotSupportedFault passed.");

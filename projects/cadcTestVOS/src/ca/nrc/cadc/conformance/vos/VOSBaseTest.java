@@ -99,7 +99,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 import org.xml.sax.SAXException;
 
 /**
@@ -115,11 +115,15 @@ public abstract class VOSBaseTest
     protected DateFormat dateFormat;
 
     protected static ContainerNode baseTestNode;
-    protected static ContainerNode testSuiteNode;
+    protected static TestNode testSuiteNode;
 
     protected VOSURI baseURI;
     protected URL resourceURL;
     protected URL serviceURL;
+    
+    protected boolean supportLinkNodes;
+    protected boolean resolvePathNodes;
+    protected boolean resolveTargetNode;
     
     public static final String NODE_ENDPOINT = "/nodes";
     
@@ -127,40 +131,83 @@ public abstract class VOSBaseTest
      * Constructor takes a path argument, which is the path to the resource
      * being tested, i.e. /nodes or /transfers. A System property service.url
      * is used to define the url to the base VOSpace service,
-     * i.e. http://locahost/vospace.
+     * i.e. http://localhost/vospace.
      *
      * @param path to the resource to test.
      */
     public VOSBaseTest(String path)
-    {
+    {        
         try
         {
-            String prop = VOSTestSuite.class.getName() + ".baseURI";
-            RegistryClient rc = new RegistryClient();
-            String suri = System.getProperty(prop);
-            log.debug(prop + "=" + suri);
-            if (suri != null)
+            // Base URI for the test nodes.
+            String propertyName = VOSTestSuite.class.getName() + ".baseURI";
+            String propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
             {
-                this.baseURI = new VOSURI(suri);
+                RegistryClient rc = new RegistryClient();
+                this.baseURI = new VOSURI(propertyValue);
                 this.serviceURL = rc.getServiceURL(baseURI.getServiceURI(), "https");
                 this.resourceURL = new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + path);
             }
             else
             {
-                throw new IllegalStateException("system property " + prop + " not set to valid VOSpace URI");
+                throw new IllegalStateException("system property " + propertyName + " not set to valid VOSpace URI");
+            }
+
+            // Service supports LinkNodes.
+            propertyName = VOSTestSuite.class.getName() + ".supportLinkNodes";
+            propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
+                supportLinkNodes = new Boolean(propertyValue);
+            }
+            else
+            {
+                supportLinkNodes = false;
+            }
+
+            // Service resolves LinkNodes in the path.
+            propertyName = VOSTestSuite.class.getName() + ".resolvePathNodes";
+            propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
+                resolvePathNodes = new Boolean(propertyValue);
+            }
+            else
+            {
+                resolvePathNodes = false;
+            }
+            
+            // Service resolves target node if it's a LinkNode.
+            propertyName = VOSTestSuite.class.getName() + ".resolveTargetNode";
+            propertyValue = System.getProperty(propertyName);
+            log.debug(propertyName + "=" + propertyValue);
+            if (propertyValue != null)
+            {
+                resolveTargetNode = new Boolean(propertyValue);
+            }
+            else
+            {
+                resolveTargetNode = false;
             }
         }
         catch(Throwable t)
         {
             throw new RuntimeException("failed to init VOSpace URI and URL for tests", t);
         }
+        
         dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
         log.debug("serviceURL: " + serviceURL);
         log.debug("resourceURL: " + resourceURL);
+        log.debug("supportLinkNodes: " + supportLinkNodes);
+        log.debug("resolvePathNodes: " + resolvePathNodes);
+        log.debug("resolveTargetNode: " + resolveTargetNode);
     }
-    
-    
+
     /**
      * 
      * @return a ContainerNode.
@@ -205,8 +252,8 @@ public abstract class VOSBaseTest
             {
                 throw new RuntimeException("Cannot create base test Node " + baseNodeName, t);
             }
+            log.debug("Created base test Node: " + baseTestNode);
         }
-        log.debug("Created base test Node: " + baseTestNode);
         return baseTestNode;
     }
     
@@ -214,21 +261,26 @@ public abstract class VOSBaseTest
      * @param service endpoint.
      * @return a ContainerNode.
      */
-    private ContainerNode getTestSuiteNode(String endpoint)
+    private TestNode getTestSuiteNode(String endpoint)
     {
         if (testSuiteNode == null)
         {
-            String testNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() + "/" + VOSTestSuite.testSuiteNodeName;
+            ContainerNode sampleNode = null;
+            LinkNode sampleLinkNode = null;
+
+            // Create the root test suite container node.
+            String testSuiteNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() + 
+                                       "/" + VOSTestSuite.testSuiteNodeName;
             try
             {
-                testSuiteNode = new ContainerNode(new VOSURI(testNodeName));
-                String resourceUrl = getResourceUrl(endpoint) + testSuiteNode.getUri().getPath();
+                sampleNode = new ContainerNode(new VOSURI(testSuiteNodeName));
+                String resourceUrl = getResourceUrl(endpoint) + sampleNode.getUri().getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
                 StringBuilder sb = new StringBuilder();
                 NodeWriter writer = new NodeWriter();
-                writer.write(testSuiteNode, sb);
+                writer.write(sampleNode, sb);
                 InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
                 WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
                 WebConversation conversation = new WebConversation();
@@ -240,17 +292,55 @@ public abstract class VOSBaseTest
                 {
                     throw new VOSException(response.getResponseMessage());
                 }
+                log.debug("Created test suite sample ContainerNode: " + sampleNode);
             }
             catch (Throwable t)
             {
-                throw new RuntimeException("Cannot create test suite Node " + testNodeName, t);
+                t.printStackTrace();
+                throw new RuntimeException("Cannot create test suite Node " + testSuiteNodeName, t);
             }
+
+            if (supportLinkNodes)
+            {
+                // Create sibling link node to test suite container node.
+                String testSuiteLinkNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() +
+                                               "/" + VOSTestSuite.testSuiteLinkNodeName;
+                try
+                {
+                    sampleLinkNode = new LinkNode(new VOSURI(testSuiteLinkNodeName), sampleNode.getUri().getURIObject());
+                    String resourceUrl = getResourceUrl(endpoint) + sampleLinkNode.getUri().getPath();
+                    log.debug("**************************************************");
+                    log.debug("HTTP PUT: " + resourceUrl);
+
+                    StringBuilder sb = new StringBuilder();
+                    NodeWriter writer = new NodeWriter();
+                    writer.write(sampleLinkNode, sb);
+                    InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
+                    WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
+                    WebConversation conversation = new WebConversation();
+                    conversation.setExceptionsThrownOnErrorStatus(false);
+                    WebResponse response = conversation.sendRequest(request);
+                    log.debug(getResponseHeaders(response));
+                    log.debug("Response code: " + response.getResponseCode());
+                    if (response.getResponseCode() != 200)
+                    {
+                        throw new VOSException(response.getResponseMessage());
+                    }
+                    log.debug("Created test suite sample LinkNode: " + sampleLinkNode);
+                }
+                catch (Throwable t)
+                {
+                    t.printStackTrace();
+                    throw new RuntimeException("Cannot create test suite LinkNode " + testSuiteLinkNodeName, t);
+                }
+            }
+            
+            testSuiteNode = new TestNode(sampleNode, sampleLinkNode);
         }
-        log.debug("Created test suite Node: " + testSuiteNode);
         return testSuiteNode;
     }
 
-    protected ContainerNode getSampleContainerNode()
+    protected TestNode getSampleContainerNode()
         throws URISyntaxException
     {
         return getSampleContainerNode("");
@@ -262,7 +352,7 @@ public abstract class VOSBaseTest
      * @return a ContainerNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected ContainerNode getSampleContainerNode(String name)
+    protected TestNode getSampleContainerNode(String name)
         throws URISyntaxException
     {
          // List of NodeProperty
@@ -270,10 +360,19 @@ public abstract class VOSBaseTest
 
         // ContainerNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         ContainerNode node = new ContainerNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
-        return node;
+
+        // ContinerNode with LinkNode as parent.
+        ContainerNode nodeWithLink = null;
+        if (supportLinkNodes)
+        {
+            nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+            nodeWithLink = new ContainerNode(new VOSURI(nodeName));
+            nodeWithLink.getProperties().add(nodeProperty);
+        }
+        return new TestNode(node, nodeWithLink);
     }
 
     /**
@@ -282,7 +381,7 @@ public abstract class VOSBaseTest
      * @return a DataNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected DataNode getSampleDataNode()
+    protected TestNode getSampleDataNode()
         throws URISyntaxException
     {
         return getSampleDataNode("");
@@ -295,7 +394,7 @@ public abstract class VOSBaseTest
      * @return a DataNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected DataNode getSampleDataNode(String name)
+    protected TestNode getSampleDataNode(String name)
         throws URISyntaxException
     {
         // List of NodeProperty
@@ -304,12 +403,21 @@ public abstract class VOSBaseTest
 
         // DataNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("data node name: " + nodeName);
         DataNode node = new DataNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
-        return node;
+
+        // DataNode with LinkNode as parent.
+        DataNode nodeWithLink = null;
+        if (supportLinkNodes)
+        {
+            nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNodeWithLink.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
+            nodeWithLink = new DataNode(new VOSURI(nodeName));
+            nodeWithLink.setBusy(NodeBusyState.notBusy);
+        }
+        return new TestNode(node, nodeWithLink);
     }
     
     /**
@@ -370,7 +478,7 @@ public abstract class VOSBaseTest
 
         // LinkNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).sampleNode.getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + "_" + name;
         log.debug("link node name: " + nodeName);
         LinkNode node = new LinkNode(new VOSURI(nodeName), target);
         node.getProperties().add(nodeProperty);
@@ -791,7 +899,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-    
+
     /**
      * Build a String representation of the Request parameters.
      *

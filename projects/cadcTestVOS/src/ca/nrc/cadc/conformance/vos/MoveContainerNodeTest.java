@@ -71,22 +71,12 @@ package ca.nrc.cadc.conformance.vos;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.net.MalformedURLException;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -127,14 +117,14 @@ public class MoveContainerNodeTest extends VOSTransferTest
             log.debug("moveContainerNodeToContainerNode");
 
             // Target ContainerNode A.
-            ContainerNode targetNode = getSampleContainerNode("A");
+            TestNode targetNode = getSampleContainerNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child container node B.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(targetNode.getUri() + "/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(targetNode.sampleNode.getUri() + "/B"));
             response = put(VOSBaseTest.NODE_ENDPOINT, nodeAB, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -144,74 +134,29 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
             // Get a destination ContainerNode Z.
-            ContainerNode destinationNode = getSampleContainerNode("Z");
-            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode, new NodeWriter());
+            TestNode destinationNode = getSampleContainerNode("Z");
+            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
-            // Create a Transfer.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.getUri(), false);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-
-            // read the response job doc.
-            String xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(xml));
-            assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
-
-            // Run the job.
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("PHASE", "RUN");
-            response = post(location + "/phase", parameters);
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-            
-            // get and read the response job doc.
-            response = get(location);
-            xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            job = reader.read(new StringReader(xml));
+            // Do the move.
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            TransferResult result = doTransfer(transfer);
             
             // Phase should be COMPLETED
-            assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, job.getExecutionPhase());
+            assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
             // Check node has been moved and old node gone
             response = get(VOSBaseTest.NODE_ENDPOINT, nodeAB);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("GET response code should be 200", 404, response.getResponseCode());
             
             // Get the moved nodes.
-            response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             
-            ContainerNode nodeA = new ContainerNode(new VOSURI(destinationNode.getUri().toString() + "/" + targetNode.getName()));
+            ContainerNode nodeA = new ContainerNode(new VOSURI(destinationNode.sampleNode.getUri().toString() + "/" + targetNode.sampleNode.getName()));
             response = get(VOSBaseTest.NODE_ENDPOINT, nodeA);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             
@@ -224,10 +169,108 @@ public class MoveContainerNodeTest extends VOSTransferTest
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Delete the node.
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("moveContainerNodeToContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * When the source is a ContainerNode, all its children
+     * (the full contents of the container) SHALL get copied,
+     * i.e. this is a deep recursive copy.
+     */
+    @Test
+    public void moveContainerNodeToContainerNodeUsingLinkNodes()
+    {
+        try
+        {
+            log.debug("moveContainerNodeToContainerNodeUsingLinkNodes");
+
+            if (!supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
+            // Target ContainerNode A.
+            TestNode targetNode = getSampleContainerNode("A");
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child container node B.
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(targetNode.sampleNode.getUri() + "/B"));
+            response = put(VOSBaseTest.NODE_ENDPOINT, nodeAB, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Child data node C.
+            DataNode nodeABC = new DataNode(new VOSURI(nodeAB.getUri() + "/C"));
+            response = put(VOSBaseTest.NODE_ENDPOINT, nodeABC, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Get a destination ContainerNode Z.
+            TestNode destinationNode = getSampleContainerNode("Z");
+            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Do the move without LinkNodes in the paths.
+            Transfer transfer = new Transfer(targetNode.sampleNodeWithLink.getUri(), destinationNode.sampleNodeWithLink.getUri(), false);
+            TransferResult result = doTransfer(transfer);
+
+            // If the service supports LinkNodes and it resolves parent LinkNodes.
+            if (resolvePathNodes)
+            {
+                // Phase should be COMPLETED
+                assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
+
+                // Check node has been moved and old node gone
+                response = get(VOSBaseTest.NODE_ENDPOINT, nodeAB);
+                assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+                response = get(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNodeWithLink);
+                assertEquals("GET response code should be 200", 404, response.getResponseCode());
+
+                // Get the moved nodes.
+                response = get(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNodeWithLink);
+                assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+                ContainerNode nodeA = new ContainerNode(new VOSURI(destinationNode.sampleNodeWithLink.getUri().toString() + "/" + targetNode.sampleNodeWithLink.getName()));
+                response = get(VOSBaseTest.NODE_ENDPOINT, nodeA);
+                assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+                ContainerNode nodeB = new ContainerNode(new VOSURI(nodeA.getUri().toString() + "/B"));
+                response = get(VOSBaseTest.NODE_ENDPOINT, nodeB);
+                assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+                DataNode nodeC = new DataNode(new VOSURI(nodeB.getUri().toString() + "/C"));
+                response = get(VOSBaseTest.NODE_ENDPOINT, nodeC);
+                assertEquals("GET response code should be 200", 200, response.getResponseCode());
+            }
+            else
+            {
+                // Phase should be ERROR
+                assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
+
+                // Get the ErrorSummary.
+                ErrorSummary errorSummary = result.job.getErrorSummary();
+                String message = errorSummary.getSummaryMessage();
+                // TOO what should be the message?
+//                assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
+            }
+
+            // Delete the node.
+            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("moveContainerNodeToContainerNodeUsingLinkNodes passed.");
         }
         catch (Exception unexpected)
         {
@@ -250,70 +293,40 @@ public class MoveContainerNodeTest extends VOSTransferTest
             log.debug("permissionDeniedFault");
 
             // Target ContainerNode A.
-            ContainerNode targetNode = getSampleContainerNode("A");
+            TestNode targetNode = getSampleContainerNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-            // Get a destination LinkNode.
-            LinkNode linkNode = getSampleLinkNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            // Get a destination ContainerNode.
+            TestNode destinationNode = getSampleContainerNode();
+            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
-            // Create a Transfer.
-            Transfer transfer = new Transfer(targetNode.getUri(), linkNode.getUri(), false);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-            
-            // read the response job doc.
-            String xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(xml));
+            // Do the move.
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
-            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
+            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
             // Get the ErrorSummary.
-            ErrorSummary errorSummary = job.getErrorSummary();
+            ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
             assertEquals("ErrorSummary message should be Permission Denied", "Permission Denied", message);
             
             // Get the error endpoint.
-            response = get(location + "/error");
+            response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             
             // Error should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
             
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
@@ -338,79 +351,34 @@ public class MoveContainerNodeTest extends VOSTransferTest
             log.debug("containerNotFoundFault");
 
             // Target ContainerNode A, don't persist.
-            ContainerNode targetNode = getSampleContainerNode("A");
+            TestNode targetNode = getSampleContainerNode("A");
 
-            // Get a destination LinkNode.
-            ContainerNode destinationNode = getSampleContainerNode("Z");
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode, new NodeWriter());
+            // Get a destination ContainerNode.
+            TestNode destinationNode = getSampleContainerNode("Z");
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
-            // Create a Transfer.
-            Transfer transfer = new Transfer(targetNode.getUri(), destinationNode.getUri(), false);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
-            {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
-            }
-
-            // read the response job doc.
-            String xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(xml));
-            assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
-
-            // Run the job.
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("PHASE", "RUN");
-            response = post(location + "/phase", parameters);
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-            
-            // get and read the response job doc.
-            response = get(location);
-            xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            job = reader.read(new StringReader(xml));
+            // Do the move.
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
-            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
+            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
             // Get the ErrorSummary.
-            ErrorSummary errorSummary = job.getErrorSummary();
+            ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
             assertEquals("ErrorSummary message should be Node Not Found", "Node Not Found", message);
             
             // Get the error endpoint.
-            response = get(location + "/error");
+            response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             
             // Error should contain 'NodeNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
             
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("containerNotFoundFault passed.");
@@ -436,64 +404,40 @@ public class MoveContainerNodeTest extends VOSTransferTest
             log.debug("invalidURI");
 
             // Target ContainerNode A.
-            ContainerNode targetNode = getSampleContainerNode("A");
+            TestNode targetNode = getSampleContainerNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-            // Get a destination LinkNode.
-            LinkNode linkNode = getSampleLinkNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            // Get a destination ContainerNode.
+            TestNode destinationNode = getSampleContainerNode();
+            response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-            
-            // Create a Transfer.
-            Transfer transfer = new Transfer(targetNode.getUri(), linkNode.getUri(), false);
 
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-
-            // Follow the redirect.
-            response = get(location);
-            assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-            // read the response job doc.
-            String xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(xml));
+            // Do the move.
+            Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
+            TransferResult result = doTransfer(transfer);
 
             // Phase should be ERROR.
-            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, job.getExecutionPhase());
+            assertEquals("Phase should be ERROR", ExecutionPhase.ERROR, result.job.getExecutionPhase());
             
             // Get the ErrorSummary.
-            ErrorSummary errorSummary = job.getErrorSummary();
+            ErrorSummary errorSummary = result.job.getErrorSummary();
             String message = errorSummary.getSummaryMessage();
             assertEquals("ErrorSummary message should be Duplicate Node", "Duplicate Node", message);
             
             // Get the error endpoint.
-            response = get(location + "/error");
+            response = get(result.location + "/error");
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             
             // Error should contain 'DuplicateNode'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
             
             // Delete the nodes
-            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, targetNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, destinationNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("invalidURI passed.");

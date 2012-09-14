@@ -112,6 +112,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("updateLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode(new URI("www.google.com"));
             
@@ -168,6 +174,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("updateLinkNodeDeleteProperty");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Create a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -230,6 +242,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
 
@@ -273,6 +291,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("updateReadOnlyPermissionDeniedFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Create a ContainerNode.
             LinkNode node = getSampleLinkNode();
@@ -328,6 +352,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         {
             log.debug("nodeNotFoundFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a Node with a nonexistent parent node
             LinkNode node = getSampleLinkNode("/A", new URI("http://www.google.com"));
 
@@ -358,6 +388,12 @@ public class SetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("invalidArgumentFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();

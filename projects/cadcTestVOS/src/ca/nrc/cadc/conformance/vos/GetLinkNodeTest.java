@@ -114,15 +114,21 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Target ContainerNode A.
-            ContainerNode nodeA = getSampleContainerNode("A");
+            TestNode nodeA = getSampleContainerNode("A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, nodeA, new NodeWriter());
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, nodeA.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child container node B.
-            ContainerNode nodeB = new ContainerNode(new VOSURI(nodeA.getUri() + "/B"));
+            ContainerNode nodeB = new ContainerNode(new VOSURI(nodeA.sampleNode.getUri() + "/B"));
             response = put(VOSBaseTest.NODE_ENDPOINT, nodeB, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -132,17 +138,17 @@ public class GetLinkNodeTest extends VOSNodeTest
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
             // Child link node link2B
-            LinkNode link2B = new LinkNode(new VOSURI(nodeA.getUri() + "/link2B"), nodeB.getUri().getURIObject());
+            LinkNode link2B = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2B"), nodeB.getUri().getURIObject());
             response = put(VOSBaseTest.NODE_ENDPOINT, link2B, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
             // Child link node link2C
-            LinkNode link2C = new LinkNode(new VOSURI(nodeA.getUri() + "/link2C"), nodeC.getUri().getURIObject());
+            LinkNode link2C = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2C"), nodeC.getUri().getURIObject());
             response = put(VOSBaseTest.NODE_ENDPOINT, link2C, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
             // Child link node link2www
-            LinkNode link2www = new LinkNode(new VOSURI(nodeA.getUri() + "/link2www"), new URI("http://localhost"));
+            LinkNode link2www = new LinkNode(new VOSURI(nodeA.sampleNode.getUri() + "/link2www"), new URI("http://localhost"));
             response = put(VOSBaseTest.NODE_ENDPOINT, link2www, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -169,7 +175,7 @@ public class GetLinkNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Get and validate link node path /A/link2B/C
-            DataNode alink2BC = new DataNode(new VOSURI(nodeA.getUri().toString() + "/link2B/C"));
+            DataNode alink2BC = new DataNode(new VOSURI(nodeA.sampleNode.getUri().toString() + "/link2B/C"));
             response = get(VOSBaseTest.NODE_ENDPOINT, alink2BC);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
             xml = response.getText();
@@ -184,7 +190,7 @@ public class GetLinkNodeTest extends VOSNodeTest
             reader.read(xml);
 
             // Delete the nodes
-            response = delete(nodeA);
+            response = delete(nodeA.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getLinkNode passed.");
@@ -210,6 +216,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("getMinLinkNode");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -267,6 +279,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getMaxLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
 
@@ -319,6 +337,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("getPropertiesLinkNode");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -373,6 +397,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("getUriOffsetNode");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -430,6 +460,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("getLimitLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
 
@@ -483,6 +519,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
             
@@ -516,6 +558,12 @@ public class GetLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("nodeNotFoundFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Create a Node with a nonexistent parent node
             LinkNode node = getSampleLinkNode("/A/B", new URI("http://www.google.com"));

@@ -71,8 +71,10 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
@@ -112,14 +114,19 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getContainerNode");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode testNode = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(testNode.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
+            // Add a child DataNode.
+            DataNode nodeAB = new DataNode(new VOSURI(testNode.sampleNode.getUri() + "/B"));
+            response = put(VOSBaseTest.NODE_ENDPOINT, nodeAB, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            
             // Get the node from vospace
-            response = get(node);
+            response = get(testNode.sampleNode);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -128,10 +135,32 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Validate against the VOSPace schema.
             NodeReader reader = new NodeReader();
-            reader.read(xml);
+            Node returnedNode = reader.read(xml);
+            assertTrue("Node returned from getContainerNode should be a ContainerNode",
+                        returnedNode instanceof ContainerNode);
+            ContainerNode validatedNode = (ContainerNode) returnedNode;
+
+            // Nodes should have a single Node.
+            assertEquals("Sample Node should have a single child Node", 1, validatedNode.getNodes().size());
+
+            // If the service supports LinkNodes and it resolves parent LinkNodes.
+            if (supportLinkNodes && resolvePathNodes)
+            {
+                // Get the node from vospace
+                response = get(testNode.sampleNodeWithLink);
+                assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+                // Get the response (an XML document)
+                xml = response.getText();
+                log.debug("GET XML:\r\n" + xml);
+
+                // Validate against the VOSPace schema.
+                reader = new NodeReader();
+                reader.read(xml);
+            }
 
             // Delete the node
-            response = delete(node);
+            response = delete(testNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getContainerNode passed.");
@@ -159,10 +188,10 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getMinContainerNode");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode node = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
@@ -170,7 +199,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             parameters.put("detail", "min");
 
             // Get the node from vospace
-            response = get(node, parameters);
+            response = get(node.sampleNode, parameters);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -188,7 +217,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             assertEquals("Node child list should be empty", 0, validatedNode.getNodes().size());
 
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getMinContainerNode passed.");
@@ -215,10 +244,10 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getMaxContainerNode");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode node = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
@@ -226,7 +255,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             parameters.put("detail", "max");
 
             // Get the node from vospace
-            response = get(node, parameters);
+            response = get(node.sampleNode, parameters);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -244,7 +273,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
 
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getMaxContainerNode passed.");
@@ -271,10 +300,10 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getPropertiesContainerNode");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode node = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
@@ -282,7 +311,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             parameters.put("detail", "properties");
 
             // Get the node from vospace
-            response = get(node, parameters);
+            response = get(node.sampleNode, parameters);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -300,7 +329,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
 
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getPropertiesContainerNode passed.");
@@ -330,14 +359,14 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-            ContainerNode nodeA = getSampleContainerNode("/A");
+            TestNode nodeA = getSampleContainerNode("/A");
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(nodeA);
+            WebResponse response = put(nodeA.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node B.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(nodeA.getUri() + "/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(nodeA.sampleNode.getUri() + "/B"));
             response = put(nodeAB);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -382,7 +411,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
             response = delete(nodeAB);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-            response = delete(nodeA);
+            response = delete(nodeA.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getUriOffsetNode passed.");
@@ -412,10 +441,10 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getLimitContainerNode");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode node = getSampleContainerNode();
 
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
@@ -423,7 +452,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             parameters.put("limit", "9");
 
             // Get the node from vospace
-            response = get(node, parameters);
+            response = get(node.sampleNode, parameters);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
@@ -443,7 +472,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             // TODO validate that there are X number of child nodes.
             
             // Delete the node
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("getLimitContainerNode passed.");
@@ -468,14 +497,14 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("permissionDeniedFault");
 
             // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            TestNode node = getSampleContainerNode();
             
             // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: how to get the node without permission to do so?
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 401", 401, response.getResponseCode());
 
             // Response message body should be 'PermissionDenied'
@@ -502,10 +531,10 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = getSampleContainerNode("/A/B");
+            TestNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and get the Node from the VOSpace.
-            WebResponse response = get(nodeAB);
+            WebResponse response = get(nodeAB.sampleNode);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response entity body should contain 'NodeNotFound'

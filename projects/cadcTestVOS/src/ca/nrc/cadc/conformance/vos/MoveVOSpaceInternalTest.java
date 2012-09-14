@@ -69,32 +69,10 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.ByteArrayInputStream;
-import java.io.StringWriter;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -104,11 +82,24 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -130,48 +121,27 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
         super(ASYNC_TRANSFER_ENDPOINT);
     }
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp()
-    {
-    }
-
-    @After
-    public void tearDown()
-    {
-    }
-
     @Test
     public void testSimpleMove()
     {
         try
         {
             log.debug("testSimpleMove");
-
+            fail("update");
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(
                     new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                             new Long(1024).toString()));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,
-                    dataNode, new NodeWriter());
+                    dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
             log.debug("SRC DataNode created");
 
             // Create a container node
-            ContainerNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode,
+            TestNode containerNode = getSampleContainerNode();
+            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -182,8 +152,8 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.getUri(),
-                    containerNode.getUri(), false);
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(),
+                    containerNode.sampleNode.getUri(), false);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -261,19 +231,19 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // check node has been moved
             // old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
-            log.debug("Container node: " + containerNode.getName());
+            log.debug("Container node: " + containerNode.sampleNode.getName());
 
             // new node there
             DataNode movedNode = new DataNode(new VOSURI(
-                    containerNode.getUri() + "/" + dataNode.getName()));
+                    containerNode.sampleNode.getUri() + "/" + dataNode.sampleNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
             response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
@@ -286,7 +256,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
@@ -316,8 +286,8 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             log.debug("SRC DataNode created");
 
             // Create a container node
-            ContainerNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode,
+            TestNode containerNode = getSampleContainerNode();
+            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
@@ -329,7 +299,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
             Transfer transfer = new Transfer(linkNode.getUri(),
-                    containerNode.getUri(), false);
+                    containerNode.sampleNode.getUri(), false);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -411,15 +381,15 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
-            log.debug("Container node: " + containerNode.getName());
+            log.debug("Container node: " + containerNode.sampleNode.getName());
 
             // new node there
             DataNode movedNode = new DataNode(new VOSURI(
-                    containerNode.getUri() + "/" + linkNode.getName()));
+                    containerNode.sampleNode.getUri() + "/" + linkNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
             response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
@@ -432,7 +402,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
 
@@ -453,26 +423,26 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             log.debug("testSimpleMoveWithLinkInPath");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(
                     new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                             new Long(1024).toString()));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,
-                    dataNode, new NodeWriter());
+                    dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
             log.debug("SRC DataNode created");
 
             // Create a container node
-            ContainerNode containerNode = getSampleContainerNode();
-            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode,
+            TestNode containerNode = getSampleContainerNode();
+            response = put(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
                     response.getResponseCode());
             log.debug("DEST ContainerNode created");
             
             // create a link to the container node
-            LinkNode linkNode = getSampleLinkNode(containerNode);
+            LinkNode linkNode = getSampleLinkNode(containerNode.sampleNode);
             response = put(VOSBaseTest.NODE_ENDPOINT, linkNode,
                     new NodeWriter());
             assertEquals("PUT response code should be 200", 200,
@@ -484,7 +454,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            Transfer transfer = new Transfer(dataNode.getUri(),
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(),
                     linkNode.getUri(), false);
 
             // Get the transfer XML.
@@ -563,19 +533,19 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
 
             // check node has been moved
             // old node gone
-            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("GET response code should be 404", 404,
                     response.getResponseCode());
 
-            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = get(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("GET response code should be 200", 200,
                     response.getResponseCode());
 
-            log.debug("Container node: " + containerNode.getName());
+            log.debug("Container node: " + containerNode.sampleNode.getName());
 
             // new node there
             DataNode movedNode = new DataNode(new VOSURI(
-                    containerNode.getUri() + "/" + dataNode.getName()));
+                    containerNode.sampleNode.getUri() + "/" + dataNode.sampleNode.getName()));
             log.debug("Moved node URI: " + movedNode.getUri());
 
             response = get(VOSBaseTest.NODE_ENDPOINT, movedNode);
@@ -588,7 +558,7 @@ public class MoveVOSpaceInternalTest extends VOSTransferTest
                     response.getResponseCode());
 
             // Delete the container
-            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, containerNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200,
                     response.getResponseCode());
             

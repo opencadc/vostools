@@ -108,18 +108,18 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("deleteDataNode");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
 
             // Add DataNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Delete the node.
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             // Try and get the node from vospace
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             log.info("deleteDataNode passed.");
@@ -144,21 +144,21 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("permissionDeniedFault");
 
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
             
             // Add DataNode to the VOSpace.
-            WebResponse response = put(node);
+            WebResponse response = put(node.sampleNode);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: how do you delete a node without permissions?
-            response = delete(node);
+            response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 401", 401, response.getResponseCode());
 
             // Response entity body should contain 'PermissionDenied'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
 
             // Check that the node wasn't created
-            response = get(node);
+            response = get(node.sampleNode);
             assertEquals("GET response code should be 404 for a deleted node", 404, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
@@ -182,10 +182,10 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            DataNode nodeA = getSampleDataNode();
+            TestNode nodeA = getSampleDataNode();
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(nodeA);
+            WebResponse response = delete(nodeA.sampleNode);
             assertEquals("DELETE response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response entity body should contain 'NodeNotFound'
@@ -213,10 +213,10 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode node = getSampleDataNode("/A/B");
+            TestNode node = getSampleDataNode("/A/B");
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(node);
+            WebResponse response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
@@ -235,7 +235,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
      * If a parent node in the URI path is a LinkNode, the service MUST 
      * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
      */
-    @Ignore("Currently not supported")
+//    @Ignore("Currently not supported")
     @Test
     public void linkFoundFault()
     {
@@ -243,14 +243,20 @@ public class DeleteDataNodeTest extends VOSNodeTest
         {
             log.debug("linkFoundFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a DataNode.
-            DataNode node = getSampleDataNode();
+            TestNode node = getSampleDataNode();
             
             // Add DataNode as target to a LinkNode.
-            LinkNode linkNode = getSampleLinkNode("", node.getUri().getURIObject());
+            LinkNode linkNode = getSampleLinkNode("", node.sampleNode.getUri().getURIObject());
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(node);
+            WebResponse response = delete(node.sampleNode);
             assertEquals("DELETE response code should be 400 for a LinkNode in the target node path", 400, response.getResponseCode());
 
             // Response entity body should contain 'LinkFound'

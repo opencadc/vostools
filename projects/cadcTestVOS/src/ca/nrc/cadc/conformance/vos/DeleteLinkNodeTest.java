@@ -107,6 +107,12 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         {
             log.debug("deleteLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a DataNode.
             LinkNode node = getSampleLinkNode();
 
@@ -142,6 +148,12 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("permissionDeniedFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a DataNode.
             LinkNode node = getSampleLinkNode();
@@ -181,6 +193,12 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         {
             log.debug("nodeNotFoundFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a Node that should not exist.
             LinkNode node = getSampleLinkNode();
 
@@ -212,6 +230,12 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         {
             log.debug("containerNotFoundFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a Node path /A/B
             LinkNode node = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
 
@@ -235,13 +259,19 @@ public class DeleteLinkNodeTest extends VOSNodeTest
      * If a parent node in the URI path is a LinkNode, the service MUST 
      * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
      */
-    @Ignore("Currently not supported")
+//    @Ignore("Currently not supported")
     @Test
     public void linkFoundFault()
     {
         try
         {
             log.debug("linkFoundFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();

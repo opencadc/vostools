@@ -87,6 +87,7 @@ import ca.nrc.cadc.vos.View;
 import com.meterware.httpunit.WebResponse;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -131,11 +132,11 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
         try
         {
             log.debug("testPushToVOSpace");
-            
+
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
@@ -143,120 +144,96 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace,view, protocols);
-            
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, view, protocols);
 
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
+            // Start the transfer.
+            TransferResult result = doAsyncTransfer(transfer);
+
+            // Check if the Job was executing.
+            ExecutionPhase phase = result.job.getExecutionPhase();
+            if (phase == ExecutionPhase.EXECUTING)
             {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
+                // Get the Transfer endpoint and make sure it's a valid URL.
+                try
+                {
+                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                }
+                catch (MalformedURLException e)
+                {
+                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                }
             }
-            
-            // read the response job doc.
-            String xml = response.getText();
-            log.debug("Job response from GET: \n\n" + xml);
-
-            // Create a Job from Job XML.
-            JobReader reader = new JobReader();
-            Job job = reader.read(new StringReader(xml));
-            assertEquals("Job pending", ExecutionPhase.PENDING, job.getExecutionPhase());
-            
-            // Run the job.
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("PHASE", "RUN");
-            response = post(location + "/phase", parameters);
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Follow the redirect until phase is EXECUTING, ERROR, or ABORTED.
-            int count = 0;
-            boolean done = false;
-            while (!done)
+            else
             {
-                // Follow the redirect.
-                response = get(location);
-                assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-                // Get the response (an XML document)
-                xml = response.getText();
-                log.debug("GET XML:\r\n" + xml);
-
-                // Get the Job.
-                JobReader jobReader = new JobReader();
-                job = jobReader.read(new StringReader(response.getText()));
-
-                if (job.getExecutionPhase() == ExecutionPhase.EXECUTING)
-                {
-                    // Get the results.
-                    List<Result> results = job.getResultsList();
-                    
-                    // Find id of transferDetails
-                    URI resultUri = null;
-                    for (Result result : results)
-                    {
-                        if (result.getName().equals("transferDetails"))
-                        {
-                            resultUri = result.getURI();
-                            break;
-                        }
-                    }
-                    assertNotNull("transferDetails Result URI not found", resultUri);
-                    
-                    // Get the Transfer document.
-                    response = get(resultUri.toString());
-                    assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-                    // Get the Transfer XML.
-                    xml = response.getText();
-                    log.debug("GET XML:\r\n" + xml);
-
-                    // Create a Transfer from Transfer XML.
-                    TransferReader transferReader = new TransferReader();
-                    transfer = transferReader.read(xml);
-
-                    // Get the Transfer endpoint and make sure it's a valid URL. 
-                    new URL(transfer.getEndpoint(VOS.PROTOCOL_HTTP_PUT));                    
-                    break;
-                }
-
-                if (job.getExecutionPhase() == ExecutionPhase.ERROR || 
-                    job.getExecutionPhase() == ExecutionPhase.ABORTED)
-                {
-                    fail("Job " + job.getExecutionPhase());
-                    break;
-                }
-
-                // Allow 30 seconds the the job to complete.
-                if (count++ > 30)
-                {
-                    fail("Job timeout");
-                    break;
-                }
-
-                // Sleep for a second.
-                Thread.sleep(1000);
+                fail("Unexpected phase " + phase.name());
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
             
             log.info("testPushToVOSpace passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testPushToVOSpaceLinkNode()
+    {
+        try
+        {
+            log.debug("testPushToVOSpaceLinkNode");
+
+            if (!resolveTargetNode)
+            {
+                log.debug("Resolving target LinkNodes not supported, skipping test.");
+                return;
+            }
+
+            // Get a DataNode.
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Create a Transfer.
+            View view = new View(new URI(VOS.VIEW_DEFAULT));
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            Transfer transfer = new Transfer(dataNode.sampleNodeWithLink.getUri(), Direction.pushToVoSpace, view, protocols);
+
+            // Start the transfer.
+            TransferResult result = doAsyncTransfer(transfer);
+
+            // Check if the Job was executing.
+            ExecutionPhase phase = result.job.getExecutionPhase();
+            if (phase == ExecutionPhase.EXECUTING)
+            {
+                // Get the Transfer endpoint and make sure it's a valid URL.
+                try
+                {
+                    new URL(result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                }
+                catch (MalformedURLException e)
+                {
+                    fail("Invalid URL returned " + result.transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
+                }
+            }
+            else
+            {
+                fail("Unexpected phase " + phase.name());
+            }
+
+            // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("testPushToVOSpaceLinkNode passed.");
         }
         catch (Exception unexpected)
         {
@@ -293,91 +270,34 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             log.debug("viewNotSupportedFault");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
             View view = new View(new URI("ivo://cadc.nrc.ca/vospace/view#bogus"));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, view, protocols);
-            
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, view, protocols);
 
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
+            // Start the transfer.
+            TransferResult result = doAsyncTransfer(transfer);
             
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
+            // Job should be in ERROR phase.
+            ExecutionPhase phase = result.job.getExecutionPhase();
+            if (phase == ExecutionPhase.ERROR)
             {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
+                // ErrorSummary should be 'View Not Supported'.
+                assertEquals("View Not Supported", result.job.getErrorSummary().getSummaryMessage());
             }
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-            
-            // Run the job.
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("PHASE", "RUN");
-            response = post(location + "/phase", parameters);
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Follow the redirect until phase is COMPLETED, ERROR, or ABORTED.
-            int count = 0;
-            boolean done = false;
-            while (!done)
+            else
             {
-                // Follow the redirect.
-                response = get(location);
-                assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-                // Get the response (an XML document)
-                String xml = response.getText();
-                log.debug("GET XML:\r\n" + xml);
-
-                // Get the Job.
-                JobReader jobReader = new JobReader();
-                Job job = jobReader.read(new StringReader(response.getText()));
-
-                if (job.getExecutionPhase().equals("COMPLETED") || 
-                    job.getExecutionPhase().equals("ABORTED"))
-                {
-                    fail("Job phase should be ERROR");         
-                    break;
-                }
-
-                if (job.getExecutionPhase().equals("ERROR"))
-                {
-                    // ErrorSummary should be 'View Not Supported'.
-                    assertEquals("View Not Supported", job.getErrorSummary().getSummaryMessage());
-                    break;
-                }
-
-                // Allow 30 seconds the the job to complete.
-                if (count++ > 30)
-                {
-                    fail("Job timeout");
-                    break;
-                }
-
-                // Sleep for a second.
-                Thread.sleep(1000);
+                fail("Job phase should be ERROR, unexpected phase " + phase.name());
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
             
             log.info("viewNotSupportedFault passed.");
@@ -398,90 +318,33 @@ public class AsyncPushToVOSpaceTest extends VOSTransferTest
             log.debug("protocolNotSupportedFault");
 
             // Get a DataNode.
-            DataNode dataNode = getSampleDataNode();
-            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            TestNode dataNode = getSampleDataNode();
+            dataNode.sampleNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode.sampleNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol("http://localhost/path"));
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, protocols);
-            
-            // Get the transfer XML.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            
-            // POST the XML to the transfer endpoint.
-            response = post(sw.toString());
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            Transfer transfer = new Transfer(dataNode.sampleNode.getUri(), Direction.pushToVoSpace, protocols);
 
-            // Get the header Location.
-            String location = response.getHeaderField("Location");
-            assertNotNull("Location header not set", location);
-            
-            // Follow all the redirects.
-            response = get(location);
-            while (303 == response.getResponseCode())
+            // Start the transfer.
+            TransferResult result = doAsyncTransfer(transfer);
+
+            // Job should be in ERROR phase.
+            ExecutionPhase phase = result.job.getExecutionPhase();
+            if (phase == ExecutionPhase.ERROR)
             {
-                location = response.getHeaderField("Location");
-                assertNotNull("Location header not set", location);
-                log.debug("New location: " + location);
-                response = get(location);
+                // ErrorSummary should be 'Protocol Not Supported'.
+                assertEquals("Protocol Not Supported", result.job.getErrorSummary().getSummaryMessage());
             }
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-            
-            // Run the job.
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("PHASE", "RUN");
-            response = post(location + "/phase", parameters);
-            assertEquals("POST response code should be 303", 303, response.getResponseCode());
-
-            // Follow the redirect until phase is COMPLETED, ERROR, or ABORTED.
-            int count = 0;
-            boolean done = false;
-            while (!done)
+            else
             {
-                // Follow the redirect.
-                response = get(location);
-                assertEquals("GET response code should be 200", 200, response.getResponseCode());
-
-                // Get the response (an XML document)
-                String xml = response.getText();
-                log.debug("GET XML:\r\n" + xml);
-
-                // Get the Job.
-                JobReader jobReader = new JobReader();
-                Job job = jobReader.read(new StringReader(response.getText()));
-
-                if (job.getExecutionPhase().equals("COMPLETED") || 
-                    job.getExecutionPhase().equals("ABORTED"))
-                {
-                    fail("Job phase should be ERROR");         
-                    break;
-                }
-
-                if (job.getExecutionPhase().equals("ERROR"))
-                {
-                    // ErrorSummary should be 'Protocol Not Supported'.
-                    assertEquals("Protocol Not Supported", job.getErrorSummary().getSummaryMessage());
-                    break;
-                }
-
-                // Allow 30 seconds the the job to complete.
-                if (count++ > 30)
-                {
-                    fail("Job timeout");
-                    break;
-                }
-
-                // Sleep for a second.
-                Thread.sleep(1000);
+                fail("Job phase should be ERROR, unexpected phase " + phase.name());
             }
 
             // Delete the node
-            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode.sampleNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("protocolNotSupportedFault passed.");

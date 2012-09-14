@@ -112,6 +112,7 @@ public class VOSTestSuite
     
     public static final String baseTestNodeName;
     public static String testSuiteNodeName;
+    public static String testSuiteLinkNodeName;
     public static String userName;
 
 
@@ -134,7 +135,9 @@ public class VOSTestSuite
         DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         userName = "CADCRegtest1";
         testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
+        testSuiteLinkNodeName = userName + "_int-test_link_" + dateFormat.format(Calendar.getInstance().getTime());
         log.debug("VOSTestSuite Node name: " + testSuiteNodeName);
+        log.debug("VOSTestSuite LinkNode name: " + testSuiteLinkNodeName);
 
         baseTestNodeName = generateAlphaNumeric();
     }

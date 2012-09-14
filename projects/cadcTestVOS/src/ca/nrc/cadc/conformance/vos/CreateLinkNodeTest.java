@@ -109,6 +109,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("createLinkNode");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
 
@@ -155,6 +161,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("duplicateNodeFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -209,6 +221,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("invalidURI");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a node.
             LinkNode node = getSampleLinkNode();
 
@@ -242,6 +260,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("typeNotSupportedFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
@@ -278,6 +302,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Get a LinkNode.
             LinkNode node = getSampleLinkNode();
             
@@ -303,8 +333,8 @@ public class CreateLinkNodeTest extends VOSNodeTest
 
     /**
      * If a parent node in the URI path does not exist then the service MUST
-     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
+     * throw a HTTP 404 status code including a ContainerNotFound fault in the entity body.
+     * For example, given the URI path /a/b/c, the service must throw a HTTP 404
      * status code including a ContainerNotFound fault in the entity body if
      * either /a or /a/b do not exist.
      */
@@ -315,12 +345,18 @@ public class CreateLinkNodeTest extends VOSNodeTest
         {
             log.debug("containerNotFoundFault");
 
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
+
             // Create a Node path /A/B
             LinkNode nodeAB = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+            assertEquals("PUT response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
@@ -350,6 +386,12 @@ public class CreateLinkNodeTest extends VOSNodeTest
         try
         {
             log.debug("linkFoundFault");
+
+            if (supportLinkNodes)
+            {
+                log.debug("LinkNodes not supported, skipping test.");
+                return;
+            }
 
             log.info("linkFoundFault passed.");
         }
