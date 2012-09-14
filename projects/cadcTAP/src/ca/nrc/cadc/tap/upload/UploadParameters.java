@@ -69,6 +69,7 @@
 package ca.nrc.cadc.tap.upload;
 
 import ca.nrc.cadc.tap.UploadManager;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.Parameter;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -118,6 +119,7 @@ public class UploadParameters
             throw new UnsupportedOperationException("UPLOAD parameter is missing");
 
         // Check each parameter in the list.
+        log.debug("process: " + parameters.size() + " params");
         for (Parameter parameter : parameters)
         {
             log.debug("parameter: " + parameter);
@@ -133,6 +135,7 @@ public class UploadParameters
             String[] values = parameter.getValue().split(";");
             for (String value : values)
             {
+                log.debug("value: " + value);
                 // Table name and uri or param are comma delimited.
                 String[] tableNameUri = value.split(",");
                 String tableName = validateTableName(parameter, tableNameUri);
@@ -155,6 +158,8 @@ public class UploadParameters
     protected String validateTableName(Parameter parameter, String[] tableNameUri)
         throws UnsupportedOperationException
     {
+        log.debug("validateTableName: " + parameter + " " + StringUtil.toString(tableNameUri));
+        
         String tableName;
         try
         {

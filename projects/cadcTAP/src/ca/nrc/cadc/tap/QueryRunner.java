@@ -233,6 +233,7 @@ public class QueryRunner implements JobRunner
 
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
+            log.debug("job " + job.getID() + ": " + paramList.size() + " parameters");
 
             log.debug("invoking TapValidator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
