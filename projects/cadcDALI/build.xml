@@ -1,0 +1,186 @@
+<!--
+************************************************************************
+*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+*
+*  (c) 2009.                            (c) 2009.
+*  Government of Canada                 Gouvernement du Canada
+*  National Research Council            Conseil national de recherches
+*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+*  All rights reserved                  Tous droits réservés
+*                                       
+*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+*  expressed, implied, or               énoncée, implicite ou légale,
+*  statutory, of any kind with          de quelque nature que ce
+*  respect to the software,             soit, concernant le logiciel,
+*  including without limitation         y compris sans restriction
+*  any warranty of merchantability      toute garantie de valeur
+*  or fitness for a particular          marchande ou de pertinence
+*  purpose. NRC shall not be            pour un usage particulier.
+*  liable in any event for any          Le CNRC ne pourra en aucun cas
+*  damages, whether direct or           être tenu responsable de tout
+*  indirect, special or general,        dommage, direct ou indirect,
+*  consequential or incidental,         particulier ou général,
+*  arising from the use of the          accessoire ou fortuit, résultant
+*  software.  Neither the name          de l'utilisation du logiciel. Ni
+*  of the National Research             le nom du Conseil National de
+*  Council of Canada nor the            Recherches du Canada ni les noms
+*  names of its contributors may        de ses  participants ne peuvent
+*  be used to endorse or promote        être utilisés pour approuver ou
+*  products derived from this           promouvoir les produits dérivés
+*  software without specific prior      de ce logiciel sans autorisation
+*  written permission.                  préalable et particulière
+*                                       par écrit.
+*                                       
+*  This file is part of the             Ce fichier fait partie du projet
+*  OpenCADC project.                    OpenCADC.
+*                                       
+*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+*  you can redistribute it and/or       vous pouvez le redistribuer ou le
+*  modify it under the terms of         modifier suivant les termes de
+*  the GNU Affero General Public        la “GNU Affero General Public
+*  License as published by the          License” telle que publiée
+*  Free Software Foundation,            par la Free Software Foundation
+*  either version 3 of the              : soit la version 3 de cette
+*  License, or (at your option)         licence, soit (à votre gré)
+*  any later version.                   toute version ultérieure.
+*                                       
+*  OpenCADC is distributed in the       OpenCADC est distribué
+*  hope that it will be useful,         dans l’espoir qu’il vous
+*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+*  without even the implied             GARANTIE : sans même la garantie
+*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+*  General Public License for           Générale Publique GNU Affero
+*  more details.                        pour plus de détails.
+*                                       
+*  You should have received             Vous devriez avoir reçu une
+*  a copy of the GNU Affero             copie de la Licence Générale
+*  General Public License along         Publique GNU Affero avec
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+*                                       <http://www.gnu.org/licenses/>.
+*
+*  $Revision: 4 $
+*
+************************************************************************
+-->
+
+
+<!DOCTYPE project>
+<project default="build" basedir=".">
+    <property environment="env" />
+
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+
+    <property name="project"        value="cadcDALI" />
+
+    <property name="cadcUtil"       value="${lib}/cadcUtil.jar" />
+    <property name="cadcUWS"        value="${lib}/cadcUWS.jar" />
+    <property name="cadc"           value="${cadcUtil}:${cadcUWS}" />
+
+    <property name="jdom"           value="${ext.lib}/jdom.jar" />
+    <property name="jdom2"          value="${ext.lib}/jdom2.jar" />
+    <property name="log4j"          value="${ext.lib}/log4j.jar" />
+    <property name="extlib"         value="${jdom2}:${log4j}" />
+
+    <property name="jars"           value="${cadc}:${extlib}" />
+    <property name="runtimeJars"    value="${jars}:${jdom}" />
+
+    <target name="build" depends="compile,xsd">
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
+        </jar>
+    </target>
+
+    <target name="xsd">
+        <copy todir="${build}/class">
+            <fileset dir="src/resources">
+                <include name="**.xsd" />
+            </fileset>
+        </copy>
+    </target>
+
+    <!-- JAR files needed to run the test suite -->
+    <property name="cadcDALI"           value="${build}/lib/${project}.jar" />
+    <property name="junit"              value="${ext.lib}/junit.jar" />
+    <property name="xerces"             value="${ext.lib}/xerces.jar" />
+    <property name="testingJars"        value="${cadcDALI}:${junit}:${xerces}" />
+
+    <!-- Run the test suite -->
+    <target name="test" depends="tables-tests, util-tests, stc-tests" />
+
+    <target name="tables-tests" depends="compile,compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${runtimeJars}:${testingJars}"/>
+            </classpath>
+            <formatter type="plain" usefile="false"/>
+            <test name="ca.nrc.cadc.dali.tables.votable.VOTableReaderWriterTest"/>
+        </junit>
+    </target>
+
+    <target name="util-tests" depends="compile,compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${runtimeJars}:${testingJars}"/>
+            </classpath>
+            <formatter type="plain" usefile="false"/>
+            <test name="ca.nrc.cadc.dali.util.BooleanFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.ByteArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.ByteFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.DoubleArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.DoubleFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.FloatArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.FloatFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.IntArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.IntegerFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.LongArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.LongFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.ShortArrayFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.ShortFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.StringFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.LocalTimestampFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.UTCTimestampFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.PointFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.RegionFormatTest"/>
+        </junit>
+    </target>
+
+    <target name="stc-tests" depends="compile,compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${resources.dir}"/>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${runtimeJars}:${testingJars}"/>
+            </classpath>
+            <formatter type="plain" usefile="false"/>
+            <test name="ca.nrc.cadc.stc.BoxTest"/>
+            <test name="ca.nrc.cadc.stc.CircleTest"/>
+            <test name="ca.nrc.cadc.stc.PolygonTest"/>
+            <test name="ca.nrc.cadc.stc.PositionTest"/>
+            <test name="ca.nrc.cadc.stc.NotTest"/>
+            <test name="ca.nrc.cadc.stc.UnionTest"/>
+            <test name="ca.nrc.cadc.stc.IntersectionTest"/>
+        </junit>
+    </target>
+
+</project>
