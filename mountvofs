@@ -117,16 +117,16 @@ class VOFS(LoggingMixIn, Operations):
         
 
     def access(self, path, mode):
+        """Test for access to the given directory. Use getNode so we have a cache of this info"""
         if path in self.node:
 	   return 0
 	try:
-           if self.client.access(path,mode):
-              return 0
-        except Exception as e:
-           e=FuseOSError(e.errno)
-           e.filename=path
-           e.strerror=e.strerror
-           raise e
+            self.getNode(path)
+            return 0
+        except IOERrror as e:
+            ### re-raise this exception if its not ENOENT
+            if not hasattr(e,'errno') or e.errno != ENOENT :
+                raise e
         return -1
 
     def chmod(self, path, mode):
@@ -549,7 +549,7 @@ class VOFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
         logging.debug("Getting direcotry list for %s " % ( path))
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True,limit=500).getNodeList() ]
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,limit=500,force=not opt.cache_nodes).getNodeList() ]
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
@@ -830,6 +830,7 @@ if __name__ == "__main__":
     parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
     parser.add_option("-d","--debug",action="store_true")
     parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("-w","--warnings",action="store_true")
     parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
@@ -846,6 +847,8 @@ if __name__ == "__main__":
         forground=True
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+    elif opt.warnings:
+        logging.basicConfig(level=logging.WARNING,format="%(asctime)s %(module)s.%(funcName)s %(message)s",filename=opt.log)
     else:
         logging.basicConfig(level=logging.ERROR,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
