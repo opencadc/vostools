@@ -393,6 +393,7 @@ class VOFS(LoggingMixIn, Operations):
         cached one some confusion will occur as the cache can be newer 
         than the vospace stored version..
         """
+	import io
 
 	logging.debug("Openning %s with flags %s" % ( path, flag2mode(flags)))
         # if len(mode)>0:
@@ -436,8 +437,9 @@ class VOFS(LoggingMixIn, Operations):
         ## Cache files are always openned oin RDWR mode with optional create 
 
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
+	fs = io.open(fh,mode='r+b')
 	os.lseek(fh,0,os.SEEK_SET)
-        self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname, 'writing': False}
+        self.fh[fh]={'flags': flags, 'cached': cached, 'fs': fs, 'name':fname, 'writing': False}
 	self.setPath(fh,path)
 
         return fh
@@ -447,10 +449,12 @@ class VOFS(LoggingMixIn, Operations):
         to the desired location.  
 
         """
-        
+
         ## Read from the requested filehandle, which was set during 'open'
         if fh is None:
             raise FuseOSError(EIO)
+        from ctypes import create_string_buffer    
+        buf = create_string_buffer("",size)
 
         import os
         if self.fh[fh]['writing'] :
@@ -469,7 +473,8 @@ class VOFS(LoggingMixIn, Operations):
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             os.lseek(fh,offset,os.SEEK_SET)
 	    logging.debug("sending back %s for %s" % ( str(fh), str(size)))
-            return os.read(fh,size)
+	    buf.value = os.read(fh,size)
+            return buf
 
         # load the file from VOSpace as we might be appending
         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
@@ -479,7 +484,8 @@ class VOFS(LoggingMixIn, Operations):
         vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
         if cacheMD5 is not None and self.fh[fh]['cached'] and cacheMD5['md5'] == vosMD5 :
-            return os.read(fh,size)                
+	    buf.value = os.read(fh, size)
+            return buf
 
         ## get a copy from VOSpace if the version we have is not currnet or cached.
         import thread
@@ -615,16 +621,17 @@ class VOFS(LoggingMixIn, Operations):
         ## remove references to this file handle.
 	while self.fh[fh]['writing']:
 	    time.sleep(READ_SLEEP) 
-        self.fh.pop(fh,None)
-        self.fh.pop(path,None)
-        self.delNode(path)
-        self.delPath(path)
         ##  now close the fh
         try:
             os.close(fh)
         except Exception as e:
             logging.debug(str(e))
             raise FuseOSError(EIO)
+        finally:
+            self.fh.pop(fh,None)
+            self.fh.pop(path,None)
+            self.delNode(path)
+            self.delPath(path)
         ## clear up the cache
         self.clear_cache()
         return 
