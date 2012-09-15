@@ -361,10 +361,10 @@ class FUSE(object):
     
     def read(self, path, buf, size, offset, fip):
         fh = fip.contents if self.raw_fi else fip.contents.fh
-        ret = self.operations('read', path, size, offset, fh)
-        if not ret:
+        data = self.operations('read', path, size, offset, fh)
+        if not data:
             return 0
-        data = create_string_buffer(ret[:size], size)
+        #data = create_string_buffer(ret[:size], size)
         memmove(buf, data, size)
         return size
     
