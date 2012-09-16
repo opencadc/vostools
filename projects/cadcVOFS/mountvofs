@@ -14,6 +14,7 @@ import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
 import sqlite3
+from vos import __version__
 READBUF=2**20
 DAEMON_TIMEOUT = 10
 READ_SLEEP = 1
@@ -454,10 +455,10 @@ class VOFS(LoggingMixIn, Operations):
         if fh is None:
             raise FuseOSError(EIO)
         from ctypes import create_string_buffer    
-        buf = create_string_buffer("",size)
 
         import os
-        if self.fh[fh]['writing'] :
+	with self.rwlock:
+         if self.fh[fh]['writing'] :
 	    logging.debug("checking if cache is done")
             st_size = os.fstat(fh).st_size
             waited = 0
@@ -473,27 +474,33 @@ class VOFS(LoggingMixIn, Operations):
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             os.lseek(fh,offset,os.SEEK_SET)
 	    logging.debug("sending back %s for %s" % ( str(fh), str(size)))
-	    buf.value = os.read(fh,size)
+	    #buf = os.read(fh,size)
+	    buf = create_string_buffer(os.read(fh,size)[:size],size)
             return buf
 
-        # load the file from VOSpace as we might be appending
-        # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
-        # this routine needs good time sych between the OS and the VOSpace... 
-        logging.debug("cache "+str(self.fh[fh]['cached']))
+         # load the file from VOSpace as we might be appending
+         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
+         # this routine needs good time sych between the OS and the VOSpace... 
+         logging.debug("cache "+str(self.fh[fh]['cached']))
                 
-        vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-        cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
-        if cacheMD5 is not None and self.fh[fh]['cached'] and cacheMD5['md5'] == vosMD5 :
-	    buf.value = os.read(fh, size)
+         vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+         cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+         if cacheMD5 is not None and self.fh[fh]['cached'] and cacheMD5['md5'] == vosMD5 :
+	    fs = self.fh[fh]['fs']
+	    fs.seek(offset,os.SEEK_SET)
+	    logging.debug("returning bytes %s starting at  %s" % ( offset, fs.tell()))
+	    #buf = fs.read(size)
+	    buf = create_string_buffer( fs.read(size)[:size], size )
             return buf
 
-        ## get a copy from VOSpace if the version we have is not currnet or cached.
-        import thread
-        if not self.fh[fh]['writing']:
+         ## get a copy from VOSpace if the version we have is not currnet or cached.
+         import thread
+         if not self.fh[fh]['writing']:
             os.fsync(fh)
             os.ftruncate(fh,0)
             self.fh[fh]['writing'] = True
             thread.start_new_thread( self.load_into_cache, (path, int(fh)))
+
         return self.read(path, size, offset, fh)
         
         
@@ -867,6 +874,7 @@ if __name__ == "__main__":
 
     parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
     parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
+    parser.add_option("--version",action="store_true",default=False,help="Print the version (%s)" % ( __version__.version))
     parser.add_option("-d","--debug",action="store_true")
     parser.add_option("-v","--verbose",action="store_true")
     parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
@@ -877,7 +885,13 @@ if __name__ == "__main__":
     parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
     parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
 
+    parser.version = __version__.version
     (opt,args)=parser.parse_args()
+    import sys
+    if opt.version:
+        parser.print_version()
+	sys.exit(0)
+       
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     if opt.debug:
