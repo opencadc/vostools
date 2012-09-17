@@ -3,8 +3,9 @@
 
 from sys import argv, exit, platform
 import time
-from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
+import vos
 import vos.fuse
+from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import tempfile
 from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED
@@ -115,7 +116,7 @@ class VOFS(LoggingMixIn, Operations):
 
     def delNode(self,path,force=False):
         """Delete the references associated with this Node"""
-        if not self.cache_nodes or force or self.node[path].isdir() :
+        if not self.cache_nodes or force :
             self.node.pop(path,None)
             self.attr.pop(path,None)
         
@@ -328,12 +329,23 @@ class VOFS(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
+
+        import os
         logging.debug("getting attributes of %s" % ( path))
+        ## check we should be returning the cache file attributes.
+        if not fh:
+            fh = self.getPath(path)
+        if fh is not None and self.fh[fh].get('cached',False):
+            f = os.fstat(fh)
+            return dict((name, getattr(f, name)) for name in dir(f) if not name.startswith('__'))
+
+        ## not in cache -> add to dictionary of Node attributes if need be
 	if not path in self.attr:
             logging.debug("Node %s not already in attribute list, so retrieving." % ( path))
             try:
-                node=self.client.getNode(path,limit=0)
+                node=self.getNode(path,limit=0)
             except IOError as e:
+                logging.error(str(e))
                 ex=FuseOSError(e.errno)
                 ex.strerror=e.strerror
                 ex.filename=path
@@ -349,9 +361,10 @@ class VOFS(LoggingMixIn, Operations):
             ### so we should access this VOSpace node again.
             #logging.debug("Getting node details for stale node %s" % ( path))
 	    try:
-               node=self.client.getNode(path,limit=0)
+               node=self.getNode(path,limit=0)
 	    except IOError as e:
-               raise FuseOSError(e.errno)
+                logging.error(str(e))
+                raise FuseOSError(e.errno)
             self.attr[path]=node.attr
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
@@ -522,8 +535,7 @@ class VOFS(LoggingMixIn, Operations):
                 if os.write(wh,buf)!=len(buf):
                     raise FuseOSError(EIO)
 		wrote = wrote + len(buf)
-            os.close(wh)
-            os.fsync(fh)
+            os.fsync(wh)
 	    logging.debug("Wrote: %d" % (wrote))
             self.update_md5_db(self.fh[fh]['name'])
             vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
@@ -537,6 +549,7 @@ class VOFS(LoggingMixIn, Operations):
 	    raise e
         finally:
             r.close()
+            os.close(wh)
             self.fh[fh]['writing'] = False
         return 
 
@@ -877,6 +890,7 @@ if __name__ == "__main__":
     parser.add_option("--version",action="store_true",default=False,help="Print the version (%s)" % ( __version__.version))
     parser.add_option("-d","--debug",action="store_true")
     parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("--warning",action="store_true",default=False,help="Print warning level log messages" )
     parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
@@ -895,12 +909,12 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     if opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(thread)d %(module)s.%(funcName)s %(message)s",filename=opt.log)
         forground=True
     elif opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.INFO,format="%(asctime)s %(thread)d vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
     else:
-        logging.basicConfig(level=logging.ERROR,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.ERROR,format="%(asctime)s %(thread)d vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
     if not os.access(opt.certfile,os.F_OK):
