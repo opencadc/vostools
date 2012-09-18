@@ -476,7 +476,7 @@ class VOFS(LoggingMixIn, Operations):
             st_size = os.fstat(fh).st_size
             waited = 0
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
-            while ( st_size < offset + size ):
+            while ( st_size < offset + size and self.fh[fh]['writing'] ):
 		logging.debug("sleeping ....")
                 time.sleep(READ_SLEEP)
 		logging.debug("wake up ....")
@@ -487,9 +487,9 @@ class VOFS(LoggingMixIn, Operations):
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             os.lseek(fh,offset,os.SEEK_SET)
 	    logging.debug("sending back %s for %s" % ( str(fh), str(size)))
-	    #buf = os.read(fh,size)
-	    buf = create_string_buffer(os.read(fh,size)[:size],size)
-            return buf
+	    buf = os.read(fh,size)
+            retsize = len(buf)
+	    return create_string_buffer(buf[:retsize],retsize)
 
          # load the file from VOSpace as we might be appending
          # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
@@ -502,9 +502,9 @@ class VOFS(LoggingMixIn, Operations):
 	    fs = self.fh[fh]['fs']
 	    fs.seek(offset,os.SEEK_SET)
 	    logging.debug("returning bytes %s starting at  %s" % ( offset, fs.tell()))
-	    #buf = fs.read(size)
-	    buf = create_string_buffer( fs.read(size)[:size], size )
-            return buf
+	    buf = fs.read(size)
+            retsize = len(buf)
+	    return create_string_buffer( buf[:retsize], retsize )
 
          ## get a copy from VOSpace if the version we have is not currnet or cached.
          import thread
