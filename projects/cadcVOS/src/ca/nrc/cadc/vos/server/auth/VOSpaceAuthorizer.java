@@ -154,7 +154,7 @@ public class VOSpaceAuthorizer implements Authorizer
         this.allowPartialPaths = allowPartialPaths;
     }
 
-    // this method will only downgrade the state to !readbler and !writable
+    // this method will only downgrade the state to !readable and !writable
     // and will never restore them to true - that is intentional
     private void initState()
     {

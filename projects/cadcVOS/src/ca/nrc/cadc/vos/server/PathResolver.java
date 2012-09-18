@@ -82,6 +82,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.io.FileNotFoundException;
 
 /**
  * Utility class to follow and resolve the target of link nodes in a local vospace.
@@ -168,6 +169,7 @@ public class PathResolver
         return result;
     }
 
+    /*
     public Node resolveWithReadPermissionCheck(VOSURI uri, Node node,
             VOSpaceAuthorizer readAuthorizer,
             boolean resolveLeafNodes)
@@ -190,25 +192,8 @@ public class PathResolver
         }
         return result;
     }
-
-    /**
-     * Used recursively to following the path of a node, resolving link targets
-     * on the way.
-     * 
-     * @param uri
-     * @param readAuthorizer
-     * @return
-     * @throws NodeNotFoundException
-     * @throws LinkingException
-     */
-    private Node doResolve(VOSURI vosuri, 
-            VOSpaceAuthorizer readAuthorizer)
-            throws NodeNotFoundException, LinkingException
-    {
-        Node node = nodePersistence.get(vosuri, true);
-        return doResolve(vosuri, node, readAuthorizer);
-    }
-
+    */
+    
     /**
      *
      * @param vosuri requested path
@@ -218,8 +203,7 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    private Node doResolve(VOSURI vosuri, Node node,
-            VOSpaceAuthorizer readAuthorizer)
+    private Node doResolve(VOSURI vosuri,  VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException
     {
         if (visitCount > visitLimit)
@@ -229,11 +213,20 @@ public class PathResolver
         visitCount++;
         LOG.debug("visit number " + visitCount);
 
+        Node node = null;
         if (readAuthorizer != null)
         {
-            LOG.debug("doing read permission check.");
-            readAuthorizer.getReadPermission(node);
+            try
+            {
+                node = (Node) readAuthorizer.getReadPermission(vosuri.getURIObject());
+            }
+            catch(FileNotFoundException ex)
+            {
+                throw new NodeNotFoundException("not found: " + vosuri);
+            }
         }
+        else
+             node = nodePersistence.get(vosuri, true);
         
         // extract the paths
         String requestedPath = vosuri.getPath();
