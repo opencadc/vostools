@@ -36,6 +36,7 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 
 import static org.easymock.EasyMock.createMock;
 
+import java.net.URI;
 import java.net.URL;
 
 import org.junit.Test;
@@ -59,7 +60,7 @@ public abstract class NodeActionTest<N extends NodeAction>
     private NodePersistence mockNodePersistence =
             createMock(NodePersistence.class);
     private Request mockRequest = createMock(Request.class);
-    private VOSpaceAuthorizer mockAuth = createMock(VOSpaceAuthorizer.class);
+    protected VOSpaceAuthorizer mockAuth = createMock(VOSpaceAuthorizer.class);
     private Reference mockRef = createMock(Reference.class);
     protected ContainerNode mockParentNode = createMock(ContainerNode.class);
     protected VOSURI mockVOS = createMock(VOSURI.class);
@@ -68,12 +69,13 @@ public abstract class NodeActionTest<N extends NodeAction>
 
     protected String nodeName = "child";
     protected String vosURI = "vos://example.com!vopspace/parent/" + nodeName;
+    protected URI vosURIObject;
 
     @Test
     public void performNodeAction() throws Exception
     {
         fakeURL = new URL("http://example/com/foo");
-        
+        vosURIObject = new URI(vosURI);
         getTestSubject().setNodePersistence(mockNodePersistence);
         getTestSubject().setRequest(mockRequest);
         getTestSubject().setVOSpaceAuthorizer(mockAuth);
