@@ -15,7 +15,8 @@ import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
 import sqlite3
-from vos import __version__
+from vos.__version__ import version
+
 READBUF=2**20
 DAEMON_TIMEOUT = 10
 READ_SLEEP = 1
@@ -293,22 +294,28 @@ class VOFS(LoggingMixIn, Operations):
         faster if VOSpace is slow.
         """
 
+      
         logging.debug("force? -> %s path -> %s" % ( force, path))
+	### force if this is a container we've not looked in before
+        if path in self.node:
+            node = self.node[path]
+            if node.isdir() and limit > 0 and not len(node._nodeList) > 0 :
+               force = True
+            if not force:
+               logging.debug("Sending back chached metadata for %s" % ( path))
+	       return node
 
-        if path in self.node and not force:
-            logging.debug("Sending back chached metadata for %s" % ( path))
-            return self.node[path]
 
         ## Pull the node meta data from VOSpace.
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
             node=self.client.getNode(path,limit=limit)
         except OSError as e:
-            logging.debug(str(e))
-            return self.getNode(path.force,limit)
+            logging.error(str(e))
+            return self.getNode(path,force,limit)
         except Exception as e:
-	    logging.debug(str(e))
-	    logging.debug(type(e))
+	    logging.error(str(e))
+	    logging.error(type(e))
             ex=FuseOSError(e.errno)
 	    ex.filename=path
             ex.strerror=e.strerror
@@ -605,7 +612,7 @@ class VOFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
         logging.debug("Getting direcotry list for %s " % ( path))
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True,limit=500).getNodeList() ]
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=not opt.cache_nodes,limit=500).getNodeList() ]
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
@@ -887,7 +894,7 @@ if __name__ == "__main__":
 
     parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
     parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
-    parser.add_option("--version",action="store_true",default=False,help="Print the version (%s)" % ( __version__.version))
+    parser.add_option("--version",action="store_true",default=False,help="Print the version (%s)" % ( version))
     parser.add_option("-d","--debug",action="store_true")
     parser.add_option("-v","--verbose",action="store_true")
     parser.add_option("--warning",action="store_true",default=False,help="Print warning level log messages" )
@@ -899,22 +906,25 @@ if __name__ == "__main__":
     parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
     parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
 
-    parser.version = __version__.version
+    parser.version = version
     (opt,args)=parser.parse_args()
     import sys
     if opt.version:
         parser.print_version()
 	sys.exit(0)
        
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
     if opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(thread)d %(module)s.%(funcName)s %(message)s",filename=opt.log)
+	logLevel = logging.DEBUG
         forground=True
     elif opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="%(asctime)s %(thread)d vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logLevel = logging.INFO
+    elif opt.warning:
+        logLevel = logging.WARNING
     else:
-        logging.basicConfig(level=logging.ERROR,format="%(asctime)s %(thread)d vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logLevel = logging.ERROR
+
+    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s %(message)s"
+    logging.basicConfig(level=logLevel, format=format, filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
     if not os.access(opt.certfile,os.F_OK):
