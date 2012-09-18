@@ -364,6 +364,8 @@ class FUSE(object):
             args.append('-s')
         if kwargs.pop('readonly', False):
 	    args.append('-r')
+        if kwargs.pop('allow_other', False):
+            args.append('-oallow_other')
         kwargs.setdefault('fsname', operations.__class__.__name__)
         args.append('-o')
         args.append(','.join(self._normalize_fuse_options(**kwargs)))

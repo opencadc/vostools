@@ -905,6 +905,7 @@ if __name__ == "__main__":
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
     parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
     parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
+    parser.add_option("--allow_other",action="store_true",default=False,help="Allow all users access to this mountpoint")
 
     parser.version = version
     (opt,args)=parser.parse_args()
@@ -947,12 +948,14 @@ if __name__ == "__main__":
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=opt.readonly,
                     #auto_cache=True,
+                    allow_other=opt.allow_other,
 		    noapplexattr=True,
 	            noappledouble=True,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root, 
                     readonly=opt.readonly,
+                    allow_other=opt.allow_other,
 		    #auto_cache=True,
                     foreground=opt.foreground)
 
