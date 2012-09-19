@@ -198,10 +198,15 @@ public class NodeResource extends BaseResource
                 return new NodeErrorRepresentation(nodeFault);
             }
             
-            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+            // Two versions of authorizer: one that allows partial paths
+            // for link resolution and one that doesn't.
+            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer(false);
+            VOSpaceAuthorizer partialPathVOSpaceAuthorizer = new VOSpaceAuthorizer(true);
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
+            partialPathVOSpaceAuthorizer.setNodePersistence(getNodePersistence());
             
             action.setVOSpaceAuthorizer(voSpaceAuthorizer);
+            action.setPartialPathVOSpaceAuthorizer(partialPathVOSpaceAuthorizer);
             action.setNodePersistence(getNodePersistence());
             action.setVosURI(vosURI);
             action.setNodeXML(getRequestEntity());

@@ -61,6 +61,7 @@ public abstract class NodeActionTest<N extends NodeAction>
             createMock(NodePersistence.class);
     private Request mockRequest = createMock(Request.class);
     protected VOSpaceAuthorizer mockAuth = createMock(VOSpaceAuthorizer.class);
+    protected VOSpaceAuthorizer mockPartialPathAuth = createMock(VOSpaceAuthorizer.class);
     private Reference mockRef = createMock(Reference.class);
     protected ContainerNode mockParentNode = createMock(ContainerNode.class);
     protected VOSURI mockVOS = createMock(VOSURI.class);
@@ -77,6 +78,7 @@ public abstract class NodeActionTest<N extends NodeAction>
         fakeURL = new URL("http://example/com/foo");
         vosURIObject = new URI(vosURI);
         getTestSubject().setNodePersistence(mockNodePersistence);
+        getTestSubject().setPartialPathVOSpaceAuthorizer(mockPartialPathAuth);
         getTestSubject().setRequest(mockRequest);
         getTestSubject().setVOSpaceAuthorizer(mockAuth);
         getTestSubject().setVosURI(mockVOS);

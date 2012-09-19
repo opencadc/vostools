@@ -116,6 +116,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     protected Request request;
     protected Form queryForm;
     protected VOSpaceAuthorizer voSpaceAuthorizer;
+    protected VOSpaceAuthorizer partialPathVOSpaceAuthorizer;
     protected NodePersistence nodePersistence;
     protected VOSURI vosURI;
     protected Representation nodeXML;
@@ -146,6 +147,16 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     public void setVOSpaceAuthorizer(VOSpaceAuthorizer voSpaceAuthorizer)
     {
         this.voSpaceAuthorizer = voSpaceAuthorizer;
+    }
+    
+    /**
+     * Set the authorizer that allows partial paths.
+     * @param partialPathVOSpaceAuthorizer
+     */
+    public void setPartialPathVOSpaceAuthorizer(
+            VOSpaceAuthorizer partialPathVOSpaceAuthorizer)
+    {
+        this.partialPathVOSpaceAuthorizer = partialPathVOSpaceAuthorizer;
     }
     
     /**

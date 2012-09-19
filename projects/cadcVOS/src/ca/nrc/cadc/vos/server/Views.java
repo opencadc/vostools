@@ -263,7 +263,7 @@ public class Views
             String viewNamesString = rb.getString(KEY_VIEW_LIST);
             String[] viewNames = viewNamesString.split(" ");
             
-            log.info("ViewFactory loading views: " + viewNamesString);
+            log.debug("ViewFactory loading views: " + viewNamesString);
             
             for (String viewName : viewNames)
             {

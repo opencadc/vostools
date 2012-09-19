@@ -125,7 +125,7 @@ public class GetNodeAction extends NodeAction
         try
         {
             return pathResolver.resolveWithReadPermissionCheck(vosURI, 
-                    voSpaceAuthorizer, false);
+                    partialPathVOSpaceAuthorizer, false);
         }
         catch (NodeNotFoundException e)
         {
