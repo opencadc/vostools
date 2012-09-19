@@ -284,7 +284,7 @@ public class PathResolver
                 targetURI.getScheme() == null ||
                 !nodeURI.getScheme().equals(targetURI.getScheme()))
         {
-            throw new LinkingException("Unsupported link target");
+            throw new LinkingException("Unsupported link target: " + targetURI);
         }
         
         try
@@ -296,7 +296,7 @@ public class PathResolver
             
             if (nodeAuth == null || targetAuth == null)
             {
-                throw new LinkingException("Non-local VOSpace target.");
+                throw new LinkingException("Non-local VOSpace target: " + targetURI);
             }
             
             nodeAuth = nodeAuth.replace('~', '!');
@@ -305,14 +305,14 @@ public class PathResolver
             // authorities must match
             if (!nodeAuth.equals(targetAuth))
             {                
-                throw new LinkingException("Non-local VOSpace target.");
+                throw new LinkingException("Non-local VOSpace target: " + targetURI);
             }
             
             return returnURI;
         }
         catch (Exception e)
         {
-            throw new LinkingException("Invalid target URI", e);
+            throw new LinkingException("Invalid target URI: " + targetURI, e);
         }
     }
     
