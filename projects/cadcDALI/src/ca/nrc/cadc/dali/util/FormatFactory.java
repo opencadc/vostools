@@ -81,7 +81,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * This factory class implements the mapping of datatypes to VOTable according
+ * to the DALI-1.0 specification.
+ * 
  * @author jburke
  */
 public abstract class FormatFactory

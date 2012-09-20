@@ -68,6 +68,7 @@
 */
 package ca.nrc.cadc.dali.tables.votable;
 
+import ca.nrc.cadc.dali.tables.TableData;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.Position;
@@ -77,7 +78,6 @@ import ca.nrc.cadc.util.Log4jInit;
 import java.io.StringWriter;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.log4j.Level;

@@ -77,5 +77,4 @@ public interface Format<T>
     T parse(String s);
 
     String format(T t);
-
 }
