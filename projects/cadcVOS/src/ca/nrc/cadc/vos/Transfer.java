@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos;
 
 import java.util.List;
+import java.util.ArrayList;
 import org.apache.log4j.Logger;
 
 /**
@@ -100,6 +101,8 @@ public class Transfer
         this.target = target;
         this.direction = direction;
         this.protocols = protocols;
+        if (this.protocols == null)
+            this.protocols = new ArrayList<Protocol>();
     }
 
     /**
@@ -114,6 +117,7 @@ public class Transfer
         this.target = target;
         this.direction = new Direction(destination.getURIObject().toASCIIString());
         this.keepBytes = keepBytes;
+        this.protocols = new ArrayList<Protocol>();
     }
 
     /**
@@ -130,6 +134,8 @@ public class Transfer
         this.direction = direction;
         this.view = view;
         this.protocols = protocols;
+        if (this.protocols == null)
+            this.protocols = new ArrayList<Protocol>();
     }
 
     // complete ctor for use by TransferReader
@@ -141,6 +147,8 @@ public class Transfer
         this.view = view;
         this.protocols = protocols;
         this.keepBytes = keepBytes;
+        if (this.protocols == null)
+            this.protocols = new ArrayList<Protocol>();
     }
     
     /**
