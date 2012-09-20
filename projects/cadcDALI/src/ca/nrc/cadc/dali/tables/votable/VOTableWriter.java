@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.dali.tables.votable;
 
+import ca.nrc.cadc.dali.tables.TableWriter;
 import ca.nrc.cadc.dali.util.Format;
 import ca.nrc.cadc.dali.util.FormatFactory;
 import java.io.BufferedWriter;
@@ -88,9 +89,11 @@ import org.jdom2.output.XMLOutputter;
  *
  * @author pdowler
  */
-public class VOTableWriter 
+public class VOTableWriter implements TableWriter<VOTable>
 {
     private static final Logger log = Logger.getLogger(VOTableWriter.class);
+
+    public static final String CONTENT_TYPE = "text/x-votable+xml";
     
     // VOTable Version number.
     public static final String VOTABLE_VERSION  = "1.2";
@@ -119,6 +122,16 @@ public class VOTableWriter
     public VOTableWriter(boolean binaryTable) 
     {
         this.binaryTable = binaryTable;
+    }
+
+    public String getContentType()
+    {
+        return CONTENT_TYPE;
+    }
+
+    public String getExtension()
+    {
+        return "xml";
     }
 
     /**

@@ -67,73 +67,13 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.dali.tables.votable;
-
-import ca.nrc.cadc.dali.tables.TableData;
-import ca.nrc.cadc.dali.tables.TableModel;
-import java.util.ArrayList;
-import java.util.List;
+package ca.nrc.cadc.dali.tables;
 
 /**
+ *
  * @author pdowler
  */
-public class VOTable implements TableModel
+public interface TableModel 
 {
-    private List<Info> infos = new ArrayList<Info>();
-    private List<TableField> columns = new ArrayList<TableField>();
-
-    private String resourceName;
-    private TableData tableData;
-
-    public VOTable() { }
-
-    @Override
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append(this.getClass().getSimpleName());
-        sb.append("[");
-        sb.append(resourceName);
-        sb.append(",info: ");
-        sb.append(infos.size());
-        sb.append(", columns: ");
-        sb.append(columns.size());
-        if (tableData != null)
-        {
-            sb.append(",");
-            sb.append(tableData.getClass().getName());
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    public List<Info> getInfos()
-    {
-        return infos;
-    }
-
-    public List<TableField> getColumns()
-    {
-        return columns;
-    }
-
-    public String getResourceName()
-    {
-        return resourceName;
-    }
-
-    public void setResourceName(String resourceName)
-    {
-        this.resourceName = resourceName;
-    }
-
-    public TableData getTableData()
-    {
-        return tableData;
-    }
-
-    public void setTableData(TableData tableData)
-    {
-        this.tableData = tableData;
-    }
+    TableData getTableData();
 }

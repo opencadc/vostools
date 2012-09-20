@@ -69,12 +69,9 @@
 
 package ca.nrc.cadc.dali.tables;
 
-import ca.nrc.cadc.dali.tables.votable.TableField;
 import ca.nrc.cadc.uws.Job;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.ResultSet;
-import java.util.List;
 
 /**
  * Interface for classes that write tables in specific formats.
@@ -82,15 +79,8 @@ import java.util.List;
  * @see TableWriterFactory
  * @author pdowler
  */
-public interface TableWriter
+public interface TableWriter<T>
 {
-    /**
-     * Provide the job to the TableWriter.
-     *
-     * @param job
-     */
-    public void setJob(Job job);
-    
     /**
      * Get the usual filename extension for this format.
      * 
@@ -106,36 +96,22 @@ public interface TableWriter
     String getContentType();
 
     /**
-     * The ordered selected items from the query.
-     *
-     * @param fields
-     */
-    void setTableFields(List<TableField> fields);
-    
-    /**
-     * Set additional information or description of the result. The implementation may
-     * include this text in the output (as a comment or wherever such descriptive text
-     * is permitted by the format).
-     * 
-     * @see TapQuery.getInfo()
-     * @param info
-     */
-    void setQueryInfo(String info);
-
-    /**
-     * Write ResultSet to the OutputStream.
+     * Write a TableModel to the OutputStream.
      *
      * @param rs
      * @param out
      * @throws IOException
      */
-    void write(ResultSet rs, OutputStream out)
+    void write(T tm, OutputStream out)
         throws IOException;
 
     /**
-     * Limit number of table rows.
+     * Write a TableModel to the OutputStream.
      *
-     * @param count
+     * @param rs
+     * @param out
+     * @throws IOException
      */
-    void setMaxRowCount(int count);
+    void write(T tm, OutputStream out, Long maxrec)
+        throws IOException;
 }

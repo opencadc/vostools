@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.dali.tables.votable;
+package ca.nrc.cadc.dali.tables;
 
 import java.util.Iterator;
 import java.util.List;
