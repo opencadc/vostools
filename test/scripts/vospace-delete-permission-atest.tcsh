@@ -1,31 +1,23 @@
 #!/bin/tcsh -f
 
-if ( ${?CADC_ROOT} ) then
-    echo "using CADC_ROOT = $CADC_ROOT"
-else
-    set CADC_ROOT = "/usr/cadc/local"
-    echo "using CADC_ROOT = $CADC_ROOT"
+echo "###################"
+if (! ${?CADC_ROOT} ) then
+	set CADC_ROOT = "/usr/cadc/local"
 endif
-set TRUST = "-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true"
-set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=www4.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-if ( ${?1} ) then
-        if ( $1 == "localhost" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.local=true $TRUST"
-        else if ( $1 == "devtest" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=devtest.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "test" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-        else if ( $1 == "rc" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rc.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "rcdev" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        endif
-endif
+echo "using CADC_ROOT = $CADC_ROOT"
 
+if (! ${?VOSPACE_WEBSERVICE} ) then
+	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+else
+	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+endif
+echo "###################"
+echo "THIS TEST TO BE IMPLEMENTED AFTER VCHMOD BECOMES AVAILABLE"
+exit
 set CMD = "java ${LOCAL} -jar ${CADC_ROOT}/lib/cadcVOSClient.jar "
 set CERT =  "--cert=$A/test-certificates/x509_CADCRegtest1.crt  --key=$A/test-certificates/x509_CADCRegtest1.key"
 set CERT1 = "--cert=$A/test-certificates/x509_CADCAuthtest1.crt --key=$A/test-certificates/x509_CADCAuthtest1.key"
-set CERT2 = "--cert=$A/test-certificates/x509_CADCAuthtest2.crt --key=$A/test-certificates/x509_CADCAuthtest2.key"
+set CERT4 = "--cert=$A/test-certificates/x509_CADCAuthtest2.crt --key=$A/test-certificates/x509_CADCAuthtest2.key"
 
 set CRED_CLIENT="java ${LOCAL} -jar ${CADC_ROOT}/lib/cred_wsPubClient.jar"
 

@@ -1,36 +1,24 @@
 #!/bin/tcsh -f
 
 date
-
-if ( ${?CADC_ROOT} ) then
-	echo "using CADC_ROOT = $CADC_ROOT"
-else
+echo "###################"
+if (! ${?CADC_ROOT} ) then
 	set CADC_ROOT = "/usr/cadc/local"
-	echo "using CADC_ROOT = $CADC_ROOT"
 endif
+echo "using CADC_ROOT = $CADC_ROOT"
 
-set TRUST = "-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true"
-set LOCAL = ""
-if ( ${?1} ) then
-        if ( $1 == "localhost" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.local=true $TRUST"
-        else if ( $1 == "devtest" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=devtest.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "test" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-        else if ( $1 == "rc" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rc.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "rcdev" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        endif
+if (! ${?VOSPACE_WEBSERVICE} ) then
+	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+else
+	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
-
+echo "###################"
 ## we cannot feasibly test the --xsv option, but it is here to fiddle with in development
-set LSCMD = "$CADC_ROOT/bin/vls"
-set MKDIRCMD = "$CADC_ROOT/bin/vmkdir"
-set RMCMD = "$CADC_ROOT/bin/vrm"
-set CPCMD = "$CADC_ROOT/bin/vcp"
-set RMDIRCMD = "$CADC_ROOT/bin/vrmdir"
+set LSCMD = "$CADC_ROOT/scripts/vls"
+set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
+set RMCMD = "$CADC_ROOT/scripts/vrm"
+set CPCMD = "$CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
@@ -76,6 +64,7 @@ echo -n "view non-existent node "
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "create private container "
+echo "$MKDIRCMD $CERT $CONTAINER"
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
@@ -110,9 +99,9 @@ echo -n "check inherit certain properties "
 echo "[TODO]"
 
 echo -n "check recursive create (non-existant parents) "
-$MKDIRCMD $CERT $CONTAINER/foo/bar/baz || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/foo/bar/baz > /dev/null || echo " [FAIL]" #TODO add -p option&& exit -1
-echo "[OK]"
+$MKDIRCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null # || echo " [FAIL]" TODO add -p option&& exit -1
+echo "[TODO]"
 
 echo -n "copy file to existing container and non-existent data node "
 $CPCMD $CERT something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
@@ -148,7 +137,7 @@ echo -n "set content-type of existing data node "
 echo " [TODO]"
 
 echo -n "delete existing data node "
-$RMCMD $CERT $CONTAINER/something.png || echo " [FAIL]" && exit -1
+$RMCMD $CERT $CONTAINER/something.png  >& /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view deleted/non-existent data node "
@@ -160,15 +149,15 @@ $RMCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "delete non-empty container "
-$RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
+$RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER/something2.png >& /dev/null && echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "delete empty container "
-$MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
+$MKDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-$RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
+$RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 

@@ -484,11 +484,12 @@ class VOFS(LoggingMixIn, Operations):
             waited = 0
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             while ( st_size < offset + size and self.fh[fh]['writing'] ):
-		logging.debug("sleeping ....")
+		logging.debug("sleeping for %d ..." % (READ_SLEEP))
                 time.sleep(READ_SLEEP)
-		logging.debug("wake up ....")
+		logging.debug("wake up ")
                 waited += READ_SLEEP
                 if waited > DAEMON_TIMEOUT - 3:
+		    logging.debug("Slept for %d, data not ready" % (waited))
                     raise FuseIOError(EIO)
                 st_size = os.fstat(fh).st_size
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
@@ -534,6 +535,7 @@ class VOFS(LoggingMixIn, Operations):
  	    wh=os.open(self.fh[fh]['name'],os.O_WRONLY)
             r=self.client.open(path,mode=os.O_RDONLY,view="data")
             logging.debug("writing to %s " % ( self.fh[fh]['name']))
+            logging.debug("reader %s " % ( str(r)))
 	    wrote = 0
             while True:
                 buf = r.read(READBUF)
@@ -551,6 +553,7 @@ class VOFS(LoggingMixIn, Operations):
 	        logging.debug("vosMD5: %s cacheMD5: %s" % ( vosMD5, cacheMD5['md5']))
                 raise FuseOSError(EIO)
 	    self.fh[fh]['cached'] = True
+	    logging.debug("Finished caching file %s" %  ( str(self.fh)))
         except Exception as e:
             logging.error("ERROR: %s" % (str(e)))
 	    raise e

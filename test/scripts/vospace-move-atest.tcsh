@@ -1,33 +1,25 @@
 #!/bin/tcsh -f
 
-if ( ${?CADC_ROOT} ) then
-    echo "using CADC_ROOT = $CADC_ROOT"
-else
-    set CADC_ROOT = "/usr/cadc/local"
-    echo "using CADC_ROOT = $CADC_ROOT"
-endif
-set TRUST = "-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true"
-set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=www4.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-if ( ${?1} ) then
-        if ( $1 == "localhost" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.local=true $TRUST"
-        else if ( $1 == "devtest" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=devtest.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "test" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-        else if ( $1 == "rc" ) then
-		set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rc.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "rcdev" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        endif
-endif
 
-set LSCMD = "$CADC_ROOT/bin/vls"
-set MKDIRCMD = "$CADC_ROOT/bin/vmkdir"
-set RMCMD = "$CADC_ROOT/bin/vrm"
-set CPCMD = "$CADC_ROOT/bin/vcp"
-set RMDIRCMD = "$CADC_ROOT/bin/vrmdir"
-set MVCMD = "$CADC_ROOT/bin/vmv"
+echo "###################"
+if (! ${?CADC_ROOT} ) then
+	set CADC_ROOT = "/usr/cadc/local"
+endif
+echo "using CADC_ROOT = $CADC_ROOT"
+
+if (! ${?VOSPACE_WEBSERVICE} ) then
+	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+else
+	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+endif
+echo "###################"
+
+set LSCMD = "$CADC_ROOT/scripts/vls"
+set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
+set RMCMD = "$CADC_ROOT/scripts/vrm"
+set CPCMD = "$CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
+set MVCMD = "$CADC_ROOT/scripts/vmv"
 
 set CERT = "--cert=$A/test-certificates/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$A/test-certificates/x509_CADCAuthtest1.pem"
@@ -163,7 +155,8 @@ echo -n " verify "
 echo " [TODO]"
 
 echo -n "test move container into container (pass)"
-$MVCMD $CERT $CONTAINER/a $CONTAINER/d > /dev/null || echo " [FAIL]" && exit -1
+echo "$MVCMD $CERT $CONTAINER/a $CONTAINER/d"
+$MVCMD $CERT $CONTAINER/a $CONTAINER/d >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/d/a > /dev/null || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER/d/a/aa > /dev/null || echo " [FAIL]" && exit -1
@@ -171,13 +164,13 @@ $LSCMD $CERT $CONTAINER/d/a/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "setup: move container back"
-$MVCMD $CERT $CONTAINER/d/a $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/d/a $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "test move container with new name (pass)"
-$MVCMD $CERT $CONTAINER/a $CONTAINER/d/x > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a $CONTAINER/d/x >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/d/x > /dev/null || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER/d/x/aa > /dev/null || echo " [FAIL]" && exit -1
@@ -185,31 +178,31 @@ $LSCMD $CERT $CONTAINER/d/x/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "setup: move container back"
-$MVCMD $CERT $CONTAINER/d/x $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/d/x $CONTAINER/a >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "test move file into container (pass)"
-$MVCMD $CERT $CONTAINER/a/aa/aaa $CONTAINER/d > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a/aa/aaa $CONTAINER/d >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/d/aaa > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "test move file with new name"
-$MVCMD $CERT $CONTAINER/d/aaa $CONTAINER/a/aa/bbb > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/d/aaa $CONTAINER/a/aa/bbb >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a/aa/bbb > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "test rename file"
-$MVCMD $CERT $CONTAINER/a/aa/bbb $CONTAINER/a/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a/aa/bbb $CONTAINER/a/aa/aaa >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "move a vos container to local file system (fail)"
-$MVCMD $CERT $CONTAINER/a notused.txt > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a notused.txt >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
@@ -222,9 +215,9 @@ echo " [TODO]"
 
 echo -n "move a local directory to vos (fail)"
 mkdir testdir
-$MVCMD $CERT testdir $CONTAINER/a > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT testdir $CONTAINER/a >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT $CONTAINER/a/testdir > /dev/null && echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/a/testdir >& /dev/null && echo " [FAIL]" && exit -1
 rmdir testdir
 echo " [OK]"
 
@@ -236,7 +229,7 @@ echo " [TODO]"
 
 echo -n "do a local file system move (fail--unsupported)"
 cp -f something.png something2.png
-$MVCMD $CERT something2.png something3.png > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT something2.png something3.png >& /dev/null && echo " [FAIL]" && exit -1
 rm something2.png
 echo " [OK]"
 

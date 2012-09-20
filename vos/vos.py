@@ -20,10 +20,7 @@ from __version__ import version
 BUFSIZE=8388608
 #BUFSIZE=8192
 
-SERVER="www.cadc.hia.nrc.gc.ca"
-### SERVER="test.cadc.hia.nrc.gc.ca"
-### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-### SERVER="scapa.cadc.dao.nrc.ca"
+SERVER=os.getenv('VOSPACE_WEBSERVICE', 'www.cadc.hia.nrc.gc.ca')
 
 class urlparse:
     """Break the URL into parts.
@@ -155,7 +152,7 @@ class Node:
         if node is a string then create a node named node of nodeType with properties
         """
 
-        if type(node)==str:
+        if type(node)==unicode or type(node)==str:
             node=self.create(node,nodeType,properties,subnodes=subnodes)
 
         if node is None:
@@ -930,7 +927,7 @@ class Client:
         ET.SubElement(transferXML,"direction").text = direction
         ET.SubElement(transferXML,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
         ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
-        logging.debug(ET.tostring(transferXML))
+        logging.debug("Transfer XML doc: %s" % (ET.tostring(transferXML)))
         url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
         con = VOFile(url, self.conn, method = "POST", size=None)
         con.write(ET.tostring(transferXML)) 
@@ -938,7 +935,7 @@ class Client:
         F = ET.parse(con)
 	logging.debug(str(F))
         P = F.find(Node.PROTOCOL)
-        logging.debug(str(P))
+        logging.debug("Transfer protocol: %s" % (str(P)))
         if P is None:
             return None
         return P.findtext(Node.ENDPOINT)

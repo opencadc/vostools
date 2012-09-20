@@ -44,10 +44,10 @@
 <target name="test_executable" depends="compile">
     <echo message="test ${build}/lib using ${python.executable}"/>
     <apply executable="${python.executable}"
-           dir="test"
+           dir="vos/test"
            failonerror="true">
         <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
-        <fileset dir="test" includes="test*.py"/>
+        <fileset dir="vos/test" includes="test*.py"/>
     </apply>
 </target>
 
