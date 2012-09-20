@@ -2,35 +2,25 @@
 
 date
 
-if ( ${?CADC_ROOT} ) then
-	echo "using CADC_ROOT = $CADC_ROOT"
-else
+echo "###################"
+if (! ${?CADC_ROOT} ) then
 	set CADC_ROOT = "/usr/cadc/local"
-	echo "using CADC_ROOT = $CADC_ROOT"
 endif
+echo "using CADC_ROOT = $CADC_ROOT"
 
-set TRUST = "-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true"
-set LOCAL = ""
-if ( ${?1} ) then
-        if ( $1 == "localhost" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.local=true $TRUST"
-        else if ( $1 == "devtest" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=devtest.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "test" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
-        else if ( $1 == "rc" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rc.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        else if ( $1 == "rcdev" ) then
-                set LOCAL = "-Dca.nrc.cadc.reg.client.RegistryClient.host=rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca $TRUST"
-        endif
+if (! ${?VOSPACE_WEBSERVICE} ) then
+	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+else
+	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
+echo "###################"
 
-set LSCMD = "$CADC_ROOT/bin/vls"
-set MKDIRCMD = "$CADC_ROOT/bin/vmkdir"
-set RMCMD = "$CADC_ROOT/bin/vrm"
-set CPCMD = "$CADC_ROOT/bin/vcp"
-set RMDIRCMD = "$CADC_ROOT/bin/vrmdir"
-set LNCMD = "$CADC_ROOT/bin/vln"
+set LSCMD = "$CADC_ROOT/scripts/vls"
+set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
+set RMCMD = "$CADC_ROOT/scripts/vrm"
+set CPCMD = "$CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
+set LNCMD = "$CADC_ROOT/scripts/vln"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 set CERT2 = " --cert=$A/test-certificates/x509_CADCAuthtest1.pem"
@@ -47,12 +37,12 @@ set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
 set CONTAINER = $BASE/$TIMESTAMP
 
 echo -n "** checking base URI"
-$LSCMD -v $CERT $BASE > /dev/null
+$LSCMD -v $CERT $BASE >& /dev/null
 if ( $status == 0) then
 	echo " [OK]"
 else
 	echo -n ", creating base URI"
-        $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+        $MKDIRCMD $CERT $BASE >& /dev/null || echo " [FAIL]" && exit -1
 	echo " [OK]"
 endif
 echo -n "** setting home and base to public, no groups"
@@ -78,8 +68,7 @@ $CPCMD $CERT something.png $CONTAINER/target/something.png || echo " [FAIL]" && 
 echo " [OK]"
 
 echo -n "create link to target container"
-echo "$LNCMD $CERT $CONTAINER/target $CONTAINER/clink"
-$LNCMD $CERT $CONTAINER/target $CONTAINER/clink > /dev/null || echo " [FAIL]" && exit -1
+$LNCMD $CERT $CONTAINER/target $CONTAINER/clink >& /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link to get the file"
@@ -87,11 +76,11 @@ $CPCMD $CERT $CONTAINER/clink/something.png /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link without read permission and fail"
-$CPCMD $CERT2 $CONTAINER/clink/something.png /tmp && echo " [FAIL]" && exit -1
-echo " [OK]"
+#TODO when vchmod implemented $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp && echo " [FAIL]" && exit -1
+echo " [TODO]"
  
 echo -n "create link to target file"
-$LNCMD $CERT $CONTAINER/dlink $CONTAINER/target/something.png > /dev/null || echo " [FAIL]" && exit -1
+$LNCMD $CERT $CONTAINER/target/something.png $CONTAINER/dlink > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link to get the file"
@@ -103,7 +92,7 @@ $LNCMD $CERT vos://unknown.authority~vospace/unknown $CONTAINER/e1link > /dev/nu
 echo " [OK]"
 
 echo -n "Follow the invalid link and fail"
-$CPCMD $CERT $CONTAINER/e1link/somefile /tmp && echo " [FAIL]" && exit -1
+$CPCMD $CERT $CONTAINER/e1link/somefile /tmp >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "create link to unknown scheme in URI"
@@ -111,7 +100,7 @@ $LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink > /dev/
 echo " [OK]"
 
 echo -n "Follow the invalid link and fail"
-$CPCMD $CERT $CONTAINER/e2link/somefile /tmp && echo " [FAIL]" && exit -1
+$CPCMD $CERT $CONTAINER/e2link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
  
 echo -n "create link to external http URI"
@@ -119,7 +108,7 @@ $LNCMD $CERT http://www.google.ca $CONTAINER/e3link > /dev/null || echo " [FAIL]
 echo " [OK]"
  
 echo -n "Follow the invalid link and fail"
-$CPCMD $CERT $CONTAINER/e3link/somefile /tmp && echo " [FAIL]" && exit -1
+$CPCMD $CERT $CONTAINER/e3link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "copy file to target through link"
