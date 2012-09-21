@@ -520,13 +520,14 @@ class Node:
 class VOFile:
     """A class for managing http connecctions"""
     
-    def __init__(self,URL,connector,method,size=None):
+    def __init__(self,URL,connector,method,size=None, followRedirect=True):
         self.closed=True
         self.resp=503
         self.connector=connector
         self.httpCon=None
         self.timeout=-1
         self.size=size
+        self.followRedirect = followRedirect
 	self.name=os.path.basename(URL)
         self._fpos=0
         self.open(URL,method)
@@ -668,11 +669,18 @@ class VOFile:
             raise IOError(errno.ENFILE,self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location',None)
+            logging.debug("Got redirect URL: %s" % ( URL))
+	    self.url = URL
             if not URL:
+                logging.debug("Raising error?")
                 raise IOError(errno.ENOENT,"No Location on redirect",self.url)
-            self.open(URL,"GET")
-            logging.debug("doing a read on the redirected URL:  %s" % (URL))
-            return self.read(size)
+            if self.followRedirect:
+                self.open(URL,"GET")
+                logging.debug("Following redirected URL:  %s" % (URL))
+                return self.read(size)
+            else:
+                logging.debug("Got url:%s from redirect but not following" % ( self.url))
+                return self.url
         elif self.resp.status == 503:
             ## try again in Retry-After seconds or fail
             logging.error("Got 503: server busy on %s" % (self.url))
@@ -928,17 +936,43 @@ class Client:
         ET.SubElement(transferXML,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
         ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
         logging.debug("Transfer XML doc: %s" % (ET.tostring(transferXML)))
-        url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
-        con = VOFile(url, self.conn, method = "POST", size=None)
+        url = "%s://%s%s" % ( self.protocol, SERVER, Client.VOTransfer)
+        con = VOFile(url, self.conn, method = "POST", followRedirect=False)
         con.write(ET.tostring(transferXML)) 
-        #logging.debug(str(con))
+        transURL = con.read()
+        logging.debug("Got back %s from trasnfer " % ( con))
+        con = VOFile(transURL, self.conn, method = "GET", followRedirect=True)
         F = ET.parse(con)
-	logging.debug(str(F))
+	
         P = F.find(Node.PROTOCOL)
         logging.debug("Transfer protocol: %s" % (str(P)))
         if P is None:
-            return None
+            self.getTransferError(transURL, uri)
+            raise OSError(errno.EBUSY)
         return P.findtext(Node.ENDPOINT)
+
+    def getTransferError(self,url, uri):
+	"""Follow a transfer URL to the Error message"""
+        import re
+        match = re.match('(.*)/results/transferDetails',url)
+        if match is None:
+            raise OSError(errno.ENOENT,"Bad Error response for VOSpace")
+        errorURL = match.group(1)+"/error"
+	con = VOFile(errorURL, self.conn, method = "GET")
+	errorMessage = con.read()
+	logging.debug("Got transfer error %s on URI %s" % ( errorMessage, uri))
+	import errno
+	errorCodes = { 'NodeNotFound': errno.ENOENT,
+                       'PermissionDenied': errno.EACCES,
+                       'OperationNotSupported': errno.EOPNOTSUPP,
+                       'InternalFault': errno.EFAULT,
+                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
+                       'ViewNotSupported': errno.ENOSYS,
+                       'InvalidArgument': errno.EINVAL,
+                       'InvalidURI': errno.EFAULT,
+                       'InvalidData': errno.EOPNOTSUPP,
+                       'TransferFailed': errno.EIO }
+        raise OSError(errorCodes.get(errorMessage,errno.ENOENT), "%s: %s" % ( uri, errorMessage)) 
 
                     
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None,size=None):
