@@ -97,7 +97,7 @@ class VOFS(LoggingMixIn, Operations):
         except Exception as e:
            e=FuseOSError(e.errno)
            e.filename=path
-           e.strerror=e.strerror
+           e.strerror=getattr(e,'strerror','failed while making mount')
            raise e
 
         self.rwlock = Lock()
@@ -131,7 +131,7 @@ class VOFS(LoggingMixIn, Operations):
         except Exception as e:
            e=FuseOSError(e.errno)
            e.filename=path
-           e.strerror=e.strerror
+           e.strerror=getattr(e,'strerror','failed whilel checking access on %s' %(path))
            raise e
         return -1
 
@@ -166,18 +166,18 @@ class VOFS(LoggingMixIn, Operations):
             ## if node.chmod returns false then no changes were made.
 	    try:
                self.client.update(node)
-               self.getNode(path)
+               self.getNode(path, force=True)
             except Exception as e:
                e=FuseOSError(e.errno)
                e.filename=path
-               e.strerror=e.strerror
+               e.strerror=getattr(e,'strerror','failed to chmod on %s' %(path))
                raise e
 
         # Need to also update the cache properties.
         fname=os.path.normpath(self.cache_dir+path)
         if os.access(fname,os.F_OK):
             os.chmod(fname,mode)
-            
+        
 
 
         
@@ -196,19 +196,19 @@ class VOFS(LoggingMixIn, Operations):
                 node = self.getNode(path)
                 parent=  self.getNode(os.path.dirname(path))
 
-                # Here I force inheritance of group settings. 
+                # Force inheritance of group settings. 
                 node.groupread = parent.groupread
                 node.groupwrite = parent.groupwrite
                 if node.chmod(flags):
                     ## chmod returns True if the mode changed but doesn't do update.
                     self.client.update(node)
-
+                    node = self.getNode(path,force=True)
+                
             except Exception as e:
-                logging.debug(str(e))
-                logging.debug("Error trying to create Node %s" %(path))
-                f=FuseOSError(e.errno)
-                f.strerror=e.strerror
-                f.message=e.strerror
+                logging.error(str(e))
+                logging.error("Error trying to create Node %s" %(path))
+                f=FuseOSError(getattr(e,'errno',EIO))
+                f.strerror=getattr(e,'strerror','failed to create %s' %(path))
                 raise f
 
         ## now we can just open the file in the usual way and return the handle
@@ -254,7 +254,10 @@ class VOFS(LoggingMixIn, Operations):
                 success=True
             elif loopCount > 3:
                 logging.error("Failed to write to vospace during nodeflush")
-                raise FuseOSError(EIO)
+                ex = FuseOSError(EIO)
+                ex.strerror = "Failed while flushing to VOSpace"
+                ex.filename = path
+                raise ex
             else:
                 loopCount += 1
         self.delNode(path,force=True)
@@ -310,15 +313,17 @@ class VOFS(LoggingMixIn, Operations):
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
             node=self.client.getNode(path,limit=limit)
-        except OSError as e:
-            logging.error(str(e))
-            return self.getNode(path,force,limit)
+        #except OSError as e:
+        #    ex = FuseOSError(e.errno)
+        #    ex.strerror = e.s
+        #    raise FuseOSError(e.errno,e.message)
+        #    return self.getNode(path,force,limit)
         except Exception as e:
 	    logging.error(str(e))
 	    logging.error(type(e))
             ex=FuseOSError(e.errno)
 	    ex.filename=path
-            ex.strerror=e.strerror
+            ex.strerror=getattr(e,'strerror','Error getting %s' % (path))
             raise ex
 
         self.node[path]=node
@@ -354,7 +359,7 @@ class VOFS(LoggingMixIn, Operations):
             except IOError as e:
                 logging.error(str(e))
                 ex=FuseOSError(e.errno)
-                ex.strerror=e.strerror
+                ex.strerror=getattr(e,'strerror','failed to get attributes for %s' %(path))
                 ex.filename=path
                 raise ex
 	    self.attr[path]=node.attr
@@ -368,10 +373,12 @@ class VOFS(LoggingMixIn, Operations):
             ### so we should access this VOSpace node again.
             #logging.debug("Getting node details for stale node %s" % ( path))
 	    try:
-               node=self.getNode(path,limit=0)
+                node=self.getNode(path,limit=0)
 	    except IOError as e:
                 logging.error(str(e))
-                raise FuseOSError(e.errno)
+                ex = FuseOSError(e.errno)
+                ex.strerror = getattr(e,'strerror','failed to get attributes for %s' %(path))
+                raise ex
             self.attr[path]=node.attr
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
@@ -393,14 +400,16 @@ class VOFS(LoggingMixIn, Operations):
         """Create a container node in the VOSpace at the correct location.
 
         set the mode after creation. """
-        try:
+        #try:
+        if 1==1:
            self.client.mkdir(path)
            self.chmod(path,mode)
-        except Exception as e:
-           ex=FuseOSError(e.errno)
-           ex.filename=path
-           ex.strerror=e.strerror
-           raise ex
+        #except Exception as e:
+	#   logging.error(str(e))
+        #   ex=FuseOSError(e.errno)
+        #   ex.filename=path
+        #   ex.strerror=e.strerror
+        #   raise ex
         return
 
 
@@ -435,7 +444,7 @@ class VOFS(LoggingMixIn, Operations):
                 th=os.open(fname,os.O_CREAT | os.O_RDWR)
             except OSError as e:
                 e=FuseOSError(e.errno)
-                e.strerror=e.strerror
+                e.strerror=getattr(e,'strerror','failed on open of %s' % ( path))
                 e.message="Not able to write cache (Permission denied: %s)" % ( fname) 
                 raise e
             os.close(th)
@@ -556,7 +565,9 @@ class VOFS(LoggingMixIn, Operations):
 	    logging.debug("Finished caching file %s" %  ( str(self.fh)))
         except Exception as e:
             logging.error("ERROR: %s" % (str(e)))
-	    raise e
+            ex = FuseOSError(e.errno)
+            ex.strerror = getattr(e,'strerror','failed while reading from %s' %(path))
+	    raise ex
         finally:
             r.close()
             os.close(wh)
@@ -655,8 +666,10 @@ class VOFS(LoggingMixIn, Operations):
         try:
             os.close(fh)
         except Exception as e:
+            ex = FuseOSError(getattr(e,'errno',EIO))
+            ex.strerror = getattr(ex,'strerror','failed while closing %s' %(path))
             logging.debug(str(e))
-            raise FuseOSError(EIO)
+            raise ex
         finally:
             self.fh.pop(fh,None)
             self.fh.pop(path,None)
@@ -857,9 +870,11 @@ class VOFS(LoggingMixIn, Operations):
         if os.access(fname,os.W_OK):
 	    logging.debug("Setting access times on cached version at location %s" % ( fname))
             try:
-              os.utime(fname,times)
+                os.utime(fname,times)
             except Exception as e:
-              raise e
+                ex = FuseOSError(getattr(e,'errno',EIO))
+                ex.strerror = getattr(e,'strerror','failed to set times on %s' %(path))
+                raise ex
         logging.debug("Attempting to set the st_mtime and st_atime attributes")
         self.getattr(path)['st_mtime']=times[1]
         self.getattr(path)['st_atime']=times[0]
@@ -874,7 +889,7 @@ class VOFS(LoggingMixIn, Operations):
                 self.read(path,fh=fh)
             except IOError as e:
                 f=FuseOSError(e.errno)
-                f.strerror=e.strerror
+                f.strerror=getattr(e,'strerror','failed during write of %s' %(path))
                 raise f
 
         ## Update the access/mod times and delete the md5 from the cache db
