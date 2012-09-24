@@ -14,6 +14,7 @@ usage="""
 parser=optparse.OptionParser(usage)
 parser.add_option("-v","--verbose",action="store_true")
 parser.add_option("-d","--debug",action="store_true")
+parser.add_option("-p",action="store_true",help="Create intermediate directories as required.")
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 
 (opt,args)=parser.parse_args()
@@ -24,7 +25,7 @@ if opt.verbose:
 elif opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="vmkdir:%(module)s.%(funcName)s %(message)s")
 else:
-    logging.basicConfig(level=logging.ERROR,format="vmkdir: %(message)s")
+    logging.basicConfig(level=logging.CRITICAL,format="vmkdir: %(message)s")
 
 
 if len(args)>1:
@@ -40,7 +41,18 @@ except Exception as e:
 
 
 try:
-    client.mkdir(args[0])	
+    dirNames=[]
+    thisDir = args[0]
+    if opt.p:
+        while not client.access(thisDir):
+	    dirNames.append(os.path.basename(thisDir))
+	    thisDir = os.path.dirname(thisDir)
+        while len(dirNames) > 0:
+    	    thisDir = os.path.join(thisDir,dirNames.pop())
+            client.mkdir(thisDir)
+    else:
+	client.mkdir(thisDir)
 except Exception as e:
-      logging.error(str(e))
+        logging.error(str(e))
+        sys.exit(-getattr(e,'errno',1))
 
