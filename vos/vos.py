@@ -911,11 +911,15 @@ class Client:
         ET.SubElement(transfer,"keepBytes").text="false"
 
         url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
-        con=self.open(srcURI,URL=url,mode=os.O_APPEND,size=len(ET.tostring(transfer)))
+        con = VOFile(url, self.conn, method = "POST" ,followRedirect=False)
         con.write(ET.tostring(transfer))
-        con.read()
-        if  con.resp.status==200:
-           return True
+        transURL = con.read()
+        if  not self.getTransferError(transURL, srcURI):
+            #con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
+            #s = con.read()
+            # logging.debug("response on move: %s" %( s))
+            ### monitor the transfer URL for result status
+            return True
         return  False
 
     def _get(self,uri):
@@ -953,14 +957,6 @@ class Client:
 
     def getTransferError(self,url, uri):
 	"""Follow a transfer URL to the Error message"""
-        import re
-        match = re.match('(.*)/results/transferDetails',url)
-        if match is None:
-            raise OSError(errno.ENOENT,"Bad Error response for VOSpace")
-        errorURL = match.group(1)+"/error"
-	con = VOFile(errorURL, self.conn, method = "GET")
-	errorMessage = con.read()
-	logging.debug("Got transfer error %s on URI %s" % ( errorMessage, uri))
 	import errno
 	errorCodes = { 'NodeNotFound': errno.ENOENT,
                        'PermissionDenied': errno.EACCES,
@@ -972,6 +968,24 @@ class Client:
                        'InvalidURI': errno.EFAULT,
                        'InvalidData': errno.EOPNOTSUPP,
                        'TransferFailed': errno.EIO }
+        import re
+        match = re.match('(.*)/results/transferDetails',url)
+        if match is None:
+            raise OSError(errno.ENOENT,"Bad response for VOSpace")
+        phaseURL = match.group(1)+"/phase"
+        while VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
+            time.sleep(1.5)
+        status = VOFile(phaseURL, self.conn, method="GET",followRedirect=False).read()
+        logging.debug("Phase:  %s" % ( status))
+        if status in ['COMPLETED']:
+            return False
+        if status in ['HELD' ,'SUSPENDED', 'ABORTED']:
+            ## requeue the job and continue to monitor for completion.
+            raise OSError("UWS status: %s" % (status), eerno.EFAULT)
+        errorURL = match.group(1)+"/error"
+	con = VOFile(errorURL, self.conn, method = "GET")
+	errorMessage = con.read()
+	logging.debug("Got transfer error %s on URI %s" % ( errorMessage, uri))
         raise OSError(errorCodes.get(errorMessage,errno.ENOENT), "%s: %s" % ( uri, errorMessage)) 
 
                     
