@@ -7,7 +7,7 @@ import time
 import optparse, os, sys, logging
 
 usage="""
-	vrm vos:/root/node   -- deletes a data node
+	vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode
 """
 
 
@@ -20,9 +20,12 @@ parser.add_option("--certfile",help="location of your CADC security certificate 
 
 
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
-if opt.debug:
-    logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
+    logging.basicConfig(level=logging.INFO,format="vmv: %(message)s")
+elif opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="vmv: %(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="vmv: %(message)s")
+
 
 
 try:
@@ -37,5 +40,6 @@ dest = args[1]
 try:
     client.move(source,dest)
 except Exception as e:
-    logging.error("Cannot move %s to %s: %s" % (source, dest, (str(e))))
+    logging.error(str(e))
+    #logging.error("Cannot move %s to %s: %s" % (source, dest, (str(e))))
     sys.exit(-1)
