@@ -169,6 +169,8 @@ public class NodeDAO
         boolean limitWithTop;
         boolean fileMetadataWritable;
 
+        public String deltaIndexName;
+
         /**
          * Constructor for specifying the table where Node(s) and NodeProperty(s) are
          * stored.
@@ -1426,10 +1428,10 @@ public class NodeDAO
      */
     List<NodeSizePropagation> getOutstandingPropagations(int limit)
     {
-        log.debug("getOutstandingPropagations (limit " + limit + ")");
         try
         {
             String sql = this.getFindOutstandingPropagationsSQL(limit);
+            log.debug("getOutstandingPropagations (limit " + limit + "): " + sql);
             NodeSizePropagationExtractor propagationExtractor = new NodeSizePropagationExtractor();
             List<NodeSizePropagation> propagations = (List<NodeSizePropagation>) jdbc.query(sql, propagationExtractor);
             return propagations;
@@ -1832,6 +1834,12 @@ public class NodeDAO
         sb.append("SELECT");
         sb.append(" nodeID, type, parentID FROM ");
         sb.append(getNodeTableName());
+        if (nodeSchema.deltaIndexName != null)
+        {
+            sb.append(" (INDEX ");
+            sb.append(nodeSchema.deltaIndexName);
+            sb.append(")");
+        }
         sb.append(" WHERE delta != 0");
         sb.append(" AND type IN ('");
         sb.append(NODE_TYPE_DATA);
