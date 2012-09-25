@@ -18,7 +18,7 @@ import sqlite3
 from vos.__version__ import version
 
 READBUF=2**20
-DAEMON_TIMEOUT = 10
+DAEMON_TIMEOUT = 60
 READ_SLEEP = 1
 
 def flag2mode(flags):
