@@ -271,9 +271,18 @@ public class QueryRunner implements JobRunner
             sList.add("read tap_schema: ");
 
             log.debug("loading " + uploadManagerClassName);
-            Class umc = Class.forName(uploadManagerClassName);
-            UploadManager uploadManager = (UploadManager) umc.newInstance();
-            uploadManager.setDataSource(uploadDataSource);
+            UploadManager uploadManager = new DefaultUploadManager();
+            try
+            {
+                Class umc = Class.forName(uploadManagerClassName);
+                uploadManager = (UploadManager) umc.newInstance();
+                uploadManager.setDataSource(uploadDataSource);
+            }
+            catch(Throwable t)
+            {
+                log.debug("failed to load " + uploadManagerClassName +": using " + DefaultUploadManager.class.getName());
+            }
+            log.debug("using " + uploadManager.getClass().getName());
             log.debug("invoking UploadManager for UPLOAD...");
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, job.getID());
 
@@ -293,8 +302,9 @@ public class QueryRunner implements JobRunner
                 Class c = Class.forName(maxrecValidatorClassName);
                 maxRecValidator = (MaxRecValidator) c.newInstance();
             }
-            catch (Throwable ignore)
+            catch (Throwable t)
             {
+                log.debug("failed to load " + uploadManagerClassName +": using " + DefaultUploadManager.class.getName());
             }
             log.debug("using " + maxRecValidator.getClass().getName());
             maxRecValidator.setJob(job);

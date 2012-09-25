@@ -82,6 +82,7 @@ import javax.sql.DataSource;
  * UnsupportedOperationException.
  * 
  * @author pdowler
+ * @deprecated the DefaultUploadManager has the same behaviour
  */
 public class UploadNotSupported implements UploadManager
 {

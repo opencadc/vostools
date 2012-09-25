@@ -20,30 +20,7 @@
       and the deploying web application must provide the classes described below. This is the only
       mechanism by which the behaviour of the <code>QueryRunner</code> class is configurable at this time.
   </p>
-  
-  <h2>ca.nrc.cadc.impl.FileStoreImpl</h2>
-  <p>
-      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.FileStore</code>
-      interface. This class is responsible for managing temporary result files and determining an absolute
-      URL to the result that the client can access.
-  </p>
-  <p>
-      No default implementation is provided.
-  </p>
-  
-  <h2>ca.nrc.cadc.tap.impl.UploadManagerImpl</h2>
-  <p>
-      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.UploadManager</code>
-      interface. This class is responsible for managing table uploads using the UPLOAD parameter.
-  </p>
-  <p>
-      Two implementations are provided:
-  </p>
-  <ul>
-      <li>ca.nrc.cadc.tap.UploadNotSupported: causes job to fail (nicely) if any UPLOAD parameters are found</li>
-      <li>ca.nrc.cadc.tap.BasicUploadManager: processes UPLOAD, creates standard SQL-ish tables, and standard SQL-values</li>
-  </ul>
-  
+
   <h2>ca.nrc.cadc.tap.impl.AdqlQueryImpl</h2>
   <p>
       The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.TapQuery</code>
@@ -51,9 +28,21 @@
       will return an error saying that value is not supported.
   </p>
   <p>
-      One implementation is provided but it needs customisation: <code>ca.nrc.cadc.tap.AdqlQuery</code>
+      The base class <code>ca.nrc.cadc.tap.AdqlQuery</code> can be used to make a trivial implementation. The
+      base class includes:
   </p>
-  
+  <ul>
+      <li>ADQL syntax parsing</li>
+      <li>complete navigation of the query to find unsupported constructs (sub-queries in select or from clause and
+      correlated subqueries in the where clause are not currently supported)</li>
+      <li>convert wildcard (*) in select to a fixed list of columns from the TapSchema</li>
+      <li>check that each table and column referred to in the query is present in the TapSchema</li>
+      <li>extract the select list metadata for use in writing result(s)</li>
+  </ul>
+  <p>
+      If the input ADQL query passes validation it will be executed as-is.
+  </p>
+
   <h2>ca.nrc.cadc.tap.impl.SqlQueryImpl</h2>
   <p>
       The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.TapQuery</code>
@@ -61,8 +50,8 @@
       will return an error saying that value is not supported.
   </p>
   <p>
-      One implementation is provided and can be used as-is: <code>ca.nrc.cadc.tap.SqlQuery</code>. This 
-      implementation performs the following: 
+      The base class <code>ca.nrc.cadc.tap.SqlQuery</code> can be used to make a trivial implementation . This
+      implementation performs the following:
   </p>
   <ul>
       <li>SQL syntax parsing</li>
@@ -72,9 +61,29 @@
       <li>check that each table and column referred to in the query is present in the TapSchema</li>
       <li>extract the select list metadata for use in writing result(s)</li>
   </ul>
-  
-  
 
+  <h2>ca.nrc.cadc.tap.impl.MaxrecValidatorImpl</h2>
+  <p>
+      The deployment may provide this class and it must extend the default <code>ca.nrc.cadc.tap.MaxrecValidator</code>
+      implementation. If this class cannot be found the default is used; the defaulty implementatikn has no limits so if
+      you want to limit the output of queries you must extend the base class and set values for the various fields.
+  </p>
+
+  <h2>ca.nrc.cadc.tap.impl.UploadManagerImpl</h2>
+  <p>
+      The deployment may provide this class and it must implement the <code>ca.nrc.cadc.tap.UploadManager</code>
+      interface. This class is responsible for managing table uploads using the UPLOAD parameter. If this class
+      cannot be found, the <code>ca.nrc.cadc.tap.DefaultUploadManager</code> is used; the default implementation
+      simply causes job to fail (nicely) if any UPLOAD parameters are found.
+  </p>
+  <p>
+      One implementations are provided:
+  </p>
+  <ul>
+      <li>ca.nrc.cadc.tap.UploadNotSupported (deprecated): causes job to fail (nicely) if any UPLOAD parameters are found</li>
+      <li>ca.nrc.cadc.tap.BasicUploadManager: processes UPLOAD, creates standard SQL-ish tables, and standard SQL-values</li>
+  </ul>
+  
   <h2>ca.nrc.cadc.tap.impl.FormatterFactoryImpl</h2>
   <p>
       The deployment must provide this class and it must implement the 
@@ -85,7 +94,7 @@
       One implementation is provided: <code>ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory</code>
       that returns Formatters to support the following types: INTEGER, BIGINT, DOUBLE, VARCHAR, TIMESTAMP, VARBINARY, 
       POINT, and REGION, and int arrays. The getPointFormatter and getRegionFormatter methods that provide formatters for
-      adql:POINT and adql:REGION datatypes will throw an UnsupportOperationExcetion unless overridden.
+      adql:POINT and adql:REGION datatypes will throw an UnsupportOperationException unless overridden.
   </p>
   <p>
       The <code>ca.nrc.cadc.tap.writer.formatter</code> provides formatters that can be used or extended, some of which 

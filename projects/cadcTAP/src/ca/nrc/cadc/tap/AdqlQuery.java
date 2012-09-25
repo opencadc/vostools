@@ -115,7 +115,7 @@ import net.sf.jsqlparser.util.deparser.SelectDeParser;
  */
 public class AdqlQuery implements TapQuery
 {
-    protected static Logger log = Logger.getLogger(AdqlQuery.class);
+    private static Logger log = Logger.getLogger(AdqlQuery.class);
 
     protected TapSchema tapSchema;
     protected Map<String, TableDesc> extraTables;

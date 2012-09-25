@@ -101,15 +101,17 @@ public class DefaultFormatterFactory implements FormatterFactory
      */  
     public static FormatterFactory getFormatterFactory()
     {
+        FormatterFactory ret = new DefaultFormatterFactory();
         try
         {
-            return (FormatterFactory) Class.forName(IMPL_CLASS).newInstance();
+            Class c = Class.forName(IMPL_CLASS);
+            ret = (FormatterFactory) c.newInstance();
         }
         catch (Exception e)
         {
-            LOG.error("Failed to instantiate FormatterFactory class " + IMPL_CLASS, e);
-            throw new RuntimeException(e);
+            LOG.warn("Failed to instantiate FormatterFactory class " + IMPL_CLASS +", using " + ret.getClass().getName());
         }
+        return ret;
     }
 
     public void setJobID(String jobID)
