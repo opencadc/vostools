@@ -73,7 +73,6 @@ class Connection:
             raise EnvironmentError(errno.EACCES,"No certifacte file found at %s\n (Perhaps use getCert to pull one)" %(certfile))
 
         self.certfile=certfile
-
         logging.debug("Using certificate file %s" % (str(self.certfile)))
 
 
@@ -91,9 +90,9 @@ class Connection:
         import httplib, ssl
         try:
             if parts.scheme=="https":
-                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=600)
+                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=45)
             else:
-                connection = httplib.HTTPConnection(parts.netloc,timeout=600)
+                connection = httplib.HTTPConnection(parts.netloc,timeout=45)
         except httplib.NotConnected as e:
             logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % ( str(e)))
@@ -109,7 +108,7 @@ class Connection:
                 connection.connect()
             except httplib.HTTPException as e:
                 logging.critical("%s" % ( str(e)))
-                logggin.critical("Retrying connection for 1200 seconds") 
+                logggin.critical("Retrying connection for 30 seconds") 
                 if time.time() - timestart  > 1200:
                     raise e
             except Exception as e:
@@ -547,6 +546,7 @@ class VOFile:
         
     def close(self,code=(200, 201, 202, 206, 302, 303, 503)):
         """close the connection"""
+        import ssl
         #logging.debug("inside the close")
         if self.closed:
             return
@@ -559,6 +559,8 @@ class VOFile:
 	    time.sleep(0.1)
 	    logging.warning("closing connection for %s" %(self.url))
             self.httpCon.close()
+        except ssl.SSLError as e:
+            raise IOError(errno.EAGAIN,str(e))
         except Exception as e:
 	    raise IOError(errno.ENOTCONN,str(e))
         self.closed=True
@@ -569,10 +571,12 @@ class VOFile:
         """check the response status"""
         msgs = { 404: "Node Not Found",
                  401: "Not Authorized",
-                 409: "Conflict"}
+                 409: "Conflict",
+	         408: "Connection Timeout"}
         errnos = { 404: errno.ENOENT,
                    401: errno.EACCES,
-                   409: errno.EEXIST }
+                   409: errno.EEXIST,
+		   408: errno.EAGAIN }
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in codes:
 	    logging.warning("Got status code: %s for %s" %(self.resp.status, self.url))
@@ -581,7 +585,7 @@ class VOFile:
             if msg is not None:
                 msg = html2text(msg,self.url).strip()
             logging.debug("Error message: %s" % (msg))
-            if self.resp.status in [404, 401, 409]:
+            if self.resp.status in errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.certfile is None:
@@ -967,7 +971,8 @@ class Client:
                        'InvalidArgument': errno.EINVAL,
                        'InvalidURI': errno.EFAULT,
                        'InvalidData': errno.EOPNOTSUPP,
-                       'TransferFailed': errno.EIO }
+                       'TransferFailed': errno.EIO,
+                       'DuplicateNode.': errno.EEXIST}
         import re
         match = re.match('(.*)/results/transferDetails',url)
         if match is None:
@@ -1090,9 +1095,16 @@ class Client:
                                 if prop2.text==prop.text:
                                     properties2.remove(prop2)
         #logging.debug(str(node))
-        f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
-        f.write(str(node))
-        f.close()
+        ## Let's do this update using the async tansfer method
+        URL=self.getNodeURL(node.uri, method=os.O_APPEND)
+        
+        con = VOFile(URL, self.conn, method="POST", followRedirect=False)
+        con.write(str(node))
+        transURL = con.read()
+        return not self.getTransferError(self, transURL, node.uri)
+        #f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
+        #f.write(str(node))
+        #f.close()
 
     def mkdir(self,uri):
         node = Node(self.fixURI(uri),nodeType="vos:ContainerNode")
