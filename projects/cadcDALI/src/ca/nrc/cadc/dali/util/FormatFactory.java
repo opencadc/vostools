@@ -76,6 +76,8 @@ import ca.nrc.cadc.stc.Not;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.stc.Union;
+import java.net.URI;
+import java.net.URL;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -108,6 +110,8 @@ public abstract class FormatFactory
         formats.put(Short.class, new ShortFormat());
         formats.put(String.class, new StringFormat());
         formats.put(Date.class, new UTCTimestampFormat());
+        formats.put(URI.class, new URIFormat());
+        formats.put(URL.class, new URLFormat());
         formats.put(Box.class, new RegionFormat());
         formats.put(Circle.class, new RegionFormat());
         formats.put(Intersection.class, new RegionFormat());
@@ -117,6 +121,21 @@ public abstract class FormatFactory
         formats.put(Position.class, new PointFormat());
     }
 
+    private static class DefaultFormat implements Format<Object>
+    {
+        public String format(Object t)
+        {
+            if (t == null)
+                return "";
+            return t.toString();
+        }
+
+        public Object parse(String s)
+        {
+            return s;
+        }
+    }
+    
     /**
      *
      * @param c
@@ -126,9 +145,7 @@ public abstract class FormatFactory
     {
         Format format = formats.get(c);
         if (format == null)
-        {
-            throw new UnsupportedOperationException("Format not found for class " + c.getName());
-        }
+            format = new DefaultFormat();
         return format;
     }
 

@@ -159,6 +159,8 @@
             <test name="ca.nrc.cadc.dali.util.StringFormatTest"/>
             <test name="ca.nrc.cadc.dali.util.LocalTimestampFormatTest"/>
             <test name="ca.nrc.cadc.dali.util.UTCTimestampFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.URIFormatTest"/>
+            <test name="ca.nrc.cadc.dali.util.URLFormatTest"/>
             <test name="ca.nrc.cadc.dali.util.PointFormatTest"/>
             <test name="ca.nrc.cadc.dali.util.RegionFormatTest"/>
         </junit>
