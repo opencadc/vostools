@@ -165,6 +165,24 @@ public class VOSTransferTest extends VOSBaseTest
         response = post(location + "/phase", parameters);
         assertEquals("POST response code should be 303", 303, response.getResponseCode());
 
+        // poll the phase
+        WebResponse phaseResp = get(location + "/phase");
+        String phase = phaseResp.getText();
+        log.debug("phase: " + phase);
+        int tries = 0;
+        while (tries < 10
+                && ( ExecutionPhase.QUEUED.getValue().equals(phase)
+                    || ExecutionPhase.EXECUTING.getValue().equals(phase) ) )
+        {
+            try { Thread.sleep(66L); }
+            catch(InterruptedException ex) { throw new RuntimeException("polling loop interrupted", ex); }
+            phaseResp = get(location + "/phase");
+            phase = phaseResp.getText();
+            log.debug("phase: " + phase);
+            tries++;
+
+        }
+
         // get and read the response job doc.
         response = get(location);
 

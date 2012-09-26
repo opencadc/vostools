@@ -284,7 +284,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
-            assertTrue("no protocols", result.transfer.getProtocols() == null);
+            boolean hasProto = (result.transfer.getProtocols() != null && !result.transfer.getProtocols().isEmpty());
+            assertEquals("protocols", false, hasProto);
             
             // get job details
             log.debug("Check job details at: " + result.location);
@@ -349,7 +350,8 @@ public class SyncPullFromVOSpaceTest extends VOSTransferTest
             TransferResult result = doSyncTransfer(transfer);
 
             assertEquals("direction", Direction.pullFromVoSpace, result.transfer.getDirection());
-            assertTrue("no protocols", result.transfer.getProtocols() == null);
+            boolean hasProto = (result.transfer.getProtocols() != null && !result.transfer.getProtocols().isEmpty());
+            assertEquals("protocols", false, hasProto);
             
             // get job details
             log.debug("Check job details at: " + result.location);
