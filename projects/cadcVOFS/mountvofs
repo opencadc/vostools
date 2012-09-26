@@ -8,7 +8,7 @@ import vos.fuse
 from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import tempfile
 from threading import Lock
-from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED
+from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 ENOATTR=93
 import os
 import vos
@@ -18,7 +18,7 @@ import sqlite3
 from vos.__version__ import version
 
 READBUF=2**20
-DAEMON_TIMEOUT = 60
+DAEMON_TIMEOUT = 6
 READ_SLEEP = 1
 
 def flag2mode(flags):
@@ -62,6 +62,7 @@ class VOFS(LoggingMixIn, Operations):
         self.attr={}
         # Where in the file system this Node is currently located
 	self.path={}
+        self.loading_dir={}
         # How old is a given reference
         self.cache_nodes=cache_nodes
 
@@ -499,7 +500,7 @@ class VOFS(LoggingMixIn, Operations):
                 waited += READ_SLEEP
                 if waited > DAEMON_TIMEOUT - 3:
 		    logging.debug("Slept for %d, data not ready" % (waited))
-                    raise FuseIOError(EIO)
+                    raise FuseOSError(EAGAIN)
                 st_size = os.fstat(fh).st_size
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             os.lseek(fh,offset,os.SEEK_SET)
@@ -626,7 +627,29 @@ class VOFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
         logging.debug("Getting direcotry list for %s " % ( path))
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=not opt.cache_nodes,limit=500).getNodeList() ]
+        ## reading from VOSpace can be slow, we'll do this in a thread
+        import thread, time
+        if not self.loading_dir.get(path,False):
+            self.loading_dir[path]=True
+            thread.start_new_thread(self.load_dir,(path, ))
+        thread_wait=0
+        while self.loading_dir.get(path,False):
+            time.sleep(READ_SLEEP)
+            thread_wait += READ_SLEEP
+            logging.error("Waiting ... %ds" % ( thread_wait))
+            if thread_wait > DAEMON_TIMEOUT - 3:
+                e = FuseOSError(EAGAIN)
+                e.strerror = "Timeout waiting for directory listing"
+                raise e
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=False,limit=1000).getNodeList() ]
+
+    def load_dir(self,path):
+        """Load the dirlist from VOSpace"""
+        logging.debug("Starting getNodeList thread")
+        self.getNode(path,force=not opt.cache_nodes,limit=500).getNodeList()
+        self.loading_dir[path] = False
+        logging.debug("Got listing for %s" %(path))
+        return 
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
@@ -705,12 +728,13 @@ class VOFS(LoggingMixIn, Operations):
            srcPath=os.path.normpath(self.cache_dir+src)
            destPath=os.path.normpath(self.cache_dir+dest)
            if os.access(srcPath,os.F_OK):
-	      # only rename if the destination exists and is a directory
+	      # only rename in cache if the source exists
                dirs=os.path.dirname(destPath)
                if not os.path.exists(dirs):
                    os.makedirs(dirs)
                os.rename(srcPath,destPath)
-        return 0
+           return 0
+        return -1
     
     def dead_setxattr(self, path, name, value, size, options, *args):
         """Simple xattr setting, ignorring options for now"""
