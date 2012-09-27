@@ -322,6 +322,7 @@ class Node:
                   else:
                       prop.text=value
                       changed=1
+        logging.debug("key %s changed? %s (1 == yes)" %(key,changed))
         if found or value is None:
             return changed
         ### must not have had this kind of property already, so set value
@@ -1096,12 +1097,13 @@ class Client:
                                     properties2.remove(prop2)
         #logging.debug(str(node))
         ## Let's do this update using the async tansfer method
-        URL=self.getNodeURL(node.uri, method=os.O_APPEND)
+        URL=self.getNodeURL(node.uri)
         
         con = VOFile(URL, self.conn, method="POST", followRedirect=False)
         con.write(str(node))
         transURL = con.read()
-        return not self.getTransferError(self, transURL, node.uri)
+        logging.debug("transfer URL: %s" % ( transURL))
+        return 0
         #f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
         #f.write(str(node))
         #f.close()

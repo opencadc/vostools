@@ -499,8 +499,10 @@ class FUSE(object):
         else:
             fh = fip.contents.fh
 
-        return self.operations('write', path.decode(self.encoding), data,
-                                        offset, fh)
+        #return self.operations('write', path.decode(self.encoding), data,
+        #                               size, offset, fh)
+        return self.operations('write', path.decode(self.encoding), buf,
+                                       size, offset, fip.contents.fh)
 
     def statfs(self, path, buf):
         stv = buf.contents
@@ -830,7 +832,7 @@ class Operations(object):
         """Times is a (atime, mtime) tuple. If None use current time."""
         return 0
 
-    def write(self, path, data, offset, fh):
+    def write(self, path, data, size, offset, fh):
         raise FuseOSError(EROFS)
 
 
