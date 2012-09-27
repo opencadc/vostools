@@ -96,7 +96,7 @@ public class VOTableReaderWriterTest
     private static final Logger log = Logger.getLogger(VOTableReaderWriterTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
     }
     private static final String DATE_TIME = "2009-01-02T11:04:05.678";
     private static DateFormat dateFormat;
@@ -505,6 +505,26 @@ public class VOTableReaderWriterTest
             row1.add(new Position("ICRS", "BARYCENTER", "SPHERICAL2", 1.0, 2.0));
             row1.add(new Circle("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0));
             fields.add(row1);
+
+            List<Object> row2 = new ArrayList<Object>();
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            row2.add(null);
+            fields.add(row2);
         }
 
         public Iterator<List<Object>> iterator()

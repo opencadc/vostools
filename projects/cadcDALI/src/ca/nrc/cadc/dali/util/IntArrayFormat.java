@@ -105,13 +105,9 @@ public class IntArrayFormat implements Format<int[]>
      */
     public int[] parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new int[] {};
         }
         else
         {

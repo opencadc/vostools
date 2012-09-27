@@ -243,7 +243,12 @@ public class VOTableWriter implements TableWriter<VOTable>
             for (int i = 0; i < columns.size(); i++)
             {
                 Object column = columns.get(i);
-                Format format = FormatFactory.getFormat(column.getClass());
+                Class c = null;
+                if (column != null)
+                {
+                    c = column.getClass();
+                }
+                Format format = FormatFactory.getFormat(c);
                 Element td = new Element("TD", namespace);
                 td.setText(format.format(column));
                 tr.addContent(td);

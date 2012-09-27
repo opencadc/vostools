@@ -98,7 +98,7 @@ public class BooleanFormat implements Format<Boolean>
      */
     public Boolean parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
         }

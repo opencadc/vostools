@@ -105,13 +105,9 @@ public class LongArrayFormat implements Format<long[]>
      */
     public long[] parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new long[] {};
         }
         else
         {

@@ -105,13 +105,9 @@ public class ShortArrayFormat implements Format<short[]>
      */
     public short[] parse(String s)
     {
-        if (s == null)
+        if (s == null|| s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new short[] {};
         }
         else
         {

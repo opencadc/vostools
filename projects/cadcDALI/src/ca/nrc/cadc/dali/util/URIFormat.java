@@ -88,8 +88,10 @@ public class URIFormat implements Format<URI>
 
     public URI parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
+        {
             return null;
+        }
         try
         {
             return new URI(s);

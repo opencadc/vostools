@@ -98,6 +98,10 @@ public class StringFormat implements Format<String>
      */
     public String parse(String s)
     {
+        if (s == null || s.isEmpty())
+        {
+            return null;
+        }
         return s;
     }
 

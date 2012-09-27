@@ -105,7 +105,7 @@ public class RegionFormat implements Format<Region>
      */
     public Region parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
         }

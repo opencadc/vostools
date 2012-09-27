@@ -88,8 +88,10 @@ public class URLFormat implements Format<URL>
 
     public URL parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
+        {
             return null;
+        }
         try
         {
             return new URL(s);

@@ -106,13 +106,9 @@ public class DoubleArrayFormat implements Format<double[]>
      */
     public double[] parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new double[] {};
         }
         else
         {

@@ -106,13 +106,9 @@ public class FloatArrayFormat  implements Format<float[]>
      */
     public float[] parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new float[] {};
         }
         else
         {

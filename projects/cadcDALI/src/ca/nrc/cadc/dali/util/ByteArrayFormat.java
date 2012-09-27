@@ -105,13 +105,9 @@ public class ByteArrayFormat implements Format<byte[]>
      */
     public byte[] parse(String s)
     {
-        if (s == null)
+        if (s == null || s.isEmpty())
         {
             return null;
-        }
-        else if (s.isEmpty())
-        {
-            return new byte[] {};
         }
         else
         {
