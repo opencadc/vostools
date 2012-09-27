@@ -16,9 +16,14 @@ from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
 import sqlite3
 from vos.__version__ import version
+from ctypes import cdll
+from ctypes.util import find_library
+
+libcPath = find_library('c')
+libc = cdll.LoadLibrary(libcPath)
 
 READBUF=2**20
-DAEMON_TIMEOUT = 6
+DAEMON_TIMEOUT = 10
 READ_SLEEP = 1
 
 def flag2mode(flags):
@@ -166,13 +171,15 @@ class VOFS(LoggingMixIn, Operations):
             self.getattr(path)['st_ctime']=time.time()
             ## if node.chmod returns false then no changes were made.
 	    try:
-               self.client.update(node)
-               self.getNode(path, force=True)
+                self.client.update(node)
+                self.getNode(path, force=True)
             except Exception as e:
-               e=FuseOSError(e.errno)
-               e.filename=path
-               e.strerror=getattr(e,'strerror','failed to chmod on %s' %(path))
-               raise e
+                logging.debug(str(e))
+                logging.debug(type(e))
+                e=FuseOSError(getattr(e,'errno',EIO))
+                e.filename=path
+                e.strerror=getattr(e,'strerror','failed to chmod on %s' %(path))
+                raise e
 
         # Need to also update the cache properties.
         fname=os.path.normpath(self.cache_dir+path)
@@ -223,46 +230,12 @@ class VOFS(LoggingMixIn, Operations):
         back over the network. This should only be done when really
         needed as the network connection can be slow."""
 
-        self.fsync(path,False,fh)
-        node=self.getNode(path)
-        import hashlib
-        loopCount=0
-        success=False
-        while not success:
-            size=os.fstat(fh).st_size
-            logging.debug("Writing %d bytes to %s, attempt: %d" % (size, path,loopCount+1))
-            md5=hashlib.md5()
-            try:
-                self.client.delete(node.uri)
-                w=self.client.open(node.uri,os.O_WRONLY,size=size)
-                os.lseek(fh,0,0)
-                while True:
-                    buf=os.read(fh,READBUF)
-                    if not buf:
-                        break
-                    if w.write(buf)!=len(buf):
-                        raise FuseOSError(EIO)
-                    md5.update(buf)
-            except Exception as e:
-                logging.error(str(e))
-                logging.error("Failed during VOSpace copy, retrying")
-            finally:                
-                w.close()
-            voMD5=self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            cacheMD5 = md5.hexdigest()
-            logging.debug("%s ==> %s" %( cacheMD5, voMD5))
-            if voMD5 == cacheMD5:
-                success=True
-            elif loopCount > 3:
-                logging.error("Failed to write to vospace during nodeflush")
-                ex = FuseOSError(EIO)
-                ex.strerror = "Failed while flushing to VOSpace"
-                ex.filename = path
-                raise ex
-            else:
-                loopCount += 1
-        self.delNode(path,force=True)
-        return
+        destination = self.getNode(path).uri
+        source = self.fh[fh]['name']
+        self.client.copy(source,destination)
+        self.fh[fh]['writing']=False
+
+        return        
 
     def flush(self,path,fh):
         """Flush the cached version of the file.
@@ -270,8 +243,24 @@ class VOFS(LoggingMixIn, Operations):
         This could be a problem since users expect the file in VOSpace
         to be updated too.  But we only do that with a flushnode call
         which we do on close of the file."""
+        
+        if not self.fh[fh].get('writing',False):
+            import thread
+            self.fh[fh]['writing']=True
+            os.fsync(fh)
+            thread.start_new_thread(self.flushnode,(path,fh))
+            return self.flush(path,fh)
+
+        ## remove references to this file handle.
+        writing_wait = 0
+	while self.fh[fh]['writing'] :
+	    time.sleep(READ_SLEEP) 
+            writing_wait += READ_SLEEP
+            if writing_wait > DAEMON_TIMEOUT -3 :
+                raise FuseOSError(EAGAIN)
+
         return os.fsync(fh) 
-        #self.fsync(path,False,fh)
+
   
     def fsync(self,path,datasync,fh):
         mode=''
@@ -457,7 +446,12 @@ class VOFS(LoggingMixIn, Operations):
 
         ## Check if the disk cache matches the vospace copy
         md5Row = self.get_md5_db(fname)
-        if md5Row['md5']==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
+	try:
+	    node = self.getNode(path)
+	except Exceptrion as e:
+	    if e.errno != ENOENT:
+                raise e
+        if node and md5Row['md5']==node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
             cached=True
         else:
             os.unlink(fname)
@@ -505,9 +499,11 @@ class VOFS(LoggingMixIn, Operations):
 	    logging.debug("%s + %s > %s?" % ( str(size), str(offset), str(st_size)))
             os.lseek(fh,offset,os.SEEK_SET)
 	    logging.debug("sending back %s for %s" % ( str(fh), str(size)))
-	    buf = os.read(fh,size)
-            retsize = len(buf)
-	    return create_string_buffer(buf[:retsize],retsize)
+	    buf = create_string_buffer(size)
+	    retsize = libc.read(fh,buf,size)
+            #retsize = len(buf)
+            return buf
+	    #return create_string_buffer(buf[:retsize],retsize)
 
          # load the file from VOSpace as we might be appending
          # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
@@ -661,6 +657,14 @@ class VOFS(LoggingMixIn, Operations):
         if self.fh.get(fh,None) is not None:
             mode = self.fh[fh]['flags']
 
+        ## remove references to this file handle.
+        writing_wait = 0
+	while self.fh[fh]['writing'] :
+	    time.sleep(READ_SLEEP) 
+            writing_wait += READ_SLEEP
+            if writing_wait > DAEMON_TIMEOUT -3 :
+                raise FuseOSError(EAGAIN)
+
         ## On close, if this was a WRITE opperation then update VOSpace
         ## unless the VOSpace is actually newer than this cache file.
         ### copy the staging file to VOSpace if needed
@@ -680,11 +684,13 @@ class VOFS(LoggingMixIn, Operations):
                 logging.debug("VOSpace MD5 %s",voMD5)
                 logging.debug("PUSHING contents of %s to VOSpace location %s " % (self.fh[fh]['name'],path))
                 ## replace VOSpace copy with cache version.
-                self.flushnode(path,fh)
+                self.fsync(path,False,fh)
+                if not self.fh[fh].get('writing',False):
+                    import thread
+                    self.fh[fh]['writing']=True
+                    thread.start_new_thread(self.flushnode,(path,fh))
+                    return self.release(path,fh)
 
-        ## remove references to this file handle.
-	while self.fh[fh]['writing']:
-	    time.sleep(READ_SLEEP) 
         ##  now close the fh
         try:
             os.close(fh)
@@ -904,8 +910,9 @@ class VOFS(LoggingMixIn, Operations):
         self.getattr(path)['st_atime']=times[0]
         return 
 
-    def write(self, path, data, offset, fh=None):
-        logging.debug("%s -> %d" % ( path,fh))
+    def write(self, path, data, size, offset, fh=None):
+        import ctypes
+        logging.debug("%s -> %s" % ( path,fh))
         if not self.fh[fh].get('cached',False) and offset > 0 :
             ## we are writing but never cached the original file, do that now
             try:
@@ -915,14 +922,15 @@ class VOFS(LoggingMixIn, Operations):
                 f=FuseOSError(e.errno)
                 f.strerror=getattr(e,'strerror','failed during write of %s' %(path))
                 raise f
-
         ## Update the access/mod times and delete the md5 from the cache db
         ##self.utimens(path)
-        logging.debug("%d --> %d" % ( offset, offset+len(data)))
+        logging.debug("%d --> %d" % ( offset, offset+size))
         self.delete_md5_db(self.fh[fh]['name'])
         self.fh[fh]['cached']=True
         os.lseek(fh, offset, os.SEEK_SET)
-        return os.write(fh, data)
+        #return os.write(fh, data)
+        #return os.write(fh, ctypes.string_at(data,size))
+        return libc.write(fh, data, size)
 
 
 if __name__ == "__main__":
