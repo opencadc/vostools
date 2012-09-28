@@ -96,7 +96,7 @@ public class VOTableReaderWriterTest
     private static final Logger log = Logger.getLogger(VOTableReaderWriterTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
     private static final String DATE_TIME = "2009-01-02T11:04:05.678";
     private static DateFormat dateFormat;
