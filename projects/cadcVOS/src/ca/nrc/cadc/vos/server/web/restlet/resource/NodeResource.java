@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
+import java.security.PrivilegedAction;
 
 import javax.security.auth.Subject;
 
@@ -99,12 +100,13 @@ import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
  * @author majorb
  *
  */
-public class NodeResource extends BaseResource
+public class NodeResource extends BaseResource implements PrivilegedAction<Representation>
 {
     private static Logger LOGGER = Logger.getLogger(NodeResource.class);
 
     private NodeFault nodeFault;
     private VOSURI vosURI;
+    private NodeAction action;
     
     /**
      * Called after object instantiation.
@@ -172,9 +174,10 @@ public class NodeResource extends BaseResource
      * @param action The action to perform.
      * @return A representation of the output or of any error that happens.
      */
-    private Representation performNodeAction(NodeAction action)
+    @Override
+    public Representation run()
     {
-        LOGGER.debug("Enter NodeResource.performNodeAction()");
+        LOGGER.debug("Enter NodeResource.run()");
         
         long start = System.currentTimeMillis();
         long end = -1;
@@ -202,6 +205,7 @@ public class NodeResource extends BaseResource
             // for link resolution and one that doesn't.
             VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer(false);
             VOSpaceAuthorizer partialPathVOSpaceAuthorizer = new VOSpaceAuthorizer(true);
+            
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
             partialPathVOSpaceAuthorizer.setNodePersistence(getNodePersistence());
             
@@ -214,18 +218,7 @@ public class NodeResource extends BaseResource
             action.setQueryForm(getQueryForm());
             action.setStylesheetReference(getStylesheetReference());
             
-            final NodeActionResult result;
-
-            if (getSubject() == null)
-            {
-                result = (NodeActionResult) action.run();
-            }
-            else
-            {
-                result = (NodeActionResult) Subject.doAs(getSubject(), action);
-            }
-            
-            end = System.currentTimeMillis();
+            final NodeActionResult result = action.run();
             
             if (result != null)
             {
@@ -276,10 +269,7 @@ public class NodeResource extends BaseResource
         }
         finally
         {
-            if (end == -1)
-            {
-                end = System.currentTimeMillis();
-            }
+            end = System.currentTimeMillis();
             time = Long.toString(end - start);
             
             LOGGER.info("END " + getRequestMethod()
@@ -293,32 +283,41 @@ public class NodeResource extends BaseResource
         }
     }
     
+    private Representation runPrivilegedAction(NodeAction action)
+    {
+        this.action = action;
+        if (getSubject() == null)
+            return run();
+        else
+            return Subject.doAs(getSubject(), this);
+    }
+    
     @Get("xml")
     public Representation represent()
     {
         LOGGER.debug("Enter NodeResource.represent()");
-        return performNodeAction(new GetNodeAction());
+        return runPrivilegedAction(new GetNodeAction());
     }
 
     @Put
     public Representation create(final Representation entity)
     {
         LOGGER.debug("Enter NodeResource.store()");
-        return performNodeAction(new CreateNodeAction());
+        return runPrivilegedAction(new CreateNodeAction());
     }
 
     @Post
     public Representation update(final Representation entity)
     {
         LOGGER.debug("Enter NodeResource.accept()");
-        return performNodeAction(new UpdatePropertiesAction());
+        return runPrivilegedAction(new UpdatePropertiesAction());
     }
 
     @Delete
     public Representation remove()
     {
         LOGGER.debug("Enter NodeResource.remove()");
-        return performNodeAction(new DeleteNodeAction());
+        return runPrivilegedAction(new DeleteNodeAction());
     }   
     
 }

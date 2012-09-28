@@ -71,7 +71,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
-import java.security.PrivilegedAction;
 
 import org.apache.log4j.Logger;
 import org.restlet.Request;
@@ -97,12 +96,9 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  * setNodePersistence() are called before using any concrete implementations of
  * this class.
  * 
- * Operations should be performed using Subject.doAs(subject, action) if a
- * subject is available.  This will invoke the entry point run() below.
- * 
  * @author majorb
  */
-public abstract class NodeAction implements PrivilegedAction<Object>
+public abstract class NodeAction
 {
     protected static Logger log = Logger.getLogger(NodeAction.class);
     
@@ -279,7 +275,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
      */
-    public Object run()
+    public NodeActionResult run()
     {
         
         try
