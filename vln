@@ -7,7 +7,7 @@ import logging
 import os,sys
 
 usage="""
-  vln source vos:VOSpaceTarget
+  vln vos:VOSpaceSource vos:VOSpaceTarget
   
 
 examples:  
@@ -50,7 +50,10 @@ except Exception as e:
     logging.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(-1)
 
-
-vos.link(args[0],args[1])
-
+try:
+    vos.link(args[0],args[1])
+except Exception as e:
+    logging.error("Failed to make link from %s] to %s" % ( args[0], args[1]))
+    logging.error(getattr(e,'strerror','Unkown Error'))
+    sys.exit(-1)
 

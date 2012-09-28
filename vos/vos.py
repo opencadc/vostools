@@ -898,6 +898,8 @@ class Client:
 
     def link(self,srcURI,linkURI):
         """Make linkURI point to srcURI"""
+        if ( self.access(linkURI) ) :
+            linkURI = os.path.join(linkURI,os.path.basename(srcURI))
         linkNode=Node(self.fixURI(linkURI),nodeType="vos:LinkNode")
         ET.SubElement(linkNode.node,"target").text=self.fixURI(srcURI)
         URL=self.getNodeURL(linkURI)
