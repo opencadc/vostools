@@ -7,17 +7,19 @@ import time
 import optparse, os, sys, logging
 
 usage="""
-	vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode
-"""
+	vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.   Version: %s 
+""" % ( vos.__version__.version)
 
 
 parser=optparse.OptionParser(usage)
 parser.add_option("-v","--verbose",action="store_true")
 parser.add_option("-d","--debug",action="store_true")
+parser.add_option("--version",help="VOS Version %s" %( vos.__version__.version))
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 
 (opt,args)=parser.parse_args()
-
+if len(args) != 2:
+    parser.error("You must supply a source and desitination")
 
 if opt.verbose:
     logging.basicConfig(level=logging.INFO,format="vmv: %(message)s")
