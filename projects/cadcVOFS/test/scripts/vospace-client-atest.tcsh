@@ -13,12 +13,12 @@ else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 echo "###################"
-## we cannot feasibly test the --xsv option, but it is here to fiddle with in development
-set LSCMD = "$CADC_ROOT/scripts/vls"
-set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
-set RMCMD = "$CADC_ROOT/scripts/vrm"
-set CPCMD = "$CADC_ROOT/scripts/vcp"
-set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
+set LSCMD = "python $CADC_ROOT/vls -l"
+set MKDIRCMD = "python $CADC_ROOT/vmkdir"
+set RMCMD = "python $CADC_ROOT/vrm"
+set CPCMD = "python $CADC_ROOT/vcp"
+set RMDIRCMD = "python $CADC_ROOT/vrmdir"
+set CHMODCMD = "python $CADC_ROOT/vchmod"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
@@ -41,15 +41,14 @@ if ( $status == 0) then
 else
 	echo -n ", creating base URI"
 	exit
-        $CMD $CERT --create --target=$BASE || echo " [FAIL]" && exit -1
+        $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
 	echo " [OK]"
 endif
-#TODO
 echo -n "** setting home and base to public, no groups"
-#$CMD $CERT --set --public --group-read="" --group-write="" --target=$VOHOME || echo " [FAIL]" && exit -1
-echo -n " [TODO]"
-#$CMD $CERT --set --public --group-read="" --group-write="" --target=$BASE || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
+echo -n " [OK]"
+$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+echo " [OK]"
 echo
 echo "*** starting test sequence ***"
 echo
@@ -64,7 +63,6 @@ echo -n "view non-existent node "
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "create private container "
-echo "$MKDIRCMD $CERT $CONTAINER"
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
@@ -72,35 +70,35 @@ echo -n "view created container "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-#TODO vchmod
 echo -n "verify public=false after create "
-#$CMD $CERT --view --target=$CONTAINER | grep -q 'readable by anyone: false' || echo " [FAIL]" && exit -1
-echo "[TODO]"
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----rw-' || echo " [FAIL]" && exit -1
+echo "[OK]"
 
 echo -n "check set permission properties "
-#$CMD $CERT --set --public --group-read=test:g1 --group-write=test:g2 --target=$CONTAINER || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER | grep -q 'readable by anyone: true' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER | grep -q 'readable by: test:g1' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER | grep -q 'writable by: test:g2' || echo " [FAIL]" && exit -1
-echo "[TODO]"
+$CHMODCMD $CERT g+rw $CONTAINER test:g1 test:g2 || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+echo "[OK]"
 
 echo -n "check inherit permission properties "
-#$CMD $CERT --create --target=$CONTAINER/pub || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/pub | grep -q 'readable by anyone: true' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/pub | grep -q 'readable by: test:g1' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/pub | grep -q 'writable by: test:g2' || echo " [FAIL]" && exit -1
-echo "[TODO]"
+$MKDIRCMD $CERT $CONTAINER/pub || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+echo "[OK]"
 
-echo -n "check inherit certain properties "
-#$CMD $CERT --create --target=$CONTAINER/priv --group-read=test:g3 || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/priv | grep -q 'readable by anyone: true' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/priv | grep -q 'readable by: test:g3' || echo " [FAIL]" && exit -1
-#$CMD $CERT --view --target=$CONTAINER/priv | grep -q 'writable by: test:g2' || echo " [FAIL]" && exit -1
-echo "[TODO]"
+echo -n "check inherit + change certain properties "
+$MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+echo "[OK]"
 
 echo -n "check recursive create (non-existant parents) "
-$MKDIRCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null # || echo " [FAIL]" TODO add -p option&& exit -1
+#$MKDIRCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
+#$LSCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null # || echo " [FAIL]" TODO add -p option&& exit -1
 echo "[TODO]"
 
 echo -n "copy file to existing container and non-existent data node "

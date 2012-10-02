@@ -14,12 +14,12 @@ else
 endif
 echo "###################"
 ## we cannot feasibly test the --xsv option, but it is here to fiddle with in development
-set LSCMD = "$CADC_ROOT/scripts/vls"
-set MOUNTCMD = "$CADC_ROOT/scripts/mountvofs"
-set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
-set RMCMD = "$CADC_ROOT/scripts/vrm"
-set CPCMD = "$CADC_ROOT/scripts/vcp"
-set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
+set LSCMD = "python $CADC_ROOT/vls"
+set MOUNTCMD = "python $CADC_ROOT/mountvofs"
+set MKDIRCMD = "python $CADC_ROOT/vmkdir"
+set RMCMD = "python $CADC_ROOT/vrm"
+set CPCMD = "python $CADC_ROOT/vcp"
+set RMDIRCMD = "python $CADC_ROOT/vrmdir"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
@@ -89,7 +89,6 @@ echo " [OK]"
 # a bug brings vofs down if the node is busy. To be removed when
 # the vofs bug is fixed.
 echo "[TODO] - pause to allow file to get uploaded first" 
-sleep 30
 
 echo -n "copy data node to local filesystem "
 cp $MCONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1

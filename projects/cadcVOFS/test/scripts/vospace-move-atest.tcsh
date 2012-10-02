@@ -14,12 +14,14 @@ else
 endif
 echo "###################"
 
-set LSCMD = "$CADC_ROOT/scripts/vls"
-set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
-set RMCMD = "$CADC_ROOT/scripts/vrm"
-set CPCMD = "$CADC_ROOT/scripts/vcp"
-set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
-set MVCMD = "$CADC_ROOT/scripts/vmv"
+set LSCMD = "python $CADC_ROOT/vls"
+set MKDIRCMD = "python $CADC_ROOT/vmkdir"
+set RMCMD = "python $CADC_ROOT/vrm"
+set CPCMD = "python $CADC_ROOT/vcp"
+set RMDIRCMD = "python $CADC_ROOT/vrmdir"
+set MVCMD = "python $CADC_ROOT/vmv"
+set CHMODCMD = "python $CADC_ROOT/vchmod"
+
 
 set CERT = "--cert=$A/test-certificates/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$A/test-certificates/x509_CADCAuthtest1.pem"
@@ -52,15 +54,10 @@ else
     echo " [OK]"
 endif
 
-#echo -n "** delegating proxy certificates in CDP "
-#$CRED_CLIENT --delegate --daysvalid=1 --cert=$A/test-certificates/x509_CADCAuthtest1.pem | grep -qi 'certificate updated' || echo " [FAIL]" && exit -1 
-#$CRED_CLIENT --delegate --daysvalid=1 --cert=$A/test-certificates/x509_CADCAuthtest2.pem | grep -qi 'certificate updated' || echo " [FAIL]" && exit -1
-#echo " [OK]"
-
 echo -n "** setting home and base to public"
-#$CMD $CERT --set --public --target=$VOHOME || echo " [FAIL]" && exit -1
-#$CMD $CERT --set --public --target=$BASE || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+echo " [OK]"
 echo
 
 echo "*** starting test sequence ***"
@@ -70,11 +67,12 @@ echo
 
 echo -n "setup: create container "
 $MKDIRCMD $CERT $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT a-rw $CONTAINER ||  echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "setup: create container/a read-write to group 2 - TODO"
+echo -n "setup: create container/a read-write to group 2" 
 $MKDIRCMD $CERT $CONTAINER/a || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
@@ -116,46 +114,43 @@ echo -n " verify "
 $LSCMD $CERT $CONTAINER/e > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-#TODO - to be implemented when vchmod available
 echo -n "check no write permission on source data node (fail)"
-#$MVCMD $CERT2 --move --src=$CONTAINER/b --dest=$CONTAINER/d > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT2 $CONTAINER/b $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$CMD $CERT --view --target=$CONTAINER/b > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $CONTAINER/b > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 echo -n "check no recursive write permission on source container node (fail)"
-#$MVCMD $CERT2 $CONTAINER/a $CONTAINER/d > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT2 $CONTAINER/a $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
-#TODO - to be implemented when vchmod available
 echo -n "check no write permission on dest (fail)"
-#$CMD $CERT2 --move --src=$CONTAINER/c --dest=$CONTAINER/e > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT2 $CONTAINER/c $CONTAINER/e >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$CMD $CERT --view --target=$CONTAINER/c > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $CONTAINER/c > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 echo -n "test dest a data node (fail)"
-#$MVCMD $CERT $CONTAINER/a $CONTAINER/b > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a $CONTAINER/b >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 echo -n "test circular move (fail)"
-#$MVCMD $CERT $CONTAINER/a $CONTAINER/a/aa > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a $CONTAINER/a/aa >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 echo -n "test root move (fail)"
-#$MVCMD $CERT $BASE $CONTAINER/d > /dev/null && echo " [FAIL]" && exit -1
+$MVCMD $CERT $BASE $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
-#$LSCMD $CERT $BASE > /dev/null || echo " [FAIL]" && exit -1
-echo " [TODO]"
+$LSCMD $CERT $BASE > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 echo -n "test move container into container (pass)"
-echo "$MVCMD $CERT $CONTAINER/a $CONTAINER/d"
 $MVCMD $CERT $CONTAINER/a $CONTAINER/d >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/d/a > /dev/null || echo " [FAIL]" && exit -1
@@ -207,7 +202,9 @@ echo -n " verify "
 $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
+#TODO not supported in vmv
 echo -n "move a vos data node to local file system (pass)"
+#echo "$MVCMD $CERT $CONTAINER/a/aa/aaa something2.png > /dev/null"
 #$MVCMD $CERT $CONTAINER/a/aa/aaa something2.png > /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 #$LSCMD $CERT $CONTAINER/a/aa/aaa > /dev/null && echo " [FAIL]" && exit -1
@@ -221,6 +218,7 @@ $LSCMD $CERT $CONTAINER/a/testdir >& /dev/null && echo " [FAIL]" && exit -1
 rmdir testdir
 echo " [OK]"
 
+#TODO not supported in vmv
 echo -n "move a file to vos (success)"
 #$MVCMD $CERT something2.png $CONTAINER/a/aa/aaa> /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "

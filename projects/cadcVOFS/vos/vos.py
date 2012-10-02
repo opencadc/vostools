@@ -21,6 +21,7 @@ BUFSIZE=8388608
 #BUFSIZE=8192
 
 SERVER=os.getenv('VOSPACE_WEBSERVICE', 'www.cadc.hia.nrc.gc.ca')
+CADC_GMS_PREFIX="ivo://cadc.nrc.ca/gms#"
 
 class urlparse:
     """Break the URL into parts.
@@ -461,6 +462,7 @@ class Node:
             perm[0]='l'
         if self.props.get('ispublic',"false")=="true":
             perm[-3]='r'
+            perm[-2]='w'
         writeGroup = self.props.get('groupwrite','NONE')
         if writeGroup != 'NONE':
             perm[5]='w'
@@ -804,6 +806,7 @@ class Client:
         """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
         from errno import EINVAL
         parts=urlparse(uri)
+	#TODO implement support for local files (parts.scheme=None and self.rootNode=None
 	if parts.scheme is None:
             uri=self.rootNode+uri
         parts=urlparse(uri)

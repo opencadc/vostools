@@ -1,0 +1,121 @@
+#!python
+"""set read/write properties of a node.
+
+"""
+
+
+import time
+import errno
+import argparse
+from vos import vos
+
+def signal_handler(signal, frame):
+    sys.stderr.write("Interupt\n")
+    sys.exit(-1)
+
+
+if __name__=='__main__':
+
+    import logging, sys
+    import errno, os
+    ## handle interupts nicely
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    parser=argparse.ArgumentParser(description="Sets read/write properties of a node")
+
+    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))                      
+    parser.add_argument("-R",action='store_const',const=True,help="Recursive set read/write properties")
+    parser.add_argument("-v","--verbose",action='store_const',const=True,help="print some diagnostics")
+    parser.add_argument("-d","--debug",action='store_const',const=True,help="print all diagnositics")
+    parser.add_argument("mode",action='store',help="The read/write properties to set")
+    parser.add_argument("node",action='store',help="Target node")
+    parser.add_argument("groups",action='store',help="Group name(s)",nargs=argparse.REMAINDER)
+                      
+    opt=parser.parse_args()
+
+
+    import re
+    if not re.match("a[\+,\-,\=][rw,wr]|g[\+,\-,\=][r,w,rw,wr]", opt.mode):
+        parser.print_help()
+        sys.stderr.write("\n\nAccepted modes: [a,g][+,-,=][r,w]\n\n")
+        sys.exit(-1)
+
+    # 
+    props ={} 
+    if 'a' in opt.mode:
+        if '-' in opt.mode:
+	    props['ispublic'] = 'false'
+	else:
+	    props['ispublic'] = 'true'
+    else:
+        if 'r' in opt.mode:
+	    if '-' in opt.mode:
+	        if not len(opt.groups) == 0:
+		     parser.print_help()
+		     sys.stderr.write("\n\nNames of groups not required with remove permission\n\n")
+		     sys.exit(-1)
+	        if "r" in opt.mode:
+	            props['readgroup'] = None
+		if "w" in opt.mode:
+		    props['writegroup'] = None
+	    else:
+	        if not 'w' in opt.mode:
+		    if not len(opt.groups) == 1:
+		        parser.print_help()
+		        sys.stderr.write("\n\nName of one read group required\n\n")
+			sys.exit(-1)
+		    props['readgroup'] = opt.groups[0]
+		else:
+		    if not len(opt.groups) == 2:
+		        parser.print_help()
+			sys.stderr.write("\n\nNames of one read group and one write group required\n\n")
+			sys.exit(-1)
+		    if opt.mode.find('r') < opt.mode.find('w'):
+		        props['readgroup'] = opt.groups[0]
+	                props['writegroup'] = opt.groups[1]
+		    else:
+			props['readgroup'] = opt.groups[1]
+			props['writegroup'] = opt.groups[0]
+	elif 'w' in opt.mode:
+	    if '-' in opt.mode:
+	        props['writegroup'] = None
+	    else:
+	        if not len(opt.groups) == 1:
+		    parser.print_help()
+		    sys.stderr.write("\n\nName of one write group required\n\n")
+		    sys.exit(-1) 
+	        props['writegroup'] = opt.groups[0]
+    if ('+' in opt.mode) or ('=' in opt.mode): 
+        if 'readgroup' in props:
+            props['readgroup'] = vos.CADC_GMS_PREFIX + props['readgroup']
+        if 'writegroup' in props:
+            props['writegroup'] = vos.CADC_GMS_PREFIX + props['writegroup']
+
+    if opt.verbose:
+        logging.basicConfig(level=logging.INFO,format="%(message)s")
+    elif opt.debug:
+        logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR,format="%(message)s")
+    logging.debug("Properties: %s" % (str(props)))
+    logging.debug("Node: %s" % opt.node)
+
+    while True:
+    
+      try:
+        client=vos.Client(certFile=opt.certfile)
+        node=client.getNode(opt.node)
+	if 'readgroup' in props:
+	    node.chrgrp(props['readgroup'])
+	if 'writegroup' in props:
+	    node.chwgrp(props['writegroup'])
+	if 'ispublic' in props:
+	    node.setPublic(props['ispublic'])
+
+	client.update(node)
+        break
+      except Exception as e:
+        sys.stderr.write(str(e))
+        sys.exit(-1)
+    sys.exit(0)
