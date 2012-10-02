@@ -71,6 +71,10 @@ package ca.nrc.cadc.tap.parser;
 
 import ca.nrc.cadc.tap.parser.function.Concatenate;
 import ca.nrc.cadc.tap.parser.function.Operator;
+import java.util.Iterator;
+import java.util.List;
+import net.sf.jsqlparser.expression.CaseExpression;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
@@ -144,6 +148,38 @@ public class QueryDeParser extends ExpressionDeParser implements OperatorVisitor
         buffer.append(")");
     }
 
+    /**
+     * Override to add missing ELSE keyword in base class.
+     * 
+     * @param caseExpression
+     */
+    @Override
+    public void visit(CaseExpression caseExpression)
+    {
+        log.debug("visit(" +  caseExpression.getClass().getSimpleName() + ") " + caseExpression);
+        buffer.append("CASE ");
+        Expression switchExp = caseExpression.getSwitchExpression();
+        if( switchExp != null )
+        {
+            switchExp.accept(this);
+        }
+
+        List clauses = caseExpression.getWhenClauses();
+        for (Iterator iter = clauses.iterator(); iter.hasNext();)
+        {
+            Expression exp = (Expression) iter.next();
+            exp.accept(this);
+        }
+
+        Expression elseExp = caseExpression.getElseExpression();
+        if( elseExp != null )
+        {
+            buffer.append(" ELSE ");
+            elseExp.accept(this);
+        }
+
+        buffer.append(" END");
+    }
 }
 
     /**
@@ -358,13 +394,6 @@ public class QueryDeParser extends ExpressionDeParser implements OperatorVisitor
     {
         log.debug("visit(" +  timeValue.getClass().getSimpleName() + ") " + timeValue);
         super.visit(timeValue);
-    }
-
-    @Override
-    public void visit(CaseExpression caseExpression)
-    {
-        log.debug("visit(" +  caseExpression.getClass().getSimpleName() + ") " + caseExpression);
-        super.visit(caseExpression);
     }
 
     @Override

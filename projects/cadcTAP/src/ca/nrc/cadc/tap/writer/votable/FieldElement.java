@@ -87,7 +87,10 @@ public class FieldElement extends Element
         if (paramDesc != null)
         {
             setFieldName(paramDesc.alias, paramDesc.name);
-            setFieldAttribute("utype", paramDesc.utype);
+            if (paramDesc.columnDesc != null)
+                setFieldAttribute("utype", paramDesc.columnDesc.utype);
+            else
+                setFieldAttribute("utype", paramDesc.utype);
             setFieldAttribute("ucd", paramDesc.ucd);
             setFieldAttribute("unit", paramDesc.unit);
             if (paramDesc.datatype != null && paramDesc.datatype.startsWith("adql:"))

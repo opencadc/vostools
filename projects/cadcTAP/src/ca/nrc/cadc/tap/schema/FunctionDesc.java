@@ -90,6 +90,12 @@ public class FunctionDesc
      */
     public String datatype;
 
+    /**
+     * The argument columnDesc if the argument was a column and the function does not
+     * change datatype.
+     */
+    public ColumnDesc arg;
+
     public FunctionDesc(String name, String unit)
     {
         this(name, unit, TapSchemaDAO.ARGUMENT_DATATYPE);

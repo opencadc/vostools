@@ -185,6 +185,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
 
             FunctionDesc functionDesc = getFunctionDesc(function, plainSelect);
             paramDesc = new ParamDesc(functionDesc, alias);
+            paramDesc.columnDesc = functionDesc.arg;
         }
         else
         {
@@ -223,6 +224,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
         if (functionDesc.datatype.equals(TapSchemaDAO.ARGUMENT_DATATYPE))
         {
             String datatype = null;
+            ColumnDesc arg = null;
             ExpressionList parameters = function.getParameters();
             for (Object parameter : parameters.getExpressions())
             {
@@ -230,7 +232,10 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                 {
                     ColumnDesc columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, (Column) parameter);
                     if (columnDesc != null)
+                    {
                         datatype = columnDesc.datatype;
+                        arg = columnDesc;
+                    }
                 }
                 else if (parameter instanceof Function)
                 {
@@ -241,11 +246,15 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                     {
                         FunctionDesc recursiveFunctionDesc = getFunctionDesc(nestedFunction, plainSelect);
                         if (recursiveFunctionDesc != null)
+                        {
                             datatype = recursiveFunctionDesc.datatype;
+                            arg = recursiveFunctionDesc.arg;
+                        }
                     }
                     else
                     {
                         datatype = nestedFunctionDesc.datatype;
+                        arg = nestedFunctionDesc.arg;
                     }
                 }
                 else
@@ -256,6 +265,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                 if (datatype != null)
                 {
                     functionDesc.datatype = datatype;
+                    functionDesc.arg = arg;
                     break;
                 }
             }
