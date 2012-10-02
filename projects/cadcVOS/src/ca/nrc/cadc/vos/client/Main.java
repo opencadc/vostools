@@ -288,7 +288,10 @@ public class Main implements Runnable
         }
         else if (this.operation.equals(Operation.SET))
         {
-            doSet();
+            if (recursiveMode)
+                doRecursiveSet();
+            else
+                doSet();
         }
         log.debug("run - DONE");
     }
@@ -315,7 +318,6 @@ public class Main implements Runnable
             else
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
 
-            this.client.setResursiveMode(recursiveMode);
             this.client.setNode(up);
             log.info("updated properties: " + this.target);
         }
@@ -860,6 +862,54 @@ public class Main implements Runnable
         log.debug("deleted vos file: " + this.source);
     }
     
+    private void doRecursiveSet()
+    {
+        try
+        {
+            log.debug("target.getPath()" + this.target.getPath());
+            // TODO: here we get the node in order to figure out the type, but
+            // maybe we could just POST a vanilla Node object?
+            Node n = this.client.getNode(this.target.getPath(), "limit=0");
+            Node up = null;
+            if (n instanceof ContainerNode)
+                up = new ContainerNode(target, properties);
+            else if (n instanceof DataNode)
+                up = new DataNode(target, properties);
+            else if (n instanceof LinkNode)
+            {
+                URI link = ((LinkNode) n).getTarget();
+                up = new LinkNode(target, properties, link);
+            }
+            else
+                throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
+
+            ClientRecursiveSetNode recSetNode = client.setNodeRecursive(up);
+
+            recSetNode.setMonitor(true);
+            recSetNode.run();
+            checkPhase(recSetNode);
+            
+            log.info("updated properties recursively: " + this.target);
+        }
+        catch(NodeNotFoundException ex)
+        {
+            msg("not found: " + target);
+            System.exit(NET_STATUS);
+        }
+        catch(Throwable t)
+        {
+            msg("failed to set properties recursively on node: " + target);
+            if (t.getMessage() != null)
+                msg("          reason: " + t.getMessage());
+            else
+                msg("          reason: " + t);
+            if (t.getCause() != null)
+                msg("          reason: " + t.getCause());
+            System.exit(NET_STATUS);
+        }
+
+    }
+    
     private void moveWithinVOSpace()
         throws Throwable
     {
@@ -872,9 +922,9 @@ public class Main implements Runnable
         trans.runTransfer();
         checkPhase(trans);
     }
-
+    
     private void checkPhase(ClientTransfer trans)
-        throws IOException, RuntimeException
+            throws IOException, RuntimeException
     {
         ExecutionPhase ep = trans.getPhase();
         if ( ExecutionPhase.ERROR.equals(ep) )
@@ -884,6 +934,21 @@ public class Main implements Runnable
         }
         else if ( ExecutionPhase.ABORTED.equals(ep) )
             throw new RuntimeException("transfer aborted by service");
+        else if ( !ExecutionPhase.COMPLETED.equals(ep) )
+            throw new RuntimeException("unexpected job state: " + ep.name());
+    }
+
+    private void checkPhase(ClientRecursiveSetNode recSetNode)
+        throws IOException, RuntimeException
+    {
+        ExecutionPhase ep = recSetNode.getPhase();
+        if ( ExecutionPhase.ERROR.equals(ep) )
+        {
+            ErrorSummary es = recSetNode.getServerError();
+            throw new RuntimeException(es.getSummaryMessage());
+        }
+        else if ( ExecutionPhase.ABORTED.equals(ep) )
+            throw new RuntimeException("recursive set node aborted by service");
         else if ( !ExecutionPhase.COMPLETED.equals(ep) )
             throw new RuntimeException("unexpected job state: " + ep.name());
     }

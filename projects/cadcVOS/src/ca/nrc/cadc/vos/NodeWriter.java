@@ -100,13 +100,11 @@ public class NodeWriter
     /*
      * The VOSpace Namespaces.
      */
-    protected static Namespace defaultNamespace;
     protected static Namespace vosNamespace;
     protected static Namespace xsiNamespace;
     
     static
     {
-        defaultNamespace = Namespace.getNamespace("http://www.ivoa.net/xml/VOSpace/v2.0");
         vosNamespace = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
         xsiNamespace = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
     }
@@ -195,9 +193,9 @@ public class NodeWriter
      */
     protected Element getNodeElement(Node node)
     {
-        Element ret = new Element("node", defaultNamespace);
+        Element ret = new Element("node", vosNamespace);
         ret.setAttribute("uri", node.getUri().toString());
-        ret.setAttribute("type", "vos:" + node.getClass().getSimpleName(), xsiNamespace);
+        ret.setAttribute("type", vosNamespace.getPrefix() + ":" + node.getClass().getSimpleName(), xsiNamespace);
 
         Element props = getPropertiesElement(node);
         ret.addContent(props);
@@ -219,7 +217,7 @@ public class NodeWriter
         else if (node instanceof LinkNode)
         {
             LinkNode ln = (LinkNode) node;
-            Element targetEl = new Element("target", defaultNamespace);
+            Element targetEl = new Element("target", vosNamespace);
             targetEl.setText(ln.getTarget().toString());
             ret.addContent(targetEl);
         }
@@ -234,10 +232,10 @@ public class NodeWriter
      */
     protected Element getPropertiesElement(Node node)
     {
-        Element ret = new Element("properties", defaultNamespace);
+        Element ret = new Element("properties", vosNamespace);
         for (NodeProperty nodeProperty : node.getProperties())
         {
-            Element property = new Element("property", defaultNamespace);
+            Element property = new Element("property", vosNamespace);
             if (nodeProperty.isMarkedForDeletion())
                 property.setAttribute(new Attribute("nil", "true", xsiNamespace));
             else
@@ -257,10 +255,10 @@ public class NodeWriter
      */
     protected Element getAcceptsElement(Node node)
     {
-        Element accepts = new Element("accepts", defaultNamespace);
+        Element accepts = new Element("accepts", vosNamespace);
         for (URI viewURI : node.accepts())
         {
-            Element viewElement = new Element("view", defaultNamespace);
+            Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             accepts.addContent(viewElement);
         }
@@ -275,10 +273,10 @@ public class NodeWriter
      */
     protected Element getProvidesElement(Node node)
     {
-        Element provides = new Element("provides", defaultNamespace);
+        Element provides = new Element("provides", vosNamespace);
         for (URI viewURI : node.provides())
         {
-            Element viewElement = new Element("view", defaultNamespace);
+            Element viewElement = new Element("view", vosNamespace);
             viewElement.setAttribute("uri", viewURI.toString());
             provides.addContent(viewElement);
         }
@@ -294,7 +292,7 @@ public class NodeWriter
      */
     protected Element getNodesElement(ContainerNode node)
     {
-        Element nodes = new Element("nodes", defaultNamespace);
+        Element nodes = new Element("nodes", vosNamespace);
         for (Node childNode : node.getNodes())
         {
             Element nodeElement = getNodeElement(childNode);

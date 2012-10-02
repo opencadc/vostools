@@ -123,11 +123,10 @@ public class VOSpaceClient
     // TODO: get this from capabilites obtained via registry lookup
     public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
     public static final String VOSPACE_ASYNC_TRANSFER_ENDPOINT = "/transfers";
+    public static final String VOSPACE_ASYNC_NODEPROPS_ENDPONT = "/nodeprops";
     public static final String VOSPACE_NODE_ENDPOINT = "/nodes";
-    public static final String VOSPACE_RECURSIVE_NODE_ENDPONT = "/nodeprops";
 
     protected String baseUrl;
-    protected boolean recursiveMode;
     boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
 
@@ -155,7 +154,6 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
         this.schemaValidation = enableSchemaValidation;
-        this.recursiveMode = false;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -168,17 +166,6 @@ public class VOSpaceClient
     {
         initHTTPS(null);
         return sslSocketFactory;
-    }
-
-    /**
-     * Does a recursive setNode operation if true, else setNode only
-     * updates the specified Node.
-     *
-     * @param b 
-     */
-    public void setResursiveMode(boolean b)
-    {
-        this.recursiveMode = b;
     }
 
     /**
@@ -439,12 +426,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            String endpoint;
-            if (recursiveMode)
-                endpoint = VOSPACE_RECURSIVE_NODE_ENDPONT;
-            else
-                endpoint = VOSPACE_NODE_ENDPOINT;
-            URL url = new URL(this.baseUrl + endpoint + node.getUri().getPath());
+            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
             
@@ -459,6 +441,7 @@ public class VOSpaceClient
             String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
             rtnNode = nodeReader.read(responseBody);
+            
         }
         catch (IOException e)
         {
@@ -469,6 +452,39 @@ public class VOSpaceClient
             throw new IllegalStateException("failed to set node", e);
         }
         return rtnNode;
+    }
+    
+    // create an async transfer job
+    public ClientRecursiveSetNode setNodeRecursive(Node node)
+    {
+        try
+        {
+            String asyncNodePropsUrl = this.baseUrl + VOSPACE_ASYNC_NODEPROPS_ENDPONT;
+            NodeWriter nodeWriter = new NodeWriter();
+            Writer stringWriter = new StringWriter();
+            nodeWriter.write(node, stringWriter);
+            URL postUrl = new URL(asyncNodePropsUrl);
+            
+            HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
+            httpPost.run();
+            checkFailureClean(httpPost.getThrowable());
+            
+            URL jobUrl = httpPost.getRedirectURL();
+            log.debug("Job URL is: " + jobUrl.toString());
+
+            // we have only created the job, not run it
+            return new ClientRecursiveSetNode(jobUrl, node, schemaValidation);
+        }
+        catch (MalformedURLException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (IOException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
     }
 
 
