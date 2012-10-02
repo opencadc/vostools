@@ -1,7 +1,7 @@
-#!python
+#!python2.7
 
 """vls:  list the contents of a voSpace"""
-import vos
+from vos import vos
 import optparse
 import logging
 import os,sys
@@ -86,7 +86,7 @@ if len(args) < 1  :
 logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
-    vos=vos.Client(certFile=opt.certfile)
+    client=vos.Client(certFile=opt.certfile)
 except Exception as e:
     logging.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(-1)
@@ -114,15 +114,15 @@ def dateFormat(Epoch):
         return time.strftime('%b %d  %Y ',timeTup)
     return time.strftime('%b %d %H:%S ',timeTup)
 
-columns=['permisions','creator']
-if opt.group:
-    columns.extend(['readGroup','writeGroup'])
-columns.extend(['size','date'])
+columns=['permisions']
+if opt.long:
+    columns.extend(['creator'])
+columns.extend(['readGroup','writeGroup','size','date'])
 
 formats={'permisions': lambda value: "%-11s" % (value),
-         'creator': lambda value: "%-20s" % (value),
-         'readGroup': lambda value: "%-15s" % (value),
-         'writeGroup': lambda value: "%-15s" % (value),
+         'creator': lambda value: " %-20s" % (value),
+         'readGroup': lambda value: " %-15s" % (value.replace(vos.CADC_GMS_PREFIX, "")),
+         'writeGroup': lambda value: " %-15s" % (value.replace(vos.CADC_GMS_PREFIX, "")),
          'size': sizeFormat,
          'date': dateFormat}
 
@@ -131,7 +131,7 @@ for node in args:
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
-        infoList= vos.getInfoList(node)
+        infoList= client.getInfoList(node)
     except IOError as e:
         logging.error("Error getting listing of %s ( %s )" % (node,e.strerror))
         sys.exit(e.errno)
@@ -145,7 +145,7 @@ for node in args:
 
     for item in infoList:
         name_string = item[0]
-        if opt.long:
+        if opt.long or opt.group:
             for col in columns:
                 sys.stdout.write(formats[col](item[1][col]))
             if item[1]["permisions"][0] == 'l':

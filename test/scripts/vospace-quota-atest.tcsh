@@ -13,10 +13,10 @@ else
 endif
 echo "###################"
 
-set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
-set CPCMD = "$CADC_ROOT/scripts/vcp"
-set LSCMD = "$CADC_ROOT/scripts/vls"
-set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
+set MKDIRCMD = "python $CADC_ROOT/vmkdir"
+set CPCMD = "python $CADC_ROOT/vcp"
+set LSCMD = "python $CADC_ROOT/vls"
+set RMDIRCMD = "python $CADC_ROOT/vrmdir"
 set CERT = "--cert=$A/test-certificates/x509_CADCAuthtest2.pem"
 
 echo

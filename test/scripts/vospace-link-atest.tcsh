@@ -15,12 +15,13 @@ else
 endif
 echo "###################"
 
-set LSCMD = "$CADC_ROOT/scripts/vls"
-set MKDIRCMD = "$CADC_ROOT/scripts/vmkdir"
-set RMCMD = "$CADC_ROOT/scripts/vrm"
-set CPCMD = "$CADC_ROOT/scripts/vcp"
-set RMDIRCMD = "$CADC_ROOT/scripts/vrmdir"
-set LNCMD = "$CADC_ROOT/scripts/vln"
+set LSCMD = "python $CADC_ROOT/vls"
+set MKDIRCMD = "python $CADC_ROOT/vmkdir"
+set RMCMD = "python $CADC_ROOT/vrm"
+set CPCMD = "python $CADC_ROOT/vcp"
+set RMDIRCMD = "python $CADC_ROOT/vrmdir"
+set LNCMD = "python $CADC_ROOT/vln"
+set CHMODCMD = "python $CADC_ROOT/vchmod"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 set CERT2 = " --cert=$A/test-certificates/x509_CADCAuthtest1.pem"
@@ -46,17 +47,18 @@ else
 	echo " [OK]"
 endif
 echo -n "** setting home and base to public, no groups"
-#$CMD $CERT --set --public --group-read="" --group-write="" --target=$VOHOME || echo " [FAIL]" && exit -1
-echo -n " [TODO]"
-#$CMD $CERT --set --public --group-read="" --group-write="" --target=$BASE || echo " [FAIL]" && exit -1
-echo " [TODO]"
-echo
+$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
+echo -n " [OK]"
+$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+echo " [OK]"
+
 
 echo "*** starting test sequence ***"
 echo
 
 echo -n "create base container"
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT a-rw $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "create container to be valid link target"
@@ -76,8 +78,8 @@ $CPCMD $CERT $CONTAINER/clink/something.png /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link without read permission and fail"
-#TODO when vchmod implemented $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp && echo " [FAIL]" && exit -1
-echo " [TODO]"
+$CPCMD $CERT2 $CONTAINER/clink/something.png /tmp >& /dev/null && echo " [FAIL]" && exit -1
+echo " [OK]"
  
 echo -n "create link to target file"
 $LNCMD $CERT $CONTAINER/target/something.png $CONTAINER/dlink > /dev/null || echo " [FAIL]" && exit -1
