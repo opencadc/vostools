@@ -151,6 +151,7 @@ public class Main implements Runnable
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
     public static final String ARG_CONTENT_MD5 = "content-md5";
+    public static final String ARG_RECURSIVE = "recursive";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -189,6 +190,8 @@ public class Main implements Runnable
     private VOSpaceClient client = null;
     private Subject subject;
     private boolean retryEnabled = false;
+
+    private boolean recursiveMode = false;
     
     // target of a LinkNode
     private URI link;
@@ -311,6 +314,8 @@ public class Main implements Runnable
             }
             else
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
+
+            this.client.setResursiveMode(recursiveMode);
             this.client.setNode(up);
             log.info("updated properties: " + this.target);
         }
@@ -1430,6 +1435,8 @@ public class Main implements Runnable
             }
         }
 
+        this.recursiveMode = argMap.isSet(ARG_RECURSIVE);
+
         if (contentType != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
         if (contentEncoding != null)
@@ -1534,6 +1541,7 @@ public class Main implements Runnable
             "   [--content-type=<mimetype of source>]                                                          ",
             "   [--content-encoding=<encoding of source>]                                                      ",
             "   [--prop=<properties file>]                                                                     ",
+            "   [--recursive]                                                                                  ",
             "                                                                                                  ",
         };
         for (String line : um)

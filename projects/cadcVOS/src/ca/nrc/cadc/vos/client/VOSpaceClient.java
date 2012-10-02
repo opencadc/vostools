@@ -123,10 +123,14 @@ public class VOSpaceClient
     // TODO: get this from capabilites obtained via registry lookup
     public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
     public static final String VOSPACE_ASYNC_TRANSFER_ENDPOINT = "/transfers";
+    public static final String VOSPACE_NODE_ENDPOINT = "/nodes";
+    public static final String VOSPACE_RECURSIVE_NODE_ENDPONT = "/nodeprops";
 
     protected String baseUrl;
+    protected boolean recursiveMode;
     boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
+
 
     /**
      * Constructor. XML Schema validation is enabled by default.
@@ -151,6 +155,7 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
         this.schemaValidation = enableSchemaValidation;
+        this.recursiveMode = false;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -164,7 +169,18 @@ public class VOSpaceClient
         initHTTPS(null);
         return sslSocketFactory;
     }
-    
+
+    /**
+     * Does a recursive setNode operation if true, else setNode only
+     * updates the specified Node.
+     *
+     * @param b 
+     */
+    public void setResursiveMode(boolean b)
+    {
+        this.recursiveMode = b;
+    }
+
     /**
      * Create the specified node. If the parent (container) nodes do not exist, they
      * will also be created.
@@ -411,6 +427,10 @@ public class VOSpaceClient
     }
 
     /**
+     * Add --recursiveMode option to command line, used by set only, and if set
+     * setNode uses a different recursiveMode endpoint.
+     */
+    /**
      * @param node
      * @return
      */
@@ -419,7 +439,12 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
+            String endpoint;
+            if (recursiveMode)
+                endpoint = VOSPACE_RECURSIVE_NODE_ENDPONT;
+            else
+                endpoint = VOSPACE_NODE_ENDPOINT;
+            URL url = new URL(this.baseUrl + endpoint + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
             
@@ -434,7 +459,6 @@ public class VOSpaceClient
             String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
             rtnNode = nodeReader.read(responseBody);
-            
         }
         catch (IOException e)
         {
