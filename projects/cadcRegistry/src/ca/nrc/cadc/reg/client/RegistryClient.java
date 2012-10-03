@@ -174,7 +174,7 @@ public class RegistryClient
     public URL getServiceURL(URI serviceID)
         throws MalformedURLException
     {
-        return getServiceURL(serviceID, null);
+        return getServiceURL(serviceID, null, null);
     }
 
     /**
@@ -189,6 +189,24 @@ public class RegistryClient
      * @return base URL or null if a matching service (and protocol) was not found
      */
     public URL getServiceURL(URI serviceID, String protocol)
+         throws MalformedURLException
+    {
+        return getServiceURL(serviceID, protocol, null);
+    }
+    
+    /**
+     * Find the service URL for the service registered under the specified identifier and
+     * using the specified protocol. The identifier must be an IVOA identifier
+     * (e.g. with URI scheme os "ivo"). The protocol argument may be null, in which case this
+     * method behaves exactly like getServiceURL(URI).
+     *
+     * @param serviceID the identifier of the service
+     * @param protocol the desired protocol or null if any will do
+     * @param path a resource path to append to the base url (null to get the base url)
+     * @throws MalformedURLException if underlying properties file contains malformed URL
+     * @return base URL or null if a matching service (and protocol) was not found
+     */
+    public URL getServiceURL(URI serviceID, String protocol, String path)
         throws MalformedURLException
     {
         init();
@@ -196,60 +214,50 @@ public class RegistryClient
 
         //List<URL> urls = lookup.get(serviceID);
         List<String> urls = mvp.getProperty(serviceID.toString());
-        if (urls == null || urls.size() == 0)
+        if (urls == null || urls.isEmpty() )
         {
-            //log.debug("no matching serviceID found");
-            return null; // could not find matching serviceID
+            return null; // no matching serviceURI
         }
-        String url = urls.get(0);
+        // default: first one in list
+        String surl = urls.get(0);
 
         if (protocol != null)
         {
             for (String u : urls)
             {
                 if ( u.startsWith(protocol + "://") )
-                    url = u;
+                    surl = u;
             }
-            if ( !url.startsWith(protocol + "://") )
+            if ( !surl.startsWith(protocol + "://") )
             {
-                //log.debug("no matching protocol found");
-                return null; // could not find matching protocol
+                return null; // no matching protocol
             }
         }
 
-        URL ret = new URL(url);
+        StringBuilder sb = new StringBuilder();
+
         if ( hostname != null )
         {
-            try
+            URL ret = new URL(surl);
+            log.debug(LOCAL_PROPERTY + " is set, assuming localhost runs the service");
+            sb.append(ret.getProtocol());
+            sb.append("://");
+            sb.append(hostname);
+            int p = ret.getPort();
+            if (p > 0 && p != ret.getDefaultPort())
             {
-                log.debug(LOCAL_PROPERTY + " is set, assuming localhost runs the service");
-                StringBuffer sb = new StringBuffer();
-                sb.append(ret.getProtocol());
-                sb.append("://");
-                sb.append(hostname);
-                int p = ret.getPort();
-                if (p > 0 && p != ret.getDefaultPort())
-                {
-                    sb.append(":");
-                    sb.append(p);
-                }
-                sb.append(ret.getPath());
-                String q = ret.getQuery();
-                if (q != null && q.length() > 0)
-                {
-                    sb.append("?");
-                    sb.append(q);
-                }
-                ret = new URL(sb.toString());
+                sb.append(":");
+                sb.append(p);
             }
-            catch(MalformedURLException ex)
-            {
-                // we caused this ourselves, so don't blame prop file
-                throw new RuntimeException("failed to change host name in URL to canonical local host name", ex);
-            }
+            sb.append(ret.getPath());
         }
+        else
+            sb.append(surl);
 
-        return ret;
+        if (path != null)
+            sb.append(path);
+
+        return new URL(sb.toString());
     }
 
     private void init()

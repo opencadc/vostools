@@ -145,10 +145,10 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             URL url = rc.getServiceURL(new URI("ivo://foo/bar"));
             Assert.assertNull(url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -163,10 +163,10 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             URL url = rc.getServiceURL(new URI(DUMMY_URI));
             Assert.assertEquals(expected, url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
     @Test
@@ -183,10 +183,10 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             URL url = rc.getServiceURL(new URI(DUMMY_URI));
             Assert.assertEquals(expected, url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -207,10 +207,32 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             url = rc.getServiceURL(new URI(GMS_URI), "https");
             Assert.assertEquals(expected, url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testFoundWithPath() throws Exception
+    {
+        try
+        {
+            RegistryClient rc = new RegistryClient();
+
+            URL expected = new URL(GMS_HTTP + "/doit");
+            URL url = rc.getServiceURL(new URI(GMS_URI), null, "/doit");
+            Assert.assertEquals(expected, url);
+
+            expected = new URL(GMS_HTTPS + "/doit");
+            url = rc.getServiceURL(new URI(GMS_URI), "https", "/doit");
+            Assert.assertEquals(expected, url);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -228,10 +250,10 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             URL url = rc.getServiceURL(new URI(DUMMY_URI));
             Assert.assertEquals(expected, url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
         finally
         {
@@ -253,10 +275,10 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             URL url = rc.getServiceURL(new URI(DUMMY_URI));
             Assert.assertEquals(expected, url);
         }
-        catch(Throwable t)
+        catch(Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
         finally
         {
