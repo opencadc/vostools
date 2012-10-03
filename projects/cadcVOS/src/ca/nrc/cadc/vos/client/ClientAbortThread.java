@@ -90,7 +90,7 @@ public class ClientAbortThread extends Thread
     static
     {
         parameters = new HashMap<String, Object>();
-        parameters.put("PHASE", "RUN");
+        parameters.put("PHASE", "ABORTED:");
     }
 
     // URL to the Job to abort.
