@@ -14,25 +14,25 @@ def signal_handler(signal, frame):
     sys.exit(-1)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     import logging, sys
     import errno, os
     ## handle interupts nicely
     import signal
     signal.signal(signal.SIGINT, signal_handler)
-    
-    parser=argparse.ArgumentParser(description="Sets read/write properties of a node")
 
-    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))                      
-    parser.add_argument("-R",action='store_const',const=True,help="Recursive set read/write properties")
-    parser.add_argument("-v","--verbose",action='store_const',const=True,help="print some diagnostics")
-    parser.add_argument("-d","--debug",action='store_const',const=True,help="print all diagnositics")
-    parser.add_argument("mode",action='store',help="The read/write properties to set")
-    parser.add_argument("node",action='store',help="Target node")
-    parser.add_argument("groups",action='store',help="Group name(s)",nargs=argparse.REMAINDER)
-                      
-    opt=parser.parse_args()
+    parser = argparse.ArgumentParser(description="Sets read/write properties of a node")
+
+    parser.add_argument("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_argument("-R", "--recursive", action='store_const', const=True, help="Recursive set read/write properties")
+    parser.add_argument("-v", "--verbose", action='store_const', const=True, help="print some diagnostics")
+    parser.add_argument("-d", "--debug", action='store_const', const=True, help="print all diagnositics")
+    parser.add_argument("mode", action='store', help="The read/write properties to set")
+    parser.add_argument("node", action='store', help="Target node")
+    parser.add_argument("groups", action='store', help="Group name(s)", nargs=argparse.REMAINDER)
+
+    opt = parser.parse_args()
 
 
     import re
@@ -42,7 +42,7 @@ if __name__=='__main__':
         sys.exit(-1)
 
     # 
-    props ={} 
+    props = {}
     if 'a' in opt.mode:
         if '-' in opt.mode:
 	    props['ispublic'] = 'false'
@@ -84,36 +84,37 @@ if __name__=='__main__':
 	        if not len(opt.groups) == 1:
 		    parser.print_help()
 		    sys.stderr.write("\n\nName of one write group required\n\n")
-		    sys.exit(-1) 
+		    sys.exit(-1)
 	        props['writegroup'] = opt.groups[0]
-    if ('+' in opt.mode) or ('=' in opt.mode): 
+    if ('+' in opt.mode) or ('=' in opt.mode):
         if 'readgroup' in props:
             props['readgroup'] = vos.CADC_GMS_PREFIX + props['readgroup']
         if 'writegroup' in props:
             props['writegroup'] = vos.CADC_GMS_PREFIX + props['writegroup']
 
     if opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="%(message)s")
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
     elif opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
     else:
-        logging.basicConfig(level=logging.ERROR,format="%(message)s")
+        logging.basicConfig(level=logging.ERROR, format="%(message)s")
     logging.debug("Properties: %s" % (str(props)))
     logging.debug("Node: %s" % opt.node)
 
     while True:
-    
-      try:
-        client=vos.Client(certFile=opt.certfile)
-        node=client.getNode(opt.node)
-	if 'readgroup' in props:
-	    node.chrgrp(props['readgroup'])
-	if 'writegroup' in props:
-	    node.chwgrp(props['writegroup'])
-	if 'ispublic' in props:
-	    node.setPublic(props['ispublic'])
 
-	client.update(node)
+      try:
+        client = vos.Client(certFile=opt.certfile)
+        node = client.getNode(opt.node)
+        if opt.recursive:
+            node.props.clear()
+        if 'readgroup' in props:
+	        node.chrgrp(props['readgroup'])
+        if 'writegroup' in props:
+	        node.chwgrp(props['writegroup'])
+        if 'ispublic' in props:
+	        node.setPublic(props['ispublic'])
+        client.update(node, opt.recursive)
         break
       except Exception as e:
         sys.stderr.write(str(e))
