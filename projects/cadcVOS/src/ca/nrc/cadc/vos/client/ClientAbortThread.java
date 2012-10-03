@@ -79,9 +79,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Thread that attempts to set a Job's Phase to ABORT. It's expected that when
+ * Thread that attempts to set a Job's Phase to ABORTED. It's expected that when
  * the run method has been invoked, the VM is about to shutdown. The run method
- * POST's PHASE=ABORT to the Job's phase endpoint.
+ * POST's PHASE=ABORTED to the Job's phase endpoint.
  *
  * @author jburke
  */
@@ -91,7 +91,7 @@ public class ClientAbortThread extends Thread
     static
     {
         parameters = new HashMap<String, Object>();
-        parameters.put("PHASE", ExecutionPhase.ABORTED);
+        parameters.put("PHASE", "ABORT");
     }
 
     // URL to the Job to abort.
@@ -103,7 +103,7 @@ public class ClientAbortThread extends Thread
     }
 
     /**
-     * POST PHASE=ABORT to the Job URL.
+     * POST PHASE=ABORTED to the Job's phase endpoint.
      */
     @Override
     public void run()
