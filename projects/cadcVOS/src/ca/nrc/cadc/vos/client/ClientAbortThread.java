@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.client;
 
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -90,7 +91,7 @@ public class ClientAbortThread extends Thread
     static
     {
         parameters = new HashMap<String, Object>();
-        parameters.put("PHASE", "ABORTED:");
+        parameters.put("PHASE", ExecutionPhase.ABORTED);
     }
 
     // URL to the Job to abort.
