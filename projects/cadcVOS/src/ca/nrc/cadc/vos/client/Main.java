@@ -200,7 +200,7 @@ public class Main implements Runnable
      * @param args  The arguments passed into this command.
      */
     public static void main(String[] args)
-    {        
+    {
         ArgumentMap argMap = new ArgumentMap(args);
         Main command = new Main();
 
@@ -255,6 +255,28 @@ public class Main implements Runnable
             log.error("unexpected failure", t);
         }
         System.exit(0);
+    }
+
+    public void attachShutDownHook(Thread thread)
+    {
+        Runtime.getRuntime().addShutdownHook(thread);
+    }
+
+    public static void test()
+    {
+        try
+        {
+            int count = 1;
+            while (count < 10)
+            {
+                System.out.println("sleep[" + count++ + "]");
+                Thread.sleep(1000);
+            }
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+        }
     }
 
     // encapsulate all messages to console here
@@ -885,8 +907,11 @@ public class Main implements Runnable
 
             ClientRecursiveSetNode recSetNode = client.setNodeRecursive(up);
 
+            Thread abortThread = new ClientAbortThread(recSetNode.getJobURL());
+            Runtime.getRuntime().addShutdownHook(abortThread);
             recSetNode.setMonitor(true);
             recSetNode.run();
+            Runtime.getRuntime().removeShutdownHook(abortThread);
             checkPhase(recSetNode);
             
             log.info("updated properties recursively: " + this.target);
@@ -918,8 +943,11 @@ public class Main implements Runnable
         Transfer transfer = new Transfer(src, dest, false);
         ClientTransfer trans = client.createTransfer(transfer);
 
+        Thread abortThread = new ClientAbortThread(trans.getJobURL());
+        Runtime.getRuntime().addShutdownHook(abortThread);
         trans.setMonitor(true);
         trans.runTransfer();
+        Runtime.getRuntime().removeShutdownHook(abortThread);
         checkPhase(trans);
     }
     

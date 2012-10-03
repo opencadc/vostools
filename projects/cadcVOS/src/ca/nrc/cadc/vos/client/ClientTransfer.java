@@ -148,6 +148,16 @@ public class ClientTransfer implements Runnable
     }
 
     /**
+     * Get the URL to the Job.
+     * 
+     * @return URL tot the Job.
+     */
+    public URL getJobURL()
+    {
+        return jobURL;
+    }
+
+    /**
      * Get the negotiated transfer details.
      * 
      * @return the negotiated transfer

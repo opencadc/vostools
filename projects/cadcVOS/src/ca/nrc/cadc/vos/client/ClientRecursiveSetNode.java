@@ -137,6 +137,16 @@ public class ClientRecursiveSetNode implements Runnable
     }
 
     /**
+     * Get the URL to the Job.
+     * 
+     * @return URL to the Job.
+     */
+    public URL getJobURL()
+    {
+        return this.jobURL;
+    }
+
+    /**
      * Get the node.
      */
     public Node getNode() { return node; }
