@@ -64,7 +64,6 @@ class VOFS(LoggingMixIn, Operations):
         # This dictionary contains the Node data about the VOSpace node in question
         self.node = {}
         # Standard attribtutes of the Node
-        self.attr={}
         # Where in the file system this Node is currently located
 	self.path={}
         self.loading_dir={}
@@ -77,14 +76,14 @@ class VOFS(LoggingMixIn, Operations):
         # file.  the name of the dictionary should be something else
         # but I started calling this fh for other reasons.
         # Refactoring would help here.
-        self.fh={}
+        self.fh={'None': False}
 
         # What is the 'root' of the VOSpace? (eg vos:MyVOSpace) 
         self.root = root
         # VOSpace is a bit slow so we do some cahcing.
         self.cache_limit=cache_limit
-        self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
-        self.cache_db = os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#"))
+        self.cache_dir = os.path.abspath(os.path.normpath(os.path.join(cache_dir,root)))
+        self.cache_db = os.path.abspath(os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#")))
         
         if not os.access(self.cache_dir,os.F_OK):
             os.makedirs(self.cache_dir)
@@ -125,7 +124,6 @@ class VOFS(LoggingMixIn, Operations):
         """Delete the references associated with this Node"""
         if not self.cache_nodes or force :
             self.node.pop(path,None)
-            self.attr.pop(path,None)
         
 
     def access(self, path, mode):
@@ -290,88 +288,63 @@ class VOFS(LoggingMixIn, Operations):
       
         logging.debug("force? -> %s path -> %s" % ( force, path))
 	### force if this is a container we've not looked in before
-        if path in self.node:
+        if path in self.node and not force:
             node = self.node[path]
             if node.isdir() and limit > 0 and not len(node._nodeList) > 0 :
                force = True
             if not force:
                logging.debug("Sending back chached metadata for %s" % ( path))
 	       return node
-
+            
 
         ## Pull the node meta data from VOSpace.
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
-            node=self.client.getNode(path,limit=limit)
-        #except OSError as e:
-        #    ex = FuseOSError(e.errno)
-        #    ex.strerror = e.s
-        #    raise FuseOSError(e.errno,e.message)
-        #    return self.getNode(path,force,limit)
+            self.node[path]=self.client.getNode(path,limit=limit)
         except Exception as e:
 	    logging.error(str(e))
 	    logging.error(type(e))
-            ex=FuseOSError(e.errno)
-	    ex.filename=path
+            ex=FuseOSError(getattr(e,'errno',ENOENT))
+            ex.filename=path
             ex.strerror=getattr(e,'strerror','Error getting %s' % (path))
             raise ex
 
-        self.node[path]=node
-        self.attr[path]=node.attr
         if self.node[path].isdir() and self.node[path]._nodeList is not None:
             for node in self.node[path]._nodeList:
                subPath=os.path.join(path,node.name)
                self.node[subPath]=node
-               self.attr[subPath]=node.attr
         return self.node[path]
 
     def getPath(self,path):
         """Return the path element for a given cached filehandle"""
         return self.path.get(path,None)
+                           
+    def is_cached(self,path):
+        return self.fh.get(self.getPath(path),{'cached': False}).get('cached', False)
 
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 
         import os
         logging.debug("getting attributes of %s" % ( path))
-        ## check we should be returning the cache file attributes.
-        if not fh:
-            fh = self.getPath(path)
-        if fh is not None and self.fh[fh].get('cached',False):
-            f = os.fstat(fh)
+
+        if self.is_cached(path):
+            f = os.fstat(self.getPath(path))
             return dict((name, getattr(f, name)) for name in dir(f) if not name.startswith('__'))
 
         ## not in cache -> add to dictionary of Node attributes if need be
-	if not path in self.attr:
-            logging.debug("Node %s not already in attribute list, so retrieving." % ( path))
-            try:
-                node=self.getNode(path,limit=0)
-            except IOError as e:
-                logging.error(str(e))
-                ex=FuseOSError(e.errno)
-                ex.strerror=getattr(e,'strerror','failed to get attributes for %s' %(path))
-                ex.filename=path
-                raise ex
-	    self.attr[path]=node.attr
-            #logging.debug("Got %s for %s" % (node, path))
-        atime=self.attr[path].get('st_atime',time.time())
-        mtime=self.attr[path].get('st_mtime',atime)
-        ctime=self.attr[path].get('st_ctime',atime)
-        #logging.debug("Got times atime: %d mtime: %d ctime: %d" % ( atime,mtime,ctime))
+	attr = self.getNode(path).attr
+
+        atime=attr.get('st_atime',time.time())
+        mtime=attr.get('st_mtime',atime)
+        ctime=attr.get('st_ctime',atime)
+
         if mtime > atime or ctime > atime:
             ### the modification/change times are after the last access
             ### so we should access this VOSpace node again.
-            #logging.debug("Getting node details for stale node %s" % ( path))
-	    try:
-                node=self.getNode(path,limit=0)
-	    except IOError as e:
-                logging.error(str(e))
-                ex = FuseOSError(e.errno)
-                ex.strerror = getattr(e,'strerror','failed to get attributes for %s' %(path))
-                raise ex
-            self.attr[path]=node.attr
-	    #self.attr[path].update(self.getNode(path).attr)
-        return self.attr[path]
+            logging.debug("Getting node details for stale node %s" % ( path))
+            attr=self.getNode(path,limit=0,force=True).attr
+        return attr
 
     def dead_getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""
