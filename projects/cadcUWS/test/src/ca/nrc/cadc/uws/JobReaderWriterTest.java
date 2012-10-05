@@ -87,8 +87,6 @@ import junit.framework.Assert;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -97,6 +95,10 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.server.JobPersistenceUtil;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.Ignore;
 
 /**
  * @author zhangsa
@@ -112,22 +114,16 @@ public class JobReaderWriterTest
 
     private DateFormat dateFormat;
     private Date baseDate;
-
+    private static String fooSchemaURL;
 
     @BeforeClass
     public static void setUpBeforeClass() 
         throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
-
+        fooSchemaURL = XmlUtil.getResourceUrlString("foo.xsd", JobReaderWriterTest.class);
     }
 
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception {}
-
-    /**
-     * @throws java.lang.Exception
-     */
     @Before
     public void setUp()
         throws Exception
@@ -135,13 +131,6 @@ public class JobReaderWriterTest
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         this.baseDate = dateFormat.parse(TEST_DATE);
     }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {}
-
 
     Job createPendingJob()
         throws Exception
@@ -494,4 +483,88 @@ public class JobReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    /*
+     * JobInfo in the UWS schema as an attribute processContents="lax", which
+     * tells the parser not to validate if it can't find the schema.
+     */
+    @Ignore("Unable to test")
+    @Test
+    public void testJobReaderWithInvalidJobInfoDocument()
+    {
+        log.debug("testJobReaderWithInvalidJobInfoDocument");
+        try
+        {
+            // Create a Job.
+            Job job = createPendingJob();
+
+            // Create a JobInfo with an invalid document.
+            StringBuilder content = new StringBuilder();
+            content.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            content.append("<foons:foo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            content.append("           xmlns:foons=\"http://localhost/foo.xsd\">");
+            content.append("</foons:foo>");
+            JobInfo jobInfo = new JobInfo(content.toString(), "text/xml", true);
+            job.setJobInfo(jobInfo);
+
+            // Write Job to XML.
+            String xml = toXML(job);
+
+            // Create a vaidating JobReader, without a schema for the JobInfo content.
+            JobReader jobReader = new JobReader(true);
+            try
+            {
+                jobReader.read(new StringReader(xml));
+                Assert.fail("JobReader should've thrown an exception for unknown schema in JobInfo");
+            }
+            catch (Exception ignore) { }
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testJobReaderWithValidJobInfoDocument()
+    {
+        log.debug("testJobReaderWithValidJobInfoDocument");
+        try
+        {
+            // Create a Job.
+            Job job = createPendingJob();
+
+            // Create a JobInfo with an invalid document.
+            StringBuilder content = new StringBuilder();
+            content.append("<?xml version=\"1.0\" ?>");
+            content.append("<foons:foo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            content.append("           xmlns:foons=\"http://localhost/foo.xsd\">");
+            content.append("</foons:foo>");
+            JobInfo jobInfo = new JobInfo(content.toString(), "text/xml", true);
+            job.setJobInfo(jobInfo);
+
+            // Write Job to XML.
+            String xml = toXML(job);
+
+            // Create a vaidating JobReader with a schema for the JobInfo content.
+            Map<String, String> map = new HashMap<String, String>();
+            map.put("http://localhost/foo.xsd", fooSchemaURL);
+            JobReader jobReader = new JobReader(map);
+            try
+            {
+                jobReader.read(new StringReader(xml));
+            }
+            catch (Exception e)
+            {
+                Assert.fail("JobReader should not throw exception " + e.getMessage());
+            }
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }

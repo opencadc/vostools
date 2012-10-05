@@ -96,6 +96,8 @@ import org.jdom.output.XMLOutputter;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Constructs a Job from an XML source. This class is not thread safe but it is
@@ -149,11 +151,44 @@ public class JobReader
             log.debug("schema validation enabled");
         }
         else
+        {
             log.debug("schema validation disabled");
+        }
 
         this.docBuilder = XmlUtil.createBuilder(schemaMap);
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+    }
 
+    /**
+     * Alternative constructor to pass in additional schemas used to valid the
+     * documents being read.
+     *
+     * Passing in an empty Map enables schema validation with no additional schemas
+     * other than the default UWS and XLink schemas.
+     *
+     * @param schemas Map of schema namespace to resource.
+     */
+    public JobReader(Map<String, String> schemas)
+    {
+        if (schemas == null)
+        {
+            throw new IllegalArgumentException("Map of schema namespace to resource cannot be null");
+        }
+        schemaMap = new HashMap<String, String>();
+        schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
+        schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
+        if (!schemas.isEmpty())
+        {
+            Set<Entry<String, String>> entries = schemas.entrySet();
+            for (Entry<String, String> entry : entries)
+            {
+                schemaMap.put(entry.getKey(), entry.getValue());
+            }
+        }
+        log.debug("schema validation enabled");
+
+        this.docBuilder = XmlUtil.createBuilder(schemaMap);
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
     public Job read(InputStream in) 
