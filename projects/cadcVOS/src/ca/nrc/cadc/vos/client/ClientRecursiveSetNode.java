@@ -79,7 +79,9 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -97,6 +99,8 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
@@ -211,7 +215,23 @@ public class ClientRecursiveSetNode implements Runnable
             conn.setUseCaches(false);
             conn.setDoInput(true);
             conn.setDoOutput(false);
-            JobReader jobReader = new JobReader(schemaValidation);
+            
+            // add the extra xsd information for vospace if we
+            // are using schema validation
+            JobReader jobReader = null;
+            if (schemaValidation)
+            {
+                Map<String, String> extreaSchemas = new HashMap<String, String>();
+                String xsdFile = XmlUtil.getResourceUrlString(
+                        VOS.XSD_FILE_NAME, ClientRecursiveSetNode.class);
+                extreaSchemas.put(VOS.XSD_KEY, xsdFile);
+                jobReader = new JobReader(extreaSchemas);
+            }
+            else
+            {
+                jobReader = new JobReader(false);
+            }
+            
             return jobReader.read(conn.getInputStream());
         }
         catch(ParseException ex)

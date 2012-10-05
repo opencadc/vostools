@@ -69,18 +69,29 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessControlException;
+import java.security.AccessController;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.jdom.JDOMException;
 
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpUpload;
@@ -95,15 +106,7 @@ import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.text.ParseException;
-import javax.net.ssl.HttpsURLConnection;
-import javax.security.auth.Subject;
-import org.jdom.JDOMException;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.
@@ -223,7 +226,23 @@ public class ClientTransfer implements Runnable
             conn.setUseCaches(false);
             conn.setDoInput(true);
             conn.setDoOutput(false);
-            JobReader jobReader = new JobReader(schemaValidation);
+            
+            // add the extra xsd information for vospace if we
+            // are using schema validation
+            JobReader jobReader = null;
+            if (schemaValidation)
+            {
+                Map<String, String> extreaSchemas = new HashMap<String, String>();
+                String xsdFile = XmlUtil.getResourceUrlString(
+                        VOS.XSD_FILE_NAME, ClientRecursiveSetNode.class);
+                extreaSchemas.put(VOS.XSD_KEY, xsdFile);
+                jobReader = new JobReader(extreaSchemas);
+            }
+            else
+            {
+                jobReader = new JobReader(false);
+            }
+            
             return jobReader.read(conn.getInputStream());
         }
         catch(ParseException ex)
