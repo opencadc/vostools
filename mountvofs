@@ -53,7 +53,8 @@ class VOFS(LoggingMixIn, Operations):
     listxattr = None
     removexattr = None
     setxattr = None
-    
+
+
     def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024, cache_nodes=False):
         """Initialize the VOFS.  
 
@@ -127,6 +128,10 @@ class VOFS(LoggingMixIn, Operations):
         
 
     def access(self, path, mode):
+        """Check if path is accessible.  
+
+        Only checks read access, mode is currently ignored"""
+        logging.debug("Checking if -->%s<-- is accessible" %(path))
         if path in self.node:
             return 0
         try:
@@ -135,7 +140,7 @@ class VOFS(LoggingMixIn, Operations):
         except Exception as e:
             e=FuseOSError(e.errno)
             e.filename=path
-            e.strerror=getattr(e,'strerror','failed whilel checking access on %s' %(path))
+            e.strerror=getattr(e,'strerror','failed while checking access on %s' %(path))
             raise e
         return -1
 
@@ -333,7 +338,7 @@ class VOFS(LoggingMixIn, Operations):
             return dict((name, getattr(f, name)) for name in dir(f) if not name.startswith('__'))
 
         ## not in cache -> add to dictionary of Node attributes if need be
-	attr = self.getNode(path).attr
+        attr = self.getNode(path).attr
 
         atime=attr.get('st_atime',time.time())
         mtime=attr.get('st_mtime',atime)
