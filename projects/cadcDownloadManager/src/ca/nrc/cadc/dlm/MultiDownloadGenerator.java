@@ -3,12 +3,12 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,33 +62,111 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.dlm.client;
+package ca.nrc.cadc.dlm;
 
+import ca.nrc.cadc.net.MultiSchemeHandler;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import org.apache.log4j.Logger;
 
 /**
- * An interface for UI behaviour.
- * 
- * @author majorb
  *
+ * @author pdowler
  */
-public interface UserInterface
+public class MultiDownloadGenerator implements DownloadGenerator
 {
-    
-    String configSection = "downloads";
-    String threadCountConfigKey = "downloadManager.threadCount";
-    String retryConfigKey = "downloadManager.retryWhenServerBusy";
-    String downloadDirConfigKey = "downloadManager.downloadDir";
-    String debugKey = "downloadManager.debug";
-    
-    public void add(List<String> uris, Map<String,List<String>> params);
-    
-    void start();
+    private static final Logger log = Logger.getLogger(MultiDownloadGenerator.class);
 
+    private static final String CACHE_FILENAME = MultiDownloadGenerator.class.getSimpleName() + ".properties";
+
+    private final Map<String,DownloadGenerator> generators = new HashMap<String,DownloadGenerator>();
+    private Map<String, List<String>> params;
+    
+    public MultiDownloadGenerator()
+    {
+        this(MultiSchemeHandler.class.getClassLoader().getResource(CACHE_FILENAME));
+    }
+
+    public MultiDownloadGenerator(URL url)
+    {
+        if (url == null)
+        {
+            log.debug("config URL is null: no custom scheme support");
+            return;
+        }
+
+        try
+        {
+            Properties props = new Properties();
+            props.load(url.openStream());
+            Iterator<String> i = props.stringPropertyNames().iterator();
+            while ( i.hasNext() )
+            {
+                String scheme = i.next();
+                String cname = props.getProperty(scheme);
+                try
+                {
+                    log.debug("loading: " + cname);
+                    Class c = Class.forName(cname);
+                    log.debug("instantiating: " + c);
+                    DownloadGenerator gen = (DownloadGenerator) c.newInstance();
+                    generators.put(scheme, gen);
+                    log.debug("success: " + scheme + " is supported");
+                }
+                catch(Exception fail)
+                {
+                    log.warn("failed to load " + cname + ", reason: " + fail);
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            log.error("failed to read config from " + url, ex);
+        }
+        finally
+        {
+
+        }
+    }
+
+    public void setParameters(Map<String, List<String>> params)
+    {
+        this.params = params;
+    }
+
+    public Iterator<DownloadDescriptor> downloadIterator(URI uri)
+    {
+        if (uri == null)
+            return null;
+
+        DownloadGenerator gen = generators.get(uri.getScheme());
+        if (gen != null)
+        {
+            gen.setParameters(params); // NOT THREAD SAFE use of the DownloadGenerator
+            return gen.downloadIterator(uri);
+        }
+
+        // fallback: hope for the best
+        try
+        {
+            log.debug("fallback: " + uri);
+            URL url = uri.toURL();
+            return new SingleDownloadIterator(uri, url);
+        }
+        catch(MalformedURLException mex)
+        {
+            return new FailIterator(uri, "unknown URI scheme: " + uri.getScheme());
+        }
+    }
 }

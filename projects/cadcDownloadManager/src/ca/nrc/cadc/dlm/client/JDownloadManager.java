@@ -658,7 +658,8 @@ public class JDownloadManager extends JPanel implements ChangeListener, Transfer
                     try
                     {
                         log.debug("manifest download: " + e.getFile());
-                        Iterator<DownloadDescriptor> iter = new ManifestReader(new FileReader(e.getFile()));
+                        ManifestReader mr = new ManifestReader();
+                        Iterator<DownloadDescriptor> iter = mr.read(new FileReader(e.getFile()));
                         add(iter);
                     }
                     catch(IOException ex)

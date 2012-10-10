@@ -1,14 +1,14 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,50 +62,36 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
--->
+*/
 
-<%--
-    Simple JSP page to write out the complete URLs in an ordered list.
---%>
+package ca.nrc.cadc.dlm;
 
-<%@ page import="java.util.Iterator" %>
-<%@ page import="ca.nrc.cadc.dlm.DownloadUtil" %>
-<%@ page import="ca.nrc.cadc.dlm.DownloadDescriptor" %>
+import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
-<%
-    String str = (String) request.getAttribute("uris");
-    String fragment = (String) request.getAttribute("fragment");
-    String[] uris = str.split(",");
-%>
+/**
+ *
+ * @author pdowler
+ */
+public interface DownloadGenerator
+{
+    /**
+     * Set a list of optional parameters for the resolver.
+     * 
+     * @param params
+     */
+    public void setParameters(Map<String,List<String>> params);
 
-<ul>
-<%
-    Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, fragment, true);
-    while ( iter.hasNext() )
-    {
-        DownloadDescriptor dd = iter.next();
-        if (dd.url != null)
-        {
-%>
-<li>
-    <a href="<%= dd.url %>"> <%= dd.url %></a>
-</li>
-<%
-        } 
-        else
-        {
-%>
-<li>
-    <%= dd.uri %>: <%= dd.error %>
-</li>
-<%
-        }
-        out.flush();
-    }
-    out.flush();
-%>
-</ul>
-
+    /**
+     * Return a stream of download descriptors for the specified URI.
+     * 
+     * @param uri
+     * @return
+     */
+    public Iterator<DownloadDescriptor> downloadIterator(URI uri);
+}

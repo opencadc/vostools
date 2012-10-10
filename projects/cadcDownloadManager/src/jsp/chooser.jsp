@@ -78,7 +78,7 @@
 <%@ page import="ca.nrc.cadc.dlm.server.UrlListServlet" %>
 <%
     String uris = (String) request.getAttribute("uris");
-    String fragment = (String) request.getAttribute("fragment");
+    String params = (String) request.getAttribute("params");
 %>
 
 <%
@@ -113,7 +113,7 @@ String bodyFooter = skin + "bodyFooter";
     <form action="/downloadManager/download" method="POST">
         
         <input type="hidden" name="uris" value="<%= uris %>" />
-        <input type="hidden" name="fragment" value="<%= fragment %>" />
+        <input type="hidden" name="params" value="<%= params %>" />
         <input type="hidden" name="skin" value="<%= skin %>" /> 
         
         <div style="padding-left: 2em; padding-right: 2em">

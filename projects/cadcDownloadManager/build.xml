@@ -90,8 +90,7 @@
 
 <property name="project" value="cadcDownloadManager" />
 
-<property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
-<property name="jars" value="${lib.cadcUtil}:${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
+<property name="jars" value="${lib}/cadcUtil.jar:${lib}/cadcRegistryClient.jar:${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
 
 <target name="build" depends="client,servlet,resources" />
 
@@ -125,31 +124,37 @@
     </copy>
 </target>
 
-<!-- 
-optional/example target to build a vanilla warfile 
-note: client jars are not signed
--->
-<target name="warfile" depends="build">
+<!-- optional/example target to build a vanilla warfile  -->
+<target name="signclient" depends="client">
+    <!-- client-side jars: for real use these must be signed so the copy
+             must be replaced with a jarsigner task instead -->
+    <copy file="${lib}/cadcUtil.jar" todir="${build}/tmp" />
+    <copy file="${build}/lib/cadcDownloadManagerClient.jar" todir="${build}/tmp" />
+    <copy file="${ext.lib}/log4j.jar" todir="${build}/tmp" />
+</target>
+
+<target name="warfile" depends="build,signclient">
     <war warfile="${build}/webapps/downloadManager.war" webxml="src/xml/web.xml" update="no">
 
-        <fileset dir="${build}/resources/${project}/">
-            <include name="**.jsp" />	
-        </fileset>
-        <fileset dir="${build}/lib">
-            <include name="${project}Client.jar" />
-        </fileset>
-	<lib file="${lib.cadcUtil}" />
-        <fileset dir="${ext.lib}">
-            <include name="log4j.jar" />
+        <!-- see above: signed client jars in $build/tmp -->
+        <fileset dir="${build}/tmp">
+            <include name="**.jar" />
         </fileset>
 
+        <!-- add resources -->
+        <fileset dir="${build}/resources/${project}/">
+            <include name="**.jsp" />
+            <include name="**.html" />
+        </fileset>
+
+        <!-- server-side jars -->
         <lib dir="${build}/lib">
             <include name="cadcDownloadManagerServer.jar" />
         </lib>
         <lib dir="${lib}">
             <include name="cadcLog.jar" />
+            <include name="cadcUtil.jar" />
         </lib>
-        
         <lib dir="${ext.lib}">
             <include name="jstl.jar" />
             <include name="standard.jar" />

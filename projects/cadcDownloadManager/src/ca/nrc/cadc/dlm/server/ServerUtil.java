@@ -70,14 +70,17 @@
 
 package ca.nrc.cadc.dlm.server;
 
-import java.io.IOException;
+import ca.nrc.cadc.dlm.DownloadUtil;
+import ca.nrc.cadc.util.StringUtil;
 import java.net.URL;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -87,11 +90,24 @@ import org.apache.log4j.Logger;
  */
 public class ServerUtil
 {
-    private ServerUtil() { }
-
-    
     private static final Logger log = Logger.getLogger(ServerUtil.class);
     
+    // public API for DownloadManager is to accept and interpret these two params
+    static final String PARAM_URI = "uri";
+    static final String PARAM_URILIST = "uris";
+    static final String PARAM_PARAMLIST = "params";
+    static final String PARAM_METHOD = "method";
+
+    static final List<String> INTERNAL_PARAMS = new ArrayList<String>();
+    static
+    {
+        INTERNAL_PARAMS.add(PARAM_URI);
+        INTERNAL_PARAMS.add(PARAM_URILIST);
+        INTERNAL_PARAMS.add(PARAM_PARAMLIST);
+        INTERNAL_PARAMS.add(PARAM_METHOD);
+    }
+    private ServerUtil() { }
+
     public static String getCodebase(HttpServletRequest request)
     {
         try
@@ -103,10 +119,68 @@ public class ServerUtil
         }
         catch(Throwable oops)
         {
-            oops.printStackTrace();
+            log.error("failed to generate codebase URL", oops);
         }
         return null;
     }
-    
+
+    /**
+     * Extract all download content related parameters from the request.
+     *
+     * @param request
+     * @return
+     */
+    public static Map<String,List<String>> getParameters(HttpServletRequest request)
+    {
+        // internal repost
+        String params = request.getParameter("params");
+        if (params != null)
+            return DownloadUtil.decodeParamMap(params);
+
+        // original post
+        Map<String,List<String>> paramMap = new TreeMap<String,List<String>>();
+        Enumeration e = request.getParameterNames();
+        while ( e.hasMoreElements() )
+        {
+            String key = (String) e.nextElement();
+            if ( !INTERNAL_PARAMS.contains(key) )
+            {
+                String[] values = request.getParameterValues(key);
+                if (values != null && values.length > 0)
+                    paramMap.put(key, Arrays.asList(values));
+            }
+        }
+        return paramMap;
+    }
+
+    /**
+     * Extract all download content related parameters from the request.
+     *
+     * @param request
+     * @return
+     */
+    public static List<String> getURIs(HttpServletRequest request)
+    {
+        // internal repost
+        String uris = request.getParameter("uris");
+        if (uris != null)
+            return DownloadUtil.decodeListURI(uris);
+
+        // original post
+        String[] uriParams = request.getParameterValues(PARAM_URI);
+        
+        List<String> ret = new ArrayList<String>();
+
+        if (uriParams != null)
+        {
+            for (String u : uriParams)
+            {
+                if ( StringUtil.hasText(u) )
+                    ret.add(u);
+            }
+        }
+
+       return ret;
+    }
 
 }

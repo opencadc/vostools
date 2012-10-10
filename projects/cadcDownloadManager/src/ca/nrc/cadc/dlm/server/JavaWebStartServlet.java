@@ -83,7 +83,10 @@ import javax.servlet.http.HttpServletResponse;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArrayUtil;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -97,6 +100,7 @@ public class JavaWebStartServlet extends HttpServlet
     private static final long serialVersionUID = 201208071730L;
     
     private static final Logger log = Logger.getLogger(JavaWebStartServlet.class);
+    
 
     /**
      * 
@@ -128,10 +132,12 @@ public class JavaWebStartServlet extends HttpServlet
         log.debug("codebase attribute: " + codebase);
         
         // origin serverName for applet and jnlp deployment
-        String  serverName = NetUtil.getServerName(JavaWebStartServlet.class);
-        request.setAttribute("serverName", serverName);
-        log.debug("serverName attribute: " + serverName);
-        
+        //String  serverName = NetUtil.getServerName(JavaWebStartServlet.class);
+        //request.setAttribute("serverName", serverName);
+        //log.debug("serverName attribute: " + serverName);
+
+        setRegistryClientProps(request);
+
         log.debug("looking for ssocookie attribute...");
         final Cookie[] cookies = request.getCookies();
         if (!ArrayUtil.isEmpty(cookies))
@@ -152,10 +158,20 @@ public class JavaWebStartServlet extends HttpServlet
                 }
             }
         }
-        
 
         RequestDispatcher disp = request.getRequestDispatcher("DownloadManager.jsp");
         disp.forward(request, response);
     }
+
+    private void setRegistryClientProps(HttpServletRequest request)
+    {
+        String local = System.getProperty(RegistryClient.class.getName() + ".local");
+        String host = System.getProperty(RegistryClient.class.getName() + ".host");
+        if (local != null && "true".equals(local))
+            host = NetUtil.getServerName(JavaWebStartServlet.class);
+        if (host != null)
+            request.setAttribute("targetHost", host);
+    }
+
     
 }

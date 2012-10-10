@@ -74,6 +74,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
@@ -97,100 +98,115 @@ import org.apache.log4j.Logger;
  *
  * @author pdowler
  */
-public class ManifestReader implements Iterator<DownloadDescriptor>
+public class ManifestReader
 {
     private static Logger log = Logger.getLogger(ManifestReader.class);
 
     public static final String CONTENT_TYPE = "application/x-download-manifest+txt";
 
-    private BufferedReader in;
-    private DownloadDescriptor cur;
+    public ManifestReader() { }
 
-    public ManifestReader(InputStream in)
+    public Iterator<DownloadDescriptor> read(String content)
     {
-        this(new InputStreamReader(in));
+        return read(new StringReader(content));
+    }
+    
+    public Iterator<DownloadDescriptor> read(InputStream istream)
+    {
+        return read(new InputStreamReader(istream));
     }
 
-    public ManifestReader(Reader in)
+    public Iterator<DownloadDescriptor> read(Reader r)
     {
-        this.in = new BufferedReader(in, 8192);
-        step(true);
+        return new ManifestIterator(r);
     }
 
-    public boolean hasNext()
+    private class ManifestIterator implements Iterator<DownloadDescriptor>
     {
-        return (cur != null);
-    }
+        private BufferedReader in;
+        private DownloadDescriptor cur;
 
-    public DownloadDescriptor next()
-    {
-        if (cur == null)
-            throw new NoSuchElementException();
-        DownloadDescriptor ret = cur;
-        step(false);
-        return ret;
-    }
-
-    public void remove()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    // assign the next descriptor to cur
-    private void step(boolean init)
-    {
-        if (!init && cur == null)
-            return;
-        
-        String arg = null;
-        String dest = null;
-        try
+        private ManifestIterator(Reader r)
         {
-            String line = in.readLine();
-            while (line != null) // skip blank lines
-            {
-                line = line.trim();
-                if (line.length() > 0)
-                    break; // found non-blank line
-                else
-                    line = in.readLine();
-            }
-            if (line == null)
-            {
-                cur = null;
-                try { in.close(); }
-                catch(IOException ignore) { }
+            this.in = new BufferedReader(r);
+            step(true);
+        }
+
+        public boolean hasNext()
+        {
+            return (cur != null);
+        }
+
+        public DownloadDescriptor next()
+        {
+            if (cur == null)
+                throw new NoSuchElementException();
+            DownloadDescriptor ret = cur;
+            step(false);
+            return ret;
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        // assign the next descriptor to cur
+        private void step(boolean init)
+        {
+            if (!init && cur == null)
                 return;
-            }
-            log.debug("line: " + line);
-            String[] tokens = line.split("[\t]"); // tab-separated-value
-            String status = tokens[0];
-            if (tokens.length > 1)
-                arg = tokens[1];
-            if (tokens.length > 2)
-                dest = tokens[2];
-            if (DownloadDescriptor.OK.equals(status))
+
+            String arg = null;
+            String dest = null;
+            try
             {
-                URL url = new URL(arg);
-                cur = new DownloadDescriptor(null, url, dest);
+                String line = in.readLine();
+                while (line != null) // skip blank lines
+                {
+                    line = line.trim();
+                    if (line.length() > 0)
+                        break; // found non-blank line
+                    else
+                        line = in.readLine();
+                }
+                if (line == null)
+                {
+                    cur = null;
+                    try { in.close(); }
+                    catch(IOException ignore) { }
+                    return;
+                }
+                log.debug("line: " + line);
+                String[] tokens = line.split("[\t]"); // tab-separated-value
+                String status = tokens[0];
+                if (tokens.length > 1)
+                    arg = tokens[1];
+                if (tokens.length > 2)
+                    dest = tokens[2];
+                if (DownloadDescriptor.OK.equals(status))
+                {
+                    URL url = new URL(arg);
+                    cur = new DownloadDescriptor(null, url, dest);
+                }
+                else if (DownloadDescriptor.ERROR.equals(status))
+                {
+                    cur = new DownloadDescriptor(null, arg, dest);
+                }
+                else
+                {
+                    cur = new DownloadDescriptor(null, "illegal start of line: " + status);
+                }
             }
-            else if (DownloadDescriptor.ERROR.equals(status))
+            catch(MalformedURLException ex)
             {
-                cur = new DownloadDescriptor(null, arg, dest);
+                cur = new DownloadDescriptor(null, "illegal URL: "+ arg, dest);
             }
-            else
+            catch(IOException ex)
             {
-                cur = new DownloadDescriptor(null, "illegal start of line: " + status);
+                throw new NoSuchElementException("failed to read a DownloadDescriptor: " + ex);
             }
+            log.debug("step: " + cur);
         }
-        catch(MalformedURLException ex)
-        {
-            cur = new DownloadDescriptor(null, "illegal URL: "+ arg, dest);
-        }
-        catch(IOException ex)
-        {
-            throw new NoSuchElementException("failed to read a DownloadDescriptor: " + ex);
-        }
-        log.debug("step: " + cur);
     }
 }

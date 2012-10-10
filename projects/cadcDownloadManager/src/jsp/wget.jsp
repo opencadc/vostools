@@ -67,12 +67,20 @@
 ************************************************************************
 -->
 
-
 <%@ taglib uri="WEB-INF/c.tld" prefix="c"%>
+
 <%@ page import="ca.nrc.cadc.dlm.DownloadUtil" %>
+<%@ page import="ca.nrc.cadc.dlm.DownloadDescriptor" %>
+<%@ page import="java.util.Iterator" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.Map" %>
+
 <%
     String uris = (String) request.getAttribute("uris");
-    String fragment = (String) request.getAttribute("fragment");
+    String params = (String) request.getAttribute("params");
+
+    List<String> uriList = DownloadUtil.decodeListURI(uris);
+    Map<String,List<String>> paramMap = DownloadUtil.decodeParamMap(params);
 %>
 
 <%
@@ -110,13 +118,40 @@ String bodyFooter = skin + "bodyFooter";
 
   
 <p>
-    <jsp:include page="urlList.jsp" flush="true" />
-    <%-- c:import url="urlList.jsp" --%>
+    <ul>
+<%
+    Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uriList, paramMap, true);
+    while ( iter.hasNext() )
+    {
+        DownloadDescriptor dd = iter.next();
+        if (dd.url != null)
+        {
+%>
+<li>
+    <a href="<%= dd.url %>"> <%= dd.url %></a>
+</li>
+<%
+        }
+        else
+        {
+%>
+<li>
+    <%= dd.uri %>: <%= dd.error %>
+</li>
+<%
+        }
+        out.flush();
+    }
+    out.flush();
+%>
+</ul>
+
 </p>
+
 <div style="padding-left: 2em; padding-right: 2em">
     <form action="/downloadManager/download" method="POST">
         <input type="hidden" name="uris" value="<%= uris %>" />
-        <input type="hidden" name="fragment" value="<%= fragment %>" />
+        <input type="hidden" name="params" value="<%= params %>" />
         <input type="hidden" name="skin" value="<%= skin %>" /> 
         <input type="submit" name="clearCookie" value="Chose one of the other download methods" />
         <input type="submit" OnClick="closemyself()" value="Close window" />

@@ -69,16 +69,18 @@
 
 package ca.nrc.cadc.dlm;
 
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
+import ca.nrc.cadc.util.StringUtil;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -92,7 +94,10 @@ public class DownloadUtil
 {
     private static Logger log = Logger.getLogger(DownloadUtil.class);
     private static MultiSchemeHandler schemeHandler;
-    
+
+    public static final String URI_SEPARATOR = ",";
+    public static final String PARAM_SEPARATOR = "&";
+
     private DownloadUtil() { }
     
     // static classes for return values so we can put list operations in here 
@@ -104,117 +109,94 @@ public class DownloadUtil
         public URI uri;
         public Throwable error;
     }
-    public static class GeneratedURL
+    
+    public static String encodeListURI(List<String> uriList)
     {
-        public String str;
-        public URL url;
-        public Throwable error;
-    }
-
-    public static synchronized MultiSchemeHandler getSchemeHandler()
-    {
-        if (schemeHandler == null)
+        StringBuilder uris = new StringBuilder();
+        for (String u : uriList)
         {
-            // MultiSchemeHandler finds and reads a config file
-            schemeHandler = new MultiSchemeHandler();
+            if (uris.length() > 0)
+                uris.append(URI_SEPARATOR);
+            uris.append(u);
         }
-        return schemeHandler;
-    }
-    
-    /**
-     * Parse a comma-separated list of URIs into a single list of unique URIs and
-     * convert URIs to URLs via URIConverter. The resulting list may contain URLs 
-     * or URIs; the latter occurs when the URI scheme is not recognized by the 
-     * URIConverter.
-     * 
-     * @param uris
-     * @param commonFragment
-     * @return mixed List of GeneratedURL objects
-     * @throws MalformedURLException
-     * @throws URISyntaxException
-     */
-    public static List<GeneratedURL> generateURLs(String uris, String commonFragment)
-    {
-        return generateURLs(uris.split(","), commonFragment);
-    }
-    
-    /**
-     * Parse an array of (possibly comma separated) URIs into a single list of unique URIs and
-     * convert URIs to URLs via URIConverter.
-     * 
-     * @param uris
-     * @param commonFragment
-     * @return List of GeneratedURL objects
-     * @throws URISyntaxException
-     */
-    public static List<GeneratedURL> generateURLs(String[] uris, String commonFragment)
-    {
-        List<ParsedURI> uriList = parseURIs(uris, commonFragment);
-        return generateURLs(uriList, commonFragment);
+        return uris.toString();
     }
 
-    public static List<GeneratedURL> generateURLs(List<ParsedURI> uris, String x)
+    public static List<String> decodeListURI(String s)
     {
-        log.debug("generateURLs: START");
-        List ret = new ArrayList<GeneratedURL>();
+        if ( !StringUtil.hasText(s) )
+            return new ArrayList<String>();
+        String[] uris = s.split(URI_SEPARATOR);
+        return Arrays.asList(uris);
+    }
 
-        Iterator<ParsedURI> i = uris.iterator();
-        while ( i.hasNext() )
+    public static String encodeParamMap(Map<String,List<String>> paramMap)
+    {
+        // separated list if key=value pairs
+        StringBuilder params = new StringBuilder();
+        for ( Map.Entry<String,List<String>> me : paramMap.entrySet())
         {
-            ParsedURI pu = i.next();
-
-            if (pu.error != null)
+            for (String value : me.getValue())
             {
-                GeneratedURL gu = new GeneratedURL();
-                gu.str = pu.str;
-                gu.error = pu.error;
-                ret.add(gu);
+                if (params.length() > 0)
+                    params.append(URI_SEPARATOR);
+                params.append(me.getKey());
+                params.append("=");
+                params.append(value);
             }
-            else
+        }
+        return params.toString();
+    }
+
+    public static Map<String,List<String>> decodeParamMap(String s)
+    {
+        String[] parts = null;
+        if (s != null)
+            parts = s.split(PARAM_SEPARATOR);
+        return toParamMap(parts);
+    }
+
+    private  static Map<String,List<String>> toParamMap(String[] params)
+    {
+        Map<String,List<String>> paramSet = new HashMap<String,List<String>>();
+        if (params != null)
+            for (String p : params)
             {
-                try
+                log.debug("toParamMap: " + p);
+                String[] par = p.split("=");
+                if ( par.length == 2 )
                 {
-                    List<URL> urls = getSchemeHandler().toURL(pu.uri);
-                    Iterator<URL> j = urls.iterator();
-                    while ( j.hasNext() )
+                    String key = par[0];
+                    String val = par[1];
+                    List<String> cur = paramSet.get(key);
+                    if (cur == null)
                     {
-                        GeneratedURL gu = new GeneratedURL();
-                        gu.url = j.next();
-                        //gu.str = pu.str;
-                        gu.str = gu.url.toString();
-                        ret.add(gu);
+                        cur = new ArrayList<String>();
+                        paramSet.put(key, cur);
                     }
-                }
-                catch(IllegalArgumentException iex)
-                {
-                    GeneratedURL gu = new GeneratedURL();
-                    gu.str = pu.str;
-                    gu.error = iex;
-                    ret.add(gu);
+                    cur.add(val);
                 }
             }
-        }
-        log.debug("generateURLs: " + ret.size() + " URLs");
-        return ret;
+        return paramSet;
     }
 
-    public static Iterator<DownloadDescriptor> iterateURLs(String[] uris, String commonFragment)
+    public static Iterator<DownloadDescriptor> iterateURLs(List<String> uris, Map<String,List<String>> params)
     {
-        return iterateURLs(uris, commonFragment, false);
+        return iterateURLs(uris, params, false);
     }
-
-    // removeDuplicates=true is intended for use by the urlList.jsp page
-    public static Iterator<DownloadDescriptor> iterateURLs(String[] uris, String commonFragment, final boolean removeDuplicates)
+    
+    public static Iterator<DownloadDescriptor> iterateURLs(List<String> uris, Map<String,List<String>> params, final boolean removeDuplicates)
     {
-        final List<ParsedURI> parsed = parseURIs(uris, commonFragment);
+        final List<ParsedURI> parsed = parseURIs(uris);
         final Set<URL> urls = new HashSet<URL>();
+        final MultiDownloadGenerator gen = new MultiDownloadGenerator();
+        gen.setParameters(params);
 
         return new Iterator<DownloadDescriptor>()
         {
             boolean done = false;
             Iterator<ParsedURI> outer = parsed.iterator();
-            Iterator<URL> inner = null;
-            ParsedURI cur;
+            Iterator<DownloadDescriptor> inner = null;
 
             public boolean hasNext()
             {
@@ -223,39 +205,40 @@ public class DownloadUtil
 
             public DownloadDescriptor next()
             {
-                if (done || parsed.isEmpty())
+                if ( !hasNext() )
                     throw new NoSuchElementException();
+                
                 if (inner != null)
                 {
-                    URL url = inner.next();
+                    DownloadDescriptor dd = inner.next();
                     if (!inner.hasNext())
                         inner = null;
-                    if (removeDuplicates && urls.contains(url))
+                    if (removeDuplicates && dd.url != null && urls.contains(dd.url))
                     {
-                        DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), "duplicate URL");
-                        return dd;
+                        dd.status = DownloadDescriptor.ERROR;
+                        dd.url = null;
+                        dd.error = "duplicate URL";
                     }
-                    urls.add(url);
-                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), url);
+                    if (dd.url != null)
+                        urls.add(dd.url);
                     return dd;
                 }
 
-                cur = outer.next();
+                ParsedURI cur = outer.next();
 
-                if (cur.error != null)
+                if (cur.error != null) // string -> URI fail
                 {
                     DownloadDescriptor dd = new DownloadDescriptor(cur.str, cur.error.toString());
                     return dd;
                 }
                 try
                 {
-                    List<URL> urls = getSchemeHandler().toURL(cur.uri);
-                    inner = urls.iterator();
-                    return this.next();
+                    inner = gen.downloadIterator(cur.uri);
+                    return this.next(); // recursive
                 }
-                catch(IllegalArgumentException iex)
+                catch(Throwable t)
                 {
-                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), iex.toString());
+                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), t.toString());
                     return dd;
                 }
             }
@@ -268,134 +251,23 @@ public class DownloadUtil
 
     }
 
-    /**
-     * Parse a comma separated list URIs into a single list of unique URI(s)
-     *
-     * @return unique List of URI
-     */
-    public static List<ParsedURI> parseURIs(String uris, String commonFragment)
+    private static List<ParsedURI> parseURIs(List<String> uris)
     {
-        ArrayList ret = new ArrayList<URI>();
-        parseURIs(uris, commonFragment, ret);
-        return ret;
-    }
-    
-    public static List<ParsedURI> parseURIs(String[] uris, String commonFragment)
-    {
-        ArrayList ret = new ArrayList<URI>();
-        parseURIs(uris, commonFragment, ret);
-        return ret;
-    }
-    
-    /**
-     * Flatten an array of URIs into a comma separated list.
-     *
-     * @return comma separated list of URI strings
-     */
-    public static String flattenURIs(String[] uris)
-    {
-        String ret = null;
-        if (uris != null && uris.length > 0)
+        ArrayList ret = new ArrayList<ParsedURI>();
+        for (String s : uris)
         {
-            StringBuilder sb = new StringBuilder();
-            for (int i=0; i<uris.length; i++)
+            ParsedURI pu = new ParsedURI();
+            pu.str = s;
+            try
             {
-                if (uris[i] != null)
-                {
-                    String ss = uris[i].trim();
-                    if (ss.length() > 0)
-                        sb.append(ss).append(",");
-                }
+                pu.uri = new URI(s);
             }
-            if (sb.length() > 0)
-                ret = sb.substring(0, sb.length() - 1); // omit trailing comma
+            catch(Throwable t)
+            {
+                pu.error = t;
+            }
+            ret.add(pu);
         }
         return ret;
-    }
-    
-    // generate a List of URIs from the array of (comma-separated list of) URIs
-    private static void parseURIs(String[] uris, String commonFragment, List<ParsedURI> ret)
-    {
-        if (uris != null && uris.length > 0)
-        {
-            for (int i=0; i<uris.length; i++)
-                parseURIs(uris[i], commonFragment, ret);
-        }
-    }
-    
-    // generate a List of URIs from the comma-separated list of URIs
-    private static void parseURIs(String uris, String commonFragment, List<ParsedURI> ret)
-    {
-        log.debug("parseURIs: " + uris + " commonFragment: " + commonFragment);
-        if (uris != null)
-        {
-            if (commonFragment != null)
-            {
-                commonFragment = commonFragment.trim();
-                if (commonFragment.length() == 0)
-                    commonFragment = null;
-            }
-            String[] sa = uris.split(",");
-            for (int i=0; i<sa.length; i++)
-            {
-                String s = sa[i].trim();
-                if (s.length() > 0) // guard against original list having extra commas aka empty URIs
-                {
-                    ParsedURI pu = new ParsedURI();
-                    pu.str = s;
-                    try
-                    {
-                        pu.uri = new URI(s);
-                        if ( !s.startsWith("http:") )
-                            pu.uri = appendFragment(pu.uri, commonFragment);
-                    }
-                    catch(URISyntaxException uex)
-                    {
-                        pu.str = s;
-                        pu.error = uex;
-                    }
-                    ret.add(pu);
-                    // TODO: duplicate check?
-                }
-            }
-        }
-    }
-    
-    private static URI appendFragment(URI uri, String fragment)
-        throws URISyntaxException
-    {
-        if (fragment == null || fragment.trim().length() == 0)
-            return uri;
-        if ( "null".equals(fragment) )
-            return uri;
-        
-        String orig = uri.getFragment(); // fragment was encoded in string
-        if (orig == null)
-            orig = fragment;
-        else
-            orig += "&" + fragment;
-        return new URI(uri.getScheme(), uri.getSchemeSpecificPart(), orig);
-    }
-
-    public static void debug(String key, String value)
-    {
-        log.debug("" + key + " = " + value);
-    }
-    public static void debug(String key, String[] value)
-    {
-        try
-        {
-            log.debug("" + key + " START");
-    
-            if (value == null)
-                return;
-            log.debug("" + key + " = " + value.length);
-            for (int i=0; i<value.length; i++)
-                debug("\t"+key, value[i]);
-        }
-        finally
-        {
-            log.debug("" + key + " DONE");
-        }
     }
 }

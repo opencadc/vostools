@@ -74,14 +74,59 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
  * @author pdowler
  */
-public class TestSchemeHandler implements SchemeHandler
+public class TestSchemeHandler implements DownloadGenerator, SchemeHandler
 {
+    private Map<String, List<String>> params;
+    
+    public Iterator<DownloadDescriptor> downloadIterator(URI uri)
+    {
+        if ( !"test".equals(uri.getScheme()) )
+            throw new IllegalArgumentException("invalid scheme: " + uri.getScheme());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("http://");
+        sb.append(uri.getHost());
+        sb.append(uri.getPath());
+
+        if (params != null && params.size() > 0)
+        {
+            String sep = "?";
+            for (Map.Entry<String,List<String>> me : params.entrySet())
+            {
+                String key = me.getKey();
+                for (String val : me.getValue())
+                {
+                    sb.append(sep).append(key).append("=").append(val);
+                    sep = "&";
+                }
+            }
+        }
+
+        String surl = sb.toString();
+
+        try
+        {
+            return new SingleDownloadIterator(uri, new URL(surl));
+        }
+        catch(MalformedURLException ex)
+        {
+            throw new RuntimeException("BUG: invalid url: " + surl, ex);
+        }
+    }
+
+    public void setParameters(Map<String, List<String>> map)
+    {
+        this.params = map;
+    }
+
 
     public List<URL> toURL(URI uri) throws IllegalArgumentException
     {

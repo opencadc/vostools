@@ -80,12 +80,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.util.ArrayUtil;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -106,7 +106,7 @@ public class DispatcherServlet extends HttpServlet
     private static final long serialVersionUID = 201208071730L;
     
     private static final Logger log = Logger.getLogger(DispatcherServlet.class);
-    
+
     public static String APPLET = "Java Applet";
     public static String URLS = "URL List";
     public static String HTMLLIST = "HTML List";
@@ -119,11 +119,12 @@ public class DispatcherServlet extends HttpServlet
      * @param config
      * @throws javax.servlet.ServletException
      */
+    @Override
     public void init(ServletConfig config)
         throws ServletException
     {
         super.init(config);
-        log.setLevel(Level.DEBUG);
+        
     }
     
     /**
@@ -134,80 +135,50 @@ public class DispatcherServlet extends HttpServlet
      * @throws javax.servlet.ServletException
      * @throws java.io.IOException
      */
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
-        boolean empty = true;
-
-        // check for forwarded attributes
-        String fragment = (String) request.getAttribute("fragment");
+        // forward
         String uris = (String) request.getAttribute("uris");
-        log.debug("fragment attribute: " + fragment);
-        log.debug("uris attribute: " + uris);
-        log.debug("Method: " + (String) request.getAttribute("method"));
+        String params = (String) request.getAttribute("params");
         
-        // check for direct POST
         if (uris == null)
         {
-            log.debug("checking for uris parameter...");
-            uris = request.getParameter("uris"); // forward/render of JSP page
-            
-            if (uris == null)
+             // external post
+            List<String> uriList = ServerUtil.getURIs(request);
+            if ( uriList == null || uriList.isEmpty() )
             {
-                log.debug("checking for uri parameter...");
-                String[] uri = request.getParameterValues("uri");
-                if (uri != null)
-                {
-                    uris = DownloadUtil.flattenURIs(uri);
-                    log.debug("found " + uri.length + " uri parameters: " + uris);
-                }
+                request.getRequestDispatcher("/emptySubmit.jsp").forward(request, response);
+                return;
             }
-            if (uris != null)
-            {
-                log.debug("adding request attribute: uris=" + uris);
-                request.setAttribute("uris", uris);
-                empty = false;
-            }
+            uris = DownloadUtil.encodeListURI(uriList);
+            request.setAttribute("uris", uris);
         }
-        else
-            empty = false;
-        
-        if (fragment == null)
+
+        if (params == null)
         {
-            log.debug("checking for fragment parameter...");
-            fragment = request.getParameter("fragment");
-            if (fragment != null)
+            Map<String,List<String>> paramMap = ServerUtil.getParameters(request);
+            if (paramMap != null && !paramMap.isEmpty() )
             {
-                log.debug("adding request attribute: fragment=" + fragment);
-                request.setAttribute("fragment", fragment);
+                params = DownloadUtil.encodeParamMap(paramMap);
+                request.setAttribute("params", params);
             }
         }
         
-        if (empty)
-        {
-             request.getRequestDispatcher("/emptySubmit.jsp").forward(request, response);
-             return;
-        }
+        log.debug("uris: " + uris);
+        log.debug("params: " + params);
         
         // check for preferred/selected download method
         String target = getDownloadMethod(request, response);
         log.debug("Target: " + target);
         if (target == null)
             target = "/chooser.jsp";
-        
-        if (!"/DownloadManager.jnlp".equals(target))
-        {
-            RequestDispatcher disp = request.getRequestDispatcher(target);
-            disp.forward(request, response);
-            return;
-        }
-        
 
         RequestDispatcher disp = request.getRequestDispatcher(target);
         disp.forward(request, response);
     }
-    
-    
+
     /**
      * Checks cookie and request param for download method preference; tries to set a cookie
      * to save setting for future use.
@@ -217,7 +188,7 @@ public class DispatcherServlet extends HttpServlet
     public static String getDownloadMethod(HttpServletRequest request, HttpServletResponse response)
         throws IOException, ServletException
     {
-        String method = request.getParameter("method");
+        String method = request.getParameter(ServerUtil.PARAM_METHOD);
         Cookie ck = null;
         
         // get cookie
@@ -230,14 +201,12 @@ public class DispatcherServlet extends HttpServlet
                     ck = cookies[i];
             }
         }
-        log.setLevel(Level.DEBUG);
-        
         
         String target = null;
         if ((method == null) && (ck != null) && (ck.getValue() != null))
         {
             method = ck.getValue();
-            if( (URLS.equals(method) || WEBSTART.equals(method)) 
+            if( (URLS.equals(method) || WEBSTART.equals(method))
                     && (request.getParameter("execute") == null))
             {
                 target = "/clearChoice.jsp";

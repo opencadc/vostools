@@ -71,10 +71,13 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.onfire.ak.BrowserApplet;
 
 import javax.swing.JApplet;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Level;
 
 /**
@@ -85,7 +88,7 @@ import org.apache.log4j.Level;
  */
 public class AppletWrapper extends JApplet
 {
-    private static String SERVER_NAME = "ca.nrc.cadc.net.serverName";
+    //private static String SERVER_NAME = "ca.nrc.cadc.net.serverName";
     private GraphicUI ui;
 	
     public void init()
@@ -93,15 +96,17 @@ public class AppletWrapper extends JApplet
         try
         {   
             // temporary hack to set a system property in applet mode
-            String serverName = fixNull(getParameter(SERVER_NAME));
-            System.setProperty(SERVER_NAME, serverName);
+            //String serverName = fixNull(getParameter(SERVER_NAME));
+            //System.setProperty(SERVER_NAME, serverName);
             
             String uriStr = fixNull(getParameter("uris"));
-            String fragment = fixNull(getParameter("fragment"));
-            String[] uris = uriStr.split(",");
+            String paramStr = fixNull(getParameter("params"));
+
+            List<String> uris = DownloadUtil.decodeListURI(uriStr);
+            Map<String,List<String>> params = DownloadUtil.decodeParamMap(paramStr);
             
             this.ui = new GraphicUI(Level.INFO);
-            ui.add(uris, fragment);
+            ui.add(uris, params);
             
             BrowserApplet f = new BrowserApplet(Constants.name, ui, this);
             this.validate();

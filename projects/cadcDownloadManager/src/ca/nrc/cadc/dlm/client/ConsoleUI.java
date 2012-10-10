@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.dlm.DownloadDescriptor;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -81,8 +82,7 @@ import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.Log4jInit;
-import javax.swing.SpinnerModel;
-import javax.swing.SpinnerNumberModel;
+import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -159,28 +159,26 @@ public class ConsoleUI implements UserInterface, TransferListener
         
     }
     
-    public void add(String[] strs, String fragment)
+    public void add(List<String> uris, Map<String,List<String>> params)
     {
-        List<DownloadUtil.ParsedURI> uris = DownloadUtil.parseURIs(strs, fragment);
-        List<DownloadUtil.GeneratedURL> urls = DownloadUtil.generateURLs(uris, fragment);
-        Iterator<DownloadUtil.GeneratedURL> i = urls.iterator();
+        Iterator<DownloadDescriptor> i = DownloadUtil.iterateURLs(uris, params);
         while ( i.hasNext() )
         {
-            DownloadUtil.GeneratedURL g = i.next();
-            if (g.error == null)
-                addDownload(g);
+            DownloadDescriptor dd = i.next();
+            if (dd.error == null)
+                addDownload(dd);
             else
             {
-                logError(g);
+                logError(dd);
             }
         }
     }
 
-    private void addDownload(DownloadUtil.GeneratedURL gen)
+    private void addDownload(DownloadDescriptor dd)
     {
         if (downloadDir == null)
             this.downloadDir = new File(System.getProperty("user.dir"));
-        HttpDownload dl = new HttpDownload(userAgent, gen.url, downloadDir);
+        HttpDownload dl = new HttpDownload(userAgent, dd.url, downloadDir);
         dl.setOverwrite(overwrite);
         dl.setDecompress(decompress);
         synchronized(downloads)
@@ -189,12 +187,10 @@ public class ConsoleUI implements UserInterface, TransferListener
         }
     }
     
-    private void logError(DownloadUtil.GeneratedURL gen)
+    private void logError(DownloadDescriptor dd)
     {
         // TODO: display in a window? create a Download in FAILED state?
-        String msg = "[CoreUI] cannot download " + gen.str + " because: " + gen.error.getMessage();
-        if (gen.error.getCause() != null)
-            msg += ", " + gen.error.getCause().getMessage();
+        String msg = "[error] cannot download " + dd.uri + " because: " + dd.error;
         System.err.println(msg);
     }
     

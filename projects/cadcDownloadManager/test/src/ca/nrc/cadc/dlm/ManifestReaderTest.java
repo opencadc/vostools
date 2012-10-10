@@ -2,7 +2,6 @@
 package ca.nrc.cadc.dlm;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.StringReader;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -20,8 +19,10 @@ public class ManifestReaderTest
     private static Logger log = Logger.getLogger(ManifestReaderTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.dlm", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.dlm", Level.INFO);
     }
+
+    ManifestReader manifestReader = new ManifestReader();
 
     @Test
     public void testOK()
@@ -41,9 +42,8 @@ public class ManifestReaderTest
                 sb.append("\tsomefile\n");
             }
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
             int num = 0;
             while ( iter.hasNext() )
             {
@@ -83,9 +83,8 @@ public class ManifestReaderTest
                 sb.append("\tsomefile\n");
             }
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
             int num = 0;
             while ( iter.hasNext() )
             {
@@ -125,9 +124,8 @@ public class ManifestReaderTest
                 sb.append("\n");
             }
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
             int num = 0;
             while ( iter.hasNext() )
             {
@@ -156,9 +154,9 @@ public class ManifestReaderTest
         {
             StringBuffer sb = new StringBuffer();
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
+
             long num = 0;
             Assert.assertFalse(iter.hasNext());
             iter.next(); // should throw
@@ -185,9 +183,8 @@ public class ManifestReaderTest
             sb.append("FOO\tillegal stuff\n");
             sb.append("ERROR\terror line\n");
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
             DownloadDescriptor dd;
 
             dd = iter.next();
@@ -221,9 +218,8 @@ public class ManifestReaderTest
             sb.append("    \n");
             sb.append("OK\t"+exp+"\n");
             String manifest = sb.toString();
-            StringReader in = new StringReader(manifest);
 
-            Iterator<DownloadDescriptor> iter = new ManifestReader(in);
+            Iterator<DownloadDescriptor> iter = manifestReader.read(manifest);
             DownloadDescriptor dd;
 
             dd = iter.next();

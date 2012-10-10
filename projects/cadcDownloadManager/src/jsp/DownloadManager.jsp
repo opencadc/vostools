@@ -74,18 +74,18 @@
 *
 ************************************************************************
 -->
+<%@ page import="ca.nrc.cadc.reg.client.RegistryClient" %>
 
 <%
+
     String uris = (String) request.getAttribute("uris");
-    String fragment = (String) request.getAttribute("fragment");
+    String params = (String) request.getAttribute("params");
     String codebase = (String) request.getAttribute("codebase");
-    String serverName = (String) request.getAttribute("serverName");
     String ssocookie = (String) request.getAttribute("ssocookie");
     String ssocookiedomain = (String) request.getAttribute("ssocookiedomain");
 
-    // this is XML: need to encode & in the uri and fragment
-    uris = uris.replaceAll("&", "&amp;");
-    fragment = fragment.replaceAll("&", "&amp;");
+    String rcHostProp = RegistryClient.class.getName() + ".host";
+    String rcHost = (String) request.getAttribute("targetHost");
 %>
 
 <jnlp spec="1.0+" codebase="<%= codebase %>"> 
@@ -102,18 +102,29 @@
     </security> 
 
     <resources> 
-        <j2se version="1.4+" initial-heap-size="64m" max-heap-size="128m" 
-            href="http://java.sun.com/products/autodl/j2se"/>
+        <j2se version="1.5+" initial-heap-size="64m" max-heap-size="256m" />
         <jar href="cadcDownloadManagerClient.jar"/>
-        <jar href="cadcUtil.jar"/> 
+        <jar href="cadcUtil.jar"/>
+        <jar href="cadcRegistryClient.jar"/>
         <jar href="log4j.jar"/>
-        <property name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
+        <!-- these are needed for VOTable parsing in the cadcDALI library -->
+        <jar href="cadcDALI.jar"/>
+        <jar href="jdom2.jar"/>
+        <jar href="xerces.jar"/>
+<%
+    if (rcHost != null)
+    {
+%>
+        <property name="<%= rcHostProp %>" value="<%= rcHost %>" />
+<%
+    }
+%>
     </resources> 
 
     <application-desc main-class="ca.nrc.cadc.dlm.client.Main">
         <argument>--verbose</argument>
         <argument>--uris=<%= uris %></argument>
-        <argument>--fragment=<%= fragment %></argument>
+        <argument>--params=<%= params %></argument>
 	<argument>--ssocookie=<%= ssocookie %></argument>
 	<argument>--ssocookiedomain=<%= ssocookiedomain %></argument>
     </application-desc>

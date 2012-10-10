@@ -73,16 +73,18 @@ import java.awt.Component;
 import java.security.PrivilegedAction;
 
 import javax.security.auth.Subject;
-import javax.servlet.http.Cookie;
 
 import org.apache.log4j.Level;
 
 import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.auth.SSOCookieManager;
+import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.onfire.ak.Application;
 import ca.onfire.ak.ApplicationFrame;
+import java.util.List;
+import java.util.Map;
 
 /**
  * TODO
@@ -114,7 +116,7 @@ public class Main
                 level = Level.OFF;
 
             String uriStr = fixNull(am.getValue("uris"));
-            String fragment = fixNull(am.getValue("fragment"));
+            String paramStr = fixNull(am.getValue("params"));
 
             boolean headless = am.isSet("headless");
             
@@ -149,11 +151,7 @@ public class Main
                 frame.setVisible(true);
             }
             
-            if (uriStr != null)
-            {
-                String[] uris = uriStr.split(",");
-                ui.add(uris, fragment);
-            }
+            
 
             Subject subject = new Subject();
             // Cookie based authentication?
@@ -174,14 +172,17 @@ public class Main
                                   ssoCookieStr, ssoCookieDomain);
                   subject.getPublicCredentials().add(cred);
             }
-            
-            boolean result = false; 
-              result =  Subject.doAs(subject, new PrivilegedAction<Boolean>()
+
+            final List<String> uris = DownloadUtil.decodeListURI(uriStr);
+            final Map<String,List<String>> params = DownloadUtil.decodeParamMap(paramStr);
+
+            boolean result = Subject.doAs(subject, new PrivilegedAction<Boolean>()
             {
                 public Boolean run()
                 {
-                        ui.start();
-                        return true;
+                    ui.add(uris, params);
+                    ui.start();
+                    return true;
                 }
             });
             

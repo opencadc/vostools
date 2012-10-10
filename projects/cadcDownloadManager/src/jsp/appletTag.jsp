@@ -74,7 +74,6 @@
 <%
     String uris = (String) request.getAttribute("uris");
     String fragment = (String) request.getAttribute("fragment");
-    String serverName = (String) request.getAttribute("serverName");
 %>
 
 <applet name="DownloadManager"
@@ -85,7 +84,6 @@
     
     <param name="uris" value="<%= uris %>" />
     <param name="fragment" value="<%= fragment %>" />
-    <param name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
 </applet>
 
     

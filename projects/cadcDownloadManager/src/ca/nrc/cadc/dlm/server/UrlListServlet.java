@@ -82,6 +82,8 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.dlm.DownloadDescriptor;
 import ca.nrc.cadc.dlm.DownloadUtil;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Download pre-processor for URL List download method.
@@ -114,22 +116,25 @@ public class UrlListServlet extends HttpServlet
      * @throws javax.servlet.ServletException
      * @throws java.io.IOException
      */
+    @Override
     protected void doPost(HttpServletRequest request,
             HttpServletResponse response) throws ServletException,
             IOException
     {
+        String uris = (String) request.getAttribute("uris");
+        String params = (String) request.getAttribute("params");
 
-        String str = (String) request.getAttribute("uris");
-        String fragment = (String) request.getAttribute("fragment");
-        String[] uris = str.split(",");
+        List<String> uriList = DownloadUtil.decodeListURI(uris);
+        Map<String,List<String>> paramMap = DownloadUtil.decodeParamMap(params);
+
         int countUrls = 0;
         int countErrors = 0;
 
         response.setContentType("html/txt");
         response.setHeader("Content-Disposition",
                 "attachement;filename=\"cadcUrlList.txt\"");
-        Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(
-                uris, fragment, true);
+        
+        Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uriList, paramMap, true);
         while (iter.hasNext())
         {
             DownloadDescriptor dd = iter.next();

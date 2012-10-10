@@ -82,7 +82,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.thread.Queue;
 import ca.nrc.cadc.util.Log4jInit;
@@ -90,6 +89,8 @@ import ca.onfire.ak.AbstractApplication;
 import ca.onfire.ak.ApplicationConfig;
 import java.io.Writer;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -124,9 +125,9 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         engineInitCond.set(false);
     }
     
-    public void add(String[] strs, String fragment)
+    public void add(List<String> uris, Map<String,List<String>> params)
     {
-        Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(strs, fragment);
+        Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, params);
         this.inputQueue.push(iter);
     }
 
