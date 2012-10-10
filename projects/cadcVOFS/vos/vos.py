@@ -462,7 +462,7 @@ class Node:
             perm[0] = 'l'
         if self.props.get('ispublic', "false") == "true":
             perm[-3] = 'r'
-            perm[-2] = 'w'
+            perm[-2] = '-'
         writeGroup = self.props.get('groupwrite', 'NONE')
         if writeGroup != 'NONE':
             perm[5] = 'w'
@@ -984,7 +984,7 @@ class Client:
                 # poll the job. Sleeping time in between polls is doubling each time 
                 # until it gets to 32sec
                 if(sleepTime <= 32):
-                    sleepTime = 2 * time
+                    sleepTime = 2 * sleepTime
                 time.sleep(sleepTime)
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client

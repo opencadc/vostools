@@ -51,9 +51,9 @@ else
 endif
 
 echo -n "** setting home and base to public, no groups"
-$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
 echo -n " [OK]"
-$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 echo "*** starting test sequence ***"
@@ -63,7 +63,7 @@ echo
 
 echo -n "create container "
 $MKDIRCMD $CERT $CONTAINER ||  echo " [FAIL]" && exit -1
-$CHMODCMD $CERT o+rw $CONTAINER ||  echo " [FAIL]" && exit 1
+$CHMODCMD $CERT o+r $CONTAINER ||  echo " [FAIL]" && exit 1
 $CHMODCMD $CERT g+w $CONTAINER $GROUP2 ||  echo " [FAIL]" && exit -1
 
 echo -n " verify "
@@ -106,7 +106,7 @@ echo " [OK]"
 
 echo -n "create container/sub1 "
 $MKDIRCMD $CERT $CONTAINER/sub1 || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT o-rw $CONTAINER/sub1 || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-r $CONTAINER/sub1 || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+w $CONTAINER/sub1 $GROUP1 || echo " [FAIL]" && exit -1
 echo " [OK]"
 

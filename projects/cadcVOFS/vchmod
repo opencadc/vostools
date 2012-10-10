@@ -49,21 +49,20 @@ if __name__ == '__main__':
 
     if len(args) < 2:
         parser.error("Requires mode and node arguments")
-
-
+    cmdArgs = dict(zip(['mode', 'node'], args[0:2]))
+    groupNames = args[2:]
     import re
-    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[\+\-\=]{1})(?P<what>rw$|wr$|r$|w$)", args[0])
+    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[\+\-\=]{1})(?P<what>rw$|wr$|r$|w$)", cmdArgs['mode'])
     if not mode:
         parser.print_help()
         logging.error("\n\nAccepted modes: (og|go|o|g)[+-=](rw|wr|r\w)\n\n")
         sys.exit(-1)
 
-
     props = {}
     if 'o' in mode.group('who'):
-        if not len(mode.group('what')) == 2:   #rw or wr only
+        if not mode.group('what') == 'r':   # read only
             parser.print_help()
-            logging.error("\n\nPublic access is for both read and write\n\n")
+            logging.error("\n\nPublic access is readonly, no public write available \n\n")
             sys.exit(-1)
         if mode.group('op') == '-':
             props['ispublic'] = 'false'
@@ -71,7 +70,7 @@ if __name__ == '__main__':
             props['ispublic'] = 'true'
     if 'g' in mode.group('who'):
         if '-' == mode.group('op'):
-            if not len(args) == 2:
+            if not len(groupNames) == 0:
                 parser.print_help()
                 logging.error("\n\nNames of groups not required with remove permission\n\n")
                 sys.exit(-1)
@@ -80,23 +79,21 @@ if __name__ == '__main__':
             if "w" in mode.group('what'):
                 props['writegroup'] = None
         else:
-            if not (len(args) - 2) == len(mode.group('what')):
+            if not len(groupNames) == len(mode.group('what')):
                 parser.print_help()
                 logging.error("\n\n%s group names required for %s\n\n" %
                                  (len(mode.group('what')), mode.group('what')))
                 sys.exit(-1)
             if mode.group('what').find('r') > -1:
-                props['readgroup'] = vos.CADC_GMS_PREFIX + args[mode.group('what').find('r') + 2]
+                props['readgroup'] = vos.CADC_GMS_PREFIX + groupNames[mode.group('what').find('r')]
             if mode.group('what').find('w') > -1:
-                props['writegroup'] = vos.CADC_GMS_PREFIX + args[mode.group('what').find('w') + 2]
-
+                props['writegroup'] = vos.CADC_GMS_PREFIX + groupNames[mode.group('what').find('w')]
     logging.debug("Properties: %s" % (str(props)))
-    logging.debug("Node: %s" % args[1])
+    logging.debug("Node: %s" % cmdArgs['node'])
     returnCode = 0
-
     try:
         client = vos.Client(certFile=opt.certfile)
-        node = client.getNode(args[1])
+        node = client.getNode(cmdArgs['node'])
         if opt.recursive:
             node.props.clear()
         if 'readgroup' in props:
@@ -106,9 +103,9 @@ if __name__ == '__main__':
         if 'ispublic' in props:
             node.setPublic(props['ispublic'])
         returnCode = client.update(node, opt.recursive)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as ke:
         logging.error("Received keyboard interrupt. Execution aborted...\n")
-        sys.exit(getattr(e, 'errno', -1))
+        sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
         logging.error(str(e))
         sys.exit(getattr(e, 'errno', -1))

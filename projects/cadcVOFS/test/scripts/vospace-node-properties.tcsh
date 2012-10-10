@@ -48,8 +48,8 @@ else
 endif
 
 echo -n "** setting home and base to public"
-$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 
@@ -60,8 +60,8 @@ echo
 
 echo -n "create container (no permissions) "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT o-rw $CONTAINER ||  echo " [FAIL]" && exit -1
-$CHMODCMD $CERT g-rw $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-r $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT g-r $CONTAINER ||  echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q "drw-------" || echo " [FAIL]" && exit -1
 echo " [OK]"
@@ -94,21 +94,21 @@ $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r-----" || 
 echo " [OK]"
 
 echo -n "make a sub-container public"
-$CHMODCMD $CERT o+rw $CONTAINER/aaa/bbb ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $CONTAINER/aaa/bbb ||  echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--rw-" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "recursively make all directories public"
-$CHMODCMD $CERT -R o+rw $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT -R o+r $CONTAINER ||  echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r--rw-" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP1 | grep -q "drw-r--rw-" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r--rw-" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--rw-" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 #test interupt
@@ -120,8 +120,8 @@ if ($? != 0) then
     echo 
     echo "create 1000 directories in testrecursiveinterrupt directory prior to runing test"
     $MKDIRCMD $CERT $TESTPATH || echo " [FAIL]" && exit -1
-    $CHMODCMD $CERT o-rw $TESTPATH ||  echo " [FAIL]" && exit -1
-    $CHMODCMD $CERT g-rw $TESTPATH ||  echo " [FAIL]" && exit -1
+    $CHMODCMD $CERT o-r $TESTPATH ||  echo " [FAIL]" && exit -1
+    $CHMODCMD $CERT g-r $TESTPATH ||  echo " [FAIL]" && exit -1
     foreach dir (`seq 1000`)
         $MKDIRCMD $CERT $TESTPATH/"dir"$dir || echo " [FAIL]" && exit -1
     end

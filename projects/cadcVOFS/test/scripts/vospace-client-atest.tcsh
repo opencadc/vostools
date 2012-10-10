@@ -45,9 +45,9 @@ else
 	echo " [OK]"
 endif
 echo -n "** setting home and base to public, no groups"
-$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
 echo -n " [OK]"
-$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 echo "*** starting test sequence ***"
@@ -71,19 +71,19 @@ $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "verify public=false after create "
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----r--' || echo " [FAIL]" && exit -1
 echo "[OK]"
 
 echo -n "check set permission properties "
 $CHMODCMD $CERT g+rw $CONTAINER test:g1 test:g2 || echo " [FAIL]" && exit -1
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g1' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g2' || echo " [FAIL]" && exit -1
 echo "[OK]"
 
 echo -n "check inherit permission properties "
 $MKDIRCMD $CERT $CONTAINER/pub || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g1' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g2' || echo " [FAIL]" && exit -1
 echo "[OK]"
@@ -91,7 +91,7 @@ echo "[OK]"
 echo -n "check inherit + change certain properties "
 $MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-rw-' || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g2' || echo " [FAIL]" && exit -1
 echo "[OK]"
