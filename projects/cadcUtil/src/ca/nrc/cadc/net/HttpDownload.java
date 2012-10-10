@@ -1070,13 +1070,15 @@ public class HttpDownload extends HttpTransfer
             if ((cookieCreds != null) && (cookieCreds.size() > 0))
             {
                 // grab the first cookie (it should be only one anyways)
-                SSOCookieCredential cookieCred = cookieCreds.iterator()
-                        .next();
-                if (conn.getURL().getHost().endsWith(
-                        cookieCred.getDomain()))
-                    conn.setRequestProperty("Cookie", cookieCred
-                            .getSsoCookieValue());
+                SSOCookieCredential cookieCred = cookieCreds.iterator().next();
+                if (conn.getURL().getHost().endsWith(cookieCred.getDomain()))
+                    conn.setRequestProperty("Cookie", cookieCred.getSsoCookieValue());
+                else
+                    log.debug("setRequestSSOCookie: domain mismatch - "
+                            + cookieCred.getDomain() + " vs " + conn.getURL().getHost());
             }
+            else
+                log.debug("setRequestSSOCookie: no cookie");
         }
     }
 }
