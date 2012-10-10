@@ -132,17 +132,12 @@ class VOFS(LoggingMixIn, Operations):
 
         Only checks read access, mode is currently ignored"""
         logging.debug("Checking if -->%s<-- is accessible" %(path))
-        if path in self.node:
-            return 0
         try:
-            if self.client.access(path,mode):
-                return 0
-        except Exception as e:
-            e=FuseOSError(e.errno)
-            e.filename=path
-            e.strerror=getattr(e,'strerror','failed while checking access on %s' %(path))
-            raise e
-        return -1
+            self.getNode(path)
+        except:
+            return -1
+        return 0
+
 
     def chmod(self, path, mode):
         """Set the read/write groups on the VOSpace node based on chmod style modes.
