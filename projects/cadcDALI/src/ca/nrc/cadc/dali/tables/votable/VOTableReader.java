@@ -79,10 +79,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.MissingResourceException;
 import org.apache.log4j.Logger;
 import org.jdom2.Attribute;
 import org.jdom2.Document;
@@ -109,13 +111,20 @@ public class VOTableReader
     private static final String votable12SchemaUrl;
     static
     {
-        votable11SchemaUrl = XmlUtil.getResourceUrlString(VOTABLE_11_SCHEMA, VOTableReader.class);
+        votable11SchemaUrl = getSchemaURL(VOTABLE_11_SCHEMA);
         log.debug("votable11SchemaUrl: " + votable11SchemaUrl);
 
-        votable12SchemaUrl = XmlUtil.getResourceUrlString(VOTABLE_12_SCHEMA, VOTableReader.class);
+        votable12SchemaUrl = getSchemaURL(VOTABLE_12_SCHEMA);
         log.debug("votable12SchemaUrl: " + votable12SchemaUrl);
     }
 
+    static String getSchemaURL(String name)
+    {
+        URL url = VOTableReader.class.getClassLoader().getResource(name);
+        if (url == null)
+            throw new MissingResourceException("schema not found", VOTableReader.class.getName(), name);
+        return url.toString();
+    }
     private SAXBuilder docBuilder;
 
     /**
