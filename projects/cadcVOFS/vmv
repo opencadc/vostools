@@ -5,28 +5,33 @@
 import vos
 import time
 import optparse, os, sys, logging
+import signal
+
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
 
 def main():
-    usage="""
-	vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.   Version: %s 
-""" % ( vos.__version__.version)
+    signal.signal(signal.SIGINT, signal_handler)
+    usage = """
+    vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.   Version: %s
+""" % (vos.__version__.version)
 
 
-    parser=optparse.OptionParser(usage)
-    parser.add_option("-v","--verbose",action="store_true")
-    parser.add_option("-d","--debug",action="store_true")
-    parser.add_option("--version",help="VOS Version %s" %( vos.__version__.version))
-    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-    
+    parser = optparse.OptionParser(usage)
+    parser.add_option("-v", "--verbose", action="store_true")
+    parser.add_option("-d", "--debug", action="store_true")
+    parser.add_option("--version", help="VOS Version %s" % (vos.__version__.version))
+    parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 
-    (opt,args)=parser.parse_args()
-        
+
+    (opt, args) = parser.parse_args()
+
     if opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="vmv: %(message)s")
+        logging.basicConfig(level=logging.INFO, format="vmv: %(message)s")
     elif opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="vmv: %(module)s.%(funcName)s %(message)s")
+        logging.basicConfig(level=logging.DEBUG, format="vmv: %(module)s.%(funcName)s %(message)s")
     else:
-        logging.basicConfig(level=logging.ERROR,format="vmv: %(message)s")
+        logging.basicConfig(level=logging.ERROR, format="vmv: %(message)s")
 
 
     if len(args) != 2:
@@ -35,16 +40,19 @@ def main():
 
 
     try:
-        client=vos.Client(certFile=opt.certfile)
+        client = vos.Client(certFile=opt.certfile)
     except Exception as e:
-        logging.error("Conneciton failed:  %s" %  (str(e)))
+        logging.error("Conneciton failed:  %s" % (str(e)))
         sys.exit(e.errno)
 
-    source=args[0]
+    source = args[0]
     dest = args[1]
 
     try:
-        client.move(source,dest)
+        client.move(source, dest)
+    except KeyboardInterrupt:
+        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(-1)
     except Exception as e:
         logging.error(str(e))
         sys.exit(-1)
@@ -56,6 +64,6 @@ if __name__ == '__main__':
     try:
         main()
     except:
-        import traceback        
+        import traceback
         logging.debug(sys.exc_info())
-	sys.exit(-1)
+        sys.exit(-1)

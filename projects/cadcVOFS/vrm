@@ -7,7 +7,7 @@ import time
 import optparse, os, sys, logging
 
 usage="""
-	vrm vos:/root/node   -- deletes a data node
+        vrm vos:/root/node   -- deletes a data node
 """
 
 
@@ -35,7 +35,7 @@ except Exception as e:
 
 for arg in args:
     if arg[0:4]!="vos:":
-       logging.error("%s is not a valid VOSpace handle" % (arg))
+        logging.error("%s is not a valid VOSpace handle" % (arg))
     try:
         if client.isfile(arg):
             logging.info("deleting %s" %(arg))
@@ -44,7 +44,7 @@ for arg in args:
             logging.error("%s is a directory" % (arg))
         else:
             logging.error("%s file not found" % (arg))
-	    sys.exit(-1)
+            sys.exit(-1)
     except Exception as e:
         logging.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),e.errno))
         sys.exit(e.errno)

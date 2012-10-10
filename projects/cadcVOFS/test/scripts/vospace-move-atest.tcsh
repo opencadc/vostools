@@ -55,8 +55,8 @@ else
 endif
 
 echo -n "** setting home and base to public"
-$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 
@@ -67,7 +67,7 @@ echo
 
 echo -n "setup: create container "
 $MKDIRCMD $CERT $CONTAINER ||  echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER ||  echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"

@@ -253,7 +253,7 @@ class fuse_operations(Structure):
     _fields_ = [
         ('getattr', CFUNCTYPE(c_int, c_char_p, POINTER(c_stat))),
         ('readlink', CFUNCTYPE(c_int, c_char_p, POINTER(c_byte), c_size_t)),
-        ('getdir', c_voidp),    # Deprecated, use readdir
+        ('getdir', c_voidp), # Deprecated, use readdir
         ('mknod', CFUNCTYPE(c_int, c_char_p, c_mode_t, c_dev_t)),
         ('mkdir', CFUNCTYPE(c_int, c_char_p, c_mode_t)),
         ('unlink', CFUNCTYPE(c_int, c_char_p)),
@@ -264,7 +264,7 @@ class fuse_operations(Structure):
         ('chmod', CFUNCTYPE(c_int, c_char_p, c_mode_t)),
         ('chown', CFUNCTYPE(c_int, c_char_p, c_uid_t, c_gid_t)),
         ('truncate', CFUNCTYPE(c_int, c_char_p, c_off_t)),
-        ('utime', c_voidp),     # Deprecated, use utimens
+        ('utime', c_voidp), # Deprecated, use utimens
         ('open', CFUNCTYPE(c_int, c_char_p, POINTER(fuse_file_info))),
 
         ('read', CFUNCTYPE(c_int, c_char_p, POINTER(c_byte), c_size_t,
@@ -363,7 +363,7 @@ class FUSE(object):
         if kwargs.pop('nothreads', False):
             args.append('-s')
         if kwargs.pop('readonly', False):
-	    args.append('-r')
+            args.append('-r')
         if kwargs.pop('allow_other', False):
             args.append('-oallow_other')
         kwargs.setdefault('fsname', operations.__class__.__name__)
@@ -479,7 +479,7 @@ class FUSE(object):
           fh = fip.contents.fh
 
         #ret = self.operations('read', path.decode(self.encoding), size, offset, fh)
-        data =  self.operations('read', path.decode(self.encoding), size, offset, fh)
+        data = self.operations('read', path.decode(self.encoding), size, offset, fh)
 
         if not data: return 0
 

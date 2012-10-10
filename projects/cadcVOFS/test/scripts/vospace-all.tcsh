@@ -9,9 +9,10 @@ vospace-delete-permission-atest.tcsh || echo "FAIL vospace-delete-permission-ate
 vospace-quota-atest.tcsh || echo "FAIL vospace-quota-atest.tcsh" && exit -1
 vospace-link-atest.tcsh || echo "FAIL vospace-link-atest.tcsh" && exit -1
 vospace-read-permission-atest.tcsh || echo "FAIL vospace-read-permission-atest.tcsh" && exit -1
+vospace-node-properties.tcsh || echo "FAIL vospace-node-properties.tcsh" && exit -1
 
 
 echo
-echo "*** test sequence passed ***"
+echo "*** all test sequences passed ***"
 
 date

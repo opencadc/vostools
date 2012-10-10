@@ -47,9 +47,9 @@ else
 	echo " [OK]"
 endif
 echo -n "** setting home and base to public, no groups"
-$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
 echo -n " [OK]"
-$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 
@@ -58,7 +58,7 @@ echo
 
 echo -n "create base container"
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "create container to be valid link target"

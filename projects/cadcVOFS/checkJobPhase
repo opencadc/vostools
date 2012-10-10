@@ -1,0 +1,45 @@
+#!python
+"""set/read/(list) a property(ies) if a node.
+
+This script is used to retrieve the state of a job using X509 authentication. """
+
+
+import time
+import errno
+import sys
+from vos import vos
+import argparse
+import errno, os
+import logging
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description="List the tags on a file")
+
+    parser.add_argument("--certfile",
+                        help="location of your CADC security certificate file",
+                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_argument("-v", "--verbose", action='store_const', const=True,
+                        help="print some diagnostics")
+    parser.add_argument("-d", "--debug", action='store_const', const=True,
+                        help="print all diagnositics")
+    parser.add_argument("jobURL", action='store', help="The URL of the job to test")
+
+
+    opt = parser.parse_args()
+    if opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    elif opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="%(message)s")
+    try:
+        client = vos.Client(certFile=opt.certfile)
+        sys.stdout.write("%s\n" % client.getJobStatus(opt.jobURL))
+    except KeyboardInterrupt:
+        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(-1)
+    except Exception as e:
+        sys.stderr.write(str(e))
+        sys.exit(-1)
+    sys.exit(0)
