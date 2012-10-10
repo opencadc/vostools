@@ -77,26 +77,26 @@ def copy(source,dest):
                 return 
         logging.info("%s -> %s " % ( source, dest))
         loopCount=0
-	waitTime=1
+        waitTime=1
         while True:
             try:
                 client.copy(source,dest,sendMD5=True)
-	        break
+                break
             except OSError as e:
-		logging.critical("ERROR: %s while copying %s -> %s (attempt %d)" % (str(e), source, dest, loopCount+1))
+                logging.critical("ERROR: %s while copying %s -> %s (attempt %d)" % (str(e), source, dest, loopCount+1))
                 if loopCount > 10 :
                     raise e
-	        logging.critical("Retrying in %d seconds\n" %(waitTime))
+                logging.critical("Retrying in %d seconds\n" %(waitTime))
                 loopCount+=1
                 time.sleep(waitTime)
                 waitTime=1.5*waitTime
             except Exception as e:
-	        if hasattr(e,'errno'):
-		   if e.errno==104:
+                if hasattr(e,'errno'):
+                   if e.errno==104:
                        logging.critical(str(e))
-	               continue
-	        raise e
-			 
+                       continue
+                raise e
+                         
             
                 
     except IOError as e:
@@ -170,7 +170,7 @@ if __name__=='__main__':
             logging.error("Can not (yet) copy from VOSpace to VOSpace")
             sys.exit(-1)
 
-	thisDest=dest
+        thisDest=dest
         if isdir(source):
             logging.debug("%s is a directory or link to one" % (source))
             ## To mimic unix fs behaviours if copying a directory and

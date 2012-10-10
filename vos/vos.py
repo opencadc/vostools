@@ -530,22 +530,22 @@ class VOFile:
         self.timeout = -1
         self.size = size
         self.followRedirect = followRedirect
-	self.name = os.path.basename(URL)
+        self.name = os.path.basename(URL)
         self._fpos = 0
         self.open(URL, method)
-	logging.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
+        logging.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
 
     def tell(self):
-	return self._fpos
+        return self._fpos
 
     def seek(self, offset, loc=os.SEEK_SET):
-	if loc == os.SEEK_CUR:
-	   self._fpos += offset
+        if loc == os.SEEK_CUR:
+            self._fpos += offset
         elif loc == os.SEEK_SET:
-	   self._fpos = offset
+            self._fpos = offset
         elif loc == os.SEEK_END:
-	   self._fpos = self.size - offset
-	return
+            self._fpos = self.size - offset
+        return
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503)):
         """close the connection"""
@@ -558,14 +558,14 @@ class VOFile:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
             self.resp = self.httpCon.getresponse()
-	    import time
-	    time.sleep(0.1)
-	    logging.warning("closing connection for %s" % (self.url))
+            import time
+            time.sleep(0.1)
+            logging.warning("closing connection for %s" % (self.url))
             self.httpCon.close()
         except ssl.SSLError as e:
             raise IOError(errno.EAGAIN, str(e))
         except Exception as e:
-	    raise IOError(errno.ENOTCONN, str(e))
+            raise IOError(errno.ENOTCONN, str(e))
         self.closed = True
         logging.debug("Connection closed")
         return self.checkstatus(codes=code)
@@ -575,14 +575,14 @@ class VOFile:
         msgs = { 404: "Node Not Found",
                  401: "Not Authorized",
                  409: "Conflict",
-	         408: "Connection Timeout"}
+             408: "Connection Timeout"}
         errnos = { 404: errno.ENOENT,
                    401: errno.EACCES,
                    409: errno.EEXIST,
-		   408: errno.EAGAIN }
+           408: errno.EAGAIN }
         logging.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
-	    logging.warning("Got status code: %s for %s" % (self.resp.status, self.url))
+            logging.warning("Got status code: %s for %s" % (self.resp.status, self.url))
             from html2text import html2text
             msg = self.resp.read()
             if msg is not None:
@@ -613,20 +613,20 @@ class VOFile:
             userAgent = 'vofs ' + version
         self.httpCon.putheader("User-Agent", userAgent)
         self.transEncode = None
-        logging.debug("sending headers for file of size %s: " % (str(self.size)))
+        logging.debug("sending headers for file of size: %s " % (str(self.size)))
         if method in ["PUT"]:
             try:
-               self.size = int(self.size)
-               self.httpCon.putheader("Content-Length", self.size)
+                self.size = int(self.size)
+                self.httpCon.putheader("Content-Length", self.size)
             except TypeError as e:
-	        self.size = None
+                self.size = None
                 self.transEncode = "chunked"
                 self.httpCon.putheader("Transfer-Encoding", 'chunked')
-	elif method in ["POST", "DELETE"]:
-	    self.size = None
+        elif method in ["POST", "DELETE"]:
+            self.size = None
             self.httpCon.putheader("Transfer-Encoding", 'chunked')
             self.transEncode = "chunked"
-	if method in ["PUT", "POST", "DELETE"]:
+        if method in ["PUT", "POST", "DELETE"]:
             contentType = "text/xml"
             if method == "PUT":
                 import urllib, os
@@ -637,8 +637,8 @@ class VOFile:
                 else:
                     contentType = mimetypes.guess_type(URL)[0]
                     logging.debug("Guessed content type: %s" % (contentType))
-	    if contentType is not None:
-	        logging.debug("Content-Type: ", contentType)
+            if contentType is not None:
+                logging.debug("Content-Type: %s" % str(contentType))
                 self.httpCon.putheader("Content-Type", contentType)
         if bytes is not None and method == "GET" :
             logging.debug("Range: %s" % (bytes))
@@ -646,13 +646,13 @@ class VOFile:
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
         self.httpCon.endheaders()
-	logging.warning("Opening connection for %s to %s" % (URL, method))
+        logging.warning("Opening connection for %s to %s" % (URL, method))
         logging.debug("Done setting headers")
 
 
     def read(self, size=None):
         """return size bytes from the connection response"""
-	#logging.debug("Starting to read file by closing http(s) connection")
+    #logging.debug("Starting to read file by closing http(s) connection")
         if not self.closed:
             self.close()
         bytes = None
@@ -678,7 +678,7 @@ class VOFile:
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location', None)
             logging.debug("Got redirect URL: %s" % (URL))
-	    self.url = URL
+            self.url = URL
             if not URL:
                 logging.debug("Raising error?")
                 raise IOError(errno.ENOENT, "No Location on redirect", self.url)
@@ -694,9 +694,9 @@ class VOFile:
             logging.error("Got 503: server busy on %s" % (self.url))
             logging.error("Message:  %s" % (self.resp.read()))
             try:
-              ras = int(self.resp.getheader("Retry-After", 5))
-	    except:
-	      ras = 5
+                ras = int(self.resp.getheader("Retry-After", 5))
+            except:
+                ras = 5
             logging.error("retrying in %d seconds" % (ras))
             time.sleep(int(ras))
             self.open(self.url, "GET")
@@ -795,11 +795,11 @@ class Client:
 
         if sendMD5:
             if checkMD5 != md5.hexdigest():
-		logging.error("MD5s don't match ( %s -> %s ) " % (src, dest))
+                logging.error("MD5s don't match ( %s -> %s ) " % (src, dest))
                 raise OSError(errno.EIO, "MD5s don't match", src)
             return md5.hexdigest()
         if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
-	    logging.error("sizes don't match ( %s -> %s ) " % (src, dest))
+            logging.error("sizes don't match ( %s -> %s ) " % (src, dest))
             raise IOError(errno.EIO, "sizes don't match", src)
         return destSize
 
@@ -808,13 +808,13 @@ class Client:
         """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
         from errno import EINVAL
         parts = urlparse(uri)
-	#TODO implement support for local files (parts.scheme=None and self.rootNode=None
-	if parts.scheme is None:
+        #TODO implement support for local files (parts.scheme=None and self.rootNode=None
+        if parts.scheme is None:
             uri = self.rootNode + uri
         parts = urlparse(uri)
         if parts.scheme != "vos":
-	    # Just past this back, I don't know how to fix...
-	    return uri
+            # Just past this back, I don't know how to fix...
+            return uri
             #raise IOError(errno.EINVAL,"Invalid vospace URI",uri)
         import re
         ## Check that path name compiles with the standard
@@ -927,10 +927,6 @@ class Client:
         con.write(ET.tostring(transfer))
         transURL = con.read()
         if  not self.getTransferError(transURL, srcURI):
-            #con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
-            #s = con.read()
-            # logging.debug("response on move: %s" %( s))
-            ### monitor the transfer URL for result status
             return True
         return  False
 
@@ -968,9 +964,9 @@ class Client:
         return P.findtext(Node.ENDPOINT)
 
     def getTransferError(self, url, uri):
-	"""Follow a transfer URL to the Error message"""
-	import errno
-	errorCodes = { 'NodeNotFound': errno.ENOENT,
+        """Follow a transfer URL to the Error message"""
+        import errno
+        errorCodes = { 'NodeNotFound': errno.ENOENT,
                        'PermissionDenied': errno.EACCES,
                        'OperationNotSupported': errno.EOPNOTSUPP,
                        'InternalFault': errno.EFAULT,
@@ -978,16 +974,25 @@ class Client:
                        'ViewNotSupported': errno.ENOSYS,
                        'InvalidArgument': errno.EINVAL,
                        'InvalidURI': errno.EFAULT,
-                       'InvalidData': errno.EOPNOTSUPP,
                        'TransferFailed': errno.EIO,
                        'DuplicateNode.': errno.EEXIST}
-        import re
-        match = re.match('(.*)(/results/transferDetails)?', url)
-        if match is None:
-            raise OSError(errno.ENOENT, "Bad response for VOSpace")
-        phaseURL = match.group(1) + "/phase"
-        while VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
-            time.sleep(1.5)
+        try:
+            jobURL = str.replace(url, "/results/transferDetails", "")
+            phaseURL = jobURL + "/phase"
+            sleepTime = 1
+            while VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
+                # poll the job. Sleeping time in between polls is doubling each time 
+                # until it gets to 32sec
+                if(sleepTime <= 32):
+                    sleepTime = 2 * time
+                time.sleep(sleepTime)
+        except KeyboardInterrupt:
+            # abort the job when receiving a Ctrl-C/Interrupt from the client
+            logging.info("Received keyboard interrupt")
+            con = VOFile(jobURL + "/phase", self.conn, method="POST", followRedirect=False)
+            con.write("PHASE=ABORT")
+            con.read()
+            raise KeyboardInterrupt
         status = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read()
         logging.debug("Phase:  %s" % (status))
         if status in ['COMPLETED']:
@@ -995,20 +1000,20 @@ class Client:
         if status in ['HELD' , 'SUSPENDED', 'ABORTED']:
             ## requeue the job and continue to monitor for completion.
             raise OSError("UWS status: %s" % (status), eerno.EFAULT)
-        errorURL = match.group(1) + "/error"
-	con = VOFile(errorURL, self.conn, method="GET")
-	errorMessage = con.read()
-	logging.debug("Got transfer error %s on URI %s" % (errorMessage, uri))
+        errorURL = jobURL + "/error"
+        con = VOFile(errorURL, self.conn, method="GET")
+        errorMessage = con.read()
+        logging.debug("Got transfer error %s on URI %s" % (errorMessage, uri))
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" % (uri, errorMessage))
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None):
         """Connect to the uri as a VOFile object"""
 
-	### sometimes this is called with mode from ['w', 'r']
+    ### sometimes this is called with mode from ['w', 'r']
         ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
-	if type(mode) == str:
-	   mode = os.O_RDONLY
+        if type(mode) == str:
+            mode = os.O_RDONLY
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
         method = None
@@ -1088,6 +1093,10 @@ class Client:
         return f.close()
 
     def update(self, node, recursive=False):
+        """Updates the node properties on the server. For non-recursive updates, node's
+           properties are updated on the server. For recursive updates, node should
+           only contain the properties to be changed in the node itself as well as
+           all its children. """
         logging.debug(str(node))
         ## Let's do this update using the async tansfer method
         URL = self.getNodeURL(node.uri)
@@ -1105,7 +1114,7 @@ class Client:
         else:
             con = VOFile(URL, self.conn, method="POST", followRedirect=False)
             con.write(str(node))
-
+            con.read()
         return 0
         #f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
         #f.write(str(node))
@@ -1157,8 +1166,8 @@ class Client:
 
     def isdir(self, uri):
         """Check to see if this given uri points at a containerNode or is a link to one."""
-	try:
-	    node = self.getNode(uri, limit=0)
+        try:
+            node = self.getNode(uri, limit=0)
             logging.debug(node.type)
             while node.type == "vos:LinkNode":
                 uri = node.target
@@ -1170,24 +1179,24 @@ class Client:
                     return False
             if node.type == "vos:ContainerNode":
                 return True
-	except Exception as e:
+        except Exception as e:
             logging.debug(str(e))
         return False
 
     def isfile(self, uri):
         try:
-	    return self.status(uri)
-	except:
-	    return False
+            return self.status(uri)
+        except:
+            return False
 
     def access(self, uri, mode=os.O_RDONLY):
         """Test for existance"""
-	try:
+        try:
             dum = self.getNode(uri)
-	    return True
+            return True
         except Exception as e:
             logging.debug(str(e))
-	    return False
+            return False
 
     def status(self, uri, code=[200, 303, 302]):
         """Check to see if this given uri points at a containerNode.
@@ -1196,4 +1205,7 @@ class Client:
         """
         return self.open(uri, view='data', head=True).close(code=code)
 
-
+    def getJobStatus(self, url):
+        """ Returns the status of a job """
+        return VOFile(url, self.conn, method="GET",
+                                    followRedirect=False).read()

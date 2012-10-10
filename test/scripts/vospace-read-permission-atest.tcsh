@@ -52,8 +52,8 @@ else
 endif
 
 echo -n "** setting home and base to public"
-$CHMODCMD $CERT a+rw $VOHOME || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a+rw $BASE || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $VOHOME || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $BASE || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 
@@ -64,7 +64,7 @@ echo
 
 echo -n "create container (no permissions) "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER ||  echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER ||  echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g-rw $CONTAINER ||  echo " [FAIL]" && exit -1
 echo " [OK]"
 
@@ -124,7 +124,7 @@ echo " [OK]"
 
 echo -n "create container with --public "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a+rw $CONTAINER || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $CONTAINER || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo -n " [OK] "
@@ -145,14 +145,14 @@ echo " [OK] "
 
 echo -n "create container "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a+rw $CONTAINER || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $CONTAINER || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----rw-' || echo " [FAIL]" && exit -1
 echo -n " [OK] "
 
 echo -n "copy file with --public "
 $CPCMD $CERT something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a+rw $CONTAINER/something.png || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o+rw $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/something.png | grep -q '\-rw----rw-' || echo " [FAIL]" && exit -1
 echo -n " [OK] "
@@ -167,7 +167,7 @@ echo " [OK] "
 
 echo -n "create container with --group-read=${GROUP1} "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER || echo " [FAIL]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+r $CONTAINER $GROUP1 || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP > /dev/null || grep -q 'drw-r-----' || echo " [FAIL]" && exit -1
@@ -189,7 +189,7 @@ echo " [OK] "
 
 echo -n "create container "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER || echo " [FAIL CHMOD]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER || echo " [FAIL CHMOD]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
 echo -n " [OK] "
@@ -211,13 +211,13 @@ echo " [OK] "
 
 echo -n "create container with --public=false "
 $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT a-rw $CONTAINER || echo " [FAIL CHMOD]" && exit -1
+$CHMODCMD $CERT o-rw $CONTAINER || echo " [FAIL CHMOD]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
 echo -n " [OK] "
 
 echo -n "try to set --public as CADCAuthtest1 (denied) "
-$CHMODCMD $CERT1 a+rw $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+$CHMODCMD $CERT1 o+rw $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
 echo " [OK]"
