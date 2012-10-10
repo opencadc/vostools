@@ -69,6 +69,10 @@
 
 package ca.nrc.cadc.uws;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.server.JobPersistenceUtil;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -78,27 +82,17 @@ import java.security.Principal;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-
 import javax.security.auth.Subject;
-
 import junit.framework.Assert;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.server.JobPersistenceUtil;
-import ca.nrc.cadc.xml.XmlUtil;
-import java.util.HashMap;
-import java.util.Map;
-import org.junit.Ignore;
 
 /**
  * @author zhangsa
@@ -114,14 +108,12 @@ public class JobReaderWriterTest
 
     private DateFormat dateFormat;
     private Date baseDate;
-    private static String fooSchemaURL;
 
     @BeforeClass
     public static void setUpBeforeClass() 
         throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
-        fooSchemaURL = XmlUtil.getResourceUrlString("foo.xsd", JobReaderWriterTest.class);
     }
 
     @Before
@@ -484,11 +476,6 @@ public class JobReaderWriterTest
         }
     }
 
-    /*
-     * JobInfo in the UWS schema as an attribute processContents="lax", which
-     * tells the parser not to validate if it can't find the schema.
-     */
-    @Ignore("Unable to test")
     @Test
     public void testJobReaderWithInvalidJobInfoDocument()
     {
@@ -511,7 +498,9 @@ public class JobReaderWriterTest
             String xml = toXML(job);
 
             // Create a vaidating JobReader, without a schema for the JobInfo content.
-            JobReader jobReader = new JobReader(true);
+            Map<String, String> map = new HashMap<String, String>();
+            map.put("http://localhost/foo.xsd", "file:test/src/resources/bar.xsd");
+            JobReader jobReader = new JobReader(map);
             try
             {
                 jobReader.read(new StringReader(xml));
@@ -549,7 +538,7 @@ public class JobReaderWriterTest
 
             // Create a vaidating JobReader with a schema for the JobInfo content.
             Map<String, String> map = new HashMap<String, String>();
-            map.put("http://localhost/foo.xsd", fooSchemaURL);
+            map.put("http://localhost/foo.xsd", "file:test/src/resources/foo.xsd");
             JobReader jobReader = new JobReader(map);
             try
             {

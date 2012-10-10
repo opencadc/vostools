@@ -183,6 +183,7 @@ public class JobReader
             for (Entry<String, String> entry : entries)
             {
                 schemaMap.put(entry.getKey(), entry.getValue());
+                log.debug("added to SchemaMap: " + entry.getKey() + " = " + entry.getValue());
             }
         }
         log.debug("schema validation enabled");
