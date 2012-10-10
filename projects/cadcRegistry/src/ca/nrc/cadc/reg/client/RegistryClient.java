@@ -138,22 +138,22 @@ public class RegistryClient
         this.url = url;
         try
         {
-            if ( "true".equals(System.getProperty(LOCAL_PROPERTY)) )
+            String localP = System.getProperty(LOCAL_PROPERTY);
+            String hostP = System.getProperty(HOST_PROPERTY);
+            log.debug("local: " + localP);
+            log.debug(" host: " + hostP);
+            if ( "true".equals(localP) )
             {
                 log.debug(LOCAL_PROPERTY + " is set, assuming localhost runs the service");
                 this.hostname = InetAddress.getLocalHost().getCanonicalHostName();
             }
-            else
+            else if (hostP != null)
             {
-                String hp = System.getProperty(HOST_PROPERTY);
-                if (hp != null)
+                hostP = hostP.trim();
+                if (hostP.length() > 0)
                 {
-                    hp = hp.trim();
-                    if (hp.length() > 0)
-                    {
-                        InetAddress inet = InetAddress.getByName(hp);
-                        this.hostname = inet.getCanonicalHostName();
-                    }
+                    InetAddress inet = InetAddress.getByName(hostP);
+                    this.hostname = inet.getCanonicalHostName();
                 }
             }
         }
@@ -210,7 +210,7 @@ public class RegistryClient
         throws MalformedURLException
     {
         init();
-        log.debug("getServiceURL: " + serviceID + "," + protocol);
+        log.debug("getServiceURL: " + serviceID + "," + protocol + "," + path);
 
         //List<URL> urls = lookup.get(serviceID);
         List<String> urls = mvp.getProperty(serviceID.toString());
@@ -239,7 +239,6 @@ public class RegistryClient
         if ( hostname != null )
         {
             URL ret = new URL(surl);
-            log.debug(LOCAL_PROPERTY + " is set, assuming localhost runs the service");
             sb.append(ret.getProtocol());
             sb.append("://");
             sb.append(hostname);
@@ -276,24 +275,17 @@ public class RegistryClient
             this.mvp = new MultiValuedProperties();
             mvp.load(istream);
 
-            // load into the lookup map
-            /*
-            this.lookup = new HashMap<URI,List<URL>>();
-            Iterator<String> iter = mvp.keySet().iterator();
-            while ( iter.hasNext() )
+            if (log.isDebugEnabled())
             {
-                String key = iter.next();
-                List<String> values = mvp.getProperty(key);
-                URI uri = new URI(key);
-                List<URL> urls = new ArrayList<URL>(values.size());
-                for (String s : values)
+                for (String k : mvp.keySet())
                 {
-                    URL u = new URL(s);
-                    urls.add(u);
-                    log.debug("init: " + uri + " -> " + u);
+                    List<String> values = mvp.getProperty(k);
+                    for (String v : values)
+                    {
+                        log.debug(k + " = " + v);
+                    }
                 }
             }
-            */
         }
         catch(IOException ex)
         {
