@@ -152,8 +152,7 @@ String bodyFooter = skin + "bodyFooter";
                 (cookies required) 
             </p>
             <p style="color: #800; padding-left: 6em; padding-right: 6em">
-                We recommend that you do not check this box until you have tried the various options and 
-                found one you like and that works on your system.
+	        Individual download pages have "Chose one of the other download methods" buttons which, if pressed, remove the remembered download choice and return to the multiple choice page.
             </p>
         </div>
         
@@ -163,27 +162,16 @@ String bodyFooter = skin + "bodyFooter";
     <h2>Help</h2>
     
     <h3>
-        How to I get back to this page if I check the <em>remember</em> box and regret it?
-    </h3>
-    
-    <p>
-        If you chose to remember your choice of download method (the checkbox), a browser cookie is stored to 
-        record the choice. If you have problems with the selected method, you can just delete the cookie and then
-        return to this page. The applet and URL list pages have a button which does this for you, but the webstart
-        method does not have that option.
-    </p>
-        
-    <h3>
         I want to use the Java option but it didn't work. How can I fix it?
     </h3>
     <p>
         For general help on getting applets or webstart working, we 
-        have a <a href="/JavaTest"">Java Test Page</a> with instructions.
+        have a <a href="/JavaTest">Java Test Page</a> with instructions.
     </p>
     <h3>
-        wget is not working
+        <i>wget</i> is not working
     </h3>
-    <p>
+        <p>
     	Please note that there are many versions of <i>wget</i> with a variety of 
 		options and syntax.  Please consult your local help pages before contacting 
 		us.&nbsp;   <code>wget --help</code> should reveal the arguments supported by 
@@ -196,7 +184,19 @@ String bodyFooter = skin + "bodyFooter";
 	    Alternately, you can try one of the several other web download utilities
 	    such as: curl, HTTrack, leech (mozilla add-on), pavuk, lftp, etc.
 	</p>    
-    
+    <h3>
+        common options used with <i>wget</i>
+    </h3>
+    <p>
+     For downloading large number of files with <i>wget</i>, the following options might come handy:
+	<ul>
+	   <li>-t,  --tries=NUMBER            set number of retries to NUMBER (5 recommended).</li>
+	   <li>--auth-no-challenge     send Basic HTTP authentication information
+                 without first waiting for the server’s challenge thus saving a roundtrip.
+           <li>--waitretry=SECONDS       wait 1..SECONDS between retries of a retrieval. By default, Wget will assume a value of 10 seconds.</li>
+           <li>-N,  --timestamping  Turn on time-stamping and download only missing or updated files.</li>
+	</ul>
+
 <c:catch><c:import url="<%= bodyFooter%>" /></c:catch>
 </body>
 </html>
