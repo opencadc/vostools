@@ -192,7 +192,7 @@ String bodyFooter = skin + "bodyFooter";
 	<ul>
 	   <li>-t,  --tries=NUMBER            set number of retries to NUMBER (5 recommended).</li>
 	   <li>--auth-no-challenge     send Basic HTTP authentication information
-                 without first waiting for the server’s challenge thus saving a roundtrip.
+                 without first waiting for the server's challenge thus saving a roundtrip.
            <li>--waitretry=SECONDS       wait 1..SECONDS between retries of a retrieval. By default, Wget will assume a value of 10 seconds.</li>
            <li>-N,  --timestamping  Turn on time-stamping and download only missing or updated files.</li>
 	</ul>
