@@ -73,10 +73,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Disposition;
@@ -86,8 +90,6 @@ import org.restlet.data.MediaType;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
@@ -134,12 +136,16 @@ public abstract class AbstractView extends View
     // The node permisistence available for use
     protected NodePersistence nodePersistence;
     
+    // The subject in which the view can choose to operate.
+    protected Subject subject;
+    
     /**
      * AbstractView constructor.
      */
     protected AbstractView()
     {
         super();
+        loadSubject();
     }
     
     /**
@@ -150,6 +156,7 @@ public abstract class AbstractView extends View
     public AbstractView(URI uri)
     {
         super(uri);
+        loadSubject();
     }
 
     /**
@@ -161,7 +168,9 @@ public abstract class AbstractView extends View
     public AbstractView(URI uri, boolean original)
     {
         super(uri, original);
+        loadSubject();
     }
+    
     
     /**
      * Get the node for this view.
@@ -334,6 +343,12 @@ public abstract class AbstractView extends View
     public void setNodePersistence(NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+    
+    private void loadSubject()
+    {
+        AccessControlContext acContext = AccessController.getContext();
+        subject = Subject.getSubject(acContext);
     }
 
 }
