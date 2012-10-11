@@ -257,28 +257,6 @@ public class Main implements Runnable
         System.exit(0);
     }
 
-    public void attachShutDownHook(Thread thread)
-    {
-        Runtime.getRuntime().addShutdownHook(thread);
-    }
-
-    public static void test()
-    {
-        try
-        {
-            int count = 1;
-            while (count < 10)
-            {
-                System.out.println("sleep[" + count++ + "]");
-                Thread.sleep(1000);
-            }
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-        }
-    }
-
     // encapsulate all messages to console here
     private static void msg(String s)
     {
@@ -1562,80 +1540,79 @@ public class Main implements Runnable
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
          * 
          */
-            "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug] [--xsv=off] ...                      ",
-            "                                                                                                  ",
+            "Usage: java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   ...                                                                                               ",
+            "",
             " --xsv=off disables XML schema validation; use at your own risk                                   ",
-            "                                                                                                  ",
+            "",
             "Help:                                                                                             ",
             "java -jar VOSpaceClient.jar <-h | --help>                                                         ",
-            "                                                                                                  ",
+            "",
             "Create node:                                                                                      ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
+            "",
             "   --create[=<ContainerNode|LinkNode|StructuredDataNode|UnstructuredDataNode>]                    ",
-            "   --target=<node URI>                                                                          ",
-            "   [--link=<link URI>]                                                                           ",
+            "   --target=<node URI>                                                                            ",
+            "   [--link=<link URI>]                                                                            ",
             "   [--prop=<properties file>]                                                                     ",
-            "                                                                                                  ",
+            "",
             "Note: --create defaults to creating a ContainerNode (directory).                                  ",
-            "                                                                                                  ",
+            "",
             "Note: --link is only required when creating a LinkNode.  It is the URI to which                   ",
             "        the LinkNode is pointing.                                                                 ",
-            "                                                                                                  ",
+            "",
+            "View node:                                                                                        ",
+            "",
+            "   --view --target=<target URI>                                                                   ",
+            "",
+             "Delete node:                                                                                     ",
+            "",
+            "   --delete --target=<target URI>                                                                 ",
+            "",
+            "Set node:                                                                                         ",
+            "",
+            "   --set --target=<target URI>                                                                    ",
+            "   [--content-type=<mimetype of source>]                                                          ",
+            "   [--content-encoding=<encoding of source>]                                                      ",
+            "   [--group-read=<group URI>]                                                                     ",
+            "   [--group-write=<group URI>]                                                                    ",
+            "   [--public]                                                          ",
+            "   [--prop=<properties file>]                                                                     ",
+            "   [--recursive]                                                                                  ",
+            "",
             "Copy file:                                                                                        ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
+            "",
             "   --copy --src=<source URI> --dest=<destination URI>                                             ",
             "   [--content-type=<mimetype of source>]                                                          ",
             "   [--content-encoding=<encoding of source>]                                                      ",
             "   [--prop=<properties file>]                                                                     ",
             "   [--noretry]                                                                                    ",
-            "                                                                                                  ",
+            "",
             "--noretry :  disable retry of failed transfers (when the server indicates it was temporary)       ",
-            "                                                                                                  ",
+            "",
             "Note: One of --src and --target may be a \"vos\" URI and the other may be an                      ",
             "absolute or relative path to a file.  If the target node does not exist, a                        ",
             "DataNode is created and data copied.  If it does exist, the data and                              ",
             "properties are overwritten.                                                                       ",
-            "                                                                                                  ",
+            "",
             "Note: Source and destination URIs may include HTTP-like query parameters, some of which will      ",
             "result in additional operations being performed.                                                  ",
-            "                                                                                                  ",
-            "View node:                                                                                        ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
-            "   --view --target=<target URI>                                                                   ",
-            "                                                                                                  ",
+            "",
             "Move file/node:                                                                                   ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
+            "",
             "   --move --src=<source URI> --dest=<destination URI>                                             ",
-            "                                                                                                  ",
+            "",
             "Note: If the source URI refers to a VOSpace node, then move is a recursive operation:  the source ",
             "nodes, and all subnodes, are moved.                                                               ",
-            "                                                                                                  ",
+            "",
             "Note: Only files can be moved from the local file system to VOSpace.  Similarly, only files       ",
             "can be moved from VOSpace to the local file system.                                               ",
-            "                                                                                                  ",
+            "",
             "Note: If the destination URI referes to a VOSpace node, that node must be a directory.  If the    ",
             "directory exists, the source URI will be moved into that directory.  If the directory doesn't     ",
             "exist, the source URI will be moved into the parent directory and will be renamed to the name     ",
-            "specified in destination URI.                                                                     ",
-            "                                                                                                  ",
-            "Delete node:                                                                                      ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
-            "   --delete --target=<target URI>                                                                 ",
-            "                                                                                                  ",
-            "Set node:                                                                                         ",
-            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-            CertCmdArgUtil.getCertArgUsage(),
-            "   --set --target=<target URI>                                                                    ",
-            "   [--content-type=<mimetype of source>]                                                          ",
-            "   [--content-encoding=<encoding of source>]                                                      ",
-            "   [--prop=<properties file>]                                                                     ",
-            "   [--recursive]                                                                                  ",
-            "                                                                                                  ",
+            "specified in destination URI.                                                                     "
+
         };
         for (String line : um)
             msg(line);
