@@ -78,6 +78,7 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -96,6 +97,7 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
 
     protected StringIDGenerator idGenerator;
     protected IdentityManager identityManager;
+    private Thread jobCleaner;
 
     protected final Map<String,Job> jobs = new HashMap<String,Job>();
 
@@ -110,9 +112,92 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
         this.identityManager = identityManager;
     }
 
+    /**
+     * Enable the JobCleaner to automatically delete jobs after the destruction date.
+     * If the value of checkInterval is positive, a thread will be spawned that checks
+     * the job list every checkInterval (milliseconds) for old jobs. Jobs with a
+     * destruction date in the past are deleted. If checkInterval is less than or
+     * equal to 0, the current job cleaner thread is terminated and a new one is not
+     * started (e.g. job cleaner is disabled).
+     * 
+     * @param checkInterval time between checks (in milliseconds)
+     */
+    public void setJobCleaner(long checkInterval)
+    {
+        terminate();
+        if (checkInterval > 0)
+        {
+            this.jobCleaner = new Thread(new JobCleaner(checkInterval));
+            jobCleaner.setDaemon(true);
+            jobCleaner.start();
+        }
+    }
+
     public void terminate()
     {
-        // no op
+        if (jobCleaner != null)
+        {
+            try
+            {
+                log.info("terminating JobCleaner...");
+                jobCleaner.interrupt();
+                jobCleaner.join();
+            }
+            catch(Throwable t)
+            {
+                log.error("failed to terminate jobCleaner thread", t);
+            }
+            finally
+            {
+                jobCleaner = null;
+            }
+        }
+    }
+
+    private class JobCleaner implements Runnable
+    {
+        long dt = 6000L;
+
+        JobCleaner(long dt) { this.dt = dt; }
+
+        public void run()
+        {
+            while(true)
+            {
+                Date now = new Date();
+                try
+                {
+                    synchronized(jobs)
+                    {
+                        log.debug("looking for old jobs...");
+                        Iterator<Map.Entry<String,Job>> iter = jobs.entrySet().iterator();
+                        while ( iter.hasNext() )
+                        {
+                            if ( Thread.interrupted() )
+                                return;
+                            Map.Entry<String,Job>me = iter.next();
+                            Date t = me.getValue().getDestructionTime();
+                            if ( now.compareTo(t) > 0 ) // destruction time has past
+                            {
+                                log.debug("delete: " + me.getKey() + ", destruction = " + t);
+                                iter.remove();
+                            }
+                        }
+                    }
+                }
+                catch(ConcurrentModificationException ex)
+                {
+                    log.debug("caught ConcurrentModificationException, ignoring");
+                }
+                catch(Throwable t)
+                {
+                    log.error("ignoring failure while cleaning job list", t);
+                }
+
+                try { Thread.sleep(dt); }
+                catch(InterruptedException ex) { return; }
+            }
+        }
     }
 
 
@@ -128,7 +213,10 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
     public void delete(String jobID)
     {
         expectNotNull("jobID", jobID);
-        jobs.remove(jobID);
+        synchronized(jobs)
+        {
+            jobs.remove(jobID);
+        }
     }
 
     public Job get(String jobID)
@@ -154,6 +242,12 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
         return job.getExecutionPhase();
     }
 
+    /**
+     * Iterator over the jobs. Note that this could fail if the underlying job list
+     * is modified while iterating.
+     * 
+     * @return
+     */
     public Iterator<Job> iterator()
     {
         return JobPersistenceUtil.createImmutableIterator(jobs.values().iterator());
@@ -162,19 +256,23 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
 
     public Job put(Job job)
     {
+        expectNotNull("job", job);
+
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         String ownerID = null;
         if (caller != null)
             ownerID = identityManager.toOwnerString(caller);
         job.setOwnerID(ownerID);
-        expectNotNull("job", job);
         if (job.getID() == null)
             JobPersistenceUtil.assignID(job, idGenerator.getID());
         Job keep = JobPersistenceUtil.deepCopy(job);
         if (ownerID != null)
             keep.ownerSubject = caller;
-        jobs.put(keep.getID(), keep);
+        synchronized(jobs)
+        {
+            jobs.put(keep.getID(), keep);
+        }
         return job;
     }
 
@@ -238,10 +336,13 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
     {
         if (jobID == null)
             throw new IllegalArgumentException("jobID cannot be null");
-        Job job = jobs.get(jobID);
-        if (job == null)
-            throw new JobNotFoundException("not found: " + jobID);
-        return job;
+        synchronized(jobs)
+        {
+            Job job = jobs.get(jobID);
+            if (job == null)
+                throw new JobNotFoundException("not found: " + jobID);
+            return job;
+        }
     }
 
     private void expectNotNull(String name, Object value)
