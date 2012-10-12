@@ -228,6 +228,10 @@ class VOFS(LoggingMixIn, Operations):
         back over the network. This should only be done when really
         needed as the network connection can be slow."""
 
+        if opt.readonly:
+            logging.debug("File system is readonly... no flushnode allowed")
+            return 
+
         destination = self.getNode(path).uri
         source = self.fh[fh]['name']
         self.client.copy(source,destination)
@@ -242,25 +246,35 @@ class VOFS(LoggingMixIn, Operations):
         to be updated too.  But we only do that with a flushnode call
         which we do on close of the file."""
         
-        if not self.fh[fh].get('writing',False):
-            import thread
-            self.fh[fh]['writing']=True
-            os.fsync(fh)
-            thread.start_new_thread(self.flushnode,(path,fh))
-            return self.flush(path,fh)
 
-        ## remove references to this file handle.
-        writing_wait = 0
-        while self.fh[fh]['writing'] :
-            time.sleep(READ_SLEEP) 
-            writing_wait += READ_SLEEP
-            if writing_wait > DAEMON_TIMEOUT -3 :
-                raise FuseOSError(EAGAIN)
+        if opt.readonly:
+            logging.debug("File system is readonly, no sync allowed")
+            return
+
+        if self.fh.get(fh,None) :
+            mode = flag2mode(self.fh[fh]['flags'])
+            if ('w' in mode or 'a' in mode ):
+                if not self.fh[fh].get('writing',False) :
+                    import thread
+                    self.fh[fh]['writing']=True
+                    os.fsync(fh)
+                    thread.start_new_thread(self.flushnode,(path,fh))
+                    return self.flush(path,fh)
+                else:
+                    writing_wait = 0
+                    while self.fh[fh]['writing'] :
+                        time.sleep(READ_SLEEP) 
+                        writing_wait += READ_SLEEP
+                        if writing_wait > DAEMON_TIMEOUT -3 :
+                            raise FuseOSError(EAGAIN)
 
         return os.fsync(fh) 
 
   
     def fsync(self,path,datasync,fh):
+        if opt.readonly:
+            logging.debug("File system is readonly, no sync allowed")
+            return 
         mode=''
         if self.fh.get(fh,None) is not None:
             mode = flag2mode(self.fh[fh]['flags'])
@@ -885,6 +899,9 @@ class VOFS(LoggingMixIn, Operations):
 
     def write(self, path, data, size, offset, fh=None):
         import ctypes
+        if opt.readonly:
+            loggin.debug("File system is readonly.. so writing 0 bytes\n")
+            return 0
         logging.debug("%s -> %s" % ( path,fh))
         if not self.fh[fh].get('cached',False) and offset > 0 :
             ## we are writing but never cached the original file, do that now
