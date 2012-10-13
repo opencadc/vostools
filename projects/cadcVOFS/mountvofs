@@ -255,23 +255,6 @@ class VOFS(LoggingMixIn, Operations):
             logging.debug("File system is readonly, no sync allowed")
             return
 
-        if self.fh.get(fh,None) :
-            mode = flag2mode(self.fh[fh]['flags'])
-            if ('w' in mode or 'a' in mode ):
-                if not self.fh[fh].get('writing',False) :
-                    import thread
-                    self.fh[fh]['writing']=True
-                    os.fsync(fh)
-                    thread.start_new_thread(self.flushnode,(path,fh))
-                    return self.flush(path,fh)
-                else:
-                    writing_wait = 0
-                    while self.fh[fh]['writing'] :
-                        time.sleep(READ_SLEEP) 
-                        writing_wait += READ_SLEEP
-                        if writing_wait > DAEMON_TIMEOUT -3 :
-                            raise FuseOSError(EAGAIN)
-
         return os.fsync(fh) 
 
   
@@ -909,6 +892,7 @@ class VOFS(LoggingMixIn, Operations):
             return 0
 
 
+        mode = flag2mode(self.fh[fh]['flags'])
         if not ('w' in mode or 'a' in mode ):
             logging.debug("file was not openned for writing")
             return 0
