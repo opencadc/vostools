@@ -12,6 +12,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ColumnReference;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
+import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.Top;
@@ -190,6 +191,26 @@ public class QuerySelectDeParser extends SelectDeParser
 		if (plainSelect.getLimit() != null) {
 			deparseLimit(plainSelect.getLimit());
 		}
+    }
+
+    /**
+     * Incorrectly handles limit of 0 by setting the limit to BigInt.MAX when
+     * the limit is 0 so hard code LIMIT 0.
+     * 
+     * @param limit
+     */
+    @Override
+    public void deparseLimit(Limit limit)
+    {
+        log.debug("visit(" +  limit.getClass().getSimpleName() + ") " + limit);
+        if (limit.getRowCount() == 0)
+        {
+            buffer.append(" LIMIT 0");
+        }
+        else
+        {
+            super.deparseLimit(limit);
+        }
     }
 
 }

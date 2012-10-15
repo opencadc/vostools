@@ -181,6 +181,7 @@
             <test name="ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.schema.ExpressionValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ConcatenateTest"/>
+            <test name="ca.nrc.cadc.tap.parser.QuerySelectDeParserTest" />
         </junit>
     </target>
 
