@@ -94,10 +94,7 @@ import org.junit.Test;
 public class VOTableReaderWriterTest
 {
     private static final Logger log = Logger.getLogger(VOTableReaderWriterTest.class);
-    static
-    {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
-    }
+
     private static final String DATE_TIME = "2009-01-02T11:04:05.678";
     private static DateFormat dateFormat;
     
@@ -106,6 +103,7 @@ public class VOTableReaderWriterTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
         dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
@@ -125,6 +123,7 @@ public class VOTableReaderWriterTest
             expected.getInfos().addAll(getTestInfos());
 
             // Add TableFields.
+            expected.getParams().addAll(getTestParams());
             expected.getColumns().addAll(getTestFields());
 
             // Add TableData.
@@ -180,6 +179,43 @@ public class VOTableReaderWriterTest
             assertNotNull(actualInfo);
             assertEquals(expectedInfo.getName(), actualInfo.getName());
             assertEquals(expectedInfo.getValue(), actualInfo.getValue());
+        }
+
+        // PARAM
+        assertNotNull(expected.getParams());
+        assertNotNull(actual.getParams());
+        List<TableParam> expectedParams = expected.getParams();
+        List<TableParam> actualParams = actual.getParams();
+        assertEquals(expectedParams.size(), actualParams.size());
+        for (int i = 0; i < expectedParams.size(); i++)
+        {
+            TableParam expectedParam = expectedParams.get(i);
+            TableParam actualParam = actualParams.get(i);
+            assertNotNull(expectedParam);
+            assertNotNull(actualParam);
+            assertEquals(expectedParam.getName(), actualParam.getName());
+            assertEquals(expectedParam.getDatatype(), expectedParam.getDatatype());
+            assertEquals(expectedParam.getValue(), expectedParam.getValue());
+            assertEquals(expectedParam.id, actualParam.id);
+            assertEquals(expectedParam.ucd, actualParam.ucd);
+            assertEquals(expectedParam.unit, actualParam.unit);
+            assertEquals(expectedParam.utype, actualParam.utype);
+            assertEquals(expectedParam.xtype, actualParam.xtype);
+            assertEquals(expectedParam.arraysize, actualParam.arraysize);
+            assertEquals(expectedParam.variableSize, actualParam.variableSize);
+            assertEquals(expectedParam.description, actualParam.description);
+            List<String> expectedValues = expectedParam.values;
+            List<String> actualValues = actualParam.values;
+            if (expectedValues == null)
+            {
+                assertNull(actualValues);
+                continue;
+            }
+            assertEquals(expectedValues.size(), actualValues.size());
+            for (int j = 0; j < expectedValues.size(); j++)
+            {
+                assertEquals(expectedValues.get(j), actualValues.get(j));
+            }
         }
 
         // FIELD
@@ -281,6 +317,41 @@ public class VOTableReaderWriterTest
         infos.add(overflow);
 
         return infos;
+    }
+
+    protected List<TableParam> getTestParams()
+    {
+        List<TableParam> params = new ArrayList<TableParam>();
+        
+        TableParam intersects = new TableParam("INPUT:INTERSECTS", "char", "OVERLAPS");
+        intersects.id = null;
+        intersects.ucd = null;
+        intersects.unit = null;
+        intersects.utype = null;
+        intersects.xtype = null;
+        intersects.arraysize = null;
+        intersects.variableSize = true;
+        intersects.description = null;
+        intersects.values = new ArrayList<String>();
+        intersects.values.add("ALL");
+        intersects.values.add("BLAST");
+        intersects.values.add("CFHT");
+        intersects.values.add("HST");
+        intersects.values.add("JCMT");
+        params.add(intersects);
+
+        TableParam collection = new TableParam("INPUT:COLLECTION", "char", "ALL");
+        collection.id = null;
+        collection.ucd = null;
+        collection.unit = null;
+        collection.utype = null;
+        collection.xtype = null;
+        collection.arraysize = null;
+        collection.variableSize = true;
+        collection.description = null;
+        params.add(collection);
+
+        return params;
     }
 
     protected List<TableField> getTestFields()

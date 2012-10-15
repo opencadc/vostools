@@ -66,132 +66,28 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.dali.tables.votable;
 
-import java.util.List;
-import org.jdom2.Element;
 import org.jdom2.Namespace;
 
-public class FieldElement extends Element
+/**
+ *
+ * @author jburke
+ */
+public class ParamElement extends FieldElement
 {
     /**
-     * Builds a FIELD Element from a TableField Description.
+     * Builds a PARAM Element from a TableParam Description.
      *
-     * @param field
-     * @param namespace 
-     */
-    public FieldElement(TableField field, Namespace namespace)
-    {
-        this("FIELD", field, namespace);
-    }
-
-    /**
-     * Builds a FIELD Element from a TableField Description.
-     *
-     * @param elementName
-     * @param field
+     * @param param
      * @param namespace
      */
-    protected FieldElement(String elementName, TableField field, Namespace namespace)
+    public ParamElement(TableParam param, Namespace namespace)
     {
-        super(elementName, namespace);
-        init(field);
-    }
-
-    private void init(TableField field)
-    {
-        if (field != null)
+        super("PARAM", param, namespace);
+        if (param != null)
         {
-            setFieldAttribute("name", field.getName());
-            setFieldAttribute("datatype", field.getDatatype());
-            setFieldAttribute("ID", field.id);
-            setFieldAttribute("ucd", field.ucd);
-            setFieldAttribute("unit", field.unit);
-            setFieldAttribute("utype", field.utype);
-            setFieldAttribute("xtype", field.xtype);
-            setArraysize(field.arraysize, field.variableSize);
-            setDescription(field.description, namespace);
-            setValues(field.values, namespace);
-        }
-    }
-
-    /**
-     * Set a String or Integer FIELD attribute.
-     * @param name
-     * @param value
-     */
-    protected void setFieldAttribute(String name, Object value)
-    {
-        if (value != null)
-        {
-            if (value instanceof String)
-            {
-                setAttribute(name, (String) value);
-            }
-            else if (value instanceof Integer)
-            {
-                setAttribute(name, String.valueOf((Integer) value));
-            }
-        }
-    }
-
-    /**
-     * Add a DESCRIPTION Element to the FIELD.
-     * @param description
-     * @param namespace
-     */
-    protected void setDescription(String description, Namespace namespace)
-    {
-        if (description != null)
-        {
-            Element element = new Element("DESCRIPTION", namespace);
-            element.setText(description);
-            addContent(element);
-        }
-    }
-
-    /**
-     * Set the arraysize attribute.
-     * @param arraysize
-     * @param variableSize
-     */
-    protected void setArraysize(Integer arraysize, Boolean variableSize)
-    {
-        if (arraysize != null)
-        {
-            if (variableSize != null && variableSize)
-            {
-                setFieldAttribute("arraysize", arraysize.toString() + "*");
-            }
-            else
-            {
-                setFieldAttribute("arraysize", arraysize.toString());
-            }
-        }
-        else if (variableSize != null)
-        {
-            setFieldAttribute("arraysize", "*");
-        }
-    }
-
-    /**
-     * Add VALUES Element with OPTION child Elements.
-     * @param values
-     * @param namespace
-     */
-    protected void setValues(List<String> values, Namespace namespace)
-    {
-        if (values != null && !values.isEmpty())
-        {
-            Element element = new Element("VALUES", namespace);
-            for (String value : values)
-            {
-                Element option = new Element("OPTION", namespace);
-                option.setAttribute("value", value);
-                element.addContent(option);
-            }
-            addContent(element);
+            setFieldAttribute("value", param.getValue());
         }
     }
     

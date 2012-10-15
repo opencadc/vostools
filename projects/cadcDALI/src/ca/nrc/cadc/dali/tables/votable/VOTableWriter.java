@@ -208,6 +208,10 @@ public class VOTableWriter implements TableWriter<VOTable>
         resource.addContent(table);
         
         // Add the metadata elements.
+        for (TableParam param : votable.getParams())
+        {
+            table.addContent(new ParamElement(param, namespace));
+        }
         for (TableField field : votable.getColumns())
         {
             table.addContent(new FieldElement(field, namespace));

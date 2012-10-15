@@ -230,7 +230,11 @@ public class VOTableReader
             // TABLE element.
             Element table = resource.getChild("TABLE", namespace);
             if (table != null)
-            {                
+            {
+                // PARAM elements.
+                List<Element> params = table.getChildren("PARAM", namespace);
+                votable.getParams().addAll(getParams(params, namespace));
+
                 // FIELD elements.
                 List<Element> fields = table.getChildren("FIELD", namespace);
                 votable.getColumns().addAll(getFields(fields, namespace));
@@ -270,6 +274,25 @@ public class VOTableReader
         return infos;
     }
 
+    protected List<TableParam> getParams(List<Element> elements, Namespace namespace)
+    {
+        ArrayList<TableParam> params = new ArrayList<TableParam>();
+        for (Element element : elements)
+        {
+            String datatype = element.getAttributeValue("datatype");
+            if (datatype == null)
+            {
+                datatype = element.getAttributeValue("xtype");
+            }
+            String name = element.getAttributeValue("name");
+            String value = element.getAttributeValue("value");
+            TableParam tableParam = new TableParam(name, datatype, value);
+            updateTableField(tableParam, element, namespace);
+            params.add(tableParam);
+        }
+        return params;
+    }
+    
     /**
      *
      * @param elements
@@ -279,7 +302,6 @@ public class VOTableReader
     protected List<TableField> getFields(List<Element> elements, Namespace namespace)
     {
         ArrayList<TableField> fields = new ArrayList<TableField>();
-
         for (Element element : elements)
         {
             String datatype = element.getAttributeValue("datatype");
@@ -289,43 +311,68 @@ public class VOTableReader
             }
             String name = element.getAttributeValue("name");
             TableField tableField = new TableField(name, datatype);
-
-            tableField.id = element.getAttributeValue("ID");
-            tableField.ucd = element.getAttributeValue("ucd");
-            tableField.unit = element.getAttributeValue("unit");
-            tableField.utype = element.getAttributeValue("utype");
-            tableField.xtype = element.getAttributeValue("xtype");
-
-            String arraysize = element.getAttributeValue("arraysize");
-            if (arraysize != null)
-            {
-                int index = arraysize.indexOf("*");
-                if (index == -1)
-                {
-                    tableField.variableSize = Boolean.FALSE;
-                }
-                else
-                {
-                    arraysize = arraysize.substring(0, index);
-                    tableField.variableSize = Boolean.TRUE;
-                }
-                if (!arraysize.trim().isEmpty())
-                {
-                    tableField.arraysize = Integer.parseInt(arraysize);
-                }
-            }
-
-            // DESCRIPTION element for the FIELD.
-            Element description = element.getChild("DESCRIPTION", namespace);
-            if (description != null)
-            {
-                tableField.description = description.getText();
-            }
+            updateTableField(tableField, element, namespace);
             fields.add(tableField);
         }
         return fields;
     }
 
+    /**
+     * 
+     * @param tableField
+     * @param element
+     * @param namespace
+     */
+    protected void updateTableField(TableField tableField, Element element, Namespace namespace)
+    {
+        tableField.id = element.getAttributeValue("ID");
+        tableField.ucd = element.getAttributeValue("ucd");
+        tableField.unit = element.getAttributeValue("unit");
+        tableField.utype = element.getAttributeValue("utype");
+        tableField.xtype = element.getAttributeValue("xtype");
+
+        String arraysize = element.getAttributeValue("arraysize");
+        if (arraysize != null)
+        {
+            int index = arraysize.indexOf("*");
+            if (index == -1)
+            {
+                tableField.variableSize = Boolean.FALSE;
+            }
+            else
+            {
+                arraysize = arraysize.substring(0, index);
+                tableField.variableSize = Boolean.TRUE;
+            }
+            if (!arraysize.trim().isEmpty())
+            {
+                tableField.arraysize = Integer.parseInt(arraysize);
+            }
+        }
+
+        // DESCRIPTION element for the FIELD.
+        Element description = element.getChild("DESCRIPTION", namespace);
+        if (description != null)
+        {
+            tableField.description = description.getText();
+        }
+
+        // VALUES element for the PARAM.
+        Element values = element.getChild("VALUES", namespace);
+        if (values != null)
+        {
+            List<Element> options = values.getChildren("OPTION", namespace);
+            if (!options.isEmpty())
+            {
+                tableField.values = new ArrayList<String>();
+                for (Element option : options)
+                {
+                    tableField.values.add(option.getAttributeValue("value"));
+                }
+            }
+        }
+    }
+    
     /**
      * 
      * @param element
@@ -358,6 +405,11 @@ public class VOTableReader
         return tableData;
     }
 
+    /**
+     * 
+     * @param schemaMap
+     * @return
+     */
     protected SAXBuilder createBuilder(Map<String, String> schemaMap)
     {
         long start = System.currentTimeMillis();

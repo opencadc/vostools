@@ -69,14 +69,16 @@
 
 package ca.nrc.cadc.dali.tables.votable;
 
+import java.util.List;
+
 /**
  *
  * @author pdowler
  */
 public class TableField
 {
-    private String name;
-    private String datatype;
+    protected String name;
+    protected String datatype;
 
     public String id;
     public String ucd;
@@ -86,8 +88,9 @@ public class TableField
     public Integer arraysize;
     public Boolean variableSize;
     public String description;
+    public List<String> values;
 
-    private TableField() { }
+    protected TableField() { }
 
     public TableField(String name, String datatype)
     {

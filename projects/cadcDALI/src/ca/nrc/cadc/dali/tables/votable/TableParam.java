@@ -69,79 +69,39 @@
 
 package ca.nrc.cadc.dali.tables.votable;
 
-import ca.nrc.cadc.dali.tables.TableData;
-import ca.nrc.cadc.dali.tables.TableModel;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
+ *
  * @author pdowler
  */
-public class VOTable implements TableModel
+public class TableParam extends TableField
 {
-    private List<Info> infos = new ArrayList<Info>();
-    private List<TableParam> params = new ArrayList<TableParam>();
-    private List<TableField> columns = new ArrayList<TableField>();
+    private String value;
 
-    private String resourceName;
-    private TableData tableData;
+    protected TableParam() { }
 
-    public VOTable() { }
+    public TableParam(String name, String datatype, String value)
+    {
+        super(name, datatype);
+        this.value = value;
+    }
+
+    public String getValue()
+    {
+        return value;
+    }
 
     @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
-        sb.append(this.getClass().getSimpleName());
-        sb.append("[");
-        sb.append(resourceName);
-        sb.append(",info: ");
-        sb.append(infos.size());
-        sb.append(", params: ");
-        sb.append(params.size());
-        sb.append(", columns: ");
-        sb.append(columns.size());
-        if (tableData != null)
-        {
-            sb.append(",");
-            sb.append(tableData.getClass().getName());
-        }
+        sb.append("TableParam[");
+        sb.append(name);
+        sb.append(",");
+        sb.append(datatype);
+        sb.append(",");
+        sb.append(value);
         sb.append("]");
         return sb.toString();
     }
 
-    public List<Info> getInfos()
-    {
-        return infos;
-    }
-
-    public List<TableParam> getParams()
-    {
-        return params;
-    }
-
-    public List<TableField> getColumns()
-    {
-        return columns;
-    }
-
-    public String getResourceName()
-    {
-        return resourceName;
-    }
-
-    public void setResourceName(String resourceName)
-    {
-        this.resourceName = resourceName;
-    }
-
-    public TableData getTableData()
-    {
-        return tableData;
-    }
-
-    public void setTableData(TableData tableData)
-    {
-        this.tableData = tableData;
-    }
 }
