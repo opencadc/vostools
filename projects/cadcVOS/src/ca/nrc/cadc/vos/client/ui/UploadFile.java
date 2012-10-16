@@ -72,11 +72,16 @@ package ca.nrc.cadc.vos.client.ui;
 import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.security.auth.Subject;
 
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.DataNode;
@@ -93,19 +98,28 @@ import ca.nrc.cadc.vos.client.VOSpaceTransferListener;
 /**
  * Class to upload the supplied file to vospace as the DataNode.
  * 
- * (implementation in progress...)
- *   
  * @author majorb
  *
  */
 public class UploadFile implements VOSpaceCommand
 {
     
+    protected static final Logger log = Logger.getLogger(UploadFile.class);
+    
     private DataNode dataNode;
     private File file;
+    private DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     
     public UploadFile(DataNode dataNode, File file)
     {
+        if (dataNode == null)
+            throw new IllegalArgumentException("dataNode cannot be null.");
+        if (file == null)
+            throw new IllegalArgumentException("file cannot be null.");
+        if (!file.isFile())
+            throw new IllegalArgumentException("not a file.");
+        if (!file.canRead())
+            throw new IllegalArgumentException("cannot read file.");
         this.dataNode = dataNode;
         this.file = file;
     }
@@ -118,17 +132,51 @@ public class UploadFile implements VOSpaceCommand
         {
             // see if the file exists
             Node serverNode = vospaceClient.getNode(dataNode.getUri().getPath());
+            log.debug("Server dataNode already exists, checking metadata.");
             
-            // TODO: get the md5 from the file object and compare it to the serverNode
-            // TODO: compare the dates
-            
-            // compare the sizes
-            String serverSize = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            long clientSize = file.length();
-            
-            if (Long.parseLong(serverSize) != clientSize)
+            // See if a MD5 value for the file exists
+            String clientMD5 = dataNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            String serverMD5 = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (clientMD5 != null && serverMD5 != null)
             {
-                upload = true;
+                if (clientMD5.equals(serverMD5))
+                {
+                    log.debug("MD5 values don't match, uploading.");
+                    upload = true;
+                }
+            }
+            else
+            {
+                // compare the sizes and date
+                boolean sizesMatch = false;
+                boolean datesMatch = false;
+                
+                String serverSize = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+                long clientSize = file.length();
+                if (Long.parseLong(serverSize) == clientSize)
+                {
+                    sizesMatch = true;
+                }
+                
+                try
+                {
+                    Date serverDate = dateFormat.parse(serverNode.getPropertyValue(VOS.PROPERTY_URI_DATE));
+                    Date clientDate = new Date(file.lastModified());
+                    if (serverDate.equals(clientDate))
+                    {
+                        datesMatch = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.debug("Couldn't determine file dates: " + e);
+                }
+                
+                if (!sizesMatch || !datesMatch)
+                {
+                    log.debug("Size and dates don't match, uploading.");
+                    upload = true;
+                }
             }
         }
         catch (NodeNotFoundException e)
@@ -139,6 +187,7 @@ public class UploadFile implements VOSpaceCommand
         
         if (upload)
         {
+            log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
             List<Protocol> protocols = new ArrayList<Protocol>();
             
             AccessControlContext acContext = AccessController.getContext();
@@ -163,12 +212,12 @@ public class UploadFile implements VOSpaceCommand
             if ( ExecutionPhase.ERROR.equals(ep) )
             {
                 ErrorSummary es = clientTransfer.getServerError();
-                throw new RuntimeException(es.getSummaryMessage());
+                throw new RuntimeException("Internal error: " + es.getSummaryMessage());
             }
             else if ( ExecutionPhase.ABORTED.equals(ep) )
-                throw new RuntimeException("transfer aborted by service");
+                throw new RuntimeException("Upload aborted");
             else if ( !ExecutionPhase.COMPLETED.equals(ep) )
-                throw new RuntimeException("unexpected job state: " + ep.name());
+                throw new RuntimeException("Unexpected upload state: " + ep.name());
         }
     }
     

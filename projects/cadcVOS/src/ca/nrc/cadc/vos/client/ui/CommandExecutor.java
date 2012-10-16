@@ -101,9 +101,9 @@ public class CommandExecutor implements Runnable
     {
         try
         {
+            VOSpaceCommand nextCommand = null;
             while (!queue.isDoneProduction())
             {
-                VOSpaceCommand nextCommand = null;
                 while ((nextCommand = queue.peek()) != null)
                 {
                     log.debug("Executing command: " + nextCommand);
@@ -119,7 +119,7 @@ public class CommandExecutor implements Runnable
                 }
                 
                 // sleep for a while
-                Thread.sleep(100);
+                Thread.sleep(30);
             }
         }
         catch (InterruptedException e)

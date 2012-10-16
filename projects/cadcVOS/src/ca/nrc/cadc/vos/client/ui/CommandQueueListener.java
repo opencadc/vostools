@@ -70,7 +70,7 @@
 package ca.nrc.cadc.vos.client.ui;
 
 /**
- * Implementations of CommandQueueListener will receive the events as described
+ * Implementations of CommandQueueListener will receive notifications as described
  * by the methods in this interface.
  * 
  * @author majorb

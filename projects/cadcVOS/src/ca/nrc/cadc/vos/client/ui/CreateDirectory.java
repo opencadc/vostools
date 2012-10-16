@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.client.ui;
 
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
@@ -83,10 +85,14 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
 public class CreateDirectory implements VOSpaceCommand
 {
     
+    protected static final Logger log = Logger.getLogger(CreateDirectory.class);
+    
     private ContainerNode containerNode;
     
     public CreateDirectory(ContainerNode containerNode)
     {
+        if (containerNode == null)
+            throw new IllegalArgumentException("containerNode cannot be null.");
         this.containerNode = containerNode;
     }
 
@@ -96,7 +102,9 @@ public class CreateDirectory implements VOSpaceCommand
         try
         {
             // see if the node exists
+            log.debug("Creating node: " + containerNode.getUri());
             vospaceClient.getNode(containerNode.getUri().getPath());
+            log.debug("Node already exists: " + containerNode.getUri());
         }
         catch (NodeNotFoundException e)
         {
