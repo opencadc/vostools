@@ -120,28 +120,19 @@ public class GmsClient
     // socket factory to use when connecting
     SSLSocketFactory sf;
 
-    private RegistryClient registryClient = new RegistryClient();
-
-    /**
-     * Ctor
-     * 
-     * @param baseServiceURL
-     *            The
-     * @deprecated Service URL resolved through the group ID (URI). Use
-     *             the default constructor instead.
-     */
-    @Deprecated
-    public GmsClient(final URL baseServiceURL)
-    {
-        // do nothing
-    }
+    private RegistryClient registryClient;
 
     /**
      * Default ctor
      */
     public GmsClient()
     {
-        // nothing to do
+        this(new RegistryClient());
+    }
+
+    public GmsClient(RegistryClient regClient)
+    {
+        this.registryClient = regClient;
     }
 
     /**
@@ -161,7 +152,7 @@ public class GmsClient
      */
     @Deprecated
     public User getMember(final URI groupID, final X500Principal memberID)
-            throws IllegalArgumentException, URISyntaxException
+            throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
 
@@ -247,8 +238,7 @@ public class GmsClient
      * 
      */
     public boolean isMember(URI groupID, X500Principal memberID)
-            throws AccessControlException, IOException,
-            URISyntaxException
+            throws AccessControlException, IOException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
@@ -671,8 +661,8 @@ public class GmsClient
      * @throws AccessControlException
      *             If user not allow to access the resource
      */
-    public boolean setGroup(Group group) throws IllegalArgumentException,
-            URISyntaxException
+    public boolean setGroup(Group group)
+        throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
@@ -750,13 +740,11 @@ public class GmsClient
      *             combination of them produces an error.
      * @throws AccessControlException
      *             If user not allow to access the resource
-     * 
      */
     public User getGMSMembership(X500Principal userID, URI serviceURI)
     {
        return getGMSMembership(userID, getServiceURL(serviceURI)); 
     }
-
 
     /**
      * Get groups the the user is member of.
@@ -851,7 +839,6 @@ public class GmsClient
      *             If user not allow to access the resource
      */
     public boolean addMember(URI groupID, X500Principal memberID)
-            throws URISyntaxException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
@@ -932,7 +919,6 @@ public class GmsClient
      *             If user not allow to access the resource
      */
     public boolean removeMember(URI groupID, X500Principal memberID)
-            throws URISyntaxException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
