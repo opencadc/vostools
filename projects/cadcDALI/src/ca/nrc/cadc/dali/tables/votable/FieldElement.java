@@ -76,7 +76,7 @@ import org.jdom2.Namespace;
 public class FieldElement extends Element
 {
     /**
-     * Builds a FIELD Element from a TableField Description.
+     * Builds a FIELD Element from a TableField.
      *
      * @param field
      * @param namespace 
@@ -87,7 +87,8 @@ public class FieldElement extends Element
     }
 
     /**
-     * Builds a FIELD Element from a TableField Description.
+     * Builds an Element with the specified element name and populates
+     * the Element using the TableField.
      *
      * @param elementName
      * @param field

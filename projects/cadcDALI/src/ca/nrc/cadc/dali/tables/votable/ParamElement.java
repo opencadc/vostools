@@ -71,7 +71,8 @@ package ca.nrc.cadc.dali.tables.votable;
 import org.jdom2.Namespace;
 
 /**
- *
+ * A VOTable PARAM element extends FIELD by adding a value attribute.
+ * 
  * @author jburke
  */
 public class ParamElement extends FieldElement

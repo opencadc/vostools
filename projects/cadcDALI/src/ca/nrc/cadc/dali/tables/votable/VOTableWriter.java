@@ -108,7 +108,7 @@ public class VOTableWriter implements TableWriter<VOTable>
     private boolean binaryTable;
 
     /**
-     * 
+     * Default constructor.
      */
     public VOTableWriter()
     {
@@ -116,6 +116,8 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
+     * Create a VOTableWriter and optionally support binary TABLEDATA cells (not
+     * yet implemented.)
      *
      * @param binaryTable
      */
@@ -124,21 +126,32 @@ public class VOTableWriter implements TableWriter<VOTable>
         this.binaryTable = binaryTable;
     }
 
+    /**
+     * Get the Content-Type for the VOTable.
+     *
+     * @return  VOTable Content-Type.
+     */
     public String getContentType()
     {
         return CONTENT_TYPE;
     }
 
+    /**
+     * Get the extension for the VOTable.
+     *
+     * @return VOTable extension.
+     */
     public String getExtension()
     {
         return "xml";
     }
 
     /**
+     * Write the VOTable to the specified OutputStream.
      *
-     * @param votable
-     * @param ostream
-     * @throws IOException
+     * @param votable VOTable object to write.
+     * @param ostream OutputStream to write to.
+     * @throws IOException if problem writing to OutputStream.
      */
     public void write(VOTable votable, OutputStream ostream)
         throws IOException
@@ -147,11 +160,14 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
-     * 
-     * @param votable
-     * @param ostream
-     * @param maxRec
-     * @throws IOException
+     * Write the VOTable to the specified OutputStream, only writing maxrec rows.
+     * If the VOTable contains more than maxrec rows, appends an INFO element with
+     * name="QUERY_STATUS" value="OVERFLOW" to the VOTable.
+     *
+     * @param votable VOTable object to write.
+     * @param ostream OutputStream to write to.
+     * @param maxRec maximum number of rows to write.
+     * @throws IOException if problem writing to OutputStream.
      */
     public void write(VOTable votable, OutputStream ostream, Long maxrec)
         throws IOException
@@ -161,10 +177,11 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
-     * 
-     * @param votable
-     * @param writer
-     * @throws IOException
+     * Write the VOTable to the specified Writer.
+     *
+     * @param votable VOTable object to write.
+     * @param writer Writer to write to.
+     * @throws IOException if problem writing to the writer.
      */
     public void write(VOTable votable, Writer writer)
         throws IOException
@@ -173,10 +190,14 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
+     * Write the VOTable to the specified Writer, only writing maxrec rows.
+     * If the VOTable contains more than maxrec rows, appends an INFO element with
+     * name="QUERY_STATUS" value="OVERFLOW" to the VOTable.
      *
-     * @param votable
-     * @param writer
-     * @throws IOException
+     * @param votable VOTable object to write.
+     * @param writer Writer to write to.
+     * @param maxRec maximum number of rows to write.
+     * @throws IOException if problem writing to the writer.
      */
     public void write(VOTable votable, Writer writer, Long maxrec)
         throws IOException
@@ -266,10 +287,13 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
+     * Write the Throwable to a VOTable, creating an INFO element with
+     * name="QUERY_STATUS" value="ERROR" and setting the stacktrace as
+     * the INFO text.
      *
-     * @param thrown
-     * @param output
-     * @throws IOException
+     * @param thrown Throwable to write.
+     * @param output OutputStream to write to.
+     * @throws IOException if problem writing to the stream.
      */
     public void write(Throwable thrown, OutputStream output)
         throws IOException
@@ -297,8 +321,10 @@ public class VOTableWriter implements TableWriter<VOTable>
     }
 
     /**
-     * 
-     * @return
+     * Builds a empty VOTable document with the appropriate namespaces and
+     * attributes.
+     *
+     * @return VOTable document.
      */
     protected Document createDocument()
     {

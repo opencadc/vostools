@@ -74,23 +74,37 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- *
+ * Class implements the TableData interface using an ArrayList.
+ * 
  * @author jburke
  */
 public class ArrayListTableData implements TableData
 {
     protected ArrayList<List<Object>> list;
 
+    /**
+     * Default constructor.
+     */
     public ArrayListTableData()
     {
         this.list = new ArrayList<List<Object>>();
     }
 
+    /**
+     * Get the ArrayList of List objects.
+     *
+     * @return ArrayList of List objects.
+     */
     public ArrayList<List<Object>> getArrayList()
     {
         return this.list;
     }
 
+    /**
+     * Get an iterator to the ArrayList.
+     *
+     * @return iterator to the ArrayList.
+     */
     public Iterator<List<Object>> iterator()
     {
         return list.iterator();

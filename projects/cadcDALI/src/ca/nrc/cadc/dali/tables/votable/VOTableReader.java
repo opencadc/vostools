@@ -122,13 +122,15 @@ public class VOTableReader
     {
         URL url = VOTableReader.class.getClassLoader().getResource(name);
         if (url == null)
+        {
             throw new MissingResourceException("schema not found", VOTableReader.class.getName(), name);
+        }
         return url.toString();
     }
     private SAXBuilder docBuilder;
 
     /**
-     *
+     * Creates a VOTableReader that validates the VOTable.
      */
     public VOTableReader()
     {
@@ -136,8 +138,9 @@ public class VOTableReader
     }
 
     /**
+     * Creates a VOTableReader and optionally validate the VOTable.
      *
-     * @param enableSchemaValidation
+     * @param enableSchemaValidation validate the VOTable if true.
      */
     public VOTableReader(boolean enableSchemaValidation)
     {
@@ -157,10 +160,11 @@ public class VOTableReader
     }
 
     /**
+     * Read a XML VOTable from a String and build a VOTable object.
      *
-     * @param xml
-     * @return
-     * @throws IOException
+     * @param xml String of the VOTable XML.
+     * @return a VOTable object.
+     * @throws IOException if unable to read the VOTable.
      */
     public VOTable read(String xml)
         throws IOException
@@ -170,10 +174,11 @@ public class VOTableReader
     }
 
     /**
+     * Read a XML VOTable from an InputStream and build a VOTable object.
      *
-     * @param istream
-     * @return
-     * @throws IOException
+     * @param istream InputStream to read from.
+     * @return a VOTable object.
+     * @throws IOException is problem reading the InputStream.
      */
     public VOTable read(InputStream istream)
         throws IOException
@@ -183,10 +188,11 @@ public class VOTableReader
     }
 
     /**
-     * 
-     * @param reader
-     * @return
-     * @throws IOException
+     * Read a XML VOTable from a Reader and build a VOTable object.
+     *
+     * @param reader Reader to read from.
+     * @return a VOTable object.
+     * @throws IOException if problem reading from the reader.
      */
     public VOTable read(Reader reader)
         throws IOException
@@ -253,10 +259,11 @@ public class VOTableReader
     }
 
     /**
-     * 
-     * @param elements
-     * @param namespace
-     * @return
+     * Builds a List of Info objects from a List of INFO Elements.
+     *
+     * @param elements List of INFO Elements.
+     * @param namespace document namespace.
+     * @return List of Info objects.
      */
     protected List<Info> getInfos(List<Element> elements, Namespace namespace)
     {
@@ -274,6 +281,13 @@ public class VOTableReader
         return infos;
     }
 
+    /**
+     * Build a List of TableParam objects from a List of PARAM Elements.
+     *
+     * @param elements List of PARAM Elements.
+     * @param namespace document namespace.
+     * @return List of TableParam objects.
+     */
     protected List<TableParam> getParams(List<Element> elements, Namespace namespace)
     {
         ArrayList<TableParam> params = new ArrayList<TableParam>();
@@ -294,10 +308,11 @@ public class VOTableReader
     }
     
     /**
+     * Build a List of TableField objects from a List of FIELD Elements.
      *
-     * @param elements
-     * @param namespace
-     * @return
+     * @param elements List of FIELD Elements.
+     * @param namespace document namespace.
+     * @return List of TableField objects.
      */
     protected List<TableField> getFields(List<Element> elements, Namespace namespace)
     {
@@ -318,10 +333,11 @@ public class VOTableReader
     }
 
     /**
-     * 
-     * @param tableField
-     * @param element
-     * @param namespace
+     * Populate a TableField object with values from the FIELD element.
+     *
+     * @param tableField TableField to populate.
+     * @param element source Element.
+     * @param namespace document namespace.
      */
     protected void updateTableField(TableField tableField, Element element, Namespace namespace)
     {
@@ -374,10 +390,11 @@ public class VOTableReader
     }
     
     /**
-     * 
-     * @param element
-     * @param namespace
-     * @return
+     * Build a List that contains the TableData rows.
+     *
+     * @param element TABLEDATA element.
+     * @param namespace document namespace.
+     * @return TableData object containing rows of data.
      */
     TableData getTableData(Element element, Namespace namespace, List<TableField> fields)
     {
@@ -406,9 +423,9 @@ public class VOTableReader
     }
 
     /**
-     * 
-     * @param schemaMap
-     * @return
+     * Create a XML parser using the schemaMap schemas for validation.
+     * @param schemaMap Map of schema namespace to location.
+     * @return XML parser.
      */
     protected SAXBuilder createBuilder(Map<String, String> schemaMap)
     {

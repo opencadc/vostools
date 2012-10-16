@@ -77,8 +77,6 @@ public class Info
 {
     private String name;
     private String value;
-    
-//    public String description;
 
     public Info(String name, String value)
     {
