@@ -141,6 +141,8 @@ public class VOSpaceAuthorizer implements Authorizer
     private Map<String, Boolean> groupMembershipCache;
     
     private NodePersistence nodePersistence;
+    private RegistryClient registryClient;
+    private GmsClient gmsClient;
 
     public VOSpaceAuthorizer()
     {
@@ -152,6 +154,8 @@ public class VOSpaceAuthorizer implements Authorizer
         groupMembershipCache = new HashMap<String, Boolean>();
         initState();
         this.allowPartialPaths = allowPartialPaths;
+        this.registryClient = new RegistryClient();
+        this.gmsClient = new GmsClient(registryClient);
     }
 
     // this method will only downgrade the state to !readable and !writable
@@ -344,12 +348,8 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             
             // require identification for group membership
-            if (subject.getPrincipals().size() <= 0)
-            {
+            if (subject.getPrincipals().isEmpty())
                 return false;
-            }
-            
-            RegistryClient registryClient = new RegistryClient();
             
             X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
                     subject.getPublicCredentials());
@@ -371,7 +371,10 @@ public class VOSpaceAuthorizer implements Authorizer
                     return false;
                 }
                 
-                try { privateKeyChain.getChain()[0].checkValidity(); }
+                try
+                {
+                    privateKeyChain.getChain()[0].checkValidity();
+                }
                 catch(CertificateException ex)
                 {
                     // TODO: as above, try to respond with a reason for the false
@@ -414,7 +417,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 LOG.warn("failed to find base URL for GMS service: " + serviceURI);
                 return false;
             }
-            GmsClient gms = new GmsClient(gmsBaseURL);
+            GmsClient gms = new GmsClient();
             gms.setSslSocketFactory(socketFactory);
             
             // check group membership for each x500 principal that exists
