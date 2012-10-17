@@ -84,6 +84,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
@@ -127,12 +128,31 @@ public class UploadFile implements VOSpaceCommand
     @Override
     public void execute(VOSpaceClient vospaceClient) throws Exception
     {
-        boolean upload = false;
-        try
+        
+        // see if the parent container exists (throws NodeNotFound if it doesn't)
+        Node serverNode = null;
+        Node parentNode = vospaceClient.getNode(dataNode.getUri().getParentURI().getPath());
+        if (! (parentNode instanceof ContainerNode))
         {
-            // see if the file exists
-            Node serverNode = vospaceClient.getNode(dataNode.getUri().getPath());
+            throw new NodeNotFoundException(dataNode.getUri().getParentURI().getPath());
+        }
+        
+        // see if the dataNode exists
+        ContainerNode container = (ContainerNode) parentNode;
+        for (Node child : container.getNodes())
+        {
+            if (child.getName().equals(dataNode.getName()))
+            {
+                serverNode = child;
+            }
+        }
+        
+        // if it does, see it we need to replace it
+        if (serverNode != null)
+        {
             log.debug("Server dataNode already exists, checking metadata.");
+            // get the persistent version
+            serverNode = vospaceClient.getNode(dataNode.getUri().getPath());
             
             // See if a MD5 value for the file exists
             String clientMD5 = dataNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
@@ -141,8 +161,8 @@ public class UploadFile implements VOSpaceCommand
             {
                 if (clientMD5.equals(serverMD5))
                 {
-                    log.debug("MD5 values don't match, uploading.");
-                    upload = true;
+                    log.debug("MD5 values match, not uploading.");
+                    return;
                 }
             }
             else
@@ -172,53 +192,45 @@ public class UploadFile implements VOSpaceCommand
                     log.debug("Couldn't determine file dates: " + e);
                 }
                 
-                if (!sizesMatch || !datesMatch)
+                if (sizesMatch && datesMatch)
                 {
-                    log.debug("Size and dates don't match, uploading.");
-                    upload = true;
+                    log.debug("Size and dates match, not uploading.");
+                    return;
                 }
             }
         }
-        catch (NodeNotFoundException e)
-        {
-            // not found = do upload
-            upload = true;
-        }
+    
+        log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
+        List<Protocol> protocols = new ArrayList<Protocol>();
         
-        if (upload)
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        
+        if (subject != null)
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        else
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+
+        Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
+        ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);
+        
+        clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
+        clientTransfer.setSSLSocketFactory(vospaceClient.getSslSocketFactory());
+        clientTransfer.setFile(file);
+        
+        clientTransfer.runTransfer();
+
+        ExecutionPhase ep = clientTransfer.getPhase();
+        if ( ExecutionPhase.ERROR.equals(ep) )
         {
-            log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            
-            AccessControlContext acContext = AccessController.getContext();
-            Subject subject = Subject.getSubject(acContext);
-            
-            if (subject != null)
-                protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-            else
-                protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-
-            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
-            ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);
-            
-            clientTransfer.setMaxRetries(Integer.MAX_VALUE);
-            clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
-            clientTransfer.setSSLSocketFactory(vospaceClient.getSslSocketFactory());
-            clientTransfer.setFile(file);
-            
-            clientTransfer.runTransfer();
-
-            ExecutionPhase ep = clientTransfer.getPhase();
-            if ( ExecutionPhase.ERROR.equals(ep) )
-            {
-                ErrorSummary es = clientTransfer.getServerError();
-                throw new RuntimeException("Internal error: " + es.getSummaryMessage());
-            }
-            else if ( ExecutionPhase.ABORTED.equals(ep) )
-                throw new RuntimeException("Upload aborted");
-            else if ( !ExecutionPhase.COMPLETED.equals(ep) )
-                throw new RuntimeException("Unexpected upload state: " + ep.name());
+            ErrorSummary es = clientTransfer.getServerError();
+            throw new RuntimeException("Internal error: " + es.getSummaryMessage());
         }
+        else if ( ExecutionPhase.ABORTED.equals(ep) )
+            throw new RuntimeException("Upload aborted");
+        else if ( !ExecutionPhase.COMPLETED.equals(ep) )
+            throw new RuntimeException("Unexpected upload state: " + ep.name());
     }
     
     @Override
