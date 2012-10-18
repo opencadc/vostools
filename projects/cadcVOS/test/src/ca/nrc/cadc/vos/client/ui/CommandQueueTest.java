@@ -91,7 +91,7 @@ public class CommandQueueTest
     @BeforeClass
     public static void setUpClass()
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.INFO);
     }
 
     /**

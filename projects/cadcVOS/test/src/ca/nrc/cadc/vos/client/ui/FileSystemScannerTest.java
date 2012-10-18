@@ -95,7 +95,7 @@ public class FileSystemScannerTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.INFO);
         TEST_VOSURI = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root"));
     }
 
@@ -106,11 +106,25 @@ public class FileSystemScannerTest
         {
             FileSystemScanner scanner = new FileSystemScanner();
 
-            File file = new File("test/src/resources/testFile");
-            File symlink = new File("test/src/resources/testSymLink");
-            
+            // a directory
+            File file = new File("test/src/resources/testDir");
+            assertFalse("Directory is not a symlink", scanner.isSymLink(file));
+
+            // a file
+            file = new File("test/src/resources/testFile");
             assertFalse("File is not a symlink", scanner.isSymLink(file));
-            assertTrue("Should return true for a symlink", scanner.isSymLink(symlink));
+
+            // test/src/resources/testDirSymlink is a symlink to test/src/resoruces/testDir
+            file = new File("test/src/resources/testDirSymlink");
+            assertTrue("Should return true for a symlink", scanner.isSymLink(file));
+
+            // parent directory as a symlink
+            file = new File("test/src/resources/testDirSymlink/testDirFile");
+            assertTrue("Should return true for a symlink", scanner.isSymLink(file));
+
+            // test/src/resource/testFileSymlink is a symlink to test/src/resources/testFile
+            file = new File("test/src/resources/testFileSymlink");
+            assertTrue("Should return true for a symlink", scanner.isSymLink(file));
         }
         catch(Exception unexpected)
         {

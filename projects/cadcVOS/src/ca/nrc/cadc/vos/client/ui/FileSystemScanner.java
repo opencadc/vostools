@@ -198,19 +198,9 @@ public class FileSystemScanner implements Runnable
     {
         if (file == null)
         {
-            return false;
+            throw new RuntimeException("null file");
         }
-        File canon;
-        if (file.getParent() == null)
-        {
-          canon = file;
-        }
-        else
-        {
-            File canonDir = file.getParentFile().getCanonicalFile();
-            canon = new File(canonDir, file.getName());
-        }
-        return !canon.getCanonicalFile().equals(canon.getAbsoluteFile());
+        return !file.getAbsolutePath().equals(file.getCanonicalPath());
     }
 
     /**
