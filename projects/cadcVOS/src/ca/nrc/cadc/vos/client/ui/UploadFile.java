@@ -173,7 +173,7 @@ public class UploadFile implements VOSpaceCommand
                 
                 String serverSize = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
                 long clientSize = file.length();
-                if (Long.parseLong(serverSize) == clientSize)
+                if (serverSize != null && (Long.parseLong(serverSize) == clientSize))
                 {
                     sizesMatch = true;
                 }
