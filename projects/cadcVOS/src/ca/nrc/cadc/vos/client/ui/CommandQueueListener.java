@@ -84,7 +84,7 @@ public interface CommandQueueListener
      * @param commandsProcessed Total number that have been processed.
      * @param commandsRemaining Total known number remaining to be processed.
      */
-    void commandProcessed(long commandsProcessed, long commandsRemaining);
+    void commandProcessed(Long commandsProcessed, Long commandsRemaining);
     
     /**
      * Indicates that processing has started.

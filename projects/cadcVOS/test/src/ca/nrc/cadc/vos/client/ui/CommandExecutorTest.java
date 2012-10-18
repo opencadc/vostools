@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2012.                            (c) 2012.
+*  (c) 2009.                            (c) 2009.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -58,7 +58,7 @@
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, sesrc/jsp/index.jspe          OpenCADC ; si ce n’est
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
@@ -69,123 +69,122 @@
 
 package ca.nrc.cadc.vos.client.ui;
 
-import java.util.concurrent.ArrayBlockingQueue;
-
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.easymock.EasyMock;
+import org.easymock.IArgumentMatcher;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-/**
- * 
- * A non-threadsafe interface to a bounded fifo queue buffering vospace
- * commands to be executed.
- * 
- * The queue will not grow beyond maxCapcity.
- * 
- * Implementations of the CommandQueueListerer will receive queue processing
- * event notifications.
- * 
- * @author majorb
- *
- */
-public class CommandQueue
+import ca.nrc.cadc.util.Log4jInit;
+
+public class CommandExecutorTest
 {
     
-    private static Logger log = Logger.getLogger(CommandQueue.class);
-    
-    private CommandQueueListener listener;
-    private boolean doneProduction = false;
-    private long commandsProcessed = 0;
-    private ArrayBlockingQueue<VOSpaceCommand> queue;
-    
-    public CommandQueue(int maxCapacity, CommandQueueListener listener)
+    private static Logger log = Logger.getLogger(CommandExecutorTest.class);
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
-        // Force FIFO behaviour by setting 2nd arg to true.
-        this.queue = new ArrayBlockingQueue<VOSpaceCommand>(maxCapacity, true);
-        this.listener = listener;
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
     
-    /**
-     * Inform the listener that processing has begun.
-     */
-    public void startedConsumption()
+    @Test
+    public void testCommandExecutorWithinBuffer() throws Exception
     {
+        this.testCommandExecutor(5, 100);
+    }
+    
+    @Test
+    public void testCommandExecutorExceedingBuffer() throws Exception
+    {
+        this.testCommandExecutor(100, 5);
+    }
+    
+    private void testCommandExecutor(int commands, int bufferSize) throws Exception
+    {
+        CommandQueueListener listener = EasyMock.createMock(CommandQueueListener.class);
+        
         listener.processingStarted();
-    }
-    
-    /**
-     * Inform the listener that processing is complete.
-     */
-    public void doneConsumption()
-    {
+        EasyMock.expectLastCall().once();
+        
         listener.processingComplete();
-    }
-    
-    /**
-     * Method to indicate that the producer is finished working.
-     */
-    public void doneProduction()
-    {
-        doneProduction = true;
-    }
-    
-    /**
-     * Returns true if command production is complete.
-     * @return
-     */
-    public boolean isDoneProduction()
-    {
-        return doneProduction;
-    }
-    
-    /**
-     * Push the command on the queue, wait if full.
-     * @param command
-     */
-    public void put(VOSpaceCommand command)
-    {
-        try
+        EasyMock.expectLastCall().once();
+        
+        for (long i=1; i<=commands; i++)
+        {
+            listener.commandProcessed(matchQueueCommandsProcessed(i), matchQueueCommandsRemaining(bufferSize));
+            EasyMock.expectLastCall().once();
+        }
+        
+        CommandQueue queue = new CommandQueue(bufferSize, listener);
+        CommandExecutor commandExecutor = new CommandExecutor(null, queue);
+        
+        VOSpaceCommand command = EasyMock.createMock(VOSpaceCommand.class);
+        command.execute(null);
+        EasyMock.expectLastCall().times(commands);
+        
+        EasyMock.replay(listener, command);
+        
+        Thread t = new Thread(commandExecutor);
+        t.start();
+        
+        for (int i=0; i<commands; i++)
         {
             queue.put(command);
+            log.debug("Added command " + (i + 1) + " to queue.");
         }
-        catch (InterruptedException e)
-        {
-            log.debug("Queue put interrupted: " + e);
-        }
-        log.debug("New queue size after put: " + queue.size());
-    }
-
-    /**
-     * Returns the command at the top of the queue.
-     * @return
-     */
-    public VOSpaceCommand peek()
-    {
-        return queue.peek();
-    }
-
-    /**
-     * Removes the command at the top of the queue.
-     */
-    public void remove()
-    {
-        queue.remove();
-        commandsProcessed++;
-        listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        log.debug("New queue size after remove: " + queue.size());
-    }
-
-    /**
-     * Removes and returns the command at the head of the queue.
-     * @return VOSpaceCommand.
-     */
-    public VOSpaceCommand poll()
-    {
-        VOSpaceCommand command = queue.poll();
-        if (command != null)
-        {
-            commandsProcessed++;
-            listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        }
-        return command;
+        
+        queue.doneProduction();
+        
+        t.join();
+        
+        EasyMock.verify(listener);
     }
     
+    private Long matchQueueCommandsProcessed(final long commandNumber)
+    {
+        EasyMock.reportMatcher(
+            new IArgumentMatcher()
+                {
+                    @Override
+                    public void appendTo(StringBuffer sb)
+                    {
+                        sb.append("eqException(Expected \"CommandsProcessed = " + commandNumber + "\"");
+                    }
+        
+                    @Override
+                    public boolean matches(Object arg0)
+                    {
+                        long value = (Long) arg0;
+                        return value == commandNumber;
+                    }
+                });
+        return null;
+    }
+    
+    private Long matchQueueCommandsRemaining(final long bufferSize)
+    {
+        EasyMock.reportMatcher(
+            new IArgumentMatcher()
+                {
+                    @Override
+                    public void appendTo(StringBuffer sb)
+                    {
+                        sb.append("eqException(Expected \"CommandsRemaining <= " + bufferSize + "\"");
+                    }
+        
+                    @Override
+                    public boolean matches(Object arg0)
+                    {
+                        long commandsRemaining = (Long) arg0;
+                        return commandsRemaining <= bufferSize;
+                    }
+                });
+        return null;
+    }
+
 }

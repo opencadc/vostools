@@ -68,17 +68,22 @@
 */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.VOSURI;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.net.URI;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  *
@@ -186,28 +191,6 @@ public class FileSystemScannerTest
             File file = new File("/a/b/c/d/e/f");
             String path = scanner.getRelativePath(file);
             assertEquals("/c/d/e/f", path);
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testOfferToCommandQueue()
-    {
-        try
-        {
-            CommandQueue queue = new CommandQueue(1, null);
-            FileSystemScanner scanner = new FileSystemScanner(null, null, queue);
-
-            ContainerNode node = new ContainerNode(TEST_VOSURI);
-            VOSpaceCommand command = new CreateDirectory(node);
-            
-            scanner.offerToCommandQueue(command);
-
-            assertNotNull("Queue peek should return a VOSpaceCommand", queue.peek());
         }
         catch(Exception unexpected)
         {

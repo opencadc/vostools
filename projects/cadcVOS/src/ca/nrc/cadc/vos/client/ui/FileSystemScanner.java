@@ -68,9 +68,6 @@
 */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.VOSURI;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -78,7 +75,12 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Starting from the specified source directory or file, creates Node commands
@@ -223,7 +225,7 @@ public class FileSystemScanner implements Runnable
 
         // Add node and InputStream from file.
         VOSpaceCommand command = new UploadFile(node, file);
-        offerToCommandQueue(command);
+        commandQueue.put(command);
     }
 
     /**
@@ -246,7 +248,7 @@ public class FileSystemScanner implements Runnable
 
         // Add node and InputStream from file.
         VOSpaceCommand command = new CreateDirectory(node);
-        offerToCommandQueue(command);
+        commandQueue.put(command);
     }
 
     /**
@@ -265,21 +267,6 @@ public class FileSystemScanner implements Runnable
                                        sourceFile.getAbsolutePath());
         }
         return file.getAbsolutePath().substring(index);
-    }
-
-    /**
-     * Add the given VOSpace command to the CommandQueue.
-     *
-     * @param command the command to add the CommandQueue.
-     * @throws InterruptedException
-     */
-    protected void offerToCommandQueue(VOSpaceCommand command)
-        throws InterruptedException
-    {
-        while (!commandQueue.offer(command))
-        {
-            Thread.sleep(500);
-        }
     }
 
 }

@@ -72,6 +72,8 @@ import org.junit.runners.Suite;
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
 import ca.nrc.cadc.vos.client.FileSizeTypeTest;
 import ca.nrc.cadc.vos.client.MainTest;
+import ca.nrc.cadc.vos.client.ui.CommandExecutorTest;
+import ca.nrc.cadc.vos.client.ui.CommandQueueTest;
 import ca.nrc.cadc.vos.client.ui.CreateDirectoryTest;
 import ca.nrc.cadc.vos.client.ui.UploadFileTest;
 import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
@@ -105,7 +107,10 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     RssFeedTest.class,
     TransferInlineContentHandlerTest.class,
     CreateDirectoryTest.class,
-    UploadFileTest.class
+    UploadFileTest.class,
+    CommandExecutorTest.class,
+    //FileSystemScannerTest.class,
+    CommandQueueTest.class
 })
 public class CADCVOSTestSuite
 {

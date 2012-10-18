@@ -68,15 +68,22 @@
 */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.VOSURI;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.net.URI;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  *
@@ -177,10 +184,10 @@ public class CommandQueueTest
     }
 
     /**
-     * Test of offer method, of class CommandQueue.
+     * Test of put method, of class CommandQueue.
      */
     @Test
-    public void testOffer()
+    public void testPut()
     {
         try
         {
@@ -191,7 +198,7 @@ public class CommandQueueTest
             VOSpaceCommand command = new CreateDirectory(node);
 
             assertNull("CommandQueue should be empty before any commands offered", queue.peek());
-            queue.offer(command);
+            queue.put(command);
             assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
         }
         catch(Exception unexpected)
@@ -216,7 +223,7 @@ public class CommandQueueTest
             VOSpaceCommand command = new CreateDirectory(node);
 
             assertNull("CommandQueue should be empty before any commands offered", queue.peek());
-            queue.offer(command);
+            queue.put(command);
             assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
         }
         catch(Exception unexpected)
@@ -241,7 +248,7 @@ public class CommandQueueTest
             VOSpaceCommand command = new CreateDirectory(node);
 
             assertNull("CommandQueue should be empty before any commands offered", queue.peek());
-            queue.offer(command);
+            queue.put(command);
             assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
             queue.remove();
             assertNull("CommandQueue should be empty after command removed", queue.peek());
@@ -287,7 +294,7 @@ public class CommandQueueTest
         }
 
         // long commandsProcessed, long commandsRemaining
-        public void commandProcessed(long processed, long remaining)
+        public void commandProcessed(Long processed, Long remaining)
         {
             this.processed = processed;
             this.remaining = remaining;
