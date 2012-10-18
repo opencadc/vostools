@@ -70,9 +70,7 @@ package ca.nrc.cadc.vos.client.ui;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.VOSURI;
-import java.io.File;
 import java.net.URI;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -84,33 +82,30 @@ import static org.junit.Assert.*;
  *
  * @author jburke
  */
-public class FileSystemScannerTest
+public class CommandQueueTest
 {
-    private static Logger log = Logger.getLogger(FileSystemScannerTest.class);
-
-    private static VOSURI TEST_VOSURI;
-
-    public FileSystemScannerTest() { }
+    private static Logger log = Logger.getLogger(CommandQueueTest.class);
+    
+    public CommandQueueTest() { }
 
     @BeforeClass
-    public static void setUpClass() throws Exception
+    public static void setUpClass()
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.DEBUG);
-        TEST_VOSURI = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root"));
     }
 
+    /**
+     * Test of startedConsumption method, of class CommandQueue.
+     */
     @Test
-    public void testIsSymLink()
+    public void testStartedConsumption()
     {
         try
         {
-            FileSystemScanner scanner = new FileSystemScanner();
-
-            File file = new File("test/src/resources/testFile");
-            File symlink = new File("test/src/resources/testSymLink");
-            
-            assertFalse("File is not a symlink", scanner.isSymLink(file));
-            assertTrue("Should return true for a symlink", scanner.isSymLink(symlink));
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+            queue.startedConsumption();
+            assertTrue(listener.started);
         }
         catch(Exception unexpected)
         {
@@ -119,19 +114,18 @@ public class FileSystemScannerTest
         }
     }
 
+    /**
+     * Test of doneConsumption method, of class CommandQueue.
+     */
     @Test
-    public void testQueueDataNode()
+    public void testDoneConsumption()
     {
         try
         {
-            CommandQueue queue = new CommandQueue(1, null);
-            File sourceFile = new File("test");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, TEST_VOSURI, queue);
-
-            File file = new File("test/src/resources/testFile");
-            scanner.queueDataNode(file);
-
-            assertNotNull(queue.peek());
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+            queue.doneConsumption();
+            assertTrue(listener.completed);
         }
         catch(Exception unexpected)
         {
@@ -140,19 +134,19 @@ public class FileSystemScannerTest
         }
     }
 
+    /**
+     * Test of doneProduction method, of class CommandQueue.
+     */
     @Test
-    public void testQueueContainerNode()
+    public void testDoneProduction()
     {
         try
         {
-            CommandQueue queue = new CommandQueue(1, null);
-            File sourceFile = new File("test");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, TEST_VOSURI, queue);
-
-            File file = new File("test/src/resources/testFile");
-            scanner.queueContainerNode(file);
-
-            assertNotNull(queue.peek());
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+            assertFalse("isDoneProduction should be false after constructor", queue.isDoneProduction());
+            queue.doneProduction();
+            assertTrue("isDoneProduction be true after doneProduction called", queue.isDoneProduction());
         }
         catch(Exception unexpected)
         {
@@ -161,17 +155,19 @@ public class FileSystemScannerTest
         }
     }
 
+    /**
+     * Test of isDoneProduction method, of class CommandQueue.
+     */
     @Test
-    public void testGetRelativePath()
+    public void testIsDoneProduction()
     {
         try
         {
-            File sourceFile = new File("/a/b/c");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, null, null);
-            
-            File file = new File("/a/b/c/d/e/f");
-            String path = scanner.getRelativePath(file);
-            assertEquals("/c/d/e/f", path);
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+            assertFalse("isDoneProduction should be false after constructor", queue.isDoneProduction());
+            queue.doneProduction();
+            assertTrue("isDoneProduction be true after doneProduction called", queue.isDoneProduction());
         }
         catch(Exception unexpected)
         {
@@ -180,26 +176,133 @@ public class FileSystemScannerTest
         }
     }
 
+    /**
+     * Test of offer method, of class CommandQueue.
+     */
     @Test
-    public void testOfferToCommandQueue()
+    public void testOffer()
     {
         try
         {
-            CommandQueue queue = new CommandQueue(1, null);
-            FileSystemScanner scanner = new FileSystemScanner(null, null, queue);
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
 
-            ContainerNode node = new ContainerNode(TEST_VOSURI);
+            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
             VOSpaceCommand command = new CreateDirectory(node);
-            
-            scanner.offerToCommandQueue(command);
 
-            assertNotNull("Queue peek should return a VOSpaceCommand", queue.peek());
+            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
+            queue.offer(command);
+            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
         }
         catch(Exception unexpected)
         {
             log.error("unexpected exception", unexpected);
             fail("unexpected exception: " + unexpected);
         }
+    }
+
+    /**
+     * Test of peek method, of class CommandQueue.
+     */
+    @Test
+    public void testPeek()
+    {
+        try
+        {
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+
+            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
+            VOSpaceCommand command = new CreateDirectory(node);
+
+            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
+            queue.offer(command);
+            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * Test of remove method, of class CommandQueue.
+     */
+    @Test
+    public void testRemove()
+    {
+        try
+        {
+            TestListener listener = new TestListener();
+            CommandQueue queue = new CommandQueue(1, listener);
+
+            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
+            VOSpaceCommand command = new CreateDirectory(node);
+
+            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
+            queue.offer(command);
+            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
+            queue.remove();
+            assertNull("CommandQueue should be empty after command removed", queue.peek());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * Test of poll method, of class CommandQueue.
+     */
+    @Test
+    public void testPoll()
+    {
+        try
+        {
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    
+    private class TestListener implements CommandQueueListener
+    {
+        long processed;
+        long remaining;
+        boolean started;
+        boolean completed;
+
+        TestListener()
+        {
+            processed = 0;
+            remaining = 0;
+            started = false;
+            completed = false;
+        }
+
+        // long commandsProcessed, long commandsRemaining
+        public void commandProcessed(long processed, long remaining)
+        {
+            this.processed = processed;
+            this.remaining = remaining;
+        }
+
+        public void processingStarted()
+        {
+            started = true;
+        }
+
+        public void processingComplete()
+        {
+            completed = true;
+        }
+
     }
     
 }

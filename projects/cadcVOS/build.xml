@@ -208,11 +208,6 @@
     
     <!-- convenience test targets when developing -->
     <target name="client-test" depends="compile-test">
-        <copy  todir="${build}/test/class">
-            <fileset dir="test/src/resources">
-                <include name="**/*.xml" />
-            </fileset>
-        </copy>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
           <classpath>
               <pathelement path="."/>
@@ -224,6 +219,7 @@
           </classpath>
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.client.ui.FileSystemScannerTest"/>
+          <test name="ca.nrc.cadc.vos.client.ui.CommandQueueTest" />
         </junit>
     </target>
 

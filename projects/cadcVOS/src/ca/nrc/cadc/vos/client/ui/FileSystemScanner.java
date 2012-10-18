@@ -159,15 +159,18 @@ public class FileSystemScanner implements Runnable
                 }
                 catch (IOException ioe)
                 {
-                    log.error("Unable to read " + file.getPath() + " because " + ioe.getMessage());
+                    log.error("Unable to read " + file.getPath() +
+                              " because " + ioe.getMessage());
                 }
                 catch (URISyntaxException use)
                 {
-                    log.error("Invalid VOSpace URI for " + file.getPath() + " because " + use.getMessage());
+                    log.error("Invalid VOSpace URI for " + file.getPath() +
+                              " because " + use.getMessage());
                 }
                 catch (RuntimeException rte)
                 {
-                    log.error("Unable to process " + file.getPath() + " because " + rte.getMessage());
+                    log.error("Unable to process " + file.getPath() +
+                              " because " + rte.getMessage());
                 }
             }
         }
@@ -264,12 +267,14 @@ public class FileSystemScanner implements Runnable
      */
     protected String getRelativePath(File file)
     {
-        int index = sourceFile.getPath().lastIndexOf(File.separator);
+        int index = sourceFile.getAbsolutePath().lastIndexOf(File.separator);
         if (index == -1)
         {
-            throw new RuntimeException("file " + file.getPath() + " not in source directory " + sourceFile.getPath());
+            throw new RuntimeException("file " + file.getAbsolutePath() + 
+                                       " not in source directory " +
+                                       sourceFile.getAbsolutePath());
         }
-        return file.getPath().substring(index);
+        return file.getAbsolutePath().substring(index);
     }
 
     /**

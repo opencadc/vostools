@@ -69,6 +69,9 @@
 
 package ca.nrc.cadc.vos.client.ui;
 
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+
 /**
  * Implementation in progress...
  * 
@@ -89,14 +92,12 @@ public class CommandQueue
     private CommandQueueListener listener;
     private boolean doneProduction = false;
     private long commandsProcessed = 0;
-    
-    // TODO: declare an underlying queue implementation
-    // BoundedFifoBuffer - max capacity queue from apache commons?
+    private Queue<VOSpaceCommand> queue;
     
     public CommandQueue(int maxCapacity, CommandQueueListener listener)
     {
-        // TODO: construct a bounded queue with maxCapacity
-        
+        // Force FIFO behaviour by setting 2nd arg to true.
+        this.queue = new ArrayBlockingQueue<VOSpaceCommand>(maxCapacity, true);
         this.listener = listener;
     }
     
@@ -136,33 +137,45 @@ public class CommandQueue
     /**
      * If the queue is not full, push the command on the queue.
      * @param command
-     * @return
+     * @return true if the command was placed in the queue, false otherwise.
      */
     public boolean offer(VOSpaceCommand command)
     {
-        // TODO: implement
-        return false;
+        return queue.offer(command);
     }
-    
+
     /**
      * Returns the command at the top of the queue.
      * @return
      */
     public VOSpaceCommand peek()
     {
-        // TODO: implement
-        return null;
+        return queue.peek();
     }
-    
+
     /**
      * Removes the command at the top of the queue.
      */
     public void remove()
     {
-        // TODO: remove top from queue
+        queue.remove();
         commandsProcessed++;
-        // TODO: get the real number of queued commands from the queue.
-        listener.commandProcessed(commandsProcessed, 0);
+        listener.commandProcessed(commandsProcessed, queue.size());
+    }
+
+    /**
+     * Removes and returns the command at the head of the queue.
+     * @return VOSpaceCommand.
+     */
+    public VOSpaceCommand poll()
+    {
+        VOSpaceCommand command = queue.poll();
+        if (command != null)
+        {
+            commandsProcessed++;
+            listener.commandProcessed(commandsProcessed, queue.size());
+        }
+        return command;
     }
     
 }
