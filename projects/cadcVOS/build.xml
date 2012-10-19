@@ -138,7 +138,13 @@
                 <include name="**.xsd" />
             </fileset>
         </copy>
+        <copy todir="${build}/resources/${project}">
+            <fileset dir="src/jsp">
+                <include name="**.jsp" />
+            </fileset>
+        </copy>
     </target>
+
     <target name="manifest">
 	<pathconvert property="client.flat.manifest" pathsep=" ">
 	    <mapper type="flatten"/>
@@ -154,6 +160,43 @@
             <attribute name="Class-Path" value="${client.flat.manifest} ${client.non-flat.manifest}"/>
 
         </manifest>
+    </target>
+
+    <!-- JavaWebstartServlet -->
+    <target name="servlet" depends="build">
+        <jar jarfile="${build}/lib/${project}Server.jar"
+            basedir="${build}/class"
+            update="no">
+                <exclude name="**/client/**" />
+                <exclude name="**/test/**" />
+        </jar>
+    </target>
+
+    <target name="warfile" depends="servlet">
+        <war warfile="${build}/webapps/vospaceUpload.war" webxml="src/xml/web.xml" update="no">
+            <!-- add resources -->
+            <fileset dir="${build}/resources/${project}/">
+                <include name="**.jsp" />
+            </fileset>
+
+            <!-- server-side jars -->
+            <lib dir="${build}/lib">
+                <include name="cadcVOSServer.jar" />
+            </lib>
+            <lib dir="${lib}">
+                <include name="cadcLog.jar" />
+                <include name="cadcRegistryClient.jar" />
+                <include name="cadcUtil.jar" />
+            </lib>
+            <lib dir="${ext.lib}">
+                <include name="jdom.jar" />
+                <include name="standard.jar" />
+                <include name="log4j.jar" />
+            </lib>
+            <webinf dir="${ext.lib}/tld">
+                <include name="c.tld" />
+            </webinf>
+        </war>
     </target>
 
     <!-- JAR files needed to run the test suite -->
