@@ -375,26 +375,6 @@ public abstract class HttpTransfer implements Runnable
         this.fireCancelOnce = false;
     }
 
-    protected class TransientException extends Exception
-    {
-        String msg;
-        long retryDelay;
-
-        public TransientException(String msg, long retryDelay)
-        {
-            this(msg, null, retryDelay);
-        }
-
-        TransientException(String msg, Throwable cause, long retryDelay)
-        {
-            super(msg, cause);
-            this.msg = msg;
-            this.retryDelay = retryDelay;
-        }
-        @Override
-        public String toString() { return "TransientException["+msg+","+retryDelay+"]"; }
-    }
-
     /**
      *  Determine if the failure was transient according to the config options.
      * @throws TransietnExceptuion to cause retry
