@@ -386,7 +386,7 @@ public abstract class HttpTransfer implements Runnable
             return;
         
         boolean trans = false;
-        long dt = 0;
+        int dt = 0;
 
         // try to get the retry delay from the response
         if (code == HttpURLConnection.HTTP_UNAVAILABLE)
@@ -398,7 +398,7 @@ public abstract class HttpTransfer implements Runnable
             {
                 try
                 {
-                    dt = Long.parseLong(retryAfter);
+                    dt = Integer.parseInt(retryAfter);
                     trans = true; // retryReason==SERVER satisfied
                     if (dt > MAX_RETRY_DELAY)
                         dt = MAX_RETRY_DELAY;

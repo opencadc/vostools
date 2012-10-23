@@ -82,6 +82,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.util.Date;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
@@ -95,7 +96,6 @@ import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
-import java.util.Date;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -360,7 +360,7 @@ public class HttpDownload extends HttpTransfer
             {
                 try
                 {
-                    long dt = 1000L * ex.retryDelay; // to milliseconds
+                    long dt = 1000L * ex.getRetryDelay(); // to milliseconds
                     log.debug("retry "+numRetries+" sleeping  for " + dt);
                     fireEvent(TransferEvent.RETRYING);
                     Thread.sleep(dt);

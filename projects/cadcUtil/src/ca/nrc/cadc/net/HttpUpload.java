@@ -71,6 +71,7 @@ package ca.nrc.cadc.net;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -85,7 +86,6 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
-import java.io.ByteArrayOutputStream;
 
 /**
  * Perform an upload (PUT).
@@ -193,7 +193,7 @@ public class HttpUpload extends HttpTransfer
             {
                 try
                 {
-                    long dt = 1000L*ex.retryDelay;
+                    long dt = 1000L * ex.getRetryDelay();
                     log.debug("retry "+numRetries+" sleeping  for " + dt);
                     fireEvent(TransferEvent.RETRYING);
                     Thread.sleep(dt);

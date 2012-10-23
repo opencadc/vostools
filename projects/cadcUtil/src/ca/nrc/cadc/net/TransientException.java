@@ -70,8 +70,7 @@
 package ca.nrc.cadc.net;
 
 /**
- * Exception indicating that a transient error occured on an
- * HTTP request.
+ * Exception indicating that a transient error occured.
  *
  */
 public class TransientException extends Exception
@@ -79,20 +78,54 @@ public class TransientException extends Exception
 
     private static final long serialVersionUID = 368806655217191211L;
 
-    String msg;
-    long retryDelay;
+    private int retryDelay;
 
-    public TransientException(String msg, long retryDelay)
+    /**
+     * Constructor.
+     * 
+     * @param msg Error message.
+     */
+    public TransientException(String msg)
+    {
+        this(msg, HttpTransfer.DEFAULT_RETRY_DELAY);
+    }
+
+    /**
+     * Constructor.
+     * 
+     * @param msg Error message.
+     * @param retryDelay Retry delay in seconds.
+     */
+    public TransientException(String msg, int retryDelay)
     {
         this(msg, null, retryDelay);
     }
 
-    TransientException(String msg, Throwable cause, long retryDelay)
+    /**
+     * Constructor.
+     * 
+     * @param msg Error message.
+     * @param cause The error cause.
+     * @param retryDelay Retry delay in seconds.
+     */
+    TransientException(String msg, Throwable cause, int retryDelay)
     {
         super(msg, cause);
-        this.msg = msg;
         this.retryDelay = retryDelay;
     }
+    
+    /**
+     * Get the retry delay (in seconds)
+     * @return
+     */
+    public long getRetryDelay()
+    {
+        return retryDelay;
+    }
+    
     @Override
-    public String toString() { return "TransientException["+msg+","+retryDelay+"]"; }
+    public String toString()
+    {
+        return "TransientException[" + super.getMessage() + "," + retryDelay + "]";
+    }
 }

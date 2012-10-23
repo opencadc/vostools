@@ -76,6 +76,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.AccessControlException;
 import java.util.Map;
 import java.util.Set;
@@ -85,7 +86,6 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.StringUtil;
-import java.net.URLEncoder;
 
 /**
  * Perform an HTTP Post.
@@ -225,7 +225,7 @@ public class HttpPost extends HttpTransfer
             {
                 try
                 {
-                    long dt = 1000L * ex.retryDelay;
+                    long dt = 1000L * ex.getRetryDelay();
                     log.debug("retry " + numRetries + " sleeping  for " + dt);
                     Thread.sleep(dt);
                 }
