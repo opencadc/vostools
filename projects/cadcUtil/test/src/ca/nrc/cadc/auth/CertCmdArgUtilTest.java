@@ -67,7 +67,7 @@ public class CertCmdArgUtilTest
     {
         log.debug("testLoadCertificate - START");
         
-        byte[] file1 = FileUtil.readFile(new File("/home/cadc/adriand/work/svn/cred_ws/test.pem"));
+        byte[] file1 = FileUtil.readFile(new File("test/data/test.pem"));
         String key = "-----BEGIN RSA PRIVATE KEY-----\n" +
         "MIIBOgIBAAJBAOvm3yk/tr7/8ZaT584T54tOviYIpoWWRfwDgd176c0kTfTj43+C\n" +
         "BgxFcequf5mY51mgD7v38krRA3+xXi/igfsCAwEAAQJBAMqVrQXGcpDaScVPZV1j\n" +
