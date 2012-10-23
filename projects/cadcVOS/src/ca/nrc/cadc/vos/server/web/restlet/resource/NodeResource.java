@@ -72,6 +72,8 @@ package ca.nrc.cadc.vos.server.web.restlet.resource;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 import javax.security.auth.Subject;
 
@@ -82,6 +84,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.VOSURI;
@@ -229,6 +232,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
                 }
                 
                 setStatus(result.getStatus());
+                
                 if (result.getRedirectURL() != null)
                 {
                     if (StringUtil.hasLength(message))
@@ -246,6 +250,21 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             }
             return null;
             
+        }
+        catch (TransientException t)
+        {
+            LOGGER.debug(t);
+            success = "no";
+            message = "Transient exception: " + t.getMessage();
+            setStatus(NodeFault.ServiceBusy.getStatus());
+            
+            Calendar retryTime = new GregorianCalendar();
+            LOGGER.debug("After transient exception, setting retry-after to be "
+                    + t.getRetryDelay() + " seconds.");
+            retryTime.add(Calendar.SECOND, t.getRetryDelay());
+            getResponse().setRetryAfter(retryTime.getTime());
+            
+            return new NodeErrorRepresentation(NodeFault.ServiceBusy);
         }
         catch (Throwable t)
         {

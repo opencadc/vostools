@@ -83,6 +83,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -165,13 +166,13 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
     @Override
     public Node get(VOSURI vos)
-        throws NodeNotFoundException
+        throws NodeNotFoundException, TransientException
     {
         return this.get(vos, false);
     }
 
     @Override
-    public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException
+    public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException, TransientException
     {
         log.debug("get: " + vos + " -- " + vos.getName());
         if ( vos.isRoot() )
@@ -201,19 +202,20 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public void getProperties(Node node)
+    public void getProperties(Node node) throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getProperties(node);
     }
 
     @Override
-    public void getChildren(ContainerNode node)
+    public void getChildren(ContainerNode node) throws TransientException
     {
         getChildren(node, null, null);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
+        throws TransientException
     {
         NodeDAO dao = getDAO( parent.getUri().getAuthority() );
 
@@ -226,14 +228,14 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
     
     @Override
-    public void getChild(ContainerNode node, String name)
+    public void getChild(ContainerNode node, String name) throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getChild(node, name);
     }
 
     @Override
-    public Node put(Node node) throws NodeNotSupportedException
+    public Node put(Node node) throws NodeNotSupportedException, TransientException
     {
     	if (node.isStructured())
     		throw new NodeNotSupportedException("StructuredDataNode is not supported.");
@@ -251,7 +253,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public Node updateProperties(Node node, List<NodeProperty> properties)
+    public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         return dao.updateProperties(node, properties);
@@ -268,14 +270,14 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @param node the node to delete
      */
     @Override
-    public void delete(Node node)
+    public void delete(Node node) throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.delete(node);
     }
 
     @Override
-    public void move(Node src, ContainerNode dest)
+    public void move(Node src, ContainerNode dest) throws TransientException
     {
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         URI srcAuthority = src.getUri().getServiceURI(); // this removes the ! vs ~ issue
@@ -289,18 +291,20 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public void copy(Node src, ContainerNode destination)
+    public void copy(Node src, ContainerNode destination) throws TransientException
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
+        throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.setBusyState(node, curState, newState);
     }
 
     public void setFileMetadata(DataNode node, FileMetadata meta)
+        throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.updateNodeMetadata(node, meta);
@@ -388,6 +392,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @param batchSize number of updates per transaction
      */
     public void chown(Node node, boolean recursive, int batchSize, boolean dryrun)
+        throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         AccessControlContext acContext = AccessController.getContext();
@@ -404,6 +409,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @param batchSize number of updates per transaction
      */
     public void delete(Node node, int batchSize, boolean dryrun)
+        throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.delete(node, batchSize, dryrun);
@@ -417,6 +423,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * then last to most recently modified.
      */
     public List<NodeSizePropagation> getOutstandingPropagations(int limit)
+        throws TransientException
     {
     	NodeDAO dao = getDAO(null);
         return dao.getOutstandingPropagations(limit);
@@ -428,6 +435,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @param propagation
      */
     public void applyPropagation(final NodeSizePropagation propagation)
+        throws TransientException
     {
         NodeDAO dao = getDAO(null);
         dao.applyPropagation(propagation);

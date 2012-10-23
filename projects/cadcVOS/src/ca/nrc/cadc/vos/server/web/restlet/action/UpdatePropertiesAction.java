@@ -74,6 +74,7 @@ import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
@@ -105,7 +106,7 @@ public class UpdatePropertiesAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-            throws AccessControlException, FileNotFoundException
+        throws AccessControlException, FileNotFoundException, TransientException
     {
         Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURIObject());
         return node;
@@ -113,36 +114,30 @@ public class UpdatePropertiesAction extends NodeAction
 
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
     {
-        try
-        {
-            // TODO: check if client and server node types match?
+        // TODO: check if client and server node types match?
 
-            // check for a busy node
-            if (serverNode instanceof DataNode)
+        // check for a busy node
+        if (serverNode instanceof DataNode)
+        {
+            if (((DataNode) serverNode).isBusy())
             {
-                if (((DataNode) serverNode).isBusy())
-                {
-                    log.debug("Node is busy: " + serverNode.getUri().getPath());
-                    NodeFault nodeFault = NodeFault.InternalFault;
-                    nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
-                    return new NodeActionResult(nodeFault);
-                }
+                log.debug("Node is busy: " + serverNode.getUri().getPath());
+                NodeFault nodeFault = NodeFault.InternalFault;
+                nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
+                return new NodeActionResult(nodeFault);
             }
-
-            // filter out any non-modifiable properties
-            filterPropertiesForUpdate(clientNode);
-
-            Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
-            
-            // return the node in xml format
-            NodeWriter nodeWriter = new NodeWriter();
-            return new NodeActionResult(new NodeOutputRepresentation(out, nodeWriter));
         }
-        finally
-        {
-            
-        }
+
+        // filter out any non-modifiable properties
+        filterPropertiesForUpdate(clientNode);
+
+        Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
+        
+        // return the node in xml format
+        NodeWriter nodeWriter = new NodeWriter();
+        return new NodeActionResult(new NodeOutputRepresentation(out, nodeWriter));
     }
     
     /**

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -76,13 +77,13 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import java.io.FileNotFoundException;
 
 /**
  * Utility class to follow and resolve the target of link nodes in a local vospace.
@@ -128,8 +129,9 @@ public class PathResolver
      * @return
      * @throws NodeNotFoundException
      * @throws LinkingException
+     * @throws TransientException
      */
-    public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException
+    public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException, TransientException
     {
         return resolveWithReadPermissionCheck(uri, null, false);
     }
@@ -145,11 +147,12 @@ public class PathResolver
      * @return
      * @throws NodeNotFoundException
      * @throws LinkingException
+     * @throws TransientException
      */
     public Node resolveWithReadPermissionCheck(VOSURI uri, 
             VOSpaceAuthorizer readAuthorizer,
             boolean resolveLeafNodes)
-            throws NodeNotFoundException, LinkingException
+            throws NodeNotFoundException, LinkingException, TransientException
     {
         visitCount = 0;
         visitedPaths = new ArrayList<String>();
@@ -204,7 +207,7 @@ public class PathResolver
      * @throws LinkingException
      */
     private Node doResolve(VOSURI vosuri,  VOSpaceAuthorizer readAuthorizer)
-            throws NodeNotFoundException, LinkingException
+            throws NodeNotFoundException, LinkingException, TransientException
     {
         if (visitCount > visitLimit)
         {
@@ -226,7 +229,9 @@ public class PathResolver
             }
         }
         else
+        {
              node = nodePersistence.get(vosuri, true);
+        }
         
         // extract the paths
         String requestedPath = vosuri.getPath();

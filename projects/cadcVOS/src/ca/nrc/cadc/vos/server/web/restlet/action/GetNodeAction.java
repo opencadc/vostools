@@ -77,6 +77,7 @@ import java.util.ListIterator;
 import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.LinkingException;
@@ -118,7 +119,7 @@ public class GetNodeAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, LinkingException
+        throws AccessControlException, FileNotFoundException, LinkingException, TransientException
     {
         // resolve any container links
         PathResolver pathResolver = new PathResolver(nodePersistence);
@@ -135,7 +136,7 @@ public class GetNodeAction extends NodeAction
     
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
-        throws URISyntaxException, FileNotFoundException
+        throws URISyntaxException, FileNotFoundException, TransientException
     {        
         long start;
         long end;

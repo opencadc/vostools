@@ -77,6 +77,7 @@ import java.text.ParseException;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
 import ca.nrc.cadc.vos.DataNode;
@@ -107,9 +108,10 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @return a FileMetadata object, populated with available metadata
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
+     * @throws TransientException If a transient error happens.
      */
     public FileMetadata get(URI resource) 
-        throws FileNotFoundException, IllegalArgumentException
+        throws FileNotFoundException, IllegalArgumentException, TransientException
     {
         VOSURI vos = new VOSURI(resource);
         Node persistentNode = getPersistentNode(vos);
@@ -190,8 +192,9 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         return fileMetadata;
     }
     
+    @Override
     public void set(final URI resource, final FileMetadata meta)
-            throws FileNotFoundException, IllegalArgumentException
+            throws FileNotFoundException, IllegalArgumentException, TransientException
     {
         VOSURI vos = new VOSURI(resource);
         Node persistentNode = getPersistentNode(vos);
@@ -207,7 +210,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws IllegalArgumentException if the specified resource is not a file
      */
     public void set(final Node persistentNode, final FileMetadata meta)
-            throws FileNotFoundException, IllegalArgumentException
+            throws FileNotFoundException, IllegalArgumentException, TransientException
     {
         if (meta == null)
             throw new IllegalArgumentException("FileMetadata is null.");
@@ -227,7 +230,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      *                                      not exist.
      */
     protected Node getPersistentNode(VOSURI resource)
-            throws FileNotFoundException
+            throws FileNotFoundException, TransientException
     {
         if (nodePersistence == null)
         {

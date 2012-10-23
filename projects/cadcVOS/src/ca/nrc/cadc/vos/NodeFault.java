@@ -157,6 +157,13 @@ public enum NodeFault
                    "NodeNotFound",
                    "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    ServiceBusy
+    (
+        new Status(503,
+                   "ServiceBusy",
+                   "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
     );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),

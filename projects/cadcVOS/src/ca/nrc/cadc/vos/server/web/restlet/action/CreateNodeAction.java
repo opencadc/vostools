@@ -75,6 +75,7 @@ import java.security.AccessControlException;
 import org.apache.log4j.Logger;
 import org.restlet.data.Status;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
@@ -108,7 +109,7 @@ public class CreateNodeAction extends NodeAction
     
     @Override
     public Node doAuthorizationCheck()
-            throws AccessControlException, FileNotFoundException
+        throws AccessControlException, FileNotFoundException, TransientException
     {
         try
         {
@@ -126,6 +127,7 @@ public class CreateNodeAction extends NodeAction
 
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
     {
         try
         {

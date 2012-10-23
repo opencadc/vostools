@@ -68,7 +68,6 @@
 */
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.date.DateUtil;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -76,9 +75,14 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.net.URL;
+import java.security.AccessControlException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -89,6 +93,8 @@ import org.jdom.output.XMLOutputter;
 import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
 
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -96,11 +102,6 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
-import java.net.URL;
-import java.security.AccessControlException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.util.Date;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -151,7 +152,7 @@ public class RssView extends AbstractView
     
     @Override
     public void setNode(Node node, String viewReference, URL requestURL)
-        throws UnsupportedOperationException
+        throws UnsupportedOperationException, TransientException
     {
         super.setNode(node, viewReference, requestURL);
         if (!(node instanceof ContainerNode))
@@ -217,6 +218,7 @@ public class RssView extends AbstractView
     }
 
     protected void addNodeToFeed(ContainerNode node, FixedSizeTreeSet set)
+        throws TransientException
     {
         // Add Node to set if it has a valid last modified date.
         try

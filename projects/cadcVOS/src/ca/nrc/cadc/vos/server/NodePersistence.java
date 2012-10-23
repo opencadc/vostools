@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server;
 
 import java.util.List;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -101,9 +102,10 @@ public interface NodePersistence
      * @param vos a node identifier
      * @return the specified node
      * @throws NodeNotFoundException
+     * @throws TransientException
      */
     Node get(VOSURI vos)
-        throws NodeNotFoundException;
+        throws NodeNotFoundException, TransientException;
 
     /**
      * Find the node with the specified path. The returned node(s) will include
@@ -120,16 +122,19 @@ public interface NodePersistence
      * @param allowPartialPaths true if partial path is allowed, false otherwise
      * @return the specified node
      * @throws NodeNotFoundException
+     * @throws TransientException
      */
     Node get(VOSURI vos, boolean allowPartialPaths)
-        throws NodeNotFoundException;
+        throws NodeNotFoundException, TransientException;
 
     /**
      * Load all the children of a container.
      *
      * @param node
+     * @throws TransientException
      */
-    void getChildren(ContainerNode node);
+    void getChildren(ContainerNode node)
+        throws TransientException;
 
     /**
      * Load some of the children of a container. If <code>uri</code> is null, a
@@ -139,23 +144,29 @@ public interface NodePersistence
      * @param parent
      * @param start
      * @param limit
+     * @throws TransientException
      */
-    void getChildren(ContainerNode parent, VOSURI start, Integer limit);
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit)
+        throws TransientException;
 
     /**
      * Load a single child of a container.
      * 
      * @param parent
      * @param name
+     * @throws TransientException
      */
-    void getChild(ContainerNode parent, String name);
+    void getChild(ContainerNode parent, String name)
+        throws TransientException;
 
     /**
      * Load all the properties of a node.
      * 
      * @param node
+     * @throws TransientException
      */
-    void getProperties(Node node);
+    void getProperties(Node node)
+        throws TransientException;
 
     /**
      * Store the specified node.
@@ -163,8 +174,10 @@ public interface NodePersistence
      * @param node
      * @return the persisted node
      * @throws NodeNotSupportedException
+     * @throws TransientException
      */
-    public Node put(Node node) throws NodeNotSupportedException;
+    public Node put(Node node)
+        throws NodeNotSupportedException, TransientException;
 
     /**
      * Update the properties of the specified node.  The node must have
@@ -175,23 +188,29 @@ public interface NodePersistence
      * @param node
      * @param properties
      * @return the modified node
+     * @throws TransientException
      */
-    Node updateProperties(Node node, List<NodeProperty> properties);
+    Node updateProperties(Node node, List<NodeProperty> properties)
+        throws TransientException;
 
     /**
      * Delete the specified node.
      * 
      * @param node
+     * @throws TransientException
      */
-    void delete(Node node);
+    void delete(Node node)
+        throws TransientException;
    
     /**
      * Update the node metadata after a transfer (put) is complete.
      *
      * @param node
      * @param meta metadata from the successful put
+     * @throws TransientException
      */
-    void setFileMetadata(DataNode node, FileMetadata meta);
+    void setFileMetadata(DataNode node, FileMetadata meta)
+        throws TransientException;
 
     /**
      * Set the busy state of the node from curState to newState.
@@ -199,9 +218,10 @@ public interface NodePersistence
      * @param node The node on which to alter the busy state.
      * @param state The new state for the node.
      * @return the new state or null if the transition failed
-     * @throws NodeNotFoundException If the node could not be found.
+     * @throws TransientException
      */
-    void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState);
+    void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
+        throws TransientException;
     
     /**
      * Move the specified node to the new path.  The node must have been retrieved
@@ -210,8 +230,10 @@ public interface NodePersistence
      * @param src The node to move.
      * @param destination The destination container.
      * @param name The name of the destination node.
+     * @throws TransientException
      */
-    void move(Node src, ContainerNode destination);
+    void move(Node src, ContainerNode destination)
+        throws TransientException;
     
     /**
      * Copy the specified node to the specified path.  The node must been retrieved
@@ -220,7 +242,9 @@ public interface NodePersistence
      * @param src The node to move.
      * @param destination The destination container.
      * @param name The name of the destination node.
+     * @throws TransientException
      */
-    void copy(Node src, ContainerNode destination);
+    void copy(Node src, ContainerNode destination)
+        throws TransientException;
     
 }

@@ -96,6 +96,7 @@ import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.cred.AuthorizationException;
 import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
 import ca.nrc.cadc.gms.client.GmsClient;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -185,7 +186,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws FileNotFoundException If the node could not be found
      */
     public Object getReadPermission(URI uri)
-        throws AccessControlException, FileNotFoundException
+        throws AccessControlException, FileNotFoundException, TransientException
     {
         initState();
         if (!readable)
@@ -258,7 +259,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws FileNotFoundException If the node could not be found
      */
     public Object getWritePermission(URI uri)
-            throws AccessControlException, FileNotFoundException
+            throws AccessControlException, FileNotFoundException, TransientException
     {
         initState();
         if (!writable)

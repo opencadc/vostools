@@ -88,6 +88,7 @@ import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -208,7 +209,7 @@ public abstract class AbstractView extends View
      * @throws UnsupportedOperationException If this view cannot be created for the given node.
      */
     public void setNode(Node node, String viewReference, URL requestURL)
-        throws UnsupportedOperationException
+        throws UnsupportedOperationException, TransientException
     {
         if (node == null)
             throw new UnsupportedOperationException("BUG: node for view is null.");

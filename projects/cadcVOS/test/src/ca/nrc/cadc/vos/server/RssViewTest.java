@@ -69,10 +69,32 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+import java.net.URL;
+import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -86,24 +108,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.net.URI;
-import java.net.URL;
-import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
-import javax.sql.DataSource;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  *
@@ -517,7 +521,7 @@ public class RssViewTest
             return root;
         }
 
-        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException, TransientException
         {
             try
             {
@@ -571,7 +575,7 @@ public class RssViewTest
             return root;
         }
 
-        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException, TransientException
         {
             try
             {
@@ -626,7 +630,7 @@ public class RssViewTest
             return root;
         }
 
-        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException, TransientException
         {
             try
             {
@@ -665,7 +669,7 @@ public class RssViewTest
             return "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER + "/child5/child9";
         }
 
-        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException, TransientException
         {
             try
             {

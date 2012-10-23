@@ -75,6 +75,7 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
@@ -101,7 +102,7 @@ public class DeleteNodeAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-            throws AccessControlException, FileNotFoundException
+        throws AccessControlException, FileNotFoundException, TransientException
     {
         try
         {
@@ -140,6 +141,7 @@ public class DeleteNodeAction extends NodeAction
 
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws TransientException
     {
         nodePersistence.delete(serverNode); // as per doAuthorizationCheck
         return null;
@@ -147,6 +149,7 @@ public class DeleteNodeAction extends NodeAction
 
     @Override
     protected NodeFault handleException(FileNotFoundException fnf)
+        throws TransientException
     {
         // need to determine if the parent container exists
         if (vosURI.isRoot())
@@ -186,7 +189,7 @@ public class DeleteNodeAction extends NodeAction
      * @throws FileNotFoundException
      */
     private void checkDeletePermission(ContainerNode container)
-            throws AccessControlException, NodeNotFoundException
+        throws AccessControlException, NodeNotFoundException, TransientException
     {
         
         nodePersistence.getChildren(container);

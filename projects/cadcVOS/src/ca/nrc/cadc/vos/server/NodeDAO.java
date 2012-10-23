@@ -105,6 +105,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.HexUtil;
@@ -322,7 +323,7 @@ public class NodeDAO
      * @param path
      * @return the last node in the path, with all parents or null if not found
      */
-    public Node getPath(String path)
+    public Node getPath(String path) throws TransientException
     {
     	return this.getPath(path, false);
     }
@@ -342,7 +343,7 @@ public class NodeDAO
      * @param allowPartialPath
      * @return the last node in the path, with all parents or null if not found
      */
-    public Node getPath(String path, boolean allowPartialPath)
+    public Node getPath(String path, boolean allowPartialPath) throws TransientException
     {
         log.debug("getPath: " + path);
         if (path.length() > 0 && path.charAt(0) == '/')
@@ -398,7 +399,7 @@ public class NodeDAO
      * 
      * @param node
      */
-    public void getProperties(Node node)
+    public void getProperties(Node node) throws TransientException
     {
         log.debug("getProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
         expectPersistentNode(node);
@@ -445,7 +446,7 @@ public class NodeDAO
      * @param parent
      * @param name
      */
-    public void getChild(ContainerNode parent, String name)
+    public void getChild(ContainerNode parent, String name) throws TransientException
     {
         log.debug("getChild: " + parent.getUri().getPath() + ", " + name);
         expectPersistentNode(parent);
@@ -498,7 +499,7 @@ public class NodeDAO
      *
      * @param parent
      */
-    public void getChildren(ContainerNode parent)
+    public void getChildren(ContainerNode parent) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         getChildren(parent, null, null);
@@ -510,7 +511,7 @@ public class NodeDAO
      * @param start
      * @param limit
      */
-    public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit) throws TransientException
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
@@ -639,7 +640,7 @@ public class NodeDAO
      * @param creator
      * @return the same node but with generated internal ID set in the appData field
      */
-    public Node put(Node node, Subject creator)
+    public Node put(Node node, Subject creator) throws TransientException
     {
         log.debug("put: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
 
@@ -714,7 +715,7 @@ public class NodeDAO
      * 
      * @param node
      */
-    public void delete(Node node)
+    public void delete(Node node) throws TransientException
     {
         log.debug("delete: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
         expectPersistentNode(node);
@@ -816,7 +817,7 @@ public class NodeDAO
      * @param node
      * @param state
      */
-    public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
+    public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState) throws TransientException
     {
         log.debug("setBusyState: " + node.getUri().getPath() + ", " + curState + " -> " + newState);
         expectPersistentNode(node);
@@ -866,7 +867,7 @@ public class NodeDAO
      * @param node
      * @param delta amount to increment (+) or decrement (-)
      */
-    public void updateNodeMetadata(DataNode node, FileMetadata meta)
+    public void updateNodeMetadata(DataNode node, FileMetadata meta) throws TransientException
     {
         log.debug("updateNodeMetadata: " + node.getUri().getPath());
 
@@ -962,7 +963,7 @@ public class NodeDAO
      * @param properties the new properties
      * @return the modified node
      */
-    public Node updateProperties(Node node, List<NodeProperty> properties)
+    public Node updateProperties(Node node, List<NodeProperty> properties) throws TransientException
     {
         log.debug("updateProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
         expectPersistentNode(node);
@@ -1086,7 +1087,7 @@ public class NodeDAO
      * @param dest The container in which to move the node.
      * @param subject The new owner for the moved node.
      */
-    public void move(Node src, ContainerNode dest)
+    public void move(Node src, ContainerNode dest) throws TransientException
     {
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         expectPersistentNode(src);
@@ -1208,7 +1209,7 @@ public class NodeDAO
      * @param destPath
      * @throws UnsupportedOperationException Until implementation is complete.
      */
-    public void copy(Node src, ContainerNode dest)
+    public void copy(Node src, ContainerNode dest) throws TransientException
     {
         log.debug("copy: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         throw new UnsupportedOperationException("Copy not implemented.");

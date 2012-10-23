@@ -78,6 +78,7 @@ import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
@@ -239,7 +240,7 @@ public abstract class NodeAction
      * @return the appropriate NodeActionResult from which the response is constructed
      */
     protected abstract NodeActionResult performNodeAction(Node clientNode, Node serverNode)
-        throws URISyntaxException, NodeParsingException, FileNotFoundException;
+        throws URISyntaxException, NodeParsingException, FileNotFoundException, TransientException;
     
     /**
      * Given the node URI and XML, return the Node object specified
@@ -263,7 +264,7 @@ public abstract class NodeAction
      * @throws LinkingException if a container link in the path could not be resolved
      */
     protected abstract Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException, LinkingException;
+        throws AccessControlException, FileNotFoundException, LinkingException, TransientException;
     
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
@@ -275,7 +276,7 @@ public abstract class NodeAction
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
      */
-    public NodeActionResult run()
+    public NodeActionResult run() throws TransientException
     {
         
         try
@@ -360,6 +361,11 @@ public abstract class NodeAction
             log.debug(faultMessage);
             return handleException(NodeFault.InternalFault, faultMessage);
         }
+        catch (TransientException e)
+        {
+            // pass transient exceptions up to the resource layer
+            throw e;
+        }
         catch (Throwable t)
         {
             String faultMessage = "Internal Error:" + t.getMessage();
@@ -369,6 +375,7 @@ public abstract class NodeAction
     }
 
     protected NodeFault handleException(FileNotFoundException ex)
+        throws TransientException
     {
         if (this instanceof CreateNodeAction)
             return NodeFault.ContainerNotFound;
