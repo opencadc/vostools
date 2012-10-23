@@ -89,7 +89,7 @@
 
     <property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar:${ext.lib}/spring.jar" />
     <property name="resources.dir" value="test/resources/" />
-
+  
     <target name="build" depends="compile">
         <jar jarfile="${build}/lib/${project}.jar"
                     basedir="${build}/class"
@@ -122,28 +122,31 @@
     
     <target name="net-test" depends="compile-test">
         <copy file="test/src/resources/MultiSchemeHandler.properties" todir="${build}/test/class"/>
+        <copy overwrite="true" file="${env.A}/test-certificates/x509_CADCAuthtest1.crt" tofile="${build}/test/class/proxy.crt" />
+        <copy overwrite="true" file="${env.A}/test-certificates/x509_CADCAuthtest1.key" tofile="${build}/test/class/proxy.key" />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
                 <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
+            <sysproperty key="ca.nrc.cadc.auth.BasicX509TrustManager.trust" value="true"/>
 
             <test name="ca.nrc.cadc.net.HttpTransferTest"/>
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
             <test name="ca.nrc.cadc.net.NetrcAuthenticatorTest" />
-            <!-- TODO: Upload test has a lot of preconditions
-            <test name="ca.nrc.cadc.net.HttpUploadTest"/>
-            -->
+            <!-- TODO: Upload test has a lot of preconditions-->
+            <!--<test name="ca.nrc.cadc.net.HttpUploadTest"/>-->
             <test name="ca.nrc.cadc.net.HttpPostTest"/>
             <test name="ca.nrc.cadc.net.MultiSchemeHandlerTest"/>
-            
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
 
     <target name="auth-test" depends="compile-test">
-        
+        <copy overwrite="true" file="${env.A}/test-certificates/x509_CADCAuthtest1.crt" tofile="${build}/test/class/proxy.crt" />
+        <copy overwrite="true" file="${env.A}/test-certificates/x509_CADCAuthtest1.key" tofile="${build}/test/class/proxy.key" />
+        <copy overwrite="true" file="${env.A}/test-certificates/x509_CADCAuthtest1.pem" tofile="${build}/test/class/proxy.pem" />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
@@ -177,7 +180,6 @@
     </target>
     
     <target name="io-test" depends="compile-test">
-    
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>

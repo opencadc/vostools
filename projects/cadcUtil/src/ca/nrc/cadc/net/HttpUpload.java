@@ -85,7 +85,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
-import ca.nrc.cadc.util.StringUtil;
+import java.io.ByteArrayOutputStream;
 
 /**
  * Perform an upload (PUT).
@@ -104,6 +104,7 @@ public class HttpUpload extends HttpTransfer
     private String contentType;
     private String contentEncoding;
     private String contentMD5;
+    private String responseBody;
 
     private InputStream istream;
     private OutputStreamWrapper wrapper;
@@ -159,6 +160,10 @@ public class HttpUpload extends HttpTransfer
         this.contentType = contentType;
     }
 
+    public String getResponseBody()
+    {
+        return responseBody;
+    }
 
     @Override
     public String toString() { return "HttpUpload[" + remoteURL + "," + localFile + "]"; }
@@ -433,10 +438,8 @@ public class HttpUpload extends HttpTransfer
             catch(IOException ignore) { }
         }
 
-        String responseMessage = conn.getResponseMessage();
         int code = conn.getResponseCode();
         log.debug("code: " + code);
-        log.debug("responseMessage: " + responseMessage);
         if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
@@ -457,5 +460,31 @@ public class HttpUpload extends HttpTransfer
         }
         if (ioex != null) // an error writing that was not detected via response code
             throw ioex;
+
+        // Write reponse body for retrieval.
+        InputStream inputStream = conn.getInputStream();
+        if (inputStream != null)
+        {
+            int smallBufferSize = 512;
+            ByteArrayOutputStream byteArrayOstream = new ByteArrayOutputStream();
+            try
+            {
+                if (use_nio)
+                    nioLoop(inputStream, byteArrayOstream, smallBufferSize, 0);
+                else
+                    ioLoop(inputStream, byteArrayOstream, smallBufferSize, 0);
+                byteArrayOstream.flush();
+                responseBody = new String(byteArrayOstream.toByteArray(), "UTF-8");
+            }
+            finally
+            {
+                if (byteArrayOstream != null)
+                {
+                    try { byteArrayOstream.close(); }
+                    catch(Exception ignore) { }
+                }
+            }
+        }
     }
+
 }
