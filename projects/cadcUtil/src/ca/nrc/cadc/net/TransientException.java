@@ -118,7 +118,7 @@ public class TransientException extends Exception
      * Get the retry delay (in seconds)
      * @return
      */
-    public long getRetryDelay()
+    public int getRetryDelay()
     {
         return retryDelay;
     }

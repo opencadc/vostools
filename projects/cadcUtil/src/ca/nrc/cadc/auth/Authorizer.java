@@ -73,6 +73,8 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.security.AccessControlException;
 
+import ca.nrc.cadc.net.TransientException;
+
 /**
  * Interface for classes that check if a user is authorized to perform
  * specific actions on a resource. The methods of implementing classes
@@ -93,9 +95,10 @@ public interface Authorizer
      * @throws AccessControlException if the permission is denied
      * @throws FileNotFoundException if the resource identified by
      * the URI could not be found.
+     * @throws TransientException If a transient error happens.
      */
     public Object getReadPermission(URI resource)
-        throws AccessControlException, FileNotFoundException;
+        throws AccessControlException, FileNotFoundException, TransientException;
 
     /**
      * Check if the current Subject is allowed to write (modify) the specified resource.
@@ -105,7 +108,8 @@ public interface Authorizer
      * @throws AccessControlException if the permission is denied
      * @throws FileNotFoundException if the resource identified by
      * the URI could not be found.
+     * @throws TransientException If a transient error happens.
      */
     public Object getWritePermission(URI resource)
-        throws AccessControlException, FileNotFoundException;
+        throws AccessControlException, FileNotFoundException, TransientException;
 }

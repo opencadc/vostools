@@ -72,6 +72,8 @@ package ca.nrc.cadc.util;
 import java.io.FileNotFoundException;
 import java.net.URI;
 
+import ca.nrc.cadc.net.TransientException;
+
 /**
  * Interface for classes that provide access to file metadata persistence.
  * 
@@ -86,9 +88,10 @@ public interface FileMetadataSource
      * @return a FileMetadata object, populated with available metadata
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
+     * @throws TransientException If a transient error happens.
      */
     public FileMetadata get(URI resource)
-        throws FileNotFoundException, IllegalArgumentException;
+        throws FileNotFoundException, IllegalArgumentException, TransientException;
 
     /**
      * Set the current file metadata for the specified resource.
@@ -97,7 +100,8 @@ public interface FileMetadataSource
      * @param meta new metadata values to persist
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
+     * @throws TransientException If a transient error happens.
      */
     public void set(URI resource, FileMetadata meta)
-        throws FileNotFoundException, IllegalArgumentException;
+        throws FileNotFoundException, IllegalArgumentException, TransientException;
 }
