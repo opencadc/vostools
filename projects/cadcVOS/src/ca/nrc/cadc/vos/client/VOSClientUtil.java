@@ -79,7 +79,9 @@ import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeWriter;
+import java.io.FileNotFoundException;
 
 /**
  * @author zhangsa
@@ -146,4 +148,39 @@ public class VOSClientUtil
         outputter.setFormat(Format.getPrettyFormat());
         return outputter.outputString(doc);
     }
+
+    public static void checkFailureClean(Throwable failure)
+    {
+        try
+        {
+            checkFailure(failure);
+        }
+        catch (IOException ioe)
+        {
+            throw new IllegalArgumentException(ioe);
+        }
+        catch (NodeNotFoundException nf)
+        {
+            throw new IllegalArgumentException(nf);
+        }
+    }
+
+    public static void checkFailure(Throwable failure)
+        throws NodeNotFoundException, IOException, RuntimeException
+    {
+        if (failure != null)
+        {
+            failure.printStackTrace();
+            if (failure instanceof RuntimeException)
+            {
+                throw (RuntimeException) failure;
+            }
+            if (failure instanceof FileNotFoundException)
+            {
+                throw new NodeNotFoundException("not found.", failure);
+            }
+            throw new IllegalStateException(failure);
+        }
+    }
+
 }

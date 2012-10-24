@@ -107,6 +107,8 @@ import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.
@@ -216,16 +218,11 @@ public class ClientTransfer implements Runnable
     {
         try
         {
-            HttpURLConnection conn = (HttpURLConnection) jobURL.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            conn.setRequestMethod("GET");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(false);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(jobURL, out);
+            get.run();
+
+            VOSClientUtil.checkFailureClean(get.getThrowable());
             
             // add the extra xsd information for vospace if we
             // are using schema validation
@@ -243,7 +240,7 @@ public class ClientTransfer implements Runnable
                 jobReader = new JobReader(false);
             }
             
-            return jobReader.read(conn.getInputStream());
+            return jobReader.read(new StringReader(new String(out.toByteArray(), "UTF-8")));
         }
         catch(ParseException ex)
         {

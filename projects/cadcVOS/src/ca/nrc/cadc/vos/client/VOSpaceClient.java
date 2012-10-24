@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -90,8 +89,11 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
@@ -108,6 +110,8 @@ import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 
 /**
  * VOSpace client library. This implementation 
@@ -191,9 +195,7 @@ public class VOSpaceClient
      */
     private Node createNode(Node node, boolean checkForDuplicate)
     {
-        int responseCode;
         Node rtnNode = null;
-
         try
         {
             VOSURI parentURI = node.getUri().getParentURI();
@@ -232,79 +234,16 @@ public class VOSpaceClient
 
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            if (connection instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                initHTTPS(sslConn);
-            }
-            connection.setDoOutput(true);
-            connection.setRequestMethod("PUT");
-            connection.setRequestProperty("Content-Type", "text/xml");
-            connection.setUseCaches(false);
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
 
-            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-            NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.write(node, out);
-            out.close();
+            NodeOutputStream out = new NodeOutputStream(node);
+            HttpUpload put = new HttpUpload(out, url);
+            put.setContentType("text/xml");
 
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-            {
-                responseMessage += ": " + errorBody;
-            }
-            responseCode = connection.getResponseCode();
-            log.debug("createNode(), response code: " + responseCode);
-            log.debug("createNode(), response message: " + responseMessage);
-            
-            switch (responseCode)
-            {
-                case 200: // valid re spec
-                case 201: // valid re previous spec
-                    InputStream in = connection.getInputStream();
-                    NodeReader nodeReader = new NodeReader(schemaValidation);
-                    rtnNode = nodeReader.read(in);
-                    in.close();
-                    log.debug("createNode, created node: " + rtnNode);
-                    break;
+            VOSClientUtil.checkFailureClean(put.getThrowable());
 
-                case 500:
-                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body
-                    // if the operation fails
-
-                    // If a parent node in the URI path does not exist
-                    // then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-
-                    // If a parent node in the URI path is a LinkNode,
-                    // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
-                    throw new RuntimeException(responseMessage);
-                case 409:
-                    // The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body
-                    // if a Node already exists with the same URI
-                    throw new IllegalArgumentException(responseMessage);
-                case 400:
-                    // The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body
-                    // if the requested URI is invalid
-                    // The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body
-                    // if the type specified in xsi:type is not supported
-                    throw new IllegalArgumentException(responseMessage);
-                case 401:
-                    // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
-                    // if the user does not have permissions to perform the operation
-                    String msg = responseMessage;
-                    if (msg == null)
-                        msg = "permission denied";
-                    throw new AccessControlException(msg);
-
-                case 404:
-                    // handle server response when parent (container) does not exist
-                    throw new IllegalArgumentException(responseMessage);
-                default:
-                    throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
-            }
+            NodeReader nodeReader = new NodeReader(schemaValidation);
+            rtnNode = nodeReader.read(put.getResponseBody());
+            log.debug("createNode, created node: " + rtnNode);
         }
         catch (IOException e)
         {
@@ -347,60 +286,21 @@ public class VOSpaceClient
         if (query != null)
             path += "?" + query;
 
-		int responseCode;
-        final Node rtnNode;
-
+        Node rtnNode = null;
         try
         {
-        
             URL url = new URL(this.baseUrl + "/nodes" + path);
             log.debug("getNode(), URL=" + url);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            if (connection instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                initHTTPS(sslConn);
-            }
-            connection.setDoOutput(true);
-            connection.setRequestMethod("GET");
-            connection.setUseCaches(false);
-            connection.setDoInput(true);
-            connection.setDoOutput(false);
 
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-            {
-                responseMessage += ": " + errorBody;
-            }
-            responseCode = connection.getResponseCode();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(url, out);
+            get.run();
+            
+            VOSClientUtil.checkFailureClean(get.getThrowable());
 
-            switch (responseCode)
-            {
-                case 200: // TODO: check content-type for XML
-                    // grab service response body
-                    InputStream in = connection.getInputStream();
-                    NodeReader nodeReader = new NodeReader(schemaValidation);
-                    rtnNode = nodeReader.read(in);
-                    in.close();
-                    log.debug("getNode, returned node: " + rtnNode);
-                    break;
-                case 500:
-                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-                    throw new RuntimeException("service failed: " + responseMessage);
-                case 401:
-                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
-                    String msg = responseMessage;
-                    if (msg == null)
-                        msg = "permission denied";
-                    throw new AccessControlException(msg);
-                case 404:
-                    // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
-                    throw new NodeNotFoundException("not found: " + path);
-                default:
-                    log.error(responseMessage + ". HTTP Code: " + responseCode);
-                    throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
-            }
+            NodeReader nodeReader = new NodeReader(schemaValidation);
+            rtnNode = nodeReader.read(new String(out.toByteArray(), "UTF-8"));
+            log.debug("getNode, returned node: " + rtnNode);
         }
         catch (IOException ex)
         {
@@ -436,7 +336,7 @@ public class VOSpaceClient
             HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
             httpPost.run();
   
-            checkFailureClean(httpPost.getThrowable());
+            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
             
             String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
@@ -467,7 +367,8 @@ public class VOSpaceClient
             
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
             httpPost.run();
-            checkFailureClean(httpPost.getThrowable());
+            
+            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
             
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
@@ -599,11 +500,6 @@ public class VOSpaceClient
         return baseUrl;
     }
 
-    //public void setBaseUrl(String baseUrl)
-    //{
-    //    this.baseUrl = baseUrl;
-    //}
-
     // create an async transfer job
     private ClientTransfer createTransferASync(Transfer transfer)
     {
@@ -617,7 +513,8 @@ public class VOSpaceClient
             
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
             httpPost.run();
-            checkFailureClean(httpPost.getThrowable());
+
+            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
             
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
@@ -650,7 +547,8 @@ public class VOSpaceClient
             URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
             httpPost.run();
-            checkFailureClean(httpPost.getThrowable());
+
+            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
             
             URL redirectURL = httpPost.getRedirectURL();
             log.debug("POST: transfer jobURL: " + redirectURL);
@@ -659,33 +557,17 @@ public class VOSpaceClient
                 throw new RuntimeException("Redirect not received from UWS.");
             }
 
-            log.debug("GET - opening connection: " + redirectURL.toString());
             // follow the redirect to run the job
-            HttpURLConnection conn = (HttpURLConnection) redirectURL.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            conn.setRequestMethod("GET");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(false);
-            int code = conn.getResponseCode();
-            String responseMessage = conn.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(conn);
-            if (StringUtil.hasText(errorBody))
-            {
-                responseMessage += ": " + errorBody;
-            }
-            if (code != 200)
-            {
-                throw new RuntimeException("failed to read transfer description (" + code + "): " + responseMessage);
-            }
+            log.debug("GET - opening connection: " + redirectURL.toString());
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(redirectURL, out);
+            get.run();
+
+            VOSClientUtil.checkFailureClean(get.getThrowable());
             
             TransferReader txfReader = new TransferReader(schemaValidation);
             log.debug("GET - reading content: " + redirectURL);
-            Transfer trans = txfReader.read(conn.getInputStream());
+            Transfer trans = txfReader.read(new String(out.toByteArray(), "UTF-8"));
             log.debug("GET - done: " + redirectURL);
             log.debug("negotiated transfer: " + trans);
 
@@ -718,40 +600,6 @@ public class VOSpaceClient
         {
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
-        }
-    }
-    
-    private void checkFailureClean(Throwable failure)
-    {
-        try
-        {
-            checkFailure(failure);
-        }
-        catch (IOException ioe)
-        {
-            throw new IllegalArgumentException(ioe);
-        }
-        catch (NodeNotFoundException nf)
-        {
-            throw new IllegalArgumentException(nf);
-        }
-    }
-    
-    private void checkFailure(Throwable failure)
-            throws NodeNotFoundException, IOException, RuntimeException
-    {
-        if (failure != null)
-        {
-            failure.printStackTrace();
-            if (failure instanceof RuntimeException)
-            {
-                throw (RuntimeException) failure;
-            }
-            if (failure instanceof FileNotFoundException)
-            {
-                throw new NodeNotFoundException("not found.", failure);
-            }
-            throw new IllegalStateException(failure);
         }
     }
 
@@ -796,4 +644,22 @@ public class VOSpaceClient
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
     }
+
+    private class NodeOutputStream implements OutputStreamWrapper
+    {
+        private Node node;
+
+        public NodeOutputStream(Node node)
+        {
+            this.node = node;
+        }
+
+        public void write(OutputStream out) throws IOException
+        {
+            NodeWriter writer = new NodeWriter();
+            writer.write(node, out);
+        }
+        
+    }
+  
 }

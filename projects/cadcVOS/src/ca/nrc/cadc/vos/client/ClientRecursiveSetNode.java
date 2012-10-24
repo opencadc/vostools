@@ -91,6 +91,8 @@ import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.StringUtil;
@@ -101,6 +103,8 @@ import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
@@ -205,16 +209,11 @@ public class ClientRecursiveSetNode implements Runnable
     {
         try
         {
-            HttpURLConnection conn = (HttpURLConnection) jobURL.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            conn.setRequestMethod("GET");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(false);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            HttpDownload get = new HttpDownload(jobURL, out);
+            get.run();
+
+            VOSClientUtil.checkFailureClean(get.getThrowable());
             
             // add the extra xsd information for vospace if we
             // are using schema validation
@@ -232,7 +231,7 @@ public class ClientRecursiveSetNode implements Runnable
                 jobReader = new JobReader(false);
             }
             
-            return jobReader.read(conn.getInputStream());
+            return jobReader.read(new StringReader(new String(out.toByteArray(), "UTF-8")));
         }
         catch(ParseException ex)
         {
@@ -304,45 +303,15 @@ public class ClientRecursiveSetNode implements Runnable
     {
         try
         {
-            URL phaseURL = new URL(jobURL.toExternalForm() + "/phase");
-            String parameters = "PHASE=RUN";
-            
-            HttpURLConnection connection = (HttpURLConnection) phaseURL.openConnection();
-            if (connection instanceof HttpsURLConnection)
-                initHTTPS((HttpsURLConnection) connection);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Length", "" + Integer.toString(parameters.getBytes().length));
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setInstanceFollowRedirects(false);
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
+            URL url = new URL(jobURL.toExternalForm() + "/phase");
+            String content = "PHASE=RUN";
+            String contentType = "application/x-www-form-urlencoded";
+            boolean followRedirects = false;
 
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(parameters.getBytes("UTF-8"));
-            outputStream.close();
+            HttpPost post = new HttpPost(url, content, contentType, followRedirects);
+            post.run();
 
-            int responseCode = connection.getResponseCode();
-            log.debug("phase=run response code: " + responseCode);
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-                responseMessage += ": " + errorBody;
-            
-            switch (responseCode)
-            {
-                case 200: // successful
-                case 303: // redirect to jobURL
-                    break;
-                case 500:
-                    throw new RuntimeException(responseMessage);
-                case 401:
-                    throw new AccessControlException(responseMessage);
-                case 404:
-                    throw new IllegalArgumentException(responseMessage);
-                default:
-                    throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
-            }
+            VOSClientUtil.checkFailureClean(post.getThrowable());
 
             if (monitorAsync)
             {
