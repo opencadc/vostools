@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import java.util.Date;
@@ -114,7 +115,7 @@ public abstract class AbstractExecutor  implements JobExecutor
     }
 
     public final void execute(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         execute(job, null);
     }
@@ -133,9 +134,10 @@ public abstract class AbstractExecutor  implements JobExecutor
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public final void execute(Job job, SyncOutput sync)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         if (job == null)
             throw new IllegalArgumentException("BUG: Job cannot be null");
@@ -210,9 +212,10 @@ public abstract class AbstractExecutor  implements JobExecutor
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void abort(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         log.debug("abort: " + job.getID());
         // can plausibly go from PENDING, QUEUED, EXECUTING -> ABORTED

@@ -154,7 +154,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     }
 
     public void getDetails(Job job)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         dao.getDetails(job);
@@ -167,7 +167,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     }
 
     public Job put(Job job)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
@@ -176,7 +176,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     }
 
     public void addParameters(String jobID, List<Parameter> params) 
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("addParameters: " + jobID + "," + toString(params));
         JobDAO dao = getDAO();
@@ -190,14 +190,14 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     }
 
     public void delete(String jobID)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         dao.delete(jobID);
     }
 
     public ExecutionPhase getPhase(String jobID)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.getPhase(jobID);
@@ -209,9 +209,10 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
      * @param ep
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void setPhase(String jobID, ExecutionPhase ep)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         setPhase(jobID, null, ep);
     }
@@ -224,16 +225,17 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
      * @param end
      * @return the final phase (end) or null if not successful
      * @throws JobNotFoundException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.set(jobID, start, end, null);
     }
 
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.set(jobID, start, end, date);
@@ -249,16 +251,17 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
      * @param results
      * @return the final phase (end) or null if not successful
      * @throws JobNotFoundException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, List<Result> results, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.set(jobID, start, end, results, date);
     }
 
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.set(jobID, start, end, error, date);

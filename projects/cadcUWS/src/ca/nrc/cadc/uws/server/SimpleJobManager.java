@@ -170,7 +170,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public Job create(Job job)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         // set defaults
         job.setExecutionPhase(ExecutionPhase.PENDING);
@@ -197,7 +197,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void execute(Job job) 
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         // assume they used get which does auth check and getDetails
         jobExecutor.execute(job);
@@ -213,7 +213,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void execute(Job job, SyncOutput output)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         
         jobExecutor.execute(job, output);

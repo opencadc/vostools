@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Result;
@@ -88,9 +89,10 @@ public interface JobUpdater
      * @return the current phase
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase getPhase(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Try to change the phase from <em>start</em> to <em>end</em>. The transition is
@@ -103,9 +105,10 @@ public interface JobUpdater
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Try to change the phase from <em>start</em> to <em>end</em> and, if successful,
@@ -121,9 +124,10 @@ public interface JobUpdater
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, Date date)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Conditionally change phase from start to end and, if successful, add the specified results to the
@@ -137,9 +141,10 @@ public interface JobUpdater
      * @return the final phase (end) or null if not successful
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, List<Result> results, Date date)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Conditionally change phase from start to end and, if successful, set the 
@@ -153,7 +158,8 @@ public interface JobUpdater
      * @return the final phase (end) or null if not successful
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, Date date)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 }

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 
 /**
@@ -92,9 +93,10 @@ public interface JobExecutor
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void execute(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     /**
      * Execute the specified job in synchronous mode.
@@ -104,9 +106,10 @@ public interface JobExecutor
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void execute(Job job, SyncOutput sync)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     /**
      * Abrt the specified job.
@@ -115,7 +118,8 @@ public interface JobExecutor
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void abort(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 }

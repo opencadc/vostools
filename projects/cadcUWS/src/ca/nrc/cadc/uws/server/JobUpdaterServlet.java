@@ -70,6 +70,7 @@
 package ca.nrc.cadc.uws.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
@@ -309,6 +310,23 @@ public class JobUpdaterServlet extends HttpServlet
             w.println("failed to find job: " + jobID);
             w.close();
             return;
+        }
+        catch(TransientException ex)
+        {
+        	if (!response.isCommitted())
+        	{  
+	            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+	            response.addHeader("Retry-After", Integer.toString(ex.getRetryDelay()));
+	            response.setContentType("text/plain");
+	            PrintWriter w = response.getWriter();
+	            w.println("failed to persist job: " + jobID);
+	            w.println("   reason: " + ex.getMessage());
+	            w.close();
+	            return;
+        	}
+        	
+        	log.error("response already committed", ex);
+        	return;
         }
         catch(JobPersistenceException ex)
         {

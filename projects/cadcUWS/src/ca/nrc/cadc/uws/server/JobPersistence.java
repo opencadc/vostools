@@ -106,9 +106,10 @@ public interface JobPersistence
      * 
      * @param job
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void getDetails(Job job)
-        throws JobPersistenceException;
+        throws JobPersistenceException, TransientException;
 
     /**
      * Persist the given Job. The returned job will have a jobID value.
@@ -116,18 +117,20 @@ public interface JobPersistence
      * @param job
      * @return the persisted job
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job put(Job job)
-        throws JobPersistenceException;
+        throws JobPersistenceException, TransientException;
 
     /**
      * Delete the specified job.
      *
      * @param jobID
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void delete(String jobID)
-        throws JobPersistenceException;
+        throws JobPersistenceException, TransientException;
 
     /**
      * Obtain a listing of Job instances.
@@ -145,9 +148,10 @@ public interface JobPersistence
      * @param params
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void addParameters(String jobID, List<Parameter> params)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     // not needed by any current use cases
     //public void setJobInfo(String jobID, JobInfo info)

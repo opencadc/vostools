@@ -104,9 +104,10 @@ public interface JobManager
      * @param job
      * @return the created job
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job create(Job job)
-        throws JobPersistenceException;
+        throws JobPersistenceException, TransientException;
 
     /**
      * Get the specified job.
@@ -184,13 +185,13 @@ public interface JobManager
         throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
     
     public void execute(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     public void execute(String jobID, SyncOutput output)
         throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     public void execute(Job job, SyncOutput outout)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     /**
      * Abort the specified job.

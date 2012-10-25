@@ -95,6 +95,7 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -363,7 +364,7 @@ public class JobDAO
                 return ret;
             }
         }
-        catch(DataAccessException daex)
+        catch(TransientDataAccessException daex)
         {
         	throw new TransientException("query failed for job: " + jobID, daex);
         }
@@ -379,9 +380,10 @@ public class JobDAO
      * 
      * @param job
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void getDetails(Job job)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         log.debug("getDetails: " + job.getID());
         expectPersistentJob(job);
@@ -391,6 +393,10 @@ public class JobDAO
             JobDetailSelectStatementCreator sc = new JobDetailSelectStatementCreator();
             sc.setJobID(job.getID());
             jdbc.query(sc, new DetailExtractor(jobSchema, job)); // ignore unnecessary return value
+        }
+        catch(TransientDataAccessException daex)
+        {
+        	throw new TransientException("query failed for job: " + job.getID(), daex);
         }
         catch(Throwable t)
         {
@@ -404,9 +410,10 @@ public class JobDAO
      * @return the current phase
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase getPhase(String jobID)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("getPhase: " + jobID);
         try
@@ -416,6 +423,10 @@ public class JobDAO
             ExecutionPhase ret = (ExecutionPhase) jdbc.query(sc, new PhaseExtractor());
             if (ret != null)
                 return ret;
+        }
+        catch(TransientDataAccessException daex)
+        {
+        	throw new TransientException("query failed for job: " + jobID, daex);
         }
         catch(Throwable t)
         {
@@ -431,9 +442,10 @@ public class JobDAO
      * @param ep
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void set(String jobID, ExecutionPhase ep)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         set(jobID, null, ep, null, null, null);
     }
@@ -449,9 +461,10 @@ public class JobDAO
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase set(String jobID, ExecutionPhase start, ExecutionPhase end, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("set: " + jobID + "," + start + "," + end + "," + date);
         return set(jobID, start, end, null, null, date);
@@ -471,9 +484,10 @@ public class JobDAO
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase set(String jobID, ExecutionPhase start, ExecutionPhase end, List<Result> results, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("set: " + jobID + "," + start + "," + end + ", <results>," + date);
         return set(jobID, start, end, null, results, date);
@@ -493,9 +507,10 @@ public class JobDAO
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase set(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("set: " + jobID + "," + start + "," + end + ", <error>," + date);
         return set(jobID, start, end, error, null, date);
@@ -516,9 +531,10 @@ public class JobDAO
      * @return the resulting phase or null if the the transition was not successful.
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public ExecutionPhase set(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, List<Result> results, Date date)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("set: " + jobID + "," + start + "," + end + ", <error>, <results>, " + date);
         boolean txn = false; // need explicit transaction or autocommit?
@@ -558,7 +574,10 @@ public class JobDAO
                     rollbackTransaction();
             }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new JobPersistenceException("failed to persist job: " + jobID, t);
+            if (t instanceof TransientDataAccessException)
+            	throw new TransientException("failed to persist job: " + jobID, t);
+            else
+                throw new JobPersistenceException("failed to persist job: " + jobID, t);
         }
         finally
         {
@@ -603,9 +622,10 @@ public class JobDAO
      * @param owner
      * @return
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job put(Job job, Subject owner)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         try
         {
@@ -672,7 +692,10 @@ public class JobDAO
             log.error("rollback for job: " + job.getID(), t);
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new JobPersistenceException("failed to persist job: " + job.getID(), t);
+            if (t instanceof TransientDataAccessException)
+            	throw new TransientException("failed to persist job: " + job.getID(), t);
+            else
+                throw new JobPersistenceException("failed to persist job: " + job.getID(), t);
         }
         finally
         {
@@ -687,7 +710,7 @@ public class JobDAO
     }
 
     public void addParameters(String jobID, List<Parameter> params)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("addParameters: " + jobID);
         try
@@ -713,7 +736,10 @@ public class JobDAO
             log.error("rollback for job: " + jobID, t);
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new JobPersistenceException("failed to persist job parameters: " + jobID, t);
+            if (t instanceof TransientDataAccessException)
+            	throw new TransientException("failed to persist job parameters: " + jobID, t);
+            else
+                throw new JobPersistenceException("failed to persist job parameters: " + jobID, t);
         }
         finally
         {
@@ -732,9 +758,10 @@ public class JobDAO
      *
      * @param jobID
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void delete(String jobID)
-        throws JobPersistenceException
+        throws JobPersistenceException, TransientException
     {
         log.debug("delete: " + jobID);
         try
@@ -751,7 +778,10 @@ public class JobDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new JobPersistenceException("failed to delete job: " + jobID, t);
+            if (t instanceof TransientDataAccessException)
+            	throw new TransientException("failed to delete job: " + jobID, t);
+            else
+                throw new JobPersistenceException("failed to delete job: " + jobID, t);
         }
         finally
         {

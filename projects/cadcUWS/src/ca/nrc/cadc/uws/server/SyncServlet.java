@@ -83,10 +83,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.fileupload.FileUploadException;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.web.InlineContentHandler;
@@ -418,6 +420,23 @@ public class SyncServlet extends HttpServlet
             response.setContentType("text/plain");
             PrintWriter w = response.getWriter();
             w.println("failed to find " + jobID);
+            w.close();
+            return;
+        }
+        catch(TransientException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
+            {
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.addHeader("Retry-After", Integer.toString(ex.getRetryDelay()));
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("failed to get or persist job state: " + jobID);
+            w.println("   reason: " + ex.getMessage());
             w.close();
             return;
         }
