@@ -83,6 +83,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
@@ -161,7 +162,7 @@ public class SimpleJobManager implements JobManager
 
 
     public void abort(String jobID) 
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         Job job = jobPersistence.get(jobID);
         doAuthorizationCheck(job);
@@ -180,7 +181,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void delete(String jobID)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         Job job = jobPersistence.get(jobID);
         doAuthorizationCheck(job);
@@ -188,7 +189,7 @@ public class SimpleJobManager implements JobManager
     }
     
     public void execute(String jobID) 
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         Job job = jobPersistence.get(jobID);
         doAuthorizationCheck(job);
@@ -203,7 +204,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void execute(String jobID, SyncOutput output) 
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         Job job = jobPersistence.get(jobID);
         doAuthorizationCheck(job);
@@ -219,7 +220,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public Job get(String jobID) 
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         Job job = jobPersistence.get(jobID);
         doAuthorizationCheck(job);
@@ -233,7 +234,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void update(String jobID, Date destruction, Long duration, Date quote)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         log.debug("update: " + jobID + "," + destruction +","+ duration +","+ quote);
         Job job = jobPersistence.get(jobID);
@@ -256,7 +257,7 @@ public class SimpleJobManager implements JobManager
     }
 
     public void update(String jobID, List<Parameter> params) 
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException
     {
         log.debug("update: " + jobID + "," + toString(params));
         if (params == null || params.size() == 0)

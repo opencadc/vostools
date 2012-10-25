@@ -73,6 +73,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 
@@ -114,9 +115,10 @@ public interface JobManager
      * @return
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job get(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Get an iterator over the current jobs.
@@ -131,9 +133,10 @@ public interface JobManager
      * @param jobID
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void delete(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Attempt to update the specified job with new job control settings. The
@@ -147,9 +150,10 @@ public interface JobManager
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void update(String jobID, Date destruction, Long duration, Date quote)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     /**
      * Add parameters to the the specified job.
@@ -158,9 +162,10 @@ public interface JobManager
      * @param params
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public void update(String jobID, List<Parameter> params)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     // not currently needed by any use cases, but plausible
     //public void update(String jobID, JobInfo info)
@@ -173,15 +178,16 @@ public interface JobManager
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      */
     public void execute(String jobID)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
     
     public void execute(Job job)
         throws JobNotFoundException, JobPersistenceException, JobPhaseException;
 
     public void execute(String jobID, SyncOutput output)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 
     public void execute(Job job, SyncOutput outout)
         throws JobNotFoundException, JobPersistenceException, JobPhaseException;
@@ -193,8 +199,9 @@ public interface JobManager
      * @throws JobNotFoundException
      * @throws JobPersistenceException
      * @throws JobPhaseException
+     * @throws TransientException 
      * @throws IllegalStateException if the job is not in a state from which it can be aborted
      */
     public void abort(String jobID)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException, TransientException;
 }

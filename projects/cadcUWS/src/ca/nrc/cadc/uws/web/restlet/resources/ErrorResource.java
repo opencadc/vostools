@@ -71,7 +71,8 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import javax.security.auth.Subject;
 
@@ -81,6 +82,7 @@ import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
@@ -96,10 +98,12 @@ public class ErrorResource extends BaseJobResource
      * Obtain the XML Representation of this Request.
      *
      * @return The XML Representation, fully populated.
+     * @throws TransientException 
+     * @throws PrivilegedActionException 
      */
     @Get
     @Override
-    public Representation represent()
+    public Representation represent() throws TransientException, PrivilegedActionException
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -108,16 +112,16 @@ public class ErrorResource extends BaseJobResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedAction<Object>()
+            new PrivilegedExceptionAction<Object>()
             {
-                public Object run()
+                public Object run() throws TransientException
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent()
+    private Representation doRepresent() throws TransientException
     {
         try
         {

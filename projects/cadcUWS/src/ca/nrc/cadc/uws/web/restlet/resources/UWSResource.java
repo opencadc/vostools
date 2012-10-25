@@ -71,6 +71,7 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
+import java.security.PrivilegedActionException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Map;
@@ -78,6 +79,7 @@ import java.util.Map;
 import javax.security.auth.Subject;
 
 import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -134,9 +136,10 @@ public abstract class UWSResource extends ServerResource
      * Obtain the XML Representation of this Request.
      *
      * @return      The XML Representation, fully populated.
+     * @throws PrivilegedActionException 
      */
     @Get
-    public Representation represent()
+    public Representation represent() throws TransientException, PrivilegedActionException
     {
         try
         {

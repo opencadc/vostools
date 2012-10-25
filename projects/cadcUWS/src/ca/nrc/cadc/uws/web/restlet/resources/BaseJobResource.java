@@ -70,7 +70,8 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import javax.security.auth.Subject;
 
@@ -79,6 +80,7 @@ import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -113,7 +115,7 @@ public abstract class BaseJobResource extends UWSResource
 
     @Get
     @Override
-    public Representation represent()
+    public Representation represent() throws TransientException, PrivilegedActionException
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -122,16 +124,16 @@ public abstract class BaseJobResource extends UWSResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedAction<Object>()
+            new PrivilegedExceptionAction<Object>()
             {
-                public Object run()
+                public Object run() throws TransientException, PrivilegedActionException
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent()
+    private Representation doRepresent() throws TransientException, PrivilegedActionException
     {
         try
         {

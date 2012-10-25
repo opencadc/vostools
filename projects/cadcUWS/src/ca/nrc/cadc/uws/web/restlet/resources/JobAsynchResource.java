@@ -71,7 +71,8 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
@@ -90,6 +91,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobWriter;
@@ -122,10 +124,12 @@ public class JobAsynchResource extends BaseJobResource
     /**
      * 
      * @author zhangsa
+     * @throws PrivilegedActionException 
+     * @throws TransientException 
      */
     @Get
     @Override
-    public Representation represent()
+    public Representation represent() throws TransientException, PrivilegedActionException
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -134,16 +138,16 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedAction<Object>()
+            new PrivilegedExceptionAction<Object>()
             {
-                public Object run()
+                public Object run() throws TransientException, PrivilegedActionException
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent()
+    private Representation doRepresent() throws TransientException, PrivilegedActionException
     {
         try
         {
@@ -179,7 +183,7 @@ public class JobAsynchResource extends BaseJobResource
     }
 
     @Delete
-    public void delete(final Representation entity)
+    public void delete(final Representation entity) throws TransientException, PrivilegedActionException
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -188,9 +192,9 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            Subject.doAs(subject, new PrivilegedAction<Object>()
+            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
             {
-                public Object run()
+                public Object run() throws TransientException
                 {
                     doDelete(entity);
                     return null;
@@ -199,7 +203,7 @@ public class JobAsynchResource extends BaseJobResource
         }
     }
 
-    private void doDelete(final Representation entity)
+    private void doDelete(final Representation entity) throws TransientException
     {
         LOGGER.debug("delete() called. for job: " + jobID);
         try
@@ -221,9 +225,11 @@ public class JobAsynchResource extends BaseJobResource
      * Accept POST requests.
      *
      * @param entity    The POST Request body.
+     * @throws TransientException 
+     * @throws PrivilegedActionException 
      */
     @Post
-    public void accept(final Representation entity)
+    public void accept(final Representation entity) throws TransientException, PrivilegedActionException
     {
         final String pathInfo = getPathInfo();
         Subject subject = getSubject();
@@ -233,9 +239,9 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            Subject.doAs(subject, new PrivilegedAction<Object>()
+            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
             {
-                public Object run()
+                public Object run() throws TransientException
                 {
                     doAccept(pathInfo, entity);
                     return null;
@@ -244,7 +250,7 @@ public class JobAsynchResource extends BaseJobResource
         }
     }
 
-    private void doAccept(final String pathInfo, final Representation entity)
+    private void doAccept(final String pathInfo, final Representation entity) throws TransientException
     {
         LOGGER.debug("doAccept: pathInfo=" + pathInfo);
         try

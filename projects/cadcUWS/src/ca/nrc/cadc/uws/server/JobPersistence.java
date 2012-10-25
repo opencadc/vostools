@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Iterator;
@@ -94,9 +95,10 @@ public interface JobPersistence
      * @return the job
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job get(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+        throws JobNotFoundException, JobPersistenceException, TransientException;
 
     /**
      * Get the details for the specified job. The details include all parameters

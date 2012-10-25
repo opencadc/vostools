@@ -71,6 +71,7 @@ package ca.nrc.cadc.uws.server;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -146,7 +147,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     protected abstract DataSource getDataSource();
 
     public Job get(String jobID)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.get(jobID);

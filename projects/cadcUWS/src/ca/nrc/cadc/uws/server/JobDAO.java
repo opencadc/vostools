@@ -104,6 +104,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -338,9 +339,10 @@ public class JobDAO
      * @return the job
      * @throws JobNotFoundException
      * @throws JobPersistenceException
+     * @throws TransientException 
      */
     public Job get(String jobID)
-        throws JobNotFoundException, JobPersistenceException
+        throws JobNotFoundException, JobPersistenceException, TransientException
     {
         log.debug("get: " + jobID);
         try
@@ -360,6 +362,10 @@ public class JobDAO
                 }
                 return ret;
             }
+        }
+        catch(DataAccessException daex)
+        {
+        	throw new TransientException("query failed for job: " + jobID, daex);
         }
         catch(Throwable t)
         {
