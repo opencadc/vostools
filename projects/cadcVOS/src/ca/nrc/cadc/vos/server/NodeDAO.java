@@ -94,6 +94,7 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -380,7 +381,11 @@ public class NodeDAO
                 dirtyRead = null;
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            throw new RuntimeException("failed to get node: " + path, t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to get node " + path, t);
+            else
+                throw new RuntimeException("failed to get node: " + path, t);
         }
         finally
         {
@@ -426,7 +431,11 @@ public class NodeDAO
                 dirtyRead = null;
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            throw new RuntimeException("failed to get node: " + node.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to get node: " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to get node: " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -480,7 +489,11 @@ public class NodeDAO
                 dirtyRead = null;
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
         }
         finally
         {
@@ -548,7 +561,11 @@ public class NodeDAO
                 dirtyRead = null;
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
-            throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
         }
         finally
         {
@@ -695,7 +712,11 @@ public class NodeDAO
             log.error("rollback for node: " + node.getUri().getPath(), t);
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to persist node: " + node.getUri(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to persist node: " + node.getUri(), t);
+            else
+                throw new RuntimeException("failed to persist node: " + node.getUri(), t);
         }
         finally
         {
@@ -768,21 +789,19 @@ public class NodeDAO
             }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
-        catch(IllegalStateException ex)
-        {
-            log.debug("delete rollback: " + ex.toString());
-            if (transactionStatus != null)
-                try { rollbackTransaction(); }
-                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw ex;
-        }
         catch (Throwable t)
         {
             log.error("delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
+            
+            if (t instanceof IllegalStateException)
+                throw (IllegalStateException) t;
+            else if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to delete " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -832,21 +851,19 @@ public class NodeDAO
                 throw new IllegalStateException("setBusyState " + curState + " -> " + newState + " failed: " + node.getUri());
             commitTransaction();
         }
-        catch(IllegalStateException ex)
-        {
-            log.debug("updateNodeMetadata rollback for node (!busy): " + node.getUri().getPath());
-            if (transactionStatus != null)
-                try { rollbackTransaction(); }
-                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw ex;
-        }
         catch (Throwable t)
         {
             log.error("Delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+            
+            if (t instanceof IllegalStateException)
+                throw (IllegalStateException) t;
+            else if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -908,21 +925,20 @@ public class NodeDAO
            
             commitTransaction();
         }
-        catch(IllegalStateException ex)
-        {
-            log.debug("updateNodeMetadata rollback: " + ex.toString());
-            if (transactionStatus != null)
-                try { rollbackTransaction(); }
-                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw ex;
-        }
         catch (Throwable t)
         {
-            log.error("Delete rollback for node: " + node.getUri().getPath(), t);
+            log.error("updateNodeMetadata rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+            
+            if (t instanceof IllegalStateException)
+                throw (IllegalStateException) t;
+            else if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+            
         }
         finally
         {
@@ -984,7 +1000,11 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to update properties:  " + node.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to update properties:  " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to update properties:  " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -1171,21 +1191,19 @@ public class NodeDAO
             
             commitTransaction();
         }
-        catch(IllegalStateException ex)
-        {
-            log.debug("move rollback: " + ex.toString());
-            if (transactionStatus != null)
-                try { rollbackTransaction(); }
-                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw ex;
-        }
         catch (Throwable t)
         {
             log.error("move rollback for node: " + src.getUri().getPath(), t);
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to move:  " + src.getUri().getPath(), t);
+            
+            if (t instanceof IllegalStateException)
+                throw (IllegalStateException) t;
+            else if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to move:  " + src.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to move:  " + src.getUri().getPath(), t);
         }
         finally
         {
@@ -1243,7 +1261,7 @@ public class NodeDAO
      * @param node
      * @param batchSize
      */
-    void delete(Node node, int batchSize, boolean dryrun)
+    void delete(Node node, int batchSize, boolean dryrun) throws TransientException
     {
         log.debug("delete: " + node.getUri().getPath() + "," + batchSize);
         expectPersistentNode(node);
@@ -1267,7 +1285,11 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to delete:  " + node.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to delete:  " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to delete:  " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -1347,6 +1369,7 @@ public class NodeDAO
      * @param batchSize
      */
     void chown(Node node, Subject newOwner, boolean recursive, int batchSize, boolean dryrun)
+        throws TransientException
     {
         log.debug("chown: " + node.getUri().getPath() + ", " + newOwner + ", " + recursive + "," + batchSize);
         expectPersistentNode(node);
@@ -1369,7 +1392,11 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to chown:  " + node.getUri().getPath(), t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to chown:  " + node.getUri().getPath(), t);
+            else
+                throw new RuntimeException("failed to chown:  " + node.getUri().getPath(), t);
         }
         finally
         {
@@ -1449,7 +1476,7 @@ public class NodeDAO
      * Admin function.
      * @param propagation
      */
-    void applyPropagation(NodeSizePropagation propagation)
+    void applyPropagation(NodeSizePropagation propagation) throws TransientException
     {
         log.debug("applyPropagation: " + propagation);
         try
@@ -1473,7 +1500,11 @@ public class NodeDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            throw new RuntimeException("failed to apply propagation.", t);
+            
+            if (t instanceof TransientDataAccessException)
+                throw new TransientException("failed to apply propagation.", t);
+            else
+                throw new RuntimeException("failed to apply propagation.", t);
         }
         finally
         {
