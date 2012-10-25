@@ -106,6 +106,17 @@ public class TransientException extends Exception
      * 
      * @param msg Error message.
      * @param cause The error cause.
+     */
+    public TransientException(String msg, Throwable cause)
+    {
+    	this(msg, cause, HttpTransfer.DEFAULT_RETRY_DELAY);
+    }
+
+    /**
+     * Constructor.
+     * 
+     * @param msg Error message.
+     * @param cause The error cause.
      * @param retryDelay Retry delay in seconds.
      */
     TransientException(String msg, Throwable cause, int retryDelay)
