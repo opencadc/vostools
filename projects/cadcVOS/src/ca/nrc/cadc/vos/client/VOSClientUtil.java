@@ -149,24 +149,8 @@ public class VOSClientUtil
         return outputter.outputString(doc);
     }
 
-    public static void checkFailureClean(Throwable failure)
-    {
-        try
-        {
-            checkFailure(failure);
-        }
-        catch (IOException ioe)
-        {
-            throw new IllegalArgumentException(ioe);
-        }
-        catch (NodeNotFoundException nf)
-        {
-            throw new IllegalArgumentException(nf);
-        }
-    }
-
     public static void checkFailure(Throwable failure)
-        throws NodeNotFoundException, IOException, RuntimeException
+        throws NodeNotFoundException, RuntimeException
     {
         if (failure != null)
         {

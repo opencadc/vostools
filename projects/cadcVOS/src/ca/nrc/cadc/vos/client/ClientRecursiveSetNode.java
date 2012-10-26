@@ -101,6 +101,7 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
@@ -213,7 +214,10 @@ public class ClientRecursiveSetNode implements Runnable
             HttpDownload get = new HttpDownload(jobURL, out);
             get.run();
 
-            VOSClientUtil.checkFailureClean(get.getThrowable());
+            if (get.getThrowable() != null)
+            {
+                throw new RuntimeException("Unable to get job because " + get.getThrowable().getLocalizedMessage());
+            }
             
             // add the extra xsd information for vospace if we
             // are using schema validation
@@ -273,7 +277,7 @@ public class ClientRecursiveSetNode implements Runnable
     public void setMonitor(boolean enabled) { this.monitorAsync = enabled; }
 
     /**
-     * Run the transfer and catch any throwables. The cakller must check the
+     * Run the transfer and catch any throwables. The caller must check the
      * getPhase(), getServerError(), and getThrowable() methods to see if the
      * transfer failed.
      */
@@ -311,7 +315,10 @@ public class ClientRecursiveSetNode implements Runnable
             HttpPost post = new HttpPost(url, content, contentType, followRedirects);
             post.run();
 
-            VOSClientUtil.checkFailureClean(post.getThrowable());
+            if (post.getThrowable() != null)
+            {
+                throw new RuntimeException("Unable to run job because " + post.getThrowable().getLocalizedMessage());
+            }
 
             if (monitorAsync)
             {

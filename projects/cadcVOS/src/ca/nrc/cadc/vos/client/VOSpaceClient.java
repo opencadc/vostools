@@ -239,7 +239,7 @@ public class VOSpaceClient
             HttpUpload put = new HttpUpload(out, url);
             put.setContentType("text/xml");
 
-            VOSClientUtil.checkFailureClean(put.getThrowable());
+            VOSClientUtil.checkFailure(put.getThrowable());
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
             rtnNode = nodeReader.read(put.getResponseBody());
@@ -253,6 +253,10 @@ public class VOSpaceClient
         catch (NodeParsingException e)
         {
             throw new IllegalStateException("failed to create node", e);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new IllegalStateException("Node not found", e);
         }
         return rtnNode;
     }
@@ -296,7 +300,7 @@ public class VOSpaceClient
             HttpDownload get = new HttpDownload(url, out);
             get.run();
             
-            VOSClientUtil.checkFailureClean(get.getThrowable());
+            VOSClientUtil.checkFailure(get.getThrowable());
 
             NodeReader nodeReader = new NodeReader(schemaValidation);
             rtnNode = nodeReader.read(new String(out.toByteArray(), "UTF-8"));
@@ -336,7 +340,7 @@ public class VOSpaceClient
             HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
             httpPost.run();
   
-            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
+            VOSClientUtil.checkFailure(httpPost.getThrowable());
             
             String responseBody = httpPost.getResponseBody();
             NodeReader nodeReader = new NodeReader();
@@ -350,6 +354,10 @@ public class VOSpaceClient
         catch (NodeParsingException e)
         {
             throw new IllegalStateException("failed to set node", e);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new IllegalStateException("Node not found", e);
         }
         return rtnNode;
     }
@@ -368,7 +376,7 @@ public class VOSpaceClient
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
             httpPost.run();
             
-            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
+            VOSClientUtil.checkFailure(httpPost.getThrowable());
             
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
@@ -384,6 +392,11 @@ public class VOSpaceClient
         catch (IOException e)
         {
             log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (NodeNotFoundException e)
+        {
+            log.debug("Node not found", e);
             throw new RuntimeException(e);
         }
     }
@@ -514,7 +527,11 @@ public class VOSpaceClient
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
             httpPost.run();
 
-            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
+            if (httpPost.getThrowable() != null)
+            {
+                log.debug("Unable to post transfer because ", httpPost.getThrowable());
+                throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
+            }
             
             URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
@@ -548,7 +565,11 @@ public class VOSpaceClient
             HttpPost httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
             httpPost.run();
 
-            VOSClientUtil.checkFailureClean(httpPost.getThrowable());
+            if (httpPost.getThrowable() != null)
+            {
+                log.debug("Unable to post transfer because ", httpPost.getThrowable());
+                throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
+            }
             
             URL redirectURL = httpPost.getRedirectURL();
             log.debug("POST: transfer jobURL: " + redirectURL);
@@ -563,7 +584,11 @@ public class VOSpaceClient
             HttpDownload get = new HttpDownload(redirectURL, out);
             get.run();
 
-            VOSClientUtil.checkFailureClean(get.getThrowable());
+            if (get.getThrowable() != null)
+            {
+                log.debug("Unable to run the job", get.getThrowable());
+                throw new RuntimeException("Unable to run the job because " + httpPost.getThrowable().getMessage());
+            }
             
             TransferReader txfReader = new TransferReader(schemaValidation);
             log.debug("GET - reading content: " + redirectURL);

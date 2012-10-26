@@ -104,6 +104,7 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
@@ -222,7 +223,10 @@ public class ClientTransfer implements Runnable
             HttpDownload get = new HttpDownload(jobURL, out);
             get.run();
 
-            VOSClientUtil.checkFailureClean(get.getThrowable());
+            if (get.getThrowable() != null)
+            {
+                throw new RuntimeException("Unable to get Job because " + get.getThrowable().getLocalizedMessage());
+            }
             
             // add the extra xsd information for vospace if we
             // are using schema validation
