@@ -90,10 +90,10 @@ class Connection:
 
         import httplib, ssl
         try:
-            if parts.scheme == "https":
-                connection = httplib.HTTPSConnection(parts.netloc, key_file=certfile, cert_file=certfile, timeout=45)
+            if parts.scheme=="https":
+                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=60)
             else:
-                connection = httplib.HTTPConnection(parts.netloc, timeout=45)
+                connection = httplib.HTTPConnection(parts.netloc,timeout=60)
         except httplib.NotConnected as e:
             logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % (str(e)))
@@ -560,7 +560,7 @@ class VOFile:
             self.resp = self.httpCon.getresponse()
             import time
             time.sleep(0.1)
-            logging.warning("closing connection for %s" % (self.url))
+            logging.debug("closing connection for %s" % (self.url))
             self.httpCon.close()
         except ssl.SSLError as e:
             raise IOError(errno.EAGAIN, str(e))
@@ -582,7 +582,7 @@ class VOFile:
            408: errno.EAGAIN }
         logging.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
-            logging.warning("Got status code: %s for %s" % (self.resp.status, self.url))
+            logging.debug("Got status code: %s for %s" % (self.resp.status, self.url))
             from html2text import html2text
             msg = self.resp.read()
             if msg is not None:
@@ -646,7 +646,7 @@ class VOFile:
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
         self.httpCon.endheaders()
-        logging.warning("Opening connection for %s to %s" % (URL, method))
+        logging.debug("Opening connection for %s to %s" % (URL, method))
         logging.debug("Done setting headers")
 
 
@@ -980,12 +980,20 @@ class Client:
             jobURL = str.replace(url, "/results/transferDetails", "")
             phaseURL = jobURL + "/phase"
             sleepTime = 1
-            while VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
+            sleepCount = 0
+            roller = ( '\\' ,'-','/','|','\\','-','/','|' )
+            phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
+            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
                 # poll the job. Sleeping time in between polls is doubling each time 
                 # until it gets to 32sec
-                if(sleepTime <= 32):
+                if(sleepTime < 3):
                     sleepTime = 2 * sleepTime
+                sys.stdout.write("\r%s %s" % (phase, roller[sleepCount % len(roller)]))
+                sys.stdout.flush()
+                sleepCount += 1
                 time.sleep(sleepTime)
+                phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
+            sys.stdout.write("\n")
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.info("Received keyboard interrupt")
@@ -1004,7 +1012,7 @@ class Client:
         con = VOFile(errorURL, self.conn, method="GET")
         errorMessage = con.read()
         logging.debug("Got transfer error %s on URI %s" % (errorMessage, uri))
-        raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" % (uri, errorMessage))
+        raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None):
@@ -1109,7 +1117,7 @@ class Client:
             # Start the job
             con = VOFile(transURL + "/phase", self.conn, method="POST", followRedirect=False)
             con.write("PHASE=RUN")
-            con.read()
+            con.close()
             self.getTransferError(transURL, node.uri)
         else:
             con = VOFile(URL, self.conn, method="POST", followRedirect=False)
