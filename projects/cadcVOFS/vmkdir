@@ -25,7 +25,7 @@ if opt.verbose:
 elif opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="vmkdir:%(module)s.%(funcName)s %(message)s")
 else:
-    logging.basicConfig(level=logging.CRITICAL,format="vmkdir: %(message)s")
+    logging.basicConfig(level=logging.ERROR,format="vmkdir: %(message)s")
 
 
 if len(args)>1:
@@ -33,14 +33,11 @@ if len(args)>1:
 
 logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
 
+
 try:
+
     client=vos.Client(certFile=opt.certfile)
-except Exception as e:
-    logging.error("Conneciton failed:  %s" %  (str(e)))
-    sys.exit(e.errno)
 
-
-try:
     dirNames=[]
     thisDir = args[0]
     if opt.p:
@@ -52,7 +49,10 @@ try:
             client.mkdir(thisDir)
     else:
         client.mkdir(thisDir)
-except Exception as e:
-        logging.error(str(e))
-        sys.exit(-getattr(e,'errno',1))
 
+except Exception as e:
+    logging.error(str(e))
+    sys.exit(getattr(e,'errno',-1))
+
+
+sys.exit(0)
