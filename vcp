@@ -1,18 +1,47 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
+
+usage = """
+  vcp filename vos:rootNode/destination
+
+  behaviour attempts to mimic the unix filesystem.
+
+  Warnings:
+    vcp destination specified with a trailing '/' implies ContainerNode 
+
+    If destination has trailing '/' and exists but is a DataNode then 
+    error message is returned:  "Invalid Argument (target node is not a DataNode)"
+
+    vcp currently only works on the CADC VOSpace server.
+
+"""
+
 import time
 import errno
+
+
+
+nodeList = {}
+
 def isdir(filename):
     logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
-        return client.isdir(filename)
+        try:
+            nodeList[filename] = nodeList.get(filename, client.getNode(filename))
+            return nodeList[filename].isdir()
+        except:
+            return False
     else:
         return os.path.isdir(filename)
 
 def access(filename,mode):
     logging.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
-        return client.access(filename,mode)
+        try:
+            nodeList[filename] = nodeList.get(filename,client.getNode(filename))
+            return True
+        except:
+            return False
     else:
         return os.access(filename,mode)
 
@@ -58,7 +87,7 @@ def copy(source,dest):
     try:
       if isdir(source):
         ## make sure the destination exists...
-        if not access(dest,os.F_OK):
+        if not isdir(dest):
             mkdir(dest)
         ## for all files in the current source directory copy them to the destination directory
         for filename in listdir(source):
@@ -69,7 +98,7 @@ def copy(source,dest):
                 sys.stderr.write("File %s exists.  Overwrite? (y/n): " % (dest))
                 ans=sys.stdin.readline().strip()
                 if ans!='y':
-                    sys.exit(errno.EEXIST)
+                    raise Exception("File exists")
         if access(dest,os.F_OK) and not opt.overwrite:
             ### check if the MD5 of dest and source mathc, if they do then skip
             if getMD5(dest)==getMD5(source):
@@ -78,29 +107,23 @@ def copy(source,dest):
         logging.info("%s -> %s " % ( source, dest))
         loopCount=0
         waitTime=1
+        if not access(os.path.dirname(dest),os.F_OK):
+            raise IOError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % ( os.path.dirname(dest)))
+        if not isdir(os.path.dirname(dest)):
+            raise IOError(errno.ENOTDIR, "vcp: %s is not a ContainerNode" % ( os.path.dirname(dest)))
         while True:
             try:
                 client.copy(source,dest,sendMD5=True)
                 break
-            except OSError as e:
-                logging.critical("ERROR: %s while copying %s -> %s (attempt %d)" % (str(e), source, dest, loopCount+1))
-                if loopCount > 10 :
-                    raise e
-                logging.critical("Retrying in %d seconds\n" %(waitTime))
-                loopCount+=1
-                time.sleep(waitTime)
-                waitTime=1.5*waitTime
             except Exception as e:
-                if hasattr(e,'errno'):
-                   if e.errno==104:
-                       logging.critical(str(e))
-                       continue
-                raise e
-                         
-            
-                
+                if getattr(e,'errno',-1) == 104:
+                    ### 104 is connection reset by peer.  Try again on this error
+                    logging.debug(str(e))
+                else:
+                    raise e
     except IOError as e:
-        if e.errno==errno.EINVAL:
+        if getattr(e,'errno',-1) == errno.EINVAL:
+            # not a valid uri, just skip those...
             logging.error("%s: Skipping" % ( str(e)))
         else:
             raise e
@@ -108,8 +131,8 @@ def copy(source,dest):
 
 
 def signal_handler(signal, frame):
-    sys.stderr.write("Interupt\n")
-    sys.exit(-1)
+    Expcetion("Interupt")
+    
 
 
 
@@ -118,11 +141,13 @@ if __name__=='__main__':
     from optparse import OptionParser
     import logging, sys
     import vos, errno, os
+    import ssl
+
     ## handle interupts nicely
     import signal
     signal.signal(signal.SIGINT, signal_handler)
     
-    parser=OptionParser()
+    parser=OptionParser(usage)
     parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
     parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
     parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
@@ -132,6 +157,9 @@ if __name__=='__main__':
     name=sys.argv[0]
 
     (opt,args)=parser.parse_args()
+
+    dest=args.pop()
+
 
     format = "%(message)s"
 
@@ -145,59 +173,47 @@ if __name__=='__main__':
     logging.basicConfig(level=logLevel,format=format)
 
 
+
+    exitCode = 0
+
     
     try:
         client=vos.Client(certFile=opt.certfile)
-    except Exception as e:
-        logging.error("Conneciton failed:  %s" %  (str(e)))
-        sys.exit(e.errno)
 
-    dest=args.pop()
+        for source in args:
+            ### the source must exist, of course...
+            if not access(source,os.R_OK):
+                raise Exception("Can't access source: %s " % ( source))
 
+            ## copying inside VOSpace not yet implemented
+            if source[0:4]=='vos:' and dest[0:4]=='vos:' :
+                raise Exception("Can not (yet) sync from VOSpace, only to")
 
-    import ssl
-    try: 
-
-      for source in args:
-
-        ### the source must exist, of course...
-        if not access(source,os.R_OK):
-            logging.error("Can't access %s " % ( source))
-            sys.exit(-1)
-
-        ## copying inside VOSpace not yet implemented
-        if source[0:4]=='vos:' and dest[0:4]=='vos:' :
-            logging.error("Can not (yet) copy from VOSpace to VOSpace")
-            sys.exit(-1)
-
-        thisDest=dest
-        if isdir(source):
-            logging.debug("%s is a directory or link to one" % (source))
-            ## To mimic unix fs behaviours if copying a directory and
-            ## the destination directory exists then the actual
-            ## destination in a recursive copy is the destination +
-            ## source basename.  This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
-            if access(dest,os.F_OK):
-                if not isdir(dest):
-                    logging.error("Can't write a directory (%s) to a file (%s)" % (source,dest))
-                    sys.exit(-1)
-                # directory exists so we append the end of source to that (UNIX behaviour)
-                thisDest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
-            elif len(args) > 1:
-                logging.error("vcp can not copy multiple things into a non-existant location (%s)" % (dest))
-                sys.exit(-1)
-        elif access(dest,os.F_OK) and isdir(dest):
-            ### we're copying into a directory
-            thisDest=os.path.join(dest,os.path.basename(source))
-
-        copy(source,thisDest)
+            thisDest=dest
+            if isdir(source):
+                logging.debug("%s is a directory or link to one" % (source))
+                # To mimic unix fs behaviours if copying a directory and
+                # the destination directory exists then the actual
+                # destination in a recursive copy is the destination +
+                # source basename.  This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
+                if access(dest,os.F_OK):
+                    if not isdir(dest):
+                        raise Exception("Can't write a directory (%s) to a file (%s)" % (source,dest))
+                    # directory exists so we append the end of source to that (UNIX behaviour)
+                    thisDest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
+                elif len(args) > 1:
+                    raise Exception("vcp can not copy multiple things into a non-existant location (%s)" % (dest))
+            elif dest[-1]=='/' or isdir(dest):
+                # we're copying into a directory
+                thisDest=os.path.join(dest,os.path.basename(source))
+            
+            copy(source,thisDest)
 
     except ssl.SSLError as e:
         logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
-        sys.exit(-2)
+        exitCode = getattr(e,'errno',-2)
     except Exception as e:
-        logging.error(str(type(e)))
-        logging.error(str(e))
-        logging.error("Failed while copying %s" %(source))
-        sys.exit(-1)
-    sys.exit(0)
+        logging.error(getattr(e,'strerror',getattr(e,'message',"FAILED")))
+        exitCode = getattr(e,'errno',-1)
+
+    sys.exit(exitCode)
