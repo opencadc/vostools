@@ -76,11 +76,13 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.security.AccessControlException;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
@@ -548,6 +550,7 @@ public class HttpDownloadTest
             dest.close();
             Throwable t = dl.getThrowable();
             Assert.assertNotNull(t);
+            Assert.assertTrue("throwable should be FileNotFoundException", t instanceof FileNotFoundException);
             log.debug("found expected exception: " + t.toString());
             Assert.assertTrue(t.getMessage().startsWith("resource not found"));
             Assert.assertEquals("number of retries", 0, dl.getRetriesPerformed());
@@ -576,6 +579,7 @@ public class HttpDownloadTest
             long dt = System.currentTimeMillis() - t1;
             Throwable t = dl.getThrowable();
             Assert.assertNotNull(t);
+            Assert.assertTrue("throwable should be FileNotFoundException", t instanceof FileNotFoundException);
             log.debug("found expected exception: " + t.toString());
             Assert.assertTrue(t.getMessage().startsWith("resource not found"));
 
@@ -690,7 +694,7 @@ public class HttpDownloadTest
                     + dl.getThrowable(), dl.getThrowable());
             Assert.assertTrue("Unexpected exception: " 
                     + dl.getThrowable().getClass(), 
-                    dl.getThrowable() instanceof IOException);
+                    dl.getThrowable() instanceof AccessControlException);
             Assert.assertTrue("Unexpected cause: " 
                     + dl.getThrowable().getMessage(), 
                     dl.getThrowable().getMessage().
@@ -735,7 +739,7 @@ public class HttpDownloadTest
                     + dl.getThrowable(), dl.getThrowable());
             Assert.assertTrue("Unexpected exception: " 
                     + dl.getThrowable().getClass(), 
-                    dl.getThrowable() instanceof IOException);
+                    dl.getThrowable() instanceof AccessControlException);
             Assert.assertTrue("Unexpected cause: " 
                     + dl.getThrowable().getMessage(), 
                     dl.getThrowable().getMessage().

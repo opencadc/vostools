@@ -86,6 +86,8 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
+import java.io.FileNotFoundException;
+import java.security.AccessControlException;
 
 /**
  * Perform an upload (PUT).
@@ -215,8 +217,6 @@ public class HttpUpload extends HttpTransfer
         if (!go)
             return; // cancelled while queued, event notification handled in terminate()
 
-        
-
         boolean throwTE = false;
         try
         {
@@ -233,7 +233,6 @@ public class HttpUpload extends HttpTransfer
             }
 
             doPut(conn);
-            
         }
         catch(InterruptedException iex)
         {
@@ -245,10 +244,6 @@ public class HttpUpload extends HttpTransfer
             log.debug("caught: " + tex);
             throwTE = true;
             throw tex;
-        }
-        catch (IOException ioex)
-        {
-            failure = ioex;
         }
         catch(Throwable t)
         {
@@ -447,11 +442,11 @@ public class HttpUpload extends HttpTransfer
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
-                    throw new IOException("authentication failed " + msg);
+                    throw new AccessControlException("authentication failed " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:
-                    throw new IOException("authorization failed " + msg);
+                    throw new AccessControlException("authorization failed " + msg);
                 case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new IOException("resource not found " + msg);
+                    throw new FileNotFoundException("resource not found " + msg);
                 case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
                     throw new IOException("No space left - " + msg);
                 default:

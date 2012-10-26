@@ -96,6 +96,8 @@ import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
+import java.io.FileNotFoundException;
+import java.security.AccessControlException;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -299,7 +301,6 @@ public class HttpDownload extends HttpTransfer
         this.overwrite = overwrite;
     }
     
-
     /**
      * Get the size of the result file. This may be smaller than the content-length if the
      * file is being decompressed.
@@ -409,10 +410,6 @@ public class HttpDownload extends HttpTransfer
             log.debug("caught: " + tex);
             throwTE = true;
             throw tex;
-        }
-        catch (IOException ioex)
-        {
-            failure = ioex;
         }
         catch(Throwable t)
         {
@@ -547,52 +544,6 @@ public class HttpDownload extends HttpTransfer
         this.localFile = destFile;
         return doDownload;
     }
-    
-    // perform http head, capture all header fields, and init output File vars
-    // NOTE: no longer used -- run() calls doGet directly
-    private void doHead()
-        throws IOException, InterruptedException
-    {
-        // check/clear interrupted flag and throw if necessary
-        if ( Thread.interrupted() )
-            throw new InterruptedException();
-
-        HttpURLConnection conn = (HttpURLConnection) remoteURL.openConnection();
-        log.debug("HttpURLConnection type: " + conn.getClass().getName() + " for HEAD " + remoteURL);
-
-        if (conn instanceof HttpsURLConnection)
-        {
-            HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-            initHTTPS(sslConn);
-        }
-
-        setRequestSSOCookie(conn);
-        conn.setInstanceFollowRedirects(true);
-        conn.setRequestMethod("HEAD");
-        conn.setRequestProperty("Accept", "*/*");
-        conn.setRequestProperty("User-Agent", userAgent);
-        
-        
-        int code = conn.getResponseCode();
-        log.debug("HTTP HEAD status: " + code);
-        if (code != HttpURLConnection.HTTP_OK)
-        {
-            String msg = "(" + code + ") " + conn.getResponseMessage();
-            switch(code)
-            {
-                case HttpURLConnection.HTTP_UNAUTHORIZED:
-                    throw new IOException("authentication failed: " + msg);
-                case HttpURLConnection.HTTP_FORBIDDEN:
-                    throw new IOException("authorization failed: " + msg);
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new IOException("resource not found: " + msg);
-                default:
-                    throw new IOException(msg);
-                    
-            }
-        }
-        processHeader(conn);
-    }
 
     // called from doHead and doGet to capture HTTP standard header values
     private void processHeader(HttpURLConnection conn)
@@ -710,11 +661,11 @@ public class HttpDownload extends HttpTransfer
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
-                    throw new IOException("authentication failed " + msg);
+                    throw new AccessControlException("authentication failed " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:
-                    throw new IOException("authorization failed " + msg);
+                    throw new AccessControlException("authorization failed " + msg);
                 case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new IOException("resource not found " + msg);
+                    throw new FileNotFoundException("resource not found " + msg);
                 default:
                     throw new IOException(msg);
             }
@@ -854,18 +805,11 @@ public class HttpDownload extends HttpTransfer
                     }
                 }
             }
-            else if (code == HttpURLConnection.HTTP_FORBIDDEN)
-                throw new IOException("permission denied");
-            // TODO: add custom handling for other failures here
-            else if (code != HttpURLConnection.HTTP_OK)
+            else
             {
-                String body = NetUtil.getErrorBody(conn);
-                if (StringUtil.hasText(body))
-                    throw new IOException(conn.getResponseMessage() + ":" + body);
-                else
-                    throw new IOException(conn.getResponseMessage());
+                checkStatusCode(conn);
             }
-
+            
             fireEvent(TransferEvent.CONNECTED);
 
             // check eventID hook
@@ -873,7 +817,6 @@ public class HttpDownload extends HttpTransfer
 
             fireEvent(origFile, TransferEvent.TRANSFERING);
 
-            boolean wrap = false;
             istream = conn.getInputStream();
             if ( !(istream instanceof BufferedInputStream) )
             {
@@ -989,12 +932,9 @@ public class HttpDownload extends HttpTransfer
         }
     }
     
-    
-    
     private static char SINGLE_QUOTE = "'".charAt(0);
     private static char DOUBLE_QUOTE = "\"".charAt(0);
 
-    
     private static boolean isFilenameDisposition(String cdisp)
     {
         if (cdisp == null)
