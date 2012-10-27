@@ -965,7 +965,7 @@ class Client:
 
     def getTransferError(self, url, uri):
         """Follow a transfer URL to the Error message"""
-        import errno
+        import errno, random
         errorCodes = { 'NodeNotFound': errno.ENOENT,
                        'PermissionDenied': errno.EACCES,
                        'OperationNotSupported': errno.EOPNOTSUPP,
@@ -976,8 +976,8 @@ class Client:
                        'InvalidURI': errno.EFAULT,
                        'TransferFailed': errno.EIO,
                        'DuplicateNode.': errno.EEXIST}
+        jobURL = str.replace(url, "/results/transferDetails", "")
         try:
-            jobURL = str.replace(url, "/results/transferDetails", "")
             phaseURL = jobURL + "/phase"
             sleepTime = 1
             sleepCount = 0
@@ -986,12 +986,15 @@ class Client:
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
                 # poll the job. Sleeping time in between polls is doubling each time 
                 # until it gets to 32sec
-                if(sleepTime < 3):
+                if(sleepTime <= 32):
                     sleepTime = 2 * sleepTime
-                sys.stdout.write("\r%s %s" % (phase, roller[sleepCount % len(roller)]))
-                sys.stdout.flush()
-                sleepCount += 1
-                time.sleep(sleepTime)
+                slept = 0
+                while slept < sleepTime:
+                    if logging.getLogger('root').getEffectiveLevel() == logging.INFO : 
+                        sys.stdout.write("\r%s %s" % (phase, roller[sleepCount % len(roller)]))
+                        sys.stdout.flush()
+                        sleepCount += 1
+                    time.sleep(sleepTime*random.random()/30.0)
                 phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
             sys.stdout.write("\n")
         except KeyboardInterrupt:
