@@ -69,18 +69,20 @@
 
 package ca.nrc.cadc.db;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
-
 import java.util.Properties;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.springframework.dao.TransientDataAccessException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 /**
@@ -172,6 +174,21 @@ public class DBUtil
         DataSource ds = (DataSource) envContext.lookup(dataSource);
 
         return ds;
+    }
+    
+    /**
+     * Return true if this is a know Spring DAO transient exception.
+     * @param t
+     * @return
+     */
+    public static boolean isTransientDBException(Throwable t)
+    {
+        if (t instanceof TransientDataAccessException ||
+            t instanceof CannotGetJdbcConnectionException)
+        {
+            return true;
+        }
+        return false;
     }
 
     private static void testDS(DataSource ds, boolean keepOpen)
