@@ -72,27 +72,29 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
 import java.security.PrivilegedActionException;
-import java.security.cert.X509Certificate;
-import java.util.Collection;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Map;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.auth.X509CertificateChain;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.Request;
-import org.restlet.data.*;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.data.Reference;
+import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.server.JobManager;
 import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
 import ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication;
 import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
 import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
@@ -196,6 +198,28 @@ public abstract class UWSResource extends ServerResource
         getResponse().setStatus(status);
         getResponse().setEntity(
                 new StringRepresentation(errorMessage.toString()));
+    }
+    
+    /**
+     * Generate the error Representation.
+     *
+     * @param error        Error in the form.
+     */
+    protected Representation generateRetryRepresentation(TransientException t)
+    {
+        final StringBuilder errorMessage = new StringBuilder(128);
+
+        errorMessage.append("Service Busy");
+
+        getResponse().setStatus(Status.SERVER_ERROR_SERVICE_UNAVAILABLE);
+        
+        Calendar retryTime = new GregorianCalendar();
+        LOGGER.debug("After transient exception, setting retry-after to be "
+                + t.getRetryDelay() + " seconds.");
+        retryTime.add(Calendar.SECOND, t.getRetryDelay());
+        getResponse().setRetryAfter(retryTime.getTime());
+        
+        return new StringRepresentation(errorMessage.toString());
     }
 
     /**

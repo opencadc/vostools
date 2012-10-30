@@ -71,8 +71,8 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 
 import javax.security.auth.Subject;
 
@@ -103,7 +103,7 @@ public class ErrorResource extends BaseJobResource
      */
     @Get
     @Override
-    public Representation represent() throws TransientException, PrivilegedActionException
+    public Representation represent()
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -112,16 +112,16 @@ public class ErrorResource extends BaseJobResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedExceptionAction<Object>()
+            new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException
+                public Object run()
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent() throws TransientException
+    private Representation doRepresent()
     {
         try
         {
@@ -141,6 +141,10 @@ public class ErrorResource extends BaseJobResource
                 return representation;
             }
             return null;
+        }
+        catch (TransientException t)
+        {
+            return generateRetryRepresentation(t);
         }
         catch(JobPersistenceException ex)
         {
