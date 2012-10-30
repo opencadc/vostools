@@ -94,7 +94,6 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -106,6 +105,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.FileMetadata;
@@ -382,7 +382,7 @@ public class NodeDAO
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node " + path, t);
             else
                 throw new RuntimeException("failed to get node: " + path, t);
@@ -432,7 +432,7 @@ public class NodeDAO
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to get node: " + node.getUri().getPath(), t);
@@ -490,7 +490,7 @@ public class NodeDAO
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
@@ -562,7 +562,7 @@ public class NodeDAO
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to get node: " + parent.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
@@ -713,7 +713,7 @@ public class NodeDAO
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to persist node: " + node.getUri(), t);
             else
                 throw new RuntimeException("failed to persist node: " + node.getUri(), t);
@@ -798,7 +798,7 @@ public class NodeDAO
             
             if (t instanceof IllegalStateException)
                 throw (IllegalStateException) t;
-            else if (t instanceof TransientDataAccessException)
+            else if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to delete " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
@@ -860,7 +860,7 @@ public class NodeDAO
             
             if (t instanceof IllegalStateException)
                 throw (IllegalStateException) t;
-            else if (t instanceof TransientDataAccessException)
+            else if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
@@ -934,7 +934,7 @@ public class NodeDAO
             
             if (t instanceof IllegalStateException)
                 throw (IllegalStateException) t;
-            else if (t instanceof TransientDataAccessException)
+            else if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
@@ -1001,7 +1001,7 @@ public class NodeDAO
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to update properties:  " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to update properties:  " + node.getUri().getPath(), t);
@@ -1200,7 +1200,7 @@ public class NodeDAO
             
             if (t instanceof IllegalStateException)
                 throw (IllegalStateException) t;
-            else if (t instanceof TransientDataAccessException)
+            else if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to move:  " + src.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to move:  " + src.getUri().getPath(), t);
@@ -1286,7 +1286,7 @@ public class NodeDAO
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to delete:  " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to delete:  " + node.getUri().getPath(), t);
@@ -1393,7 +1393,7 @@ public class NodeDAO
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to chown:  " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to chown:  " + node.getUri().getPath(), t);
@@ -1501,7 +1501,7 @@ public class NodeDAO
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to apply propagation.", t);
             else
                 throw new RuntimeException("failed to apply propagation.", t);
