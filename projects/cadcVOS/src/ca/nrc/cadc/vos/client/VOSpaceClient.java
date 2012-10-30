@@ -238,6 +238,7 @@ public class VOSpaceClient
             NodeOutputStream out = new NodeOutputStream(node);
             HttpUpload put = new HttpUpload(out, url);
             put.setContentType("text/xml");
+            put.run();
 
             VOSClientUtil.checkFailure(put.getThrowable());
 
