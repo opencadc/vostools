@@ -496,7 +496,6 @@ public class Main implements Runnable
         }
         catch(Throwable t)
         {
-            t.printStackTrace();
             msg("failed to create: " + target);
             if (t.getMessage() != null)
                 msg("          reason: " + t.getMessage());
