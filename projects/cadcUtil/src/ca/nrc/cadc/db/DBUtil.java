@@ -84,6 +84,7 @@ import org.apache.log4j.Logger;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Utility class for obtaining JDBC DataSources.
@@ -177,14 +178,15 @@ public class DBUtil
     }
     
     /**
-     * Return true if this is a know Spring DAO transient exception.
+     * Return true if this is a known Spring DAO transient exception.
      * @param t
      * @return
      */
     public static boolean isTransientDBException(Throwable t)
     {
         if (t instanceof TransientDataAccessException ||
-            t instanceof CannotGetJdbcConnectionException)
+            t instanceof CannotGetJdbcConnectionException ||
+            t instanceof CannotCreateTransactionException)
         {
             return true;
         }
