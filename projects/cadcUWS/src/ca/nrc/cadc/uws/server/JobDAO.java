@@ -95,7 +95,6 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -105,6 +104,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
@@ -364,13 +364,12 @@ public class JobDAO
                 return ret;
             }
         }
-        catch(TransientDataAccessException daex)
-        {
-        	throw new TransientException("query failed for job: " + jobID, daex);
-        }
         catch(Throwable t)
         {
-            throw new JobPersistenceException("failed to get job: " + jobID, t);
+            if (DBUtil.isTransientDBException(t))
+                throw new TransientException("failed to get job: " + jobID, t);
+            else
+                throw new JobPersistenceException("failed to get job: " + jobID, t);
         }
         throw new JobNotFoundException(jobID);
     }
@@ -394,13 +393,12 @@ public class JobDAO
             sc.setJobID(job.getID());
             jdbc.query(sc, new DetailExtractor(jobSchema, job)); // ignore unnecessary return value
         }
-        catch(TransientDataAccessException daex)
-        {
-        	throw new TransientException("query failed for job: " + job.getID(), daex);
-        }
         catch(Throwable t)
         {
-            throw new JobPersistenceException("failed to get job details: " + job.getID(), t);
+            if (DBUtil.isTransientDBException(t))
+                throw new TransientException("failed to get job details: " + job.getID(), t);
+            else
+                throw new JobPersistenceException("failed to get job details: " + job.getID(), t);
         }
     }
 
@@ -424,13 +422,12 @@ public class JobDAO
             if (ret != null)
                 return ret;
         }
-        catch(TransientDataAccessException daex)
-        {
-        	throw new TransientException("query failed for job: " + jobID, daex);
-        }
         catch(Throwable t)
         {
-            throw new JobPersistenceException("failed to get job phase: " + jobID, t);
+            if (DBUtil.isTransientDBException(t))
+                throw new TransientException("failed to get job phase: " + jobID, t);
+            else
+                throw new JobPersistenceException("failed to get job phase: " + jobID, t);
         }
         throw new JobNotFoundException(jobID);
     }
@@ -574,7 +571,8 @@ public class JobDAO
                     rollbackTransaction();
             }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            if (t instanceof TransientDataAccessException)
+            
+            if (DBUtil.isTransientDBException(t))
             	throw new TransientException("failed to persist job: " + jobID, t);
             else
                 throw new JobPersistenceException("failed to persist job: " + jobID, t);
@@ -692,7 +690,7 @@ public class JobDAO
             log.error("rollback for job: " + job.getID(), t);
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
             	throw new TransientException("failed to persist job: " + job.getID(), t);
             else
                 throw new JobPersistenceException("failed to persist job: " + job.getID(), t);
@@ -736,7 +734,7 @@ public class JobDAO
             log.error("rollback for job: " + jobID, t);
             try { rollbackTransaction(); }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
             	throw new TransientException("failed to persist job parameters: " + jobID, t);
             else
                 throw new JobPersistenceException("failed to persist job parameters: " + jobID, t);
@@ -778,7 +776,7 @@ public class JobDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-            if (t instanceof TransientDataAccessException)
+            if (DBUtil.isTransientDBException(t))
             	throw new TransientException("failed to delete job: " + jobID, t);
             else
                 throw new JobPersistenceException("failed to delete job: " + jobID, t);
