@@ -645,7 +645,7 @@ public class Main implements Runnable
 
     private String pad(String s, int len)
     {
-        if (s.length() > len)
+        if (s.length() >= len)
             len = s.length() + 1;
         StringBuilder sb = new StringBuilder();
         sb.append(s);
