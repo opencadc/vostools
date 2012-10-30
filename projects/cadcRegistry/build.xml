@@ -71,6 +71,7 @@
 <!DOCTYPE project>
 <project default="build" basedir=".">
     <property environment="env"/>
+    <property file="local.build.properties" />
     
     <!-- site-specific build properties or overrides of values in opencadc.properties -->
     <property file="${env.CADC_PREFIX}/etc/local.properties" />

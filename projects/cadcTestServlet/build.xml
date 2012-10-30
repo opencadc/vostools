@@ -73,6 +73,7 @@
 <project default="build" basedir=".">
 
 <property environment="env"/>
+    <property file="local.build.properties" />
 
     <!-- site-specific build properties or overrides of values in opencadc.properties -->
     <property file="${env.CADC_PREFIX}/etc/local.properties" />
@@ -90,7 +91,6 @@
     <property name="project" value="cadcTestServlet" />
     <property name="webapp" value="test" />
 
-    <property file="local.build.properties" />
 
     <!-- JAR files to be included in classpath and war file -->
     <property name="log4j"              value="${ext.lib}/log4j.jar" />
