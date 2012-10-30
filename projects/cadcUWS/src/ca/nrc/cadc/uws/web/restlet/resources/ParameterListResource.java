@@ -80,8 +80,8 @@ import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+
+import java.security.PrivilegedAction;
 
 import javax.security.auth.Subject;
 import org.jdom.Document;
@@ -95,11 +95,9 @@ public class ParameterListResource extends BaseJobResource
      * POST Parameter data to this Job.
      *
      * @param entity    The Representation Entity.
-     * @throws TransientException 
-     * @throws PrivilegedActionException 
      */
     @Post
-    public void accept(final Representation entity) throws TransientException, PrivilegedActionException
+    public void accept(final Representation entity)
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -108,9 +106,9 @@ public class ParameterListResource extends BaseJobResource
         }
         else
         {
-            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
+            Subject.doAs(subject, new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException
+                public Object run()
                 {
                     doAccept(entity);
                     return null;
@@ -119,7 +117,7 @@ public class ParameterListResource extends BaseJobResource
         }
     }
 
-    private void doAccept(final Representation entity) throws TransientException
+    private void doAccept(final Representation entity)
     {
         try
         {
@@ -131,6 +129,10 @@ public class ParameterListResource extends BaseJobResource
         catch(JobNotFoundException ex)
         {
             throw new RuntimeException(ex);
+        }
+        catch (TransientException t)
+        {
+            generateRetryRepresentation(t);
         }
         catch(JobPersistenceException ex)
         {

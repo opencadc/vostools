@@ -141,7 +141,7 @@ public abstract class UWSResource extends ServerResource
      * @throws PrivilegedActionException 
      */
     @Get
-    public Representation represent() throws TransientException, PrivilegedActionException
+    public Representation represent()
     {
         try
         {

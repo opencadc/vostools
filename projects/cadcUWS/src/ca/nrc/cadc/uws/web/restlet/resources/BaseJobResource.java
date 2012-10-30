@@ -70,8 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedAction;
 
 import javax.security.auth.Subject;
 
@@ -115,7 +114,7 @@ public abstract class BaseJobResource extends UWSResource
 
     @Get
     @Override
-    public Representation represent() throws TransientException, PrivilegedActionException
+    public Representation represent()
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -124,16 +123,16 @@ public abstract class BaseJobResource extends UWSResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedExceptionAction<Object>()
+            new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException, PrivilegedActionException
+                public Object run()
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent() throws TransientException, PrivilegedActionException
+    private Representation doRepresent()
     {
         try
         {
@@ -143,6 +142,10 @@ public abstract class BaseJobResource extends UWSResource
                 job.setProtocol(protocol);
             }
             return super.represent();
+        }
+        catch (TransientException t)
+        {
+            return generateRetryRepresentation(t);
         }
         catch(JobPersistenceException ex)
         {

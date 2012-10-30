@@ -82,6 +82,7 @@ import org.restlet.representation.Representation;
 import org.restlet.resource.Post;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 
@@ -139,6 +140,10 @@ public class AsynchResource extends UWSResource
             String errorMessage = "XML document exceeds " + ex.getLimit() + " bytes";
             LOGGER.info("Exception caught in doAccept: " + errorMessage);
             generateErrorRepresentation(Status.CLIENT_ERROR_REQUEST_ENTITY_TOO_LARGE, errorMessage);
+        }
+        catch (TransientException t)
+        {
+            generateRetryRepresentation(t);
         }
         catch(Exception ex)
         {

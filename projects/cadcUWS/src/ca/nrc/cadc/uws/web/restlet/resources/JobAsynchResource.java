@@ -71,8 +71,7 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import java.security.PrivilegedAction;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
@@ -124,12 +123,10 @@ public class JobAsynchResource extends BaseJobResource
     /**
      * 
      * @author zhangsa
-     * @throws PrivilegedActionException 
-     * @throws TransientException 
      */
     @Get
     @Override
-    public Representation represent() throws TransientException, PrivilegedActionException
+    public Representation represent()
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -138,16 +135,16 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         return (Representation) Subject.doAs(subject,
-            new PrivilegedExceptionAction<Object>()
+            new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException, PrivilegedActionException
+                public Object run()
                 {
                     return doRepresent();
                 }
             } );
     }
 
-    private Representation doRepresent() throws TransientException, PrivilegedActionException
+    private Representation doRepresent()
     {
         try
         {
@@ -172,6 +169,10 @@ public class JobAsynchResource extends BaseJobResource
 
             return super.represent();
         }
+        catch (TransientException t)
+        {
+            return generateRetryRepresentation(t);
+        }
         catch(JobPersistenceException ex)
         {
             throw new RuntimeException(ex);
@@ -183,7 +184,7 @@ public class JobAsynchResource extends BaseJobResource
     }
 
     @Delete
-    public void delete(final Representation entity) throws TransientException, PrivilegedActionException
+    public void delete(final Representation entity)
     {
         Subject subject = getSubject();
         if (subject == null) // anon
@@ -192,9 +193,9 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
+            Subject.doAs(subject, new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException
+                public Object run()
                 {
                     doDelete(entity);
                     return null;
@@ -203,13 +204,17 @@ public class JobAsynchResource extends BaseJobResource
         }
     }
 
-    private void doDelete(final Representation entity) throws TransientException
+    private void doDelete(final Representation entity)
     {
         LOGGER.debug("delete() called. for job: " + jobID);
         try
         {   
             getJobManager().delete(jobID);
             redirectToJobList();
+        }
+        catch (TransientException t)
+        {
+            generateRetryRepresentation(t);
         }
         catch(JobPersistenceException ex)
         {
@@ -225,11 +230,9 @@ public class JobAsynchResource extends BaseJobResource
      * Accept POST requests.
      *
      * @param entity    The POST Request body.
-     * @throws TransientException 
-     * @throws PrivilegedActionException 
      */
     @Post
-    public void accept(final Representation entity) throws TransientException, PrivilegedActionException
+    public void accept(final Representation entity)
     {
         final String pathInfo = getPathInfo();
         Subject subject = getSubject();
@@ -239,9 +242,9 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
+            Subject.doAs(subject, new PrivilegedAction<Object>()
             {
-                public Object run() throws TransientException
+                public Object run()
                 {
                     doAccept(pathInfo, entity);
                     return null;
@@ -250,7 +253,7 @@ public class JobAsynchResource extends BaseJobResource
         }
     }
 
-    private void doAccept(final String pathInfo, final Representation entity) throws TransientException
+    private void doAccept(final String pathInfo, final Representation entity)
     {
         LOGGER.debug("doAccept: pathInfo=" + pathInfo);
         try
@@ -359,6 +362,10 @@ public class JobAsynchResource extends BaseJobResource
                 }
             }
             redirectToJob();
+        }
+        catch (TransientException t)
+        {
+            generateRetryRepresentation(t);
         }
         catch(JobPersistenceException ex)
         {
