@@ -117,7 +117,7 @@ public class UploadFile implements VOSpaceCommand
             throw new IllegalArgumentException("dataNode cannot be null.");
         if (file == null)
             throw new IllegalArgumentException("file cannot be null.");
-        if (!file.isFile())
+        if (file.isDirectory())
             throw new IllegalArgumentException("not a file.");
         if (!file.canRead())
             throw new IllegalArgumentException("cannot read file.");

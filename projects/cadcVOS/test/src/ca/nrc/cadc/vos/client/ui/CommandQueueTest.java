@@ -68,14 +68,9 @@
 */
 package ca.nrc.cadc.vos.client.ui;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.net.URI;
 
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
@@ -84,6 +79,9 @@ import org.junit.Test;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.VOSURI;
+
+import static org.junit.Assert.*;
+
 
 /**
  *
@@ -99,6 +97,38 @@ public class CommandQueueTest
     public static void setUpClass()
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos.client.ui", Level.INFO);
+    }
+
+
+    @Test
+    public void abort() throws Exception
+    {
+        final TestListener listener = new TestListener();
+        final CommandQueue testSubject = new CommandQueue(100, listener);
+
+        for (int i = 0; i < 100; i++)
+        {
+            testSubject.put(new VOSpaceCommand()
+            {
+                @Override
+                public void execute(VOSpaceClient vospaceClient) throws Exception
+                {
+                    // Do nothing
+                }
+            });
+        }
+
+        // Remove forty of them.
+        for (int i = 0; i < 40; i++)
+        {
+            testSubject.remove();
+        }
+
+        final long remainingItems = testSubject.abortProduction();
+
+        assertTrue("Abort not properly issued.",
+                   testSubject.isAbortedProduction());
+        assertEquals("Should be sixty items left.", 60l, remainingItems);
     }
 
     /**
@@ -284,6 +314,7 @@ public class CommandQueueTest
         long remaining;
         boolean started;
         boolean completed;
+        boolean aborted;
 
         TestListener()
         {
@@ -291,6 +322,7 @@ public class CommandQueueTest
             remaining = 0;
             started = false;
             completed = false;
+            aborted = false;
         }
 
         // long commandsProcessed, long commandsRemaining
@@ -310,6 +342,14 @@ public class CommandQueueTest
             completed = true;
         }
 
+        /**
+         * Indicates that an Abort was issued.
+         */
+        @Override
+        public void onAbort()
+        {
+            aborted = true;
+        }
     }
     
 }

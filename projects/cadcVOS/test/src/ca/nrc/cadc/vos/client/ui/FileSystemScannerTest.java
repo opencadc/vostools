@@ -105,7 +105,7 @@ public class FileSystemScannerTest
     }
 
     @Test
-    public void testIsSymLink()
+    public void testIsSymLink() throws Exception
     {
         try
         {
@@ -198,5 +198,4 @@ public class FileSystemScannerTest
             fail("unexpected exception: " + unexpected);
         }
     }
-    
 }

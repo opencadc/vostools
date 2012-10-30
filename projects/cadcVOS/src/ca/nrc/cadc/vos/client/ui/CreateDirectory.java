@@ -84,7 +84,6 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
  */
 public class CreateDirectory implements VOSpaceCommand
 {
-    
     protected static final Logger log = Logger.getLogger(CreateDirectory.class);
     
     private ContainerNode containerNode;

@@ -72,7 +72,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -109,11 +108,12 @@ public class FileSystemScanner implements Runnable
     /**
      * Constructor.
      * 
-     * @param sourceFile root of the file structure to be uploaded.
-     * @param targetURI target node URI.
-     * @param queue CommandQueue containing VOSpaceCommands.
+     * @param sourceFile    root of the file structure to be uploaded.
+     * @param targetURI     target node URI.
+     * @param commandQueue  CommandQueue containing VOSpaceCommands.
      */
-    public FileSystemScanner(File sourceFile, VOSURI targetURI, CommandQueue commandQueue)
+    public FileSystemScanner(File sourceFile, VOSURI targetURI,
+                             CommandQueue commandQueue)
     {
         this.sourceFile = sourceFile;
         this.targetURI = targetURI;
@@ -131,18 +131,19 @@ public class FileSystemScanner implements Runnable
             Queue<String> filePathQueue = new LinkedList<String>();
             filePathQueue.add(sourceFile.getPath());
 
-            while (!filePathQueue.isEmpty())
+            while (!filePathQueue.isEmpty()
+                   && !commandQueue.isAbortedProduction())
             {
                 // Next file in the queue.
-                File file = new File(filePathQueue.remove());
+                final File file = new File(filePathQueue.remove());
 
                 try
                 {
                     // Check if file is a symlink.
                     if (isSymLink(file))
                     {
-                        log.error("Symbolic link found: " + file.getAbsolutePath());
-                        continue;
+                        log.error("Symbolic link found: "
+                                  + file.getAbsolutePath());
                     }
 
                     // Create a DataNode command and add it to the CommandQueue.
@@ -156,7 +157,11 @@ public class FileSystemScanner implements Runnable
                     else
                     {
                         queueContainerNode(file);
-                        filePathQueue.addAll(Arrays.asList(file.list()));
+                        for (final String filename : file.list())
+                        {
+                            filePathQueue.add(file.getPath() + File.separator
+                                              + filename);
+                        }
                     }
                 }
                 catch (IOException ioe)
@@ -180,9 +185,22 @@ public class FileSystemScanner implements Runnable
         {
             log.error("Processing stopped");
         }
+        catch (Exception e)
+        {
+            log.error("Bug found!", e);
+        }
         finally
         {
-            commandQueue.doneProduction();
+            //
+            // TODO - If a CommandQueue is aborted, is it also considered
+            // TODO - 'Done'?  It seems unlikely.
+            //
+            // TODO - jenkinsd 2012.10.23
+            //
+            if (!commandQueue.isAbortedProduction())
+            {
+                commandQueue.doneProduction();
+            }
         }
     }
 
@@ -233,17 +251,16 @@ public class FileSystemScanner implements Runnable
      * add it to the CommandQueue.
      *
      * @param file the file to add to the CommandQueue
-     * @throws URISyntaxException
      * @throws InterruptedException
      */
     protected void queueContainerNode(File file)
-        throws URISyntaxException, InterruptedException
+        throws InterruptedException
     {
         // Get the path starting from the root file.
         String path = getRelativePath(file);
 
         // Create a DataNode.
-        URI uri = new URI(targetURI.toString() + path);
+        URI uri = URI.create(targetURI.toString() + path);
         ContainerNode node = new ContainerNode(new VOSURI(uri));
 
         // Add node and InputStream from file.
@@ -254,7 +271,7 @@ public class FileSystemScanner implements Runnable
     /**
      * Get the relative path from the root file to the given file.
      *
-     * @param file 
+     * @param file      The file to get the path for.
      * @return String of relative path to the given file.
      */
     protected String getRelativePath(File file)

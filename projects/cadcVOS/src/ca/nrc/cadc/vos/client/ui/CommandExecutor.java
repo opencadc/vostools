@@ -95,17 +95,19 @@ public class CommandExecutor implements Runnable
     
     /**
      * Executes the commands in the queue until queue production is
-     * complete.
+     * complete or aborted.
      */
     public void run()
     {
         queue.startedConsumption();
         try
         {
-            VOSpaceCommand nextCommand = null;
-            while (!queue.isDoneProduction() || queue.peek() != null)
+            VOSpaceCommand nextCommand;
+            while (!queue.isAbortedProduction()
+                   && (!queue.isDoneProduction() || (queue.peek() != null)))
             {
-                while ((nextCommand = queue.peek()) != null)
+                while (!queue.isAbortedProduction()
+                       && ((nextCommand = queue.peek()) != null))
                 {
                     log.debug("Executing command: " + nextCommand);
                     try
@@ -114,7 +116,8 @@ public class CommandExecutor implements Runnable
                     }
                     catch (Exception e)
                     {
-                        log.info("Error executing command: " + nextCommand + ": " + e);
+                        log.info("Error executing command: " + nextCommand
+                                 + ": " + e);
                     }
                     queue.remove();
                 }
@@ -129,8 +132,19 @@ public class CommandExecutor implements Runnable
         }
         finally
         {
-            queue.doneConsumption();
+            //
+            // TODO - If a CommandQueue is aborted, is it also considered
+            // TODO - to be 'Done'?  It seems unlikely.
+            //
+            // TODO - jenkinsd 2012.10.23
+            //
+            if (!queue.isAbortedProduction())
+            {
+                queue.doneConsumption();
+            }
+
+            // Clean up.
+            queue.clear();
         }
     }
-
 }

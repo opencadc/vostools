@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2012.                            (c) 2012.
+*  (c) 2009.                            (c) 2009.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -58,7 +58,7 @@
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, sesrc/jsp/index.jspe          OpenCADC ; si ce n’est
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
@@ -67,149 +67,58 @@
 ************************************************************************
 */
 
+
 package ca.nrc.cadc.vos.client.ui;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import javax.swing.*;
+import java.awt.*;
 
-import org.apache.log4j.Logger;
 
 /**
- * 
- * A non-threadsafe interface to a bounded fifo queue buffering vospace
- * commands to be executed.
- * 
- * The queue will not grow beyond maxCapcity.
- * 
- * Implementations of the CommandQueueListerer will receive queue processing
- * event notifications.
- * 
- * @author majorb
+ * TODO.
  *
+ * @author pdowler
  */
-public class CommandQueue
+public class Util
 {
+    private Util() { }
     
-    private static Logger log = Logger.getLogger(CommandQueue.class);
-    
-    private CommandQueueListener listener;
-    private boolean doneProduction = false;
-    private boolean abortedProduction = false;
-    private long commandsProcessed = 0;
-    private ArrayBlockingQueue<VOSpaceCommand> queue;
-    
-    public CommandQueue(int maxCapacity, CommandQueueListener listener)
+    public static Frame findParentFrame(Component parent)
     {
-        // Force FIFO behaviour by setting 2nd arg to true.
-        this.queue = new ArrayBlockingQueue<VOSpaceCommand>(maxCapacity, true);
-        this.listener = listener;
+        while (true)
+        {
+            if (parent == null)
+                return null;
+            if (parent instanceof Frame)
+                return (Frame) parent;
+            parent = parent.getParent();
+        }
     }
     
-    /**
-     * Inform the listener that processing has begun.
-     */
-    public void startedConsumption()
-    {
-        listener.processingStarted();
-    }
-    
-    /**
-     * Inform the listener that processing is complete.
-     */
-    public void doneConsumption()
-    {
-        listener.processingComplete();
-    }
-    
-    /**
-     * Method to indicate that the producer is finished working.
-     */
-    public void doneProduction()
-    {
-        doneProduction = true;
-    }
-    
-    /**
-     * Returns true if command production is complete.
-     * @return
-     */
-    public boolean isDoneProduction()
-    {
-        return doneProduction;
-    }
-    
-    /**
-     * Push the command on the queue, wait if full.
-     * @param command
-     */
-    public void put(VOSpaceCommand command)
+    public static void setPositionRelativeToParent(Window w, Component parent, int hOffset, int vOffset)
     {
         try
         {
-            queue.put(command);
-        }
-        catch (InterruptedException e)
+            Point p = parent.getLocationOnScreen();
+            int x = (int) p.getX() + hOffset;
+            int y = (int) p.getY() + vOffset;
+            w.setLocation(x, y);
+            w.pack();
+        } 
+        catch (Throwable t) { }
+        
+    }
+    
+    public static void recursiveSetBackground(Component comp, Color color)
+    {
+        if (comp instanceof JToolBar || comp instanceof JButton)
+            return;
+        comp.setBackground(color);
+        if (comp instanceof Container)
         {
-            log.debug("Queue put interrupted: " + e);
+            Container cc = (Container) comp;
+            for (int i = 0; i < cc.getComponentCount(); i++)
+                recursiveSetBackground(cc.getComponent(i), color);
         }
-        log.debug("New queue size after put: " + queue.size());
-    }
-
-    /**
-     * Returns the command at the top of the queue.
-     * @return
-     */
-    public VOSpaceCommand peek()
-    {
-        return queue.peek();
-    }
-
-    /**
-     * Removes the command at the top of the queue.
-     */
-    public void remove()
-    {
-        queue.remove();
-        commandsProcessed++;
-        listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        log.debug("New queue size after remove: " + queue.size());
-    }
-
-    /**
-     * Removes and returns the command at the head of the queue.
-     * @return VOSpaceCommand.
-     */
-    public VOSpaceCommand poll()
-    {
-        VOSpaceCommand command = queue.poll();
-        if (command != null)
-        {
-            commandsProcessed++;
-            listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        }
-        return command;
-    }
-
-    public void clear()
-    {
-        queue.clear();
-    }
-
-    /**
-     * Abort this Command Queue kindly.  Any in-progress Threads will finish
-     * execution.
-     *
-     * @return  long    Count of items remaining in the queue.
-     */
-    public long abortProduction()
-    {
-        listener.onAbort();
-        abortedProduction = true;
-
-        return queue.size();
-    }
-
-    public boolean isAbortedProduction()
-    {
-        return abortedProduction;
     }
 }

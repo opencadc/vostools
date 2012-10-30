@@ -67,225 +67,250 @@
 ************************************************************************
 -->
 
-	
+
 <project default="build" basedir=".">
   <property environment="env"/>
     <property file="local.build.properties" />
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+  <!-- site-specific build properties or overrides of values in opencadc.properties -->
+  <property file="${env.CADC_PREFIX}/etc/local.properties"/>
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+  <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+  <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true"/>
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+  <!-- default properties and targets -->
+  <property file="${env.CADC_PREFIX}/etc/opencadc.properties"/>
+  <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+  <!-- developer convenience: place for extra targets and properties -->
+  <import file="extras.xml" optional="true"/>
 
 
-    <property name="project" value="cadcVOS" />
+  <property name="project" value="cadcVOS"/>
 
-    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
-    <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
-    <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
-    <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
-    <property name="cadcCDP" value="${lib}/cadcCDP.jar" />
+  <property name="cadcUtil" value="${lib}/cadcUtil.jar"/>
+  <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar"/>
+  <property name="cadcUWS" value="${lib}/cadcUWS.jar"/>
+  <property name="cadcGMS" value="${lib}/cadcGMSClient.jar"/>
+  <property name="cadcCDP" value="${lib}/cadcCDP.jar"/>
 
-    <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
-    <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
-    <property name="ext.spring" value="${ext.lib}/spring.jar" />
-    <property name="ext.servlet" value="${ext.lib}/servlet-api.jar" />
-    <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
-    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
-    <property name="resources.dir" value="test/resources/" />    
-    
+  <property name="ext.restlet" value="${ext.lib}/org.restlet.jar"/>
+  <property name="ext.log4j" value="${ext.lib}/log4j.jar"/>
+  <property name="ext.spring" value="${ext.lib}/spring.jar"/>
+  <property name="ext.servlet" value="${ext.lib}/servlet-api.jar"/>
+  <property name="ext.jdom" value="${ext.lib}/jdom.jar"/>
+  <property name="ext.xerces" value="${ext.lib}/xerces.jar"/>
+  <property name="resources.dir" value="test/resources/"/>
 
-    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}" />
 
-    <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
-    <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
-    <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
+  <property name="jars"
+            value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}"/>
 
-    <target name="build" depends="compile,resources,manifest">
+  <property name="client.cadc.jars"
+            value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
+  <property name="client.external.jars"
+            value="${ext.jdom}:${ext.xerces}:${ext.log4j}"/>
+  <property name="client.jarfile" value="${build}/lib/${project}Client.jar"/>
 
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-            <include name="**.xsd" />
-            <exclude name="**Test**" />
-        </jar>
-   
-        <jar jarfile="${client.jarfile}"
-            basedir="${build}/class"
-            update="no"
-            manifest="${build}/tmp/${project}Client.mf">
-            <include name="ca/nrc/cadc/vos/client/**" />
-            <include name="ca/nrc/cadc/vos/**.class" />
-            <include name="**.xsd" />
-            <exclude name="**Test**" />
-        </jar>
+  <target name="build" depends="compile,resources,manifest">
 
-        
-    </target>
+    <jar jarfile="${build}/lib/${project}.jar"
+         basedir="${build}/class"
+         update="no">
+      <include name="ca/nrc/cadc/**"/>
+      <include name="**.xsd"/>
+      <exclude name="**Test**"/>
+    </jar>
 
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
+    <jar jarfile="${client.jarfile}"
+         basedir="${build}/class"
+         update="no">
+      <include name="ca/nrc/cadc/vos/client/**"/>
+      <include name="ca/nrc/cadc/vos/**.class"/>
+      <include name="ca/onfire/ak/**.class"/>
+      <include name="**.xsd"/>
+      <exclude name="**Test**"/>
+    </jar>
 
-    <target name="manifest">
-	<pathconvert property="client.flat.manifest" pathsep=" ">
-	    <mapper type="flatten"/>
-	    <path> <pathelement path="${client.cadc.jars}"/> </path>
-	    <path> <pathelement path="${client.external.jars}"/> </path>
-	</pathconvert>
-	<pathconvert property="client.non-flat.manifest" pathsep=" ">
-	    <path> <pathelement path="${client.external.jars}"/> </path>
-	</pathconvert>
 
-        <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
-            <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
-            <attribute name="Class-Path" value="${client.flat.manifest} ${client.non-flat.manifest}"/>
+  </target>
 
-        </manifest>
-    </target>
+  <target name="resources">
+    <copy todir="${build}/class">
+      <fileset dir="src/resources">
+        <include name="**.xsd"/>
+      </fileset>
+    </copy>
+  </target>
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="cadcVOS" value="${build}/lib/${project}.jar" />
-    <property name="junit" value="${ext.lib}/junit.jar" />
-    <property name="xmlunit" value="${ext.lib}/xmlunit.jar" />
-    <property name="xerces" value="${ext.lib}/xerces.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="dev.asm" value="${ext.dev}/asm.jar" />
-    <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
-    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
-    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars"
-              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}" />
+  <target name="manifest">
+    <pathconvert property="client.flat.manifest" pathsep=" ">
+      <mapper type="flatten"/>
+      <path>
+        <pathelement path="${client.cadc.jars}"/>
+      </path>
+      <path>
+        <pathelement path="${client.external.jars}"/>
+      </path>
+    </pathconvert>
+    <pathconvert property="client.non-flat.manifest" pathsep=" ">
+      <path>
+        <pathelement path="${client.external.jars}"/>
+      </path>
+    </pathconvert>
 
-    <!-- Run the test suite -->
-    <target name="test" depends="build,compile-test,create-tables">
-        <copy file="test/src/resources/Views.properties" todir="${build}/test/class"/>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-          <classpath>
-              <pathelement path="."/>
-              <pathelement path="src"/>
-              <pathelement path="test/src"/>
-              <pathelement path="${build}/class"/>
-              <pathelement path="${build}/test/class"/>
-              <pathelement path="${jars}:${testingJars}"/>
-          </classpath>
-          <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.CADCVOSTestSuite"/>
-        </junit>
-    </target>
-    
-    <!-- create the client distribution tar file -->
-    <target name="distribute" depends="build" >
-	<echo message="${ant.project.name}"/>
-	<antcall target="build_distribution">
-	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}:${client.external.jars}"/>
-	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
-	    <param name="distName" value="cadcVOSClient"/> 
-	</antcall>
-	<antcall target="build_distribution">
-	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}"/>
-	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
-	    <param name="distName" value="cadcVOSClient-minimal"/> 
-	</antcall>
-    </target>
+    <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
+      <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
+      <attribute name="Class-Path"
+                 value="${client.flat.manifest} ${client.non-flat.manifest}"/>
 
-    <target name="create-tables">
-        <echo message="creating test tables..."/>
-        <exec executable="test/scripts/createTestTables.sh"/>
-    </target>
-    
-    <!-- convenience test targets when developing -->
-    <target name="client-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-          <classpath>
-              <pathelement path="."/>
-              <pathelement path="src"/>
-              <pathelement path="test/src"/>
-              <pathelement path="${build}/class"/>
-              <pathelement path="${build}/test/class"/>
-              <pathelement path="${jars}:${testingJars}"/>
-          </classpath>
-          <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.client.ui.FileSystemScannerTest"/>
-          <test name="ca.nrc.cadc.vos.client.ui.CommandQueueTest" />
-        </junit>
-    </target>
+    </manifest>
+  </target>
 
-    <target name="xml-test" depends="compile-test">
-        <copy  todir="${build}/test/class">
-            <fileset dir="test/src/resources">
-                <include name="**/*.xml" />
-            </fileset>
-        </copy>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-          <classpath>
-              <pathelement path="."/>
-              <pathelement path="src"/>
-              <pathelement path="test/src"/>
-              <pathelement path="${build}/class"/>
-              <pathelement path="${build}/test/class"/>
-              <pathelement path="${jars}:${testingJars}"/>
-          </classpath>
-          <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
-          <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
-        </junit>
-    </target>
+  <!-- JAR files needed to run the test suite -->
+  <property name="cadcVOS" value="${build}/lib/${project}.jar"/>
+  <property name="junit" value="${ext.lib}/junit.jar"/>
+  <property name="xmlunit" value="${ext.lib}/xmlunit.jar"/>
+  <property name="xerces" value="${ext.lib}/xerces.jar"/>
+  <property name="dev.easyMock" value="${ext.dev}/easymock.jar"/>
+  <property name="dev.asm" value="${ext.dev}/asm.jar"/>
+  <property name="dev.cglib" value="${ext.dev}/cglib.jar"/>
+  <property name="dev.objenesis" value="${ext.dev}/objenesis.jar"/>
+  <property name="commons-logging" value="${ext.lib}/commons-logging.jar"/>
 
-    <target name="dao-test" depends="compile-test">
-        <copy  todir="${build}/test/class">
-            <fileset dir="test/src/resources">
-                <include name="**/*.xml" />
-            </fileset>
-        </copy>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-          <classpath>
-              <pathelement path="."/>
-              <pathelement path="src"/>
-              <pathelement path="test/src"/>
-              <pathelement path="${build}/class"/>
-              <pathelement path="${build}/test/class"/>
-              <pathelement path="${jars}:${testingJars}"/>
-          </classpath>
-          <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.server.NodeDAOTest"/>
-        </junit>
-    </target>
+  <!-- FEST UI testing. -->
+  <!--<property name="dev.fest.home" value="${env.SANDBOX_HOME}/thirdparty/fest-swing" />-->
+  <!--<property name="dev.fest.lib" value="${dev.fest.home}/fest-swing-1.2.jar" />-->
+  <!--<property name="dev.fest.assert.lib" value="${dev.fest.home}/lib/fest-assert-1.2.jar" />-->
+  <!--<property name="dev.fest.reflect.lib" value="${dev.fest.home}/lib/fest-reflect-1.2.jar" />-->
+  <!--<property name="dev.fest.util.lib" value="${dev.fest.home}/lib/fest-util-1.2.jar" />-->
+  <!--<property name="dev.fest.annotations.lib" value="${dev.fest.home}/lib/fest-annotations-1.2.jar" />-->
+  <!--<property name="testingJars"-->
+            <!--value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${dev.fest.lib}:${dev.fest.assert.lib}:${dev.fest.reflect.lib}:${dev.fest.util.lib}:${dev.fest.annotations.lib}"/>-->
+  <property name="testingJars"
+            value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}"/>
 
-    <target name="rss-test" depends="compile-test">
-        <copy  todir="${build}/test/class">
-            <fileset dir="test/src/resources">
-                <include name="**/*.xml" />
-            </fileset>
-        </copy>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-          <classpath>
-              <pathelement path="."/>
-              <pathelement path="src"/>
-              <pathelement path="test/src"/>
-              <pathelement path="${build}/class"/>
-              <pathelement path="${build}/test/class"/>
-              <pathelement path="${jars}:${testingJars}"/>
-          </classpath>
-          <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.server.RssViewTest"/>
-          <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>   
-          <test name="ca.nrc.cadc.vos.server.RssFeedItemTest"/>
-          <test name="ca.nrc.cadc.vos.server.util.FixedSizeTreeSetTest"/>
-        </junit>
-    </target>
+  <!-- Run the test suite -->
+  <target name="test" depends="build,compile-test,create-tables">
+    <copy file="test/src/resources/Views.properties"
+          todir="${build}/test/class"/>
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="."/>
+        <pathelement path="src"/>
+        <pathelement path="test/src"/>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <test name="ca.nrc.cadc.vos.CADCVOSTestSuite"/>
+    </junit>
+  </target>
+
+  <!-- create the client distribution tar file -->
+  <target name="distribute" depends="build">
+    <echo message="${ant.project.name}"/>
+    <antcall target="build_distribution">
+      <param name="jarFiles"
+             value="${client.jarfile}:${client.cadc.jars}:${client.external.jars}"/>
+      <param name="scriptFiles"
+             value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
+      <param name="distName" value="cadcVOSClient"/>
+    </antcall>
+    <antcall target="build_distribution">
+      <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}"/>
+      <param name="scriptFiles"
+             value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
+      <param name="distName" value="cadcVOSClient-minimal"/>
+    </antcall>
+  </target>
+
+  <target name="create-tables">
+    <echo message="creating test tables..."/>
+    <exec executable="test/scripts/createTestTables.sh"/>
+  </target>
+
+  <!-- convenience test targets when developing -->
+  <target name="client-test" depends="compile-test">
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="."/>
+        <pathelement path="src"/>
+        <pathelement path="test/src"/>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <test name="ca.nrc.cadc.vos.client.ui.FileSystemScannerTest"/>
+      <test name="ca.nrc.cadc.vos.client.ui.CommandQueueTest"/>
+      <test name="ca.nrc.cadc.vos.client.ui.integration.UploadApplicationTest"/>
+    </junit>
+  </target>
+
+  <target name="xml-test" depends="compile-test">
+    <copy todir="${build}/test/class">
+      <fileset dir="test/src/resources">
+        <include name="**/*.xml"/>
+      </fileset>
+    </copy>
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="."/>
+        <pathelement path="src"/>
+        <pathelement path="test/src"/>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
+      <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
+    </junit>
+  </target>
+
+  <target name="dao-test" depends="compile-test">
+    <copy todir="${build}/test/class">
+      <fileset dir="test/src/resources">
+        <include name="**/*.xml"/>
+      </fileset>
+    </copy>
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="."/>
+        <pathelement path="src"/>
+        <pathelement path="test/src"/>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <test name="ca.nrc.cadc.vos.server.NodeDAOTest"/>
+    </junit>
+  </target>
+
+  <target name="rss-test" depends="compile-test">
+    <copy todir="${build}/test/class">
+      <fileset dir="test/src/resources">
+        <include name="**/*.xml"/>
+      </fileset>
+    </copy>
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="."/>
+        <pathelement path="src"/>
+        <pathelement path="test/src"/>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+      </classpath>
+      <formatter type="plain" usefile="false"/>
+      <test name="ca.nrc.cadc.vos.server.RssViewTest"/>
+      <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>
+      <test name="ca.nrc.cadc.vos.server.RssFeedItemTest"/>
+      <test name="ca.nrc.cadc.vos.server.util.FixedSizeTreeSetTest"/>
+    </junit>
+  </target>
 
 </project>

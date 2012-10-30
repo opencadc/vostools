@@ -96,4 +96,8 @@ public interface CommandQueueListener
      */
     void processingComplete();
 
+    /**
+     * Indicates that an Abort was issued.
+     */
+    void onAbort();
 }
