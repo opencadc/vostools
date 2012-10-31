@@ -417,7 +417,6 @@ public abstract class HttpTransfer implements Runnable
                 case HttpURLConnection.HTTP_UNAVAILABLE:
                 case HttpURLConnection.HTTP_CLIENT_TIMEOUT:
                 case HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
-                case HttpURLConnection.HTTP_INTERNAL_ERROR:     // use larger delays for this?
                 case HttpURLConnection.HTTP_PRECON_FAILED:      // ??
                 case HttpURLConnection.HTTP_PAYMENT_REQUIRED:   // maybe it will become free :-)
                     trans = true;
