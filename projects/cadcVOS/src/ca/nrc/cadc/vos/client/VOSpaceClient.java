@@ -69,9 +69,9 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
@@ -91,6 +91,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
@@ -110,8 +111,6 @@ import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
 
 /**
  * VOSpace client library. This implementation 
@@ -238,7 +237,8 @@ public class VOSpaceClient
             NodeOutputStream out = new NodeOutputStream(node);
             HttpUpload put = new HttpUpload(out, url);
             put.setContentType("text/xml");
-            put.run();
+            
+            runHttpTransfer(put);
 
             VOSClientUtil.checkFailure(put.getThrowable());
 
@@ -299,7 +299,8 @@ public class VOSpaceClient
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(url, out);
-            get.run();
+            
+            runHttpTransfer(get);
             
             VOSClientUtil.checkFailure(get.getThrowable());
 
@@ -339,7 +340,8 @@ public class VOSpaceClient
             StringBuilder nodeXML = new StringBuilder();
             nodeWriter.write(node, nodeXML);
             HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
-            httpPost.run();
+            
+            runHttpTransfer(httpPost);
   
             VOSClientUtil.checkFailure(httpPost.getThrowable());
             
@@ -375,7 +377,8 @@ public class VOSpaceClient
             URL postUrl = new URL(asyncNodePropsUrl);
             
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
-            httpPost.run();
+            
+            runHttpTransfer(httpPost);
             
             VOSClientUtil.checkFailure(httpPost.getThrowable());
             
@@ -526,7 +529,8 @@ public class VOSpaceClient
             URL postUrl = new URL(asyncTransUrl);
             
             HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
-            httpPost.run();
+            
+            runHttpTransfer(httpPost);
 
             if (httpPost.getThrowable() != null)
             {
@@ -564,7 +568,8 @@ public class VOSpaceClient
             
             URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
             HttpPost httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
-            httpPost.run();
+            
+            runHttpTransfer(httpPost);
 
             if (httpPost.getThrowable() != null)
             {
@@ -583,7 +588,8 @@ public class VOSpaceClient
             log.debug("GET - opening connection: " + redirectURL.toString());
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(redirectURL, out);
-            get.run();
+            
+            runHttpTransfer(get);
 
             if (get.getThrowable() != null)
             {
@@ -669,6 +675,17 @@ public class VOSpaceClient
             log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
+    }
+    
+    private void runHttpTransfer(HttpTransfer transfer)
+    {
+        if (sslSocketFactory != null)
+            transfer.setSSLSocketFactory(sslSocketFactory);
+        
+        transfer.run();
+        
+        if (transfer.getSSLSocketFactory() != null)
+            this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 
     private class NodeOutputStream implements OutputStreamWrapper

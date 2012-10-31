@@ -69,43 +69,33 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.HttpRequestProperty;
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.
@@ -212,7 +202,8 @@ public class ClientRecursiveSetNode implements Runnable
         {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(jobURL, out);
-            get.run();
+            
+            runHttpTransfer(get);
 
             if (get.getThrowable() != null)
             {
@@ -313,7 +304,8 @@ public class ClientRecursiveSetNode implements Runnable
             boolean followRedirects = false;
 
             HttpPost post = new HttpPost(url, content, contentType, followRedirects);
-            post.run();
+            
+            runHttpTransfer(post);
 
             if (post.getThrowable() != null)
             {
@@ -334,20 +326,15 @@ public class ClientRecursiveSetNode implements Runnable
             throw new RuntimeException("BUG: failed to create phase url", bug);
         }
     }
-
-    private void initHTTPS(HttpsURLConnection sslConn)
+    
+    private void runHttpTransfer(HttpTransfer transfer)
     {
-        if (sslSocketFactory == null) // lazy init
-        {
-            log.debug("initHTTPS: lazy init");
-            AccessControlContext ac = AccessController.getContext();
-            Subject s = Subject.getSubject(ac);
-            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
-        }
-        if (sslSocketFactory != null && sslConn != null)
-        {
-            log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
-            sslConn.setSSLSocketFactory(sslSocketFactory);
-        }
+        if (sslSocketFactory != null)
+            transfer.setSSLSocketFactory(sslSocketFactory);
+        
+        transfer.run();
+        
+        if (transfer.getSSLSocketFactory() != null)
+            this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 }

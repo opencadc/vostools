@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -94,6 +96,7 @@ import org.jdom.JDOMException;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpRequestProperty;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.net.OutputStreamWrapper;
@@ -104,12 +107,9 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.
@@ -221,7 +221,8 @@ public class ClientTransfer implements Runnable
         {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             HttpDownload get = new HttpDownload(jobURL, out);
-            get.run();
+            
+            runHttpTransfer(get);
 
             if (get.getThrowable() != null)
             {
@@ -461,9 +462,9 @@ public class ClientTransfer implements Runnable
         upload.setMaxRetries(maxRetries);
         if (transListener != null)
             upload.setTransferListener(transListener);
-        if (sslSocketFactory != null)
-            upload.setSSLSocketFactory(sslSocketFactory);
-        upload.run();
+        
+        runHttpTransfer(upload);
+        
         if (upload.getThrowable() != null)
         {
             // allow illegal arugment exceptions through
@@ -501,9 +502,9 @@ public class ClientTransfer implements Runnable
         download.setMaxRetries(maxRetries);
         if (transListener != null)
             download.setTransferListener(transListener);
-        if (sslSocketFactory != null)
-            download.setSSLSocketFactory(sslSocketFactory);
-        download.run();
+        
+        runHttpTransfer(download);
+        
         if (download.getThrowable() != null)
         {
             throw new IOException("failed to download file", download.getThrowable());
@@ -574,6 +575,17 @@ public class ClientTransfer implements Runnable
         {
 
         }
+    }
+    
+    private void runHttpTransfer(HttpTransfer transfer)
+    {
+        if (sslSocketFactory != null)
+            transfer.setSSLSocketFactory(sslSocketFactory);
+        
+        transfer.run();
+        
+        if (transfer.getSSLSocketFactory() != null)
+            this.sslSocketFactory = transfer.getSSLSocketFactory();
     }
 
     private void initHTTPS(HttpsURLConnection sslConn)
