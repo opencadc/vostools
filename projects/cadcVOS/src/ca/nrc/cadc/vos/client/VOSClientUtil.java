@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -81,7 +82,6 @@ import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeWriter;
-import java.io.FileNotFoundException;
 
 /**
  * @author zhangsa
@@ -154,7 +154,6 @@ public class VOSClientUtil
     {
         if (failure != null)
         {
-            failure.printStackTrace();
             if (failure instanceof RuntimeException)
             {
                 throw (RuntimeException) failure;
