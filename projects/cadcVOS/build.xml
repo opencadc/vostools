@@ -221,7 +221,7 @@
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.client.ui.FileSystemScannerTest"/>
           <test name="ca.nrc.cadc.vos.client.ui.CommandQueueTest" />
-          <!--<test name="ca.nrc.cadc.vos.client.ui.integration.UploadApplicationTest" />-->
+          <test name="ca.nrc.cadc.vos.client.ui.integration.UploadApplicationTest" />
         </junit>
     </target>
 

@@ -40,6 +40,7 @@ import org.apache.log4j.Level;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.net.URI;
 
 import org.junit.Ignore;
@@ -130,10 +131,115 @@ public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
         verify(mockLogPane, mockTabPane);
     }
 
+    /**
+     * If the user somehow is able to select something other than a Directory.
+     *
+     * @throws Exception    For any exceptions.
+     */
     @Test
-    public void selectSourceDirectory() throws Exception
+    public void selectSourceDirectoryFile() throws Exception
     {
+        final Component mockParent = createMock(Component.class);
+        final SourceDirectoryChooser mockSourceDirectoryChooser =
+                createMock(SourceDirectoryChooser.class);
+        final File mockSelectedFile = createMock(File.class);
+        final StringBuilder errorMessage = new StringBuilder();
 
+        setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
+                                     getMockVOSpaceClient())
+        {
+            @Override
+            protected SourceDirectoryChooser getSourceDirectoryChooser()
+            {
+                return mockSourceDirectoryChooser;
+            }
+
+            @Override
+            protected void handleError(String message, Component parent,
+                                       SourceDirectoryChooserCallback callback)
+            {
+                errorMessage.append(message);
+            }
+        });
+
+        // Selection approved by user.
+        expect(mockSourceDirectoryChooser.showDialog(mockParent, "Select")).
+                andReturn(JFileChooser.APPROVE_OPTION).once();
+
+        // The chosen file.
+        expect(mockSourceDirectoryChooser.getSelectedFile()).andReturn(
+                mockSelectedFile).once();
+
+        // Not a directory.
+        expect(mockSelectedFile.isDirectory()).andReturn(false).once();
+
+        // The path to display in the error message.
+        expect(mockSelectedFile.getAbsolutePath()).andReturn(
+                "/my/path/to/nondir.txt").once();
+
+        replay(mockParent, mockSourceDirectoryChooser, mockSelectedFile);
+
+        getTestSubject().selectSourceDirectory(mockParent, null);
+
+        assertEquals("Wrong error message.",
+                     "'/my/path/to/nondir.txt' is not a directory",
+                     errorMessage.toString());
+
+        verify(mockParent, mockSourceDirectoryChooser, mockSelectedFile);
+    }
+
+    @Test
+    public void selectSourceDirectoryNotReadable() throws Exception
+    {
+        final Component mockParent = createMock(Component.class);
+        final SourceDirectoryChooser mockSourceDirectoryChooser =
+                createMock(SourceDirectoryChooser.class);
+        final File mockSelectedFile = createMock(File.class);
+        final StringBuilder errorMessage = new StringBuilder();
+
+        setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
+                                     getMockVOSpaceClient())
+        {
+            @Override
+            protected SourceDirectoryChooser getSourceDirectoryChooser()
+            {
+                return mockSourceDirectoryChooser;
+            }
+
+            @Override
+            protected void handleError(String message, Component parent,
+                                       SourceDirectoryChooserCallback callback)
+            {
+                errorMessage.append(message);
+            }
+        });
+
+        // Selection approved by user.
+        expect(mockSourceDirectoryChooser.showDialog(mockParent, "Select")).
+                andReturn(JFileChooser.APPROVE_OPTION).once();
+
+        // The chosen file.
+        expect(mockSourceDirectoryChooser.getSelectedFile()).andReturn(
+                mockSelectedFile).once();
+
+        // Not a directory.
+        expect(mockSelectedFile.isDirectory()).andReturn(true).once();
+
+        expect(mockSelectedFile.canRead()).andReturn(false).once();
+
+        // The path to display in the error message.
+        expect(mockSelectedFile.getAbsolutePath()).andReturn(
+                "/my/path/to/nondir.txt").once();
+
+        replay(mockParent, mockSourceDirectoryChooser, mockSelectedFile);
+
+        getTestSubject().selectSourceDirectory(mockParent, null);
+
+        assertEquals("Wrong error message.",
+                     "'/my/path/to/nondir.txt' is not writable",
+                     errorMessage.toString());
+
+        verify(mockParent, mockSourceDirectoryChooser, mockSelectedFile);
     }
 
 

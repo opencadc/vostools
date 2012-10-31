@@ -257,7 +257,7 @@ public class GraphicUI extends AbstractApplication
         try
         {
             final SourceDirectoryChooser fileChooser =
-                    new SourceDirectoryChooser(null, "sourceDirectoryChooser");
+                    getSourceDirectoryChooser();
             final int returnVal = fileChooser.showDialog(parent, "Select");
 
             if (returnVal == JFileChooser.APPROVE_OPTION)
@@ -283,15 +283,17 @@ public class GraphicUI extends AbstractApplication
 
                 if (estr != null)
                 {
-                    JOptionPane.showMessageDialog(parent, estr, "Error",
-                                                  JOptionPane.ERROR_MESSAGE);
-                    selectSourceDirectory(parent, callback); // recursive
+                    handleError(estr, parent, callback); // recursive
                 }
                 else
                 {
                     LOGGER.info("Source directory: "
                                 + sourceDirectory.getAbsolutePath());
-                    callback.onCallback(sourceDirectory);
+
+                    if (callback != null)
+                    {
+                        callback.onCallback(sourceDirectory);
+                    }
                 }
             }
         }
@@ -299,6 +301,19 @@ public class GraphicUI extends AbstractApplication
         {
             LOGGER.error("Failed to determine Source Directory", rex);
         }
+    }
+
+    protected void handleError(final String message, final Component parent,
+                               final SourceDirectoryChooserCallback callback)
+    {
+        JOptionPane.showMessageDialog(parent, message, "Error",
+                                      JOptionPane.ERROR_MESSAGE);
+        selectSourceDirectory(parent, callback);
+    }
+
+    protected SourceDirectoryChooser getSourceDirectoryChooser()
+    {
+        return new SourceDirectoryChooser(null, "sourceDirectoryChooser");
     }
 
 
