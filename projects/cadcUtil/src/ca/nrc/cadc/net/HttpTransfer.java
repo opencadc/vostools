@@ -323,6 +323,11 @@ public abstract class HttpTransfer implements Runnable
         this.sslSocketFactory = sslSocketFactory;
     }
     
+    public SSLSocketFactory getSSLSocketFactory()
+    {
+        return this.sslSocketFactory;
+    }
+    
     public void setOverwriteChooser(OverwriteChooser overwriteChooser) { this.overwriteChooser = overwriteChooser; }
 
     public void setProgressListener(ProgressListener listener)
