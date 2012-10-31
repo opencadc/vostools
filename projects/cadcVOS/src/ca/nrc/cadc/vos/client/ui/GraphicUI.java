@@ -87,17 +87,26 @@ import java.io.Writer;
 
 
 /**
- * The main class for graphical output display.
+ * The main class for graphical output display.  Care has been taken to adhere
+ * to the rules of conduct in Swing:
  *
- * @author pdowler
+ * 1. Swing Components must be created in the EDT (Event Dispatch Thread)
+ * 2. Swing Components must be accessed in the EDT, unless calling methods
+ *    documented as "thread safe".
+ *
+ * Even if a Component is documented as thread-safe, it is not necessarily to
+ * be trusted as such.
+ *
+ * @author jenkinsd
  */
 public class GraphicUI extends AbstractApplication
         implements ChangeListener, UserInterface
 {
+    private static final String NAME = "MainUI";
+
     private static final long serialVersionUID = 201210201041L;
     private static Logger LOGGER = Logger.getLogger(GraphicUI.class);
 
-    private JTextArea logTextArea;
     private LogWriter logWriter;
     private JTabbedPane tabPane;
     private JUploadManager uploadManager;
@@ -111,6 +120,7 @@ public class GraphicUI extends AbstractApplication
     {
         super(new BorderLayout());
         LOGGER.setLevel(logLevel);
+        setName(NAME);
 
         this.targetVOSpaceURI = targetVOSpaceURI;
         this.voSpaceClient = voSpaceClient;
@@ -126,75 +136,9 @@ public class GraphicUI extends AbstractApplication
     @Override
     protected void makeUI()
     {
-        tabPane = new JTabbedPane();
-        logTextArea = new JTextArea();
-        logWriter = new LogWriter(logTextArea);
-
-        Log4jInit.setLevel("ca.nrc.cadc.vospace", LOGGER.getLevel(),
-                           getLogWriter());
-
-        addMainPane();
-        setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-
-        final JScrollPane sp = createLogScrollPane();
-        getTabPane().addTab("Log Messages", sp);
-
-        Util.recursiveSetBackground(this, Color.WHITE);
-
         try
         {
-            final Thread appThread = new Thread()
-            {
-                /**
-                 * If this thread was constructed using a separate
-                 * <code>Runnable</code> run object, then that
-                 * <code>Runnable</code> object's <code>run</code> method is called;
-                 * otherwise, this method does nothing and returns.
-                 * <p/>
-                 * Subclasses of <code>Thread</code> should override this method.
-                 *
-                 * @see #start()
-                 * @see #stop()
-                 */
-                @Override
-                public void run()
-                {
-                    try
-                    {
-                        SwingUtilities.invokeAndWait(new Runnable()
-                        {
-                            public void run()
-                            {
-                                selectSourceDirectory(GraphicUI.this,
-                                                      new SourceDirectoryChooserCallback()
-                                                      {
-                                                          @Override
-                                                          public void onCallback(final File chosenDirectory)
-                                                          {
-                                                              setUploadManager(
-                                                                      new JUploadManager(chosenDirectory,
-                                                                                         getTargetVOSpaceURI(),
-                                                                                         getVOSpaceClient()));
-
-                                                              getTabPane().addTab("Upload",
-                                                                                  getUploadManager());
-                                                              getTabPane().setSelectedIndex(1);
-
-                                                              GraphicUI.this.run();
-                                                          }
-                                                      });
-                            }
-                        });
-                    }
-                    catch (final Exception e)
-                    {
-                        LOGGER.fatal("Error caught.", e);
-                        e.printStackTrace();
-                        System.exit(-1);
-                    }
-                }
-            };
-
+            final Thread appThread = new Thread(new UICreator());
             appThread.start();
         }
         catch (Throwable t)
@@ -220,11 +164,13 @@ public class GraphicUI extends AbstractApplication
 
     /**
      * Create an instance of a JScrollPane to contain the log output.
-     * @return      The JScrollPane instance.
+     *
+     * @param logTextArea   The JTextArea to scroll.
+     * @return              The JScrollPane instance.
      */
-    protected JScrollPane createLogScrollPane()
+    protected JScrollPane createLogScrollPane(final JTextArea logTextArea)
     {
-        return new JScrollPane(getLogTextArea());
+        return new JScrollPane(logTextArea);
     }
 
     /**
@@ -285,11 +231,6 @@ public class GraphicUI extends AbstractApplication
         return logWriter;
     }
 
-    public JTextArea getLogTextArea()
-    {
-        return logTextArea;
-    }
-
     public JUploadManager getUploadManager()
     {
         return uploadManager;
@@ -316,7 +257,7 @@ public class GraphicUI extends AbstractApplication
         try
         {
             final SourceDirectoryChooser fileChooser =
-                    new SourceDirectoryChooser(null, "sourceFileChooser");
+                    new SourceDirectoryChooser(null, "sourceDirectoryChooser");
             final int returnVal = fileChooser.showDialog(parent, "Select");
 
             if (returnVal == JFileChooser.APPROVE_OPTION)
@@ -450,6 +391,79 @@ public class GraphicUI extends AbstractApplication
                 {
                     LOGGER.error("DelayedInit failed: " + t);
                 }
+            }
+        }
+    }
+
+    protected class UICreator implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            try
+            {
+                SwingUtilities.invokeAndWait(new Runnable()
+                {
+                    public void run()
+                    {
+                        tabPane = new JTabbedPane();
+                        getTabPane().setName("tabPane");
+
+                        logWriter = new LogWriter(new JTextArea());
+
+                        Log4jInit.setLevel("ca.nrc.cadc.vospace",
+                                           LOGGER.getLevel(),
+                                           getLogWriter());
+
+                        addMainPane();
+                        setBorder(BorderFactory.createEmptyBorder(4, 4,
+                                                                  4, 4));
+
+                        final JScrollPane sp =
+                                createLogScrollPane(
+                                        getLogWriter().getLogTextArea());
+                        getTabPane().addTab("Log Messages", sp);
+
+                        Util.recursiveSetBackground(GraphicUI.this,
+                                                    Color.WHITE);
+
+                        selectSourceDirectory(GraphicUI.this,
+                                              new SourceDirectoryChooserCallback()
+                                              {
+                                                  @Override
+                                                  public void onCallback(final File chosenDirectory)
+                                                  {
+                                                      setUploadManager(
+                                                              new JUploadManager(chosenDirectory,
+                                                                                 getTargetVOSpaceURI(),
+                                                                                 getVOSpaceClient()));
+
+                                                      getTabPane().addTab("Upload",
+                                                                          getUploadManager());
+                                                      getTabPane().setSelectedIndex(1);
+
+                                                      GraphicUI.this.run();
+                                                  }
+                                              });
+                    }
+                });
+            }
+            catch (final Exception e)
+            {
+                LOGGER.fatal("Error caught.", e);
+                e.printStackTrace();
+                System.exit(-1);
             }
         }
     }

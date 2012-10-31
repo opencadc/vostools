@@ -1540,14 +1540,14 @@ public class Main implements Runnable
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
          * 
          */
-            "Usage: java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
+            "Usage: UploadApplicationTest -jar cadcVOSClient.jar [-v|--verbose|-d|--debug] [--xsv=off]                          ",
             CertCmdArgUtil.getCertArgUsage(),
             "   ...                                                                                               ",
             "",
             " --xsv=off disables XML schema validation; use at your own risk                                   ",
             "",
             "Help:                                                                                             ",
-            "java -jar VOSpaceClient.jar <-h | --help>                                                         ",
+            "UploadApplicationTest -jar VOSpaceClient.jar <-h | --help>                                                         ",
             "",
             "Create node:                                                                                      ",
             "",

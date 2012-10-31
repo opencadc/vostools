@@ -180,5 +180,5 @@ public abstract class AbstractApplication extends JPanel implements Application
 	}
 }
 
-// end of GUIApplication.java
+// end of GUIApplication.UploadApplicationTest
 
