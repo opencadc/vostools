@@ -319,6 +319,7 @@ public class HttpPost extends HttpTransfer
     private void doPost(HttpURLConnection conn, String content, String contentType)
         throws IOException, InterruptedException, TransientException
     {
+        setRequestSSOCookie(conn);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Length", ""
                 + Integer.toString(content.getBytes("UTF-8").length));

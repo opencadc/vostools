@@ -74,20 +74,20 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.AccessControlException;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
-import java.io.FileNotFoundException;
-import java.security.AccessControlException;
 
 /**
  * Perform an upload (PUT).
@@ -331,6 +331,7 @@ public class HttpUpload extends HttpTransfer
             log.debug("invoked setChunkedStreamingMode");
         }
 
+        setRequestSSOCookie(conn);
         conn.setRequestMethod("PUT");
         conn.setUseCaches(false);
         conn.setDoInput(true);

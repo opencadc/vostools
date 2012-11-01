@@ -74,30 +74,25 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessController;
+import java.security.AccessControlException;
 import java.util.Date;
-import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
-import java.io.FileNotFoundException;
-import java.security.AccessControlException;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -998,27 +993,5 @@ public class HttpDownload extends HttpTransfer
         }
         return null;
      }
-    
-    private void setRequestSSOCookie(HttpURLConnection conn)
-    {
-        AccessControlContext acc = AccessController.getContext();
-        Subject subj = Subject.getSubject(acc);
-        if (subj != null)
-        {
-            Set<SSOCookieCredential> cookieCreds = subj
-                    .getPublicCredentials(SSOCookieCredential.class);
-            if ((cookieCreds != null) && (cookieCreds.size() > 0))
-            {
-                // grab the first cookie (it should be only one anyways)
-                SSOCookieCredential cookieCred = cookieCreds.iterator().next();
-                if (conn.getURL().getHost().endsWith(cookieCred.getDomain()))
-                    conn.setRequestProperty("Cookie", cookieCred.getSsoCookieValue());
-                else
-                    log.debug("setRequestSSOCookie: domain mismatch - "
-                            + cookieCred.getDomain() + " vs " + conn.getURL().getHost());
-            }
-            else
-                log.debug("setRequestSSOCookie: no cookie");
-        }
-    }
+
 }

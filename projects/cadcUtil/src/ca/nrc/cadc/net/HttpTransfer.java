@@ -83,6 +83,7 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -91,6 +92,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
@@ -627,6 +629,29 @@ public abstract class HttpTransfer implements Runnable
                 if (progressListener != null)
                     progressListener.update(count, tot);
             }
+        }
+    }
+    
+    protected void setRequestSSOCookie(HttpURLConnection conn)
+    {
+        AccessControlContext acc = AccessController.getContext();
+        Subject subj = Subject.getSubject(acc);
+        if (subj != null)
+        {
+            Set<SSOCookieCredential> cookieCreds = subj
+                    .getPublicCredentials(SSOCookieCredential.class);
+            if ((cookieCreds != null) && (cookieCreds.size() > 0))
+            {
+                // grab the first cookie (it should be only one anyways)
+                SSOCookieCredential cookieCred = cookieCreds.iterator().next();
+                if (conn.getURL().getHost().endsWith(cookieCred.getDomain()))
+                    conn.setRequestProperty("Cookie", cookieCred.getSsoCookieValue());
+                else
+                    log.debug("setRequestSSOCookie: domain mismatch - "
+                            + cookieCred.getDomain() + " vs " + conn.getURL().getHost());
+            }
+            else
+                log.debug("setRequestSSOCookie: no cookie");
         }
     }
 }
