@@ -437,7 +437,7 @@ public class GraphicUI extends AbstractApplication
 
                         logWriter = new LogWriter(new JTextArea());
 
-                        Log4jInit.setLevel("ca.nrc.cadc.vospace",
+                        Log4jInit.setLevel("ca.nrc.cadc",
                                            LOGGER.getLevel(),
                                            getLogWriter());
 

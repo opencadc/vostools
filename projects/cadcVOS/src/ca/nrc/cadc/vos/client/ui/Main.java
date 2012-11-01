@@ -33,11 +33,8 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.auth.SSOCookieManager;
-import ca.nrc.cadc.auth.X509CertificateChain;
-import ca.nrc.cadc.cred.AuthorizationException;
-import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.StringUtil;
@@ -47,8 +44,6 @@ import ca.onfire.ak.ApplicationFrame;
 import org.apache.log4j.Level;
 
 import javax.security.auth.Subject;
-import javax.swing.*;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedAction;
@@ -56,20 +51,44 @@ import java.security.PrivilegedAction;
 
 public class Main
 {
-    private static final String CRED_SERVICE_URI = "ivo://cadc.nrc.ca/cred";
-    private static final String CRED_PROTOCOL = "https";
+    protected static final URI VOSPACE_SERVICE_URI =
+            URI.create("ivo://cadc.nrc.ca/vospace");
+
 
     public static void main(final String[] args)
     {
         final ArgumentMap argumentMap = new ArgumentMap(args);
+
+        final ArgumentMap am = new ArgumentMap(args);
+
+        if (am.isSet("h") || am.isSet("help"))
+        {
+            usage();
+            System.exit(0);
+        }
+
+        final Level level;
+        if (am.isSet("d") || am.isSet("debug"))
+        {
+            level = Level.DEBUG;
+        }
+        else if (am.isSet("v") || am.isSet("verbose"))
+        {
+            level = Level.INFO;
+        }
+        else if (am.isSet("q") || am.isSet("quiet"))
+        {
+            level = Level.OFF;
+        }
+        else
+        {
+            level = Level.WARN;
+        }
+
+
         final VOSURI targetVOSpaceURI =
                 new VOSURI(URI.create(argumentMap.getValue("dest")));
-        final String vospaceWebServiceURL =
-                argumentMap.getValue("vospaceWebServiceURL");
         final Subject subject = new Subject();
-
-        System.setProperty("ca.nrc.cadc.auth.BasicX509TrustManager.trust",
-                           "true");
 
         // Cookie based authentication?
         final String ssoCookieStr = fixNull(argumentMap.getValue("ssocookie"));
@@ -85,54 +104,13 @@ public class Main
             }
             else
             {
-                final SSOCookieManager ssoCookieManager =
-                        new SSOCookieManager(ssoCookieStr);
-                subject.getPrincipals().add(
-                        new CookiePrincipal(ssoCookieManager.getUsername(),
-                                            ssoCookieManager.getToken()));
+                final SSOCookieCredential ssoCookieCredential =
+                        new SSOCookieCredential(
+                                SSOCookieManager.DEFAULT_SSO_COOKIE_NAME
+                                + "=\"" + ssoCookieStr + "\"", ssoCookieDomain);
+                subject.getPublicCredentials().add(ssoCookieCredential);
             }
         }
-
-        Subject.doAs(subject, new PrivilegedAction<Void>()
-        {
-            @Override
-            public Void run()
-            {
-                final X509CertificateChain privateKeyChain;
-
-                try
-                {
-                    final URL credBaseURL =
-                            new RegistryClient().getServiceURL(
-                                    URI.create(CRED_SERVICE_URI),
-                                    CRED_PROTOCOL);
-                    final CredPrivateClient cdp =
-                            CredPrivateClient.getInstance(credBaseURL);
-                    privateKeyChain = cdp.getCertificate(1.0f);
-                    privateKeyChain.getChain()[0].checkValidity();
-
-                    subject.getPublicCredentials().add(privateKeyChain);
-                }
-                catch (MalformedURLException ex)
-                {
-                    throw new RuntimeException(
-                            "CredPrivateClient.getCertficate failed", ex);
-                }
-                catch (AuthorizationException ex)
-                {
-                    throw new RuntimeException(
-                            "CredPrivateClient.getCertficate failed", ex);
-                }
-                catch (Exception ex)
-                {
-                    throw new RuntimeException(
-                            "BUG: failed to instantiate CredPrivateClient impl",
-                            ex);
-                }
-
-                return null;
-            }
-        });
 
         Subject.doAs(subject, new PrivilegedAction<Boolean>()
         {
@@ -141,22 +119,23 @@ public class Main
             {
                 try
                 {
-                    SwingUtilities.invokeAndWait(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            final GraphicUI graphicUploadUI =
-                                    new GraphicUI(Level.DEBUG, targetVOSpaceURI,
-                                                  new VOSpaceClient(vospaceWebServiceURL));
-                            final ApplicationFrame frame =
-                                    new ApplicationFrame(Constants.name, graphicUploadUI);
-                            frame.getContentPane().add(graphicUploadUI);
-                            frame.setVisible(true);
+                    final RegistryClient registryClient = new RegistryClient();
+                    final URL vospaceServiceURL =
+                            registryClient.getServiceURL(VOSPACE_SERVICE_URI,
+                                                         "http");
 
-                            graphicUploadUI.start();
-                        }
-                    });
+                    final GraphicUI graphicUploadUI =
+                            new GraphicUI(level, targetVOSpaceURI,
+                                          new VOSpaceClient(
+                                                  vospaceServiceURL.
+                                                          toString()));
+                    final ApplicationFrame frame =
+                            new ApplicationFrame(Constants.name,
+                                                 graphicUploadUI);
+                    frame.getContentPane().add(graphicUploadUI);
+                    frame.setVisible(true);
+
+                    graphicUploadUI.start();
 
                     return Boolean.TRUE;
                 }
@@ -177,6 +156,11 @@ public class Main
 
     private static void usage()
     {
-        System.out.println("USAGE");
+        System.out.println("java -jar cadcVOSClient.jar -h || --help");
+        System.out.println("java -jar cadcVOSClient.jar [-v|--verbose | -d|--debug | -q|--quiet ]");
+        System.out.println("          --dest=<VOSpace URI to upload the directory to>");
+        System.out.println("          --ssocookie=<cookie value to use in sso authentication>");
+        System.out.println("          --ssocookiedomain=<domain cookie is valid in (required with ssocookie arg)>");
+        System.out.println();
     }
 }
