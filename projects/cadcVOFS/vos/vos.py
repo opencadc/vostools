@@ -55,8 +55,8 @@ class Connection:
     def __init__(self, certfile=None):
         """Setup the Certificate for later usage
 
-        cerdServerURL --- the location of the cadc proxy certificate server
-        certfile      --- where to store the certificate, if None then ${HOME}/.ssl or a temporary filename
+        cerdServerURL -- the location of the cadc proxy certificate server
+        certfile      -- where to store the certificate, if None then ${HOME}/.ssl or a temporary filename
 
         The user must supply a valid certificate.
         """
@@ -533,6 +533,9 @@ class VOFile:
     too high (as the default value is) the number of retries are time limitted (max 15min)
     maxRetryTime - maximum time to retry for when transient errors are encountered
     """
+   
+    ### if we get one of these codes, retry the command... ;-(
+    retryCodes = (503, 408, 504, 402, 412) 
 
     def __init__(self, URL, connector, method, size=None, followRedirect=True):
         self.closed = True
@@ -594,11 +597,11 @@ class VOFile:
         msgs = { 404: "Node Not Found",
                  401: "Not Authorized",
                  409: "Conflict",
-             408: "Connection Timeout"}
+                 408: "Connection Timeout"}
         errnos = { 404: errno.ENOENT,
                    401: errno.EACCES,
                    409: errno.EEXIST,
-           408: errno.EAGAIN }
+                   408: errno.EAGAIN }
         logging.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
             logging.debug("Got status code: %s for %s" % (self.resp.status, self.url))
@@ -671,7 +674,7 @@ class VOFile:
 
     def read(self, size=None):
         """return size bytes from the connection response"""
-    #logging.debug("Starting to read file by closing http(s) connection")
+        #logging.debug("Starting to read file by closing http(s) connection")
         if not self.closed:
             self.close()
         bytes = None
@@ -708,11 +711,12 @@ class VOFile:
             else:
                 logging.debug("Got url:%s from redirect but not following" % (self.url))
                 return self.url
-        elif self.resp.status == 503:
+        elif self.resp.status in VOFile.retryCodes:
             ## try again in Retry-After seconds or fail
-            logging.error("Got 503: server busy on %s" % (self.url))
+            logging.error("Got %d: server busy on %s" % (self.resp.status, self.url))
             logging.error("Message:  %s" % (self.resp.read()))
             try:
+	        ### see if there is a Retry-After in the head...
                 ras = int(self.resp.getheader("Retry-After", 5))
             except:
                 ras = self.currentRetryDelay
@@ -720,12 +724,6 @@ class VOFile:
                     self.currentRetryDelay = self.currentRetryDelay * 2
                 else:
                     self.currentRetryDelay = MAX_RETRY_DELAY
-        elif self.resp.status in (408, 504, 402, 412):
-            ras = self.currentRetryDelay
-            if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
-                self.currentRetryDelay = self.currentRetryDelay * 2
-            else:
-                self.currentRetryDelay = MAX_RETRY_DELAY
         else:
             # line below can be removed after we are sure all codes
             # are caught
@@ -870,8 +868,8 @@ class Client:
     def getNode(self, uri, limit=0):
         """connect to VOSpace and download the definition of vospace node
 
-        uri   --- a voSpace node in the format vos:/vospaceName/nodeName
-        limit --- load children nodes in batches of limit
+        uri   -- a voSpace node in the format vos:/vospaceName/nodeName
+        limit -- load children nodes in batches of limit
         """
         #logging.debug("Getting node %s" % ( uri))
         xmlObj = self.open(uri, os.O_RDONLY, limit=0)
@@ -1034,7 +1032,7 @@ class Client:
             sys.stdout.write("\n")
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
-            logging.info("Received keyboard interrupt")
+            logging.error("Received keyboard interrupt")
             con = VOFile(jobURL + "/phase", self.conn, method="POST", followRedirect=False)
             con.write("PHASE=ABORT")
             con.read()
