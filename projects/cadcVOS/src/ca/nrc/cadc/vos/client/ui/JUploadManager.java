@@ -42,6 +42,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.net.Authenticator;
 import java.text.MessageFormat;
 
 import org.apache.log4j.Logger;
@@ -97,6 +98,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
 
         registerCommandQueueListener(this);
 
+        // configure custom authentication
+        Authenticator.setDefault(new HttpAuthenticator(this));
+
         final Box statusBox = new Box(BoxLayout.Y_AXIS);
         final Box uploadProgressHolder = new Box(BoxLayout.X_AXIS);
         final Box scannerProgressHolder = new Box(BoxLayout.X_AXIS);
@@ -117,6 +121,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         getMessageLabel().setForeground(Color.RED);
 
         getUploadProgressBar().setMinimum(0);
+        getUploadProgressBar().setIndeterminate(true);
         getScannerProgressBar().setMinimum(0);
 
         // add an empty border to the exterior
@@ -399,6 +404,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         public void run()
         {
             LOGGER.info("Processing started.");
+            getUploadProgressBar().setIndeterminate(false);
             getAbortButton().setEnabled(true);
         }
     }
@@ -430,6 +436,8 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         public void run()
         {
             LOGGER.info("Command processed.");
+
+            getUploadProgressBar().setIndeterminate(false);
 
             if (!getUploadManager().isAbortIssued())
             {

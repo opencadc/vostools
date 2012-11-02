@@ -196,6 +196,9 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
         mockProgressPercentageLabel.setText("19.67%");
         expectLastCall().once();
 
+        mockProgressBar.setIndeterminate(false);
+        expectLastCall().once();
+
         replay(mockProgressBar, mockProgressPercentageLabel, mockUploadManager,
                mockUploadProgressLabel);
 
