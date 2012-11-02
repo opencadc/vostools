@@ -20,6 +20,11 @@ from __version__ import version
 BUFSIZE = 8388608
 #BUFSIZE=8192
 
+# consts for dealing with transient errors
+MAX_RETRY_DELAY = 128; # maximum delay between retries
+DEFAULT_RETRY_DELAY = 30; # start delay between retries when Try_After not specified by server
+MAX_RETRY_TIME = 900; # maximum time for retries before giving up...
+
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.cadc.hia.nrc.gc.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
@@ -520,7 +525,14 @@ class Node:
 
 
 class VOFile:
-    """A class for managing http connecctions"""
+    """
+    A class for managing http connecctions
+
+    Attributes:
+    maxRetries - maximum number of retries when transient errors encountered. When set
+    too high (as the default value is) the number of retries are time limitted (max 15min)
+    maxRetryTime - maximum time to retry for when transient errors are encountered
+    """
 
     def __init__(self, URL, connector, method, size=None, followRedirect=True):
         self.closed = True
@@ -529,11 +541,18 @@ class VOFile:
         self.httpCon = None
         self.timeout = -1
         self.size = size
+        self.maxRetries = 10000
+        self.maxRetryTime = MAX_RETRY_TIME
         self.followRedirect = followRedirect
         self.name = os.path.basename(URL)
         self._fpos = 0
         self.open(URL, method)
-        logging.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
+        # initial values for retry parameters
+        self.currentRetryDelay = DEFAULT_RETRY_DELAY
+        self.totalRetryDelay = 0
+        self.retries = 0
+
+	logging.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
 
     def tell(self):
         return self._fpos
@@ -547,7 +566,7 @@ class VOFile:
             self._fpos = self.size - offset
         return
 
-    def close(self, code=(200, 201, 202, 206, 302, 303, 503)):
+    def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
         import ssl
         #logging.debug("inside the close")
@@ -570,7 +589,7 @@ class VOFile:
         logging.debug("Connection closed")
         return self.checkstatus(codes=code)
 
-    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416)):
+    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416, 416, 402, 408, 412, 504)):
         """check the response status"""
         msgs = { 404: "Node Not Found",
                  401: "Not Authorized",
@@ -696,15 +715,31 @@ class VOFile:
             try:
                 ras = int(self.resp.getheader("Retry-After", 5))
             except:
-                ras = 5
+                ras = self.currentRetryDelay
+                if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
+                    self.currentRetryDelay = self.currentRetryDelay * 2
+                else:
+                    self.currentRetryDelay = MAX_RETRY_DELAY
+        elif self.resp.status in (408, 504, 402, 412):
+            ras = self.currentRetryDelay
+            if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
+                self.currentRetryDelay = self.currentRetryDelay * 2
+            else:
+                self.currentRetryDelay = MAX_RETRY_DELAY
+        else:
+            # line below can be removed after we are sure all codes
+            # are caught
+            raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+
+        if (self.retries < self.maxRetries) and (self.totalRetryDelay < self.maxRetryTime):
             logging.error("retrying in %d seconds" % (ras))
+            self.totalRetryDelay = self.totalRetryDelay + ras
+            self.retries = self.retries + 1
             time.sleep(int(ras))
             self.open(self.url, "GET")
             return self.read(size)
-        # line below can be removed after we are sure all codes
-        # are caught
-        raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
-
+        else:
+            raise IOError(self.resp.status, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
 
     def write(self, buf):
         """write buffer to the connection"""
