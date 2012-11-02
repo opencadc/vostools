@@ -136,22 +136,7 @@ public class GraphicUI extends AbstractApplication
     @Override
     protected void makeUI()
     {
-        try
-        {
-            final Thread appThread = new Thread(new UICreator());
-            appThread.start();
-        }
-        catch (Throwable t)
-        {
-            if (LOGGER.isDebugEnabled())
-            {
-                LOGGER.error("DelayedInit failed", t);
-            }
-            else
-            {
-                LOGGER.error("DelayedInit failed: " + t);
-            }
-        }
+        new UICreator().run();
     }
 
     /**
@@ -210,15 +195,6 @@ public class GraphicUI extends AbstractApplication
         }
 
         return ret;
-    }
-
-    @Override
-    public void start()
-    {
-        if (getUploadManager() != null)
-        {
-            getUploadManager().start();
-        }
     }
 
     public JTabbedPane getTabPane()
@@ -378,7 +354,6 @@ public class GraphicUI extends AbstractApplication
             if (getLogTextArea() != null)
             {
                 getLogTextArea().append(s);
-                getLogTextArea().updateUI();
             }
         }
     }
@@ -440,6 +415,8 @@ public class GraphicUI extends AbstractApplication
                         Log4jInit.setLevel("ca.nrc.cadc",
                                            LOGGER.getLevel(),
                                            getLogWriter());
+                        LOGGER.debug("Executing tasks against VOSpace found at "
+                                     + getVOSpaceClient().getBaseURL());
 
                         addMainPane();
                         setBorder(BorderFactory.createEmptyBorder(4, 4,
@@ -452,6 +429,7 @@ public class GraphicUI extends AbstractApplication
 
                         Util.recursiveSetBackground(GraphicUI.this,
                                                     Color.WHITE);
+                        getTabPane().setVisible(true);
 
                         selectSourceDirectory(GraphicUI.this,
                                               new SourceDirectoryChooserCallback()

@@ -38,21 +38,33 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.MessageFormat;
 
+import org.apache.log4j.Logger;
+
 
 public class JUploadManager extends JPanel implements CommandQueueListener,
                                                       ActionListener
 {
-    private static final String COMPLETED = " Completed: ";
+    private static final Logger LOGGER = Logger.getLogger(JUploadManager.class);
+
+    private static final String COMPLETED_SCANNING = " Completed scanning:";
+    private static final String COMPLETED_UPLOADING = " Completed uploading:";
+
     private final UploadManager uploadManager;
 
-    private final JProgressBar progressBar;
-    private final JLabel progressLabel;
+    private final JProgressBar uploadProgressBar;
+    private final JLabel uploadProgressLabel;
+    private final JLabel uploadProgressPercentageLabel;
+    private final JProgressBar scannerProgressBar;
+    private final JLabel scannerProgressLabel;
+    private final JLabel scannerProgressPercentageLabel;
     private final JButton abortButton;
+    private final JLabel messageLabel;
 
 
     /**
@@ -60,9 +72,14 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      */
     JUploadManager()
     {
-        progressBar = null;
-        progressLabel = null;
+        uploadProgressBar = null;
+        uploadProgressLabel = null;
+        uploadProgressPercentageLabel = null;
+        scannerProgressBar = null;
+        scannerProgressLabel = null;
+        scannerProgressPercentageLabel = null;
         abortButton = null;
+        messageLabel = null;
         uploadManager = null;
     }
 
@@ -76,31 +93,63 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     {
         this.uploadManager = new UploadManagerImpl(sourceDirectory,
                                                    targetVOSpaceURI,
-                                                   vospaceClient);
+                                                   vospaceClient, this);
 
         registerCommandQueueListener(this);
 
         final Box statusBox = new Box(BoxLayout.Y_AXIS);
-        final Box progressHolder = new Box(BoxLayout.X_AXIS);
-        this.progressBar = new JProgressBar();
-        this.progressLabel = new JLabel(COMPLETED + "0%");
+        final Box uploadProgressHolder = new Box(BoxLayout.X_AXIS);
+        final Box scannerProgressHolder = new Box(BoxLayout.X_AXIS);
+
+        this.uploadProgressBar = new JProgressBar();
+        this.uploadProgressLabel = new JLabel(" Waiting for scan...");
+        this.uploadProgressPercentageLabel = new JLabel("0%");
+
+        this.scannerProgressBar = new JProgressBar();
+        this.scannerProgressLabel = new JLabel(COMPLETED_SCANNING);
+        this.scannerProgressPercentageLabel = new JLabel("0%");
 
         abortButton = new JButton("Abort");
         abortButton.setActionCommand("Abort");
         abortButton.addActionListener(this);
 
-        getProgressBar().setMinimum(0);
+        messageLabel = new JLabel();
+        getMessageLabel().setForeground(Color.RED);
+
+        getUploadProgressBar().setMinimum(0);
+        getScannerProgressBar().setMinimum(0);
 
         // add an empty border to the exterior
-        getProgressBar().setBorder(BorderFactory.createCompoundBorder(
+        getUploadProgressBar().setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(6, 40, 6, 40),
-                getProgressBar().getBorder()));
+                getUploadProgressBar().getBorder()));
+        getScannerProgressBar().setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(6, 40, 6, 40),
+                getScannerProgressBar().getBorder()));
 
-        progressHolder.add(getProgressBar());
-        progressHolder.add(getAbortButton());
+        getUploadProgressPercentageLabel().setHorizontalAlignment(
+                SwingConstants.LEFT);
+        getScannerProgressPercentageLabel().setHorizontalAlignment(
+                SwingConstants.LEFT);
 
-        statusBox.add(progressHolder);
-        statusBox.add(getProgressLabel());
+        uploadProgressHolder.add(getUploadProgressLabel());
+        uploadProgressHolder.add(getUploadProgressBar());
+        uploadProgressHolder.add(getUploadProgressPercentageLabel());
+
+        scannerProgressHolder.add(getScannerProgressLabel());
+        scannerProgressHolder.add(getScannerProgressBar());
+        scannerProgressHolder.add(getScannerProgressPercentageLabel());
+
+        statusBox.add(scannerProgressHolder);
+        statusBox.add(uploadProgressHolder);
+        statusBox.add(new Box.Filler(new Dimension(10, 10),
+                                     new Dimension(10, 10),
+                                     new Dimension(10, 10)));
+        statusBox.add(getAbortButton());
+        statusBox.add(new Box.Filler(new Dimension(10, 10),
+                                     new Dimension(10, 10),
+                                     new Dimension(10, 10)));
+        statusBox.add(getMessageLabel());
 
         add(statusBox);
     }
@@ -115,8 +164,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         if (StringUtil.hasText(e.getActionCommand())
             && e.getActionCommand().equals("Abort"))
         {
-            getAbortButton().setEnabled(false);
-            getUploadManager().abort();
+            executeInEDT(new AbortAction());
         }
     }
 
@@ -130,16 +178,8 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     public void commandProcessed(final Long commandsProcessed,
                                  final Long commandsRemaining)
     {
-        if (!getUploadManager().isAbortIssued())
-        {
-            getProgressBar().setMaximum(commandsProcessed.intValue()
-                                        + commandsRemaining.intValue());
-            getProgressBar().setValue(commandsProcessed.intValue());
-
-            getProgressLabel().setText(
-                     MessageFormat.format(COMPLETED + "{0,number,#.00%}",
-                                          getProgressBar().getPercentComplete()));
-        }
+        executeInEDT(new CommandProcessedAction(commandsProcessed,
+                                                commandsRemaining));
     }
 
     /**
@@ -148,7 +188,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void onAbort()
     {
-        getProgressLabel().setText(getProgressLabel().getText() + " (Aborted)");
+        executeInEDT(new AbortListenerAction());
     }
 
     /**
@@ -157,7 +197,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void processingStarted()
     {
-        getAbortButton().setEnabled(true);
+        executeInEDT(new ProcessingStartedAction());
     }
 
     /**
@@ -166,16 +206,36 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void processingComplete()
     {
-        getAbortButton().setEnabled(false);
-        getProgressLabel().setText(getProgressLabel().getText()
-                                   + "  -  Please use the refresh button in the "
-                                   + "VOSpace Browser to see the new "
-                                   + "Directory.");
+        executeInEDT(new ProcessingCompletedAction());
+    }
+
+    /**
+     * Ensure the given action is executed in the Event Dispatch Thread.
+     *
+     * @param action        The Action to run.
+     */
+    protected void executeInEDT(final Runnable action)
+    {
+        if (!SwingUtilities.isEventDispatchThread())
+        {
+            try
+            {
+                SwingUtilities.invokeAndWait(action);
+            }
+            catch (Throwable t)
+            {
+                t.printStackTrace();
+            }
+        }
+        else
+        {
+            action.run();
+        }
     }
 
     public void start()
     {
-        getUploadManager().start();
+        executeInEDT(new StartUploadManagerAction());
     }
 
     /**
@@ -183,7 +243,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      */
     public void stop()
     {
-        getUploadManager().stop();
+        executeInEDT(new StopUploadManagerAction());
     }
 
     public UploadManager getUploadManager()
@@ -191,14 +251,34 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         return uploadManager;
     }
 
-    public JProgressBar getProgressBar()
+    public JProgressBar getUploadProgressBar()
     {
-        return progressBar;
+        return uploadProgressBar;
     }
 
-    public JLabel getProgressLabel()
+    public JLabel getUploadProgressLabel()
     {
-        return progressLabel;
+        return uploadProgressLabel;
+    }
+
+    public JLabel getUploadProgressPercentageLabel()
+    {
+        return uploadProgressPercentageLabel;
+    }
+
+    public JProgressBar getScannerProgressBar()
+    {
+        return scannerProgressBar;
+    }
+
+    public JLabel getScannerProgressLabel()
+    {
+        return scannerProgressLabel;
+    }
+
+    public JLabel getScannerProgressPercentageLabel()
+    {
+        return scannerProgressPercentageLabel;
     }
 
     protected JButton getAbortButton()
@@ -206,9 +286,195 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         return abortButton;
     }
 
+    protected JLabel getMessageLabel()
+    {
+        return messageLabel;
+    }
+
     public void registerCommandQueueListener(
             final CommandQueueListener commandQueueListener)
     {
         getUploadManager().registerCommandQueueListener(commandQueueListener);
+    }
+
+
+    private class StartUploadManagerAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            getUploadManager().start();
+        }
+    }
+
+    private class StopUploadManagerAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            getUploadManager().stop();
+        }
+    }
+
+    private class AbortAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            getAbortButton().setEnabled(false);
+            getUploadManager().abort();
+        }
+    }
+
+    private class AbortListenerAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            getUploadProgressLabel().setText(getUploadProgressLabel().getText()
+                                       + " (Aborted)");
+            getScannerProgressLabel().setText(
+                    getScannerProgressLabel().getText() + " (Aborted)");
+        }
+    }
+
+    private class ProcessingStartedAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            LOGGER.info("Processing started.");
+            getAbortButton().setEnabled(true);
+        }
+    }
+
+    private class CommandProcessedAction implements Runnable
+    {
+        Long commandsProcessed;
+        Long commandsRemaining;
+
+        private CommandProcessedAction(final Long commandsProcessed,
+                                       final Long commandsRemaining)
+        {
+            this.commandsProcessed = commandsProcessed;
+            this.commandsRemaining = commandsRemaining;
+        }
+
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            LOGGER.info("Command processed.");
+
+            if (!getUploadManager().isAbortIssued())
+            {
+                getUploadProgressBar().setMaximum(commandsProcessed.intValue()
+                                            + commandsRemaining.intValue());
+                getUploadProgressBar().setValue(commandsProcessed.intValue());
+
+                if (!getUploadProgressLabel().getText().equals(
+                        COMPLETED_UPLOADING))
+                {
+                    getUploadProgressLabel().setText(COMPLETED_UPLOADING);
+                }
+
+                getUploadProgressPercentageLabel().setText(
+                        MessageFormat.format("{0,number,#.00%}",
+                                             getUploadProgressBar().
+                                                     getPercentComplete()));
+            }
+        }
+    }
+
+    private class ProcessingCompletedAction implements Runnable
+    {
+        /**
+         * When an object implementing interface <code>Runnable</code> is used
+         * to create a thread, starting the thread causes the object's
+         * <code>run</code> method to be called in that separately executing
+         * thread.
+         * <p/>
+         * The general contract of the method <code>run</code> is that it may
+         * take any action whatsoever.
+         *
+         * @see Thread#run()
+         */
+        @Override
+        public void run()
+        {
+            if (getAbortButton().isEnabled())
+            {
+                LOGGER.info("Processing completed.");
+                getAbortButton().setEnabled(false);
+                getMessageLabel().setText(
+                        "Please use the refresh button in the "
+                        + "VOSpace Browser to see the new Directory.");
+            }
+        }
     }
 }

@@ -124,6 +124,7 @@
             update="no"
             manifest="${build}/tmp/${project}Client.mf">
             <include name="ca/nrc/cadc/vos/client/**" />
+            <include name="ca/onfire/ak/**" />
             <include name="ca/nrc/cadc/vos/**.class" />
             <include name="**.xsd" />
             <exclude name="**Test**" />

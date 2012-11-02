@@ -81,15 +81,16 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
     @Test
     public void processingComplete() throws Exception
     {
-        final JLabel mockProgressLabel = createMock(JLabel.class);
+        final JLabel mockProgressPercentageLabel = createMock(JLabel.class);
+        final JLabel mockMessageLabel = createMock(JLabel.class);
         final JButton mockAbortButton = createMock(JButton.class);
 
         setTestSubject(new JUploadManager()
         {
             @Override
-            public JLabel getProgressLabel()
+            public JLabel getUploadProgressPercentageLabel()
             {
-                return mockProgressLabel;
+                return mockProgressPercentageLabel;
             }
 
             @Override
@@ -97,49 +98,84 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
             {
                 return mockAbortButton;
             }
+
+            @Override
+            protected JLabel getMessageLabel()
+            {
+                return mockMessageLabel;
+            }
+
+            /**
+             * Ensure the given action is executed in the Event Dispatch Thread.
+             *
+             * @param action The Action to run.
+             */
+            @Override
+            protected void executeInEDT(Runnable action)
+            {
+                action.run();
+            }
         });
+
+        expect(mockAbortButton.isEnabled()).andReturn(true).once();
 
         mockAbortButton.setEnabled(false);
         expectLastCall().once();
 
-        expect(mockProgressLabel.getText()).andReturn("Completed 100%").once();
-        mockProgressLabel.setText("Completed 100%  -  "
-                                  + "Please use the refresh button in the "
-                                  + "VOSpace Browser to see the new "
-                                  + "Directory.");
+        mockMessageLabel.setText(
+                "Please use the refresh button in the VOSpace Browser to see "
+                + "the new Directory.");
 
-        replay(mockAbortButton, mockProgressLabel);
+        replay(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
 
         getTestSubject().processingComplete();
 
-        verify(mockAbortButton, mockProgressLabel);
+        verify(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
     }
 
     @Test
     public void commandProcessed() throws Exception
     {
         final JProgressBar mockProgressBar = createMock(JProgressBar.class);
-        final JLabel mockProgressLabel = createMock(JLabel.class);
+        final JLabel mockProgressPercentageLabel = createMock(JLabel.class);
+        final JLabel mockUploadProgressLabel = createMock(JLabel.class);
         final UploadManager mockUploadManager = createMock(UploadManager.class);
 
         setTestSubject(new JUploadManager()
         {
             @Override
-            public JProgressBar getProgressBar()
+            public JProgressBar getUploadProgressBar()
             {
                 return mockProgressBar;
             }
 
             @Override
-            public JLabel getProgressLabel()
+            public JLabel getUploadProgressLabel()
             {
-                return mockProgressLabel;
+                return mockUploadProgressLabel;
+            }
+
+            @Override
+            public JLabel getUploadProgressPercentageLabel()
+            {
+                return mockProgressPercentageLabel;
             }
 
             @Override
             public UploadManager getUploadManager()
             {
                 return mockUploadManager;
+            }
+
+            /**
+             * Ensure the given action is executed in the Event Dispatch Thread.
+             *
+             * @param action The Action to run.
+             */
+            @Override
+            protected void executeInEDT(Runnable action)
+            {
+                action.run();
             }
         });
 
@@ -152,18 +188,23 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
         expect(mockProgressBar.getPercentComplete()).andReturn(
                 0.196731235d).once();
 
+        expect(mockUploadProgressLabel.getText()).andReturn(
+                " Completed uploading:").once();
+
         expect(mockUploadManager.isAbortIssued()).andReturn(false).once();
 
-        mockProgressLabel.setText(" Completed: 19.67%");
+        mockProgressPercentageLabel.setText("19.67%");
         expectLastCall().once();
 
-        replay(mockProgressBar, mockProgressLabel, mockUploadManager);
+        replay(mockProgressBar, mockProgressPercentageLabel, mockUploadManager,
+               mockUploadProgressLabel);
 
         // 1977 jobs
         // 19.67% complete
         getTestSubject().commandProcessed(325l, 1652l);
 
-        verify(mockProgressBar, mockProgressLabel, mockUploadManager);
+        verify(mockProgressBar, mockProgressPercentageLabel, mockUploadManager,
+               mockUploadProgressLabel);
     }
 
     /**

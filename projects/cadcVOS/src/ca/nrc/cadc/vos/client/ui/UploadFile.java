@@ -205,11 +205,16 @@ public class UploadFile implements VOSpaceCommand
         
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
-        if (subject != null)
+
+        if ((subject != null) && !subject.getPrincipals().isEmpty()
+            && !subject.getPublicCredentials().isEmpty())
+        {
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        }
         else
+        {
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+        }
 
         Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
         ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);

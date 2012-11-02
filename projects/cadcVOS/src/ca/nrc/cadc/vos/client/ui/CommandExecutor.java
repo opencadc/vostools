@@ -120,6 +120,9 @@ public class CommandExecutor implements Runnable
                                  + ": " + e);
                     }
                     queue.remove();
+                    log.debug(String.format("Command %s is complete.  "
+                                            + "New queue size is %d.",
+                                            nextCommand, queue.size()));
                 }
                 
                 // sleep for a while
@@ -129,9 +132,13 @@ public class CommandExecutor implements Runnable
         catch (InterruptedException e)
         {
             // exit
+            log.debug("Interrupted.  Exiting.");
+            e.printStackTrace();
         }
         finally
         {
+            log.debug("Completed.");
+
             //
             // TODO - If a CommandQueue is aborted, is it also considered
             // TODO - to be 'Done'?  It seems unlikely.
@@ -140,11 +147,9 @@ public class CommandExecutor implements Runnable
             //
             if (!queue.isAbortedProduction())
             {
+                log.debug("Not aborted, just done.");
                 queue.doneConsumption();
             }
-
-            // Clean up.
-            queue.clear();
         }
     }
 }

@@ -154,6 +154,11 @@ public class CommandQueue
         log.debug("New queue size after put: " + queue.size());
     }
 
+    public int size()
+    {
+        return queue.size();
+    }
+
     /**
      * Returns the command at the top of the queue.
      * @return

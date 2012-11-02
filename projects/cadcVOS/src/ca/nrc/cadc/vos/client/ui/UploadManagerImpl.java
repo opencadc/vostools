@@ -37,9 +37,6 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 import org.apache.log4j.Logger;
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,12 +48,13 @@ import java.util.concurrent.Executors;
  * The main manager to manage the logic of the uploads.  Reports to UI elements
  * via the listeners.
  */
-public class UploadManagerImpl implements UploadManager, ChangeListener,
-                                          CommandQueueListener
+public class UploadManagerImpl implements UploadManager
 {
+    // If we don't use a different logger here, then it will try to log to the
+    // AWT console outside the EDT.
     private static final Logger LOGGER =
             Logger.getLogger(UploadManagerImpl.class);
-    private static final int MAX_COMMAND_COUNT = 200;
+    private static final int MAX_COMMAND_COUNT = 500;
 
     private final File sourceDirectory;
     private final VOSURI targetVOSpaceURI;
@@ -65,10 +63,8 @@ public class UploadManagerImpl implements UploadManager, ChangeListener,
     private boolean abortIssued;
 
     private ExecutorService commandController;
-    private CommandQueue commandQueue;
+    private final CommandQueue commandQueue;
 
-    private final List<ChangeListener> changeListeners =
-            new ArrayList<ChangeListener>();
     private final List<CommandQueueListener> commandQueueListeners =
             new ArrayList<CommandQueueListener>();
 
@@ -79,14 +75,18 @@ public class UploadManagerImpl implements UploadManager, ChangeListener,
      * @param sourceDirectory       The Source directory to upload.
      * @param targetVOSpaceURI      The URI of the target VOSpace.
      * @param vospaceClient         The VOSpace client instance to use.
+     * @param commandQueueListener  The main listener.
      */
     public UploadManagerImpl(final File sourceDirectory,
                              final VOSURI targetVOSpaceURI,
-                             final VOSpaceClient vospaceClient)
+                             final VOSpaceClient vospaceClient,
+                             final CommandQueueListener commandQueueListener)
     {
         this.sourceDirectory = sourceDirectory;
         this.targetVOSpaceURI = targetVOSpaceURI;
         this.voSpaceClient = vospaceClient;
+        this.commandQueue = new CommandQueue(MAX_COMMAND_COUNT,
+                                             commandQueueListener);
     }
 
 
@@ -97,16 +97,7 @@ public class UploadManagerImpl implements UploadManager, ChangeListener,
     public void start()
     {
         LOGGER.info("Starting process.");
-        initializeCommandQueue();
         initializeCommandController();
-    }
-
-    /**
-     * Create a command queue and set it.
-     */
-    protected void initializeCommandQueue()
-    {
-        setCommandQueue(new CommandQueue(MAX_COMMAND_COUNT, this));
     }
 
     /**
@@ -164,140 +155,6 @@ public class UploadManagerImpl implements UploadManager, ChangeListener,
         return abortIssued;
     }
 
-    /**
-     * Invoked when the target of the listener has changed its state.
-     *
-     * @param e a ChangeEvent object
-     */
-    @Override
-    public void stateChanged(final ChangeEvent e)
-    {
-        for (final ChangeListener changeListener : getChangeListeners())
-        {
-            changeListener.stateChanged(e);
-        }
-    }
-
-    /**
-     * Indicates that an Abort was issued.
-     */
-    @Override
-    public void onAbort()
-    {
-        for (final CommandQueueListener commandQueueListener
-                : getCommandQueueListeners())
-        {
-            commandQueueListener.onAbort();
-        }
-    }
-
-    /**
-     * Indicates that a command has been processed.
-     *
-     * @param commandsProcessed Total number that have been processed.
-     * @param commandsRemaining Total known number remaining to be processed.
-     */
-    @Override
-    public void commandProcessed(final Long commandsProcessed,
-                                 final Long commandsRemaining)
-    {
-//        try
-//        {
-//            SwingUtilities.invokeAndWait(new Runnable()
-//            {
-//                @Override
-//                public void run()
-//                {
-//                    for (final CommandQueueListener commandQueueListener
-//                            : getCommandQueueListeners())
-//                    {
-//                        commandQueueListener.commandProcessed(commandsProcessed,
-//                                                              commandsRemaining);
-//                    }
-//                }
-//            });
-//        }
-//        catch (final Throwable t)
-//        {
-//            System.out.println("Bad bug found.");
-//            t.printStackTrace();
-//        }
-        for (final CommandQueueListener commandQueueListener
-                : getCommandQueueListeners())
-        {
-            commandQueueListener.commandProcessed(commandsProcessed,
-                                                  commandsRemaining);
-        }
-    }
-
-    /**
-     * Indicates that processing has started.
-     */
-    @Override
-    public void processingStarted()
-    {
-        LOGGER.info("Started processing.");
-//        try
-//        {
-//            SwingUtilities.invokeAndWait(new Runnable()
-//            {
-//                @Override
-//                public void run()
-//                {
-//                    for (final CommandQueueListener commandQueueListener
-//                            : getCommandQueueListeners())
-//                    {
-//                        commandQueueListener.processingStarted();
-//                    }
-//                }
-//            });
-//        }
-//        catch (final Throwable t)
-//        {
-//            System.out.println("Bad bug found.");
-//            t.printStackTrace();
-//        }
-        for (final CommandQueueListener commandQueueListener
-                : getCommandQueueListeners())
-        {
-            commandQueueListener.processingStarted();
-        }
-    }
-
-    /**
-     * Indicates that processing is complete.
-     */
-    @Override
-    public void processingComplete()
-    {
-        LOGGER.info("Completed processing.");
-//        try
-//        {
-//            SwingUtilities.invokeAndWait(new Runnable()
-//            {
-//                @Override
-//                public void run()
-//                {
-//                    for (final CommandQueueListener commandQueueListener
-//                            : getCommandQueueListeners())
-//                    {
-//                        commandQueueListener.processingComplete();
-//                    }
-//                }
-//            });
-//        }
-//        catch (final Throwable t)
-//        {
-//            System.out.println("Bad bug found.");
-//            t.printStackTrace();
-//        }
-        for (final CommandQueueListener commandQueueListener
-                : getCommandQueueListeners())
-        {
-            commandQueueListener.processingComplete();
-        }
-    }
-
     public File getSourceDirectory()
     {
         return sourceDirectory;
@@ -326,16 +183,6 @@ public class UploadManagerImpl implements UploadManager, ChangeListener,
     public CommandQueue getCommandQueue()
     {
         return commandQueue;
-    }
-
-    public void setCommandQueue(CommandQueue commandQueue)
-    {
-        this.commandQueue = commandQueue;
-    }
-
-    public final List<ChangeListener> getChangeListeners()
-    {
-        return changeListeners;
     }
 
     public void registerCommandQueueListener(

@@ -107,8 +107,17 @@ public class CreateDirectory implements VOSpaceCommand
         }
         catch (NodeNotFoundException e)
         {
+            log.debug("Creating new Node for " + containerNode.getUri());
             // create it if it doesn't
             vospaceClient.createNode(containerNode);
+            log.debug("Done creating " + containerNode.getUri());
+        }
+        catch (Exception e)
+        {
+            log.error("***");
+            log.error("Found error while creating Node "
+                      + containerNode.getUri(), e);
+            log.error("***");
         }
     }
     

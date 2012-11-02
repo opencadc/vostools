@@ -79,5 +79,4 @@ package ca.nrc.cadc.vos.client.ui;
  */
 public interface UserInterface
 {
-    void start();
 }

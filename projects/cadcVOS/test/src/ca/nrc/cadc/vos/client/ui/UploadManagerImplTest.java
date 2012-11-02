@@ -71,7 +71,34 @@ public class UploadManagerImplTest
     {
         setTestSubject(new UploadManagerImpl(getSourceDirectory(),
                                              getTargetVOSpaceURI(),
-                                             getMockVOSpaceClient()));
+                                             getMockVOSpaceClient(),
+                                             new CommandQueueListener()
+        {
+            @Override
+            public void commandProcessed(Long commandsProcessed,
+                                         Long commandsRemaining)
+            {
+
+            }
+
+            @Override
+            public void processingStarted()
+            {
+
+            }
+
+            @Override
+            public void processingComplete()
+            {
+
+            }
+
+            @Override
+            public void onAbort()
+            {
+
+            }
+        }));
     }
 
     /**

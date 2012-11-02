@@ -67,22 +67,22 @@ public class Main
             System.exit(0);
         }
 
-        final Level level;
+        final Level logLevel;
         if (am.isSet("d") || am.isSet("debug"))
         {
-            level = Level.DEBUG;
+            logLevel = Level.DEBUG;
         }
         else if (am.isSet("v") || am.isSet("verbose"))
         {
-            level = Level.INFO;
+            logLevel = Level.INFO;
         }
         else if (am.isSet("q") || am.isSet("quiet"))
         {
-            level = Level.OFF;
+            logLevel = Level.OFF;
         }
         else
         {
-            level = Level.WARN;
+            logLevel = Level.WARN;
         }
 
 
@@ -112,7 +112,8 @@ public class Main
             }
         }
 
-        Subject.doAs(subject, new PrivilegedAction<Boolean>()
+        final Boolean successfulStart =
+                Subject.doAs(subject, new PrivilegedAction<Boolean>()
         {
             @Override
             public Boolean run()
@@ -125,7 +126,7 @@ public class Main
                                                          "http");
 
                     final GraphicUI graphicUploadUI =
-                            new GraphicUI(level, targetVOSpaceURI,
+                            new GraphicUI(logLevel, targetVOSpaceURI,
                                           new VOSpaceClient(
                                                   vospaceServiceURL.
                                                           toString()));
@@ -134,8 +135,6 @@ public class Main
                                                  graphicUploadUI);
                     frame.getContentPane().add(graphicUploadUI);
                     frame.setVisible(true);
-
-                    graphicUploadUI.start();
 
                     return Boolean.TRUE;
                 }
@@ -146,6 +145,12 @@ public class Main
                 }
             }
         });
+
+        if (!successfulStart)
+        {
+            System.out.println("Unable to start application.");
+            System.exit(-1);
+        }
     }
 
     // convert string 'null' and empty string to a null, trim() and return
