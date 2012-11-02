@@ -75,7 +75,9 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -154,9 +156,11 @@ public class ThreadExecutorTest
     {
         try
         {
-            JobUpdater ju = new TestJobUpdater();
+            TestJobUpdater ju = new TestJobUpdater();
             ThreadExecutor exec = new ThreadExecutor(ju, TestJobRunner.class);
-            Job job = new TestJob();
+            Job job = new TestJob(100L);
+            ju.jobs.put(job.getID(), job);
+            
             exec.execute(job);
             Thread.sleep(150L);
             ExecutionPhase actual = ju.getPhase(job.getID());
@@ -174,9 +178,11 @@ public class ThreadExecutorTest
     {
         try
         {
-            JobUpdater ju = new TestJobUpdater();
+            TestJobUpdater ju = new TestJobUpdater();
             ThreadExecutor exec = new ThreadExecutor(ju, TestJobRunner.class);
-            Job job = new TestJob();
+            Job job = new TestJob(100L);
+            ju.jobs.put(job.getID(), job);
+            
             long t1 = System.currentTimeMillis();
             exec.execute(job);
             Thread.sleep(20L);
@@ -196,45 +202,64 @@ public class ThreadExecutorTest
 
     public static class TestJob extends Job
     {
+        String id;
+        Long dt;
+        
+        public TestJob(String id, long dt)
+        {
+            this.id = id;
+            this.dt = new Long(dt);
+            this.setExecutionPhase(ExecutionPhase.PENDING);
+        }
+
+        public TestJob(long dt) { this("abc123", dt); }
+
         @Override
-        public String getID() { return "abc123"; }
+        public String getID() { return id; }
+
+        @Override
+        public Long getExecutionDuration()
+        {
+            return dt;
+        }
     }
     
     public static class TestJobUpdater implements JobUpdater
     {
-        private ExecutionPhase phase = ExecutionPhase.PENDING;
+        Map<String,Job> jobs = new HashMap<String,Job>();
 
         public ExecutionPhase getPhase(String jobID) throws JobNotFoundException, JobPersistenceException
         {
-            return phase;
+            Job j=  jobs.get(jobID);
+            if (j == null)
+                throw new JobNotFoundException(jobID);
+            return j.getExecutionPhase();
         }
 
         public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end) throws JobNotFoundException, JobPersistenceException
         {
+            Job j=  jobs.get(jobID);
+            if (j == null)
+                throw new JobNotFoundException(jobID);
+            ExecutionPhase phase = j.getExecutionPhase();
             if (phase.equals(start))
-                phase = end;
-            return phase;
+                j.setExecutionPhase(end);
+            return j.getExecutionPhase();
         }
 
         public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, Date date) throws JobNotFoundException, JobPersistenceException
         {
-            if (phase.equals(start))
-                phase = end;
-            return phase;
+            return setPhase(jobID, start, end);
         }
 
         public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, List<Result> results, Date date) throws JobNotFoundException, JobPersistenceException
         {
-            if (phase.equals(start))
-                phase = end;
-            return phase;
+            return setPhase(jobID, start, end);
         }
 
         public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, Date date) throws JobNotFoundException, JobPersistenceException
         {
-            if (phase.equals(start))
-                phase = end;
-            return phase;
+            return setPhase(jobID, start, end);
         }
     }
     
@@ -249,7 +274,7 @@ public class ThreadExecutorTest
             try
             {
                 jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.EXECUTING);
-                Thread.sleep(100L);
+                Thread.sleep(job.getExecutionDuration().longValue());
                 jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED);
             }
             catch(Throwable t)

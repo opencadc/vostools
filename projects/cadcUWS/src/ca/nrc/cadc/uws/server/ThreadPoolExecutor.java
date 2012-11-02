@@ -69,18 +69,15 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.auth.AnonPrincipalExtractor;
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.uws.Job;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import javax.security.auth.Subject;
@@ -97,8 +94,6 @@ public class ThreadPoolExecutor extends AbstractExecutor
 {
     private static final Logger log = Logger.getLogger(ThreadPoolExecutor.class);
 
-    private final static int INITIAL_QUEUE_SIZE = 21;
-    
     private final Map<String,CurrentJob> currentJobs = new HashMap<String,CurrentJob>();
     
     private java.util.concurrent.ThreadPoolExecutor threadPool;
@@ -115,7 +110,7 @@ public class ThreadPoolExecutor extends AbstractExecutor
     public ThreadPoolExecutor(JobUpdater jobUpdater, Class jobRunnerClass, int poolSize)
     {
         super(jobUpdater, jobRunnerClass);
-        init(poolSize, ThreadPoolExecutor.class.getSimpleName(), new DefaultPriorityComparator());
+        init(poolSize, ThreadPoolExecutor.class.getSimpleName());
     }
 
     /**
@@ -130,23 +125,7 @@ public class ThreadPoolExecutor extends AbstractExecutor
             int poolSize, String poolName)
     {
         super(jobUpdater, jobRunnerClass);
-        init(poolSize, poolName, new DefaultPriorityComparator());
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param jobUpdater JobUpdater implementation
-     * @param jobRunnerClass JobRunner implementation class
-     * @param poolName name of this pool (for naming threads)
-     * @param poolSize minimum (initial) number of running threads
-     * @param priorityComparator comparator to order queued jobs
-     */
-    public ThreadPoolExecutor(JobUpdater jobUpdater, Class jobRunnerClass,
-            int poolSize, String poolName, Comparator<CurrentJob> priorityComparator)
-    {
-        super(jobUpdater, jobRunnerClass);
-        init(poolSize, poolName, priorityComparator);
+        init(poolSize, poolName);
     }
 
     @Override
@@ -159,29 +138,22 @@ public class ThreadPoolExecutor extends AbstractExecutor
         log.info("shutting down ThreadPool... [OK]");
     }
 
-
-    private void init(int poolSize, String poolName, Comparator<CurrentJob> priorityComparator)
+    private void init(int poolSize, String poolName)
     {
         
         if (poolName == null)
             throw new IllegalArgumentException("poolName cannot be null");
         if (poolSize < 1)
             throw new IllegalArgumentException("poolSize must be > 0");
-        if (priorityComparator == null)
-            throw new IllegalArgumentException("priorityComparator cannot be null");
         this.poolName = poolName + "-";
+        
+        this.threadPool = new java.util.concurrent.ThreadPoolExecutor(poolSize, poolSize,
+                Long.MAX_VALUE, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+                new DaemonThreadFactory());
 
-        Comparator<Runnable> cr = new WrapperPriorityComparator(priorityComparator);
-        // note: PriorityBlockingQueue is unbounded so maxPoolSize is ignored (=poolSize)
-        // note: core threads are kept alive unless we want to also enable allowCoreThreadTimeOut
-        this.threadPool =
-            new java.util.concurrent.ThreadPoolExecutor(poolSize, poolSize,
-                Long.MAX_VALUE, TimeUnit.MILLISECONDS,
-                new PriorityBlockingQueue<Runnable>(INITIAL_QUEUE_SIZE, cr));
-        threadPool.setThreadFactory(new DaemonThreadFactory());
-        //threadPool.allowCoreThreadTimeOut(true);
-
-        this.poolSubject = AuthenticationUtil.getSubject(new AnonPrincipalExtractor());
+        // TODO: could implement a background thread that scans the currentJob map for jobs
+        // where currentTime - startTime > executionDuration and kill them off; sort of like
+        // the thread in InMemoryPersistence deletes jobs past their destructionTime
     }
 
     private class DaemonThreadFactory implements ThreadFactory
@@ -210,14 +182,14 @@ public class ThreadPoolExecutor extends AbstractExecutor
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
 
-        final CurrentJob cj = new CurrentJob(job, jobRunner, System.currentTimeMillis(), caller);
+        final CurrentJob cj = new CurrentJob(job, jobRunner, caller);
         synchronized(currentJobs)
         {
             this.currentJobs.put(job.getID(), cj);
         }
         // IMPORTANT: run the submit using an internal poolSubject so lazily
         // spawned threads do not inherit the AccessControlContext of the caller
-        Subject.doAs(poolSubject, new PrivilegedAction<Future>()
+        cj.future = Subject.doAs(poolSubject, new PrivilegedAction<Future>()
             {
                 public Future run()
                 {
@@ -242,7 +214,10 @@ public class ThreadPoolExecutor extends AbstractExecutor
             if (r != null)
             {
                 if (r.future != null)
+                {
                     r.future.cancel(true);     // try to interrupt running
+                    //futureJobs.remove(r.future);
+                }
                 threadPool.remove(r.runnable); // try to remove queued
             }
         }
@@ -255,15 +230,13 @@ public class ThreadPoolExecutor extends AbstractExecutor
     {
         public Job job;
         public JobRunner runnable;
-        public Long queuedTime;
         private Future future;
         private Subject subject;
         
-        CurrentJob(Job job, JobRunner runnable, long queuedTime, Subject subject)
+        CurrentJob(Job job, JobRunner runnable, Subject subject)
         {
             this.job = job;
             this.runnable = runnable;
-            this.queuedTime = new Long(queuedTime);
             this.subject = subject;
         }
 
@@ -293,30 +266,5 @@ public class ThreadPoolExecutor extends AbstractExecutor
             }
         }
 
-    }
-
-    private class WrapperPriorityComparator implements Comparator<Runnable>
-    {
-        private Comparator<CurrentJob> cmp;
-
-        public WrapperPriorityComparator( Comparator<CurrentJob> cmp)
-        {
-            this.cmp = cmp;
-        }
-
-        public int compare(Runnable o1, Runnable o2)
-        {
-            CurrentJob c1 = (CurrentJob) o1;
-            CurrentJob c2 = (CurrentJob) o2;
-            return cmp.compare(c1, c2);
-        }
-    }
-
-    private class DefaultPriorityComparator implements Comparator<CurrentJob>
-    {
-        public int compare(CurrentJob o1, CurrentJob o2)
-        {
-            return o1.queuedTime.compareTo(o2.queuedTime);
-        }
     }
 }

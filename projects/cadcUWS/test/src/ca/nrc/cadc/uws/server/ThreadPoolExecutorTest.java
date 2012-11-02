@@ -93,7 +93,7 @@ public class ThreadPoolExecutorTest
         Log4jInit.setLevel("ca.nrc.cadc.uws.server", Level.INFO);
     }
 
-    @Test
+    //@Test
     public void testInvalidArgs()
     {
         try
@@ -149,17 +149,6 @@ public class ThreadPoolExecutorTest
                 log.debug("caught expected: " + expected);
             }
 
-            try
-            {
-                ThreadPoolExecutor exec = new ThreadPoolExecutor(ju, TestJobRunner.class, 1,
-                        "ThreadPoolExecutor",  null);
-                Assert.fail("expected IllegalArgumentException: null Comparator<>");
-            }
-            catch(IllegalArgumentException expected)
-            {
-                log.debug("caught expected: " + expected);
-            }
-
             // success
             ThreadPoolExecutor exec = new ThreadPoolExecutor(new TestJobUpdater(), TestJobRunner.class, 2);
         }
@@ -175,9 +164,11 @@ public class ThreadPoolExecutorTest
     {
         try
         {
-            JobUpdater ju = new TestJobUpdater();
+            TestJobUpdater ju = new TestJobUpdater();
             ThreadPoolExecutor exec = new ThreadPoolExecutor(ju, TestJobRunner.class, 2);
-            Job job = new TestJob();
+            Job job = new TestJob(100L);
+            ju.jobs.put(job.getID(), job);
+            
             exec.execute(job);
             Thread.sleep(120L);
             ExecutionPhase actual = ju.getPhase(job.getID());
@@ -191,13 +182,46 @@ public class ThreadPoolExecutorTest
     }
 
     @Test
+    public void testExecQueued()
+    {
+        try
+        {
+            TestJobUpdater ju = new TestJobUpdater();
+            ThreadPoolExecutor exec = new ThreadPoolExecutor(ju, TestJobRunner.class, 2);
+            for (int i=0; i<10; i++) // 10 jobs * 100ms / 2 threads ~ 500ms
+            {
+                String id = "abc123_" + i;
+                Job job = new TestJob(id, 100L);
+                ju.jobs.put(job.getID(), job);
+                exec.execute(job);
+            }
+            
+            Thread.sleep(750L);
+
+            for (int i=0; i<10; i++) // 10 jobs * 100ms / 2 threads ~ 500ms
+            {
+                String id = "abc123_" + i;
+                ExecutionPhase actual = ju.getPhase(id);
+                Assert.assertEquals("phase", ExecutionPhase.COMPLETED, actual);
+            }
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
     public void testAbort()
     {
         try
         {
-            JobUpdater ju = new TestJobUpdater();
+            TestJobUpdater ju = new TestJobUpdater();
             ThreadPoolExecutor exec = new ThreadPoolExecutor(ju, TestJobRunner.class, 2);
-            Job job = new TestJob();
+            Job job = new TestJob(100L);
+            ju.jobs.put(job.getID(), job);
+            
             long t1 = System.currentTimeMillis();
             exec.execute(job);
             Thread.sleep(20L);
