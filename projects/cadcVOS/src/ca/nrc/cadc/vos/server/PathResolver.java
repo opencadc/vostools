@@ -78,6 +78,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
@@ -169,6 +170,35 @@ public class PathResolver
                         new VOSURI(linkNode.getTarget()), readAuthorizer);
             }
         }
+
+        // If the given URI has query or fragment parts, and the node is a DataNode
+        // add the query and fragment to the Node URI.
+        // Use case: URI is a LinkNode with cutout query to a DataNode.
+        if (uri.getQuery() != null && result instanceof DataNode)
+        {
+            String fragment = null;
+            if (uri.getFragment() != null)
+                fragment = uri.getFragment();
+            try
+            {
+                URI queryUri = new URI(result.getUri().getScheme(),
+                                       result.getUri().getAuthority(),
+                                       result.getUri().getPath(),
+                                       uri.getQuery(),
+                                       fragment);
+                Node dataNode = new DataNode(new VOSURI(queryUri), result.getProperties());
+                dataNode.setAccepts(result.accepts());
+                dataNode.setProvides(result.provides());
+                dataNode.setParent(result.getParent());
+                dataNode.setName(result.getName());
+                return dataNode;
+            }
+            catch (URISyntaxException e)
+            {
+                throw new LinkingException("Unable to append query part to " + result.getUri());
+            }
+            
+        }
         return result;
     }
 
@@ -232,6 +262,7 @@ public class PathResolver
         {
              node = nodePersistence.get(vosuri, true);
         }
+        LOG.debug("found node: " + node.getUri().toString());
         
         // extract the paths
         String requestedPath = vosuri.getPath();
@@ -255,11 +286,14 @@ public class PathResolver
             }
             LinkNode linkNode = (LinkNode) node;
             String remainingPath = requestedPath.substring(nodePath.length());
+            LOG.debug("remainingPath: " + remainingPath);
             
             VOSURI linkURI = validateTargetURI(linkNode);
+            LOG.debug("linkURI: " + linkURI.toString());
             try
             {
                 VOSURI resolvedURI = new VOSURI(linkURI.toString() + remainingPath);
+                LOG.debug("resolvedURI: " + resolvedURI.toString());
                 return doResolve(resolvedURI, readAuthorizer);
             }
             catch (URISyntaxException e)
@@ -267,7 +301,7 @@ public class PathResolver
                 throw new LinkingException("Invalid link URI");
             }
         }
-        
+        LOG.debug("returning node: " + node.getUri().toString());
         return node;
     }
 
@@ -334,6 +368,13 @@ public class PathResolver
                     "Too high a visit limit.  Must be below " + VISIT_LIMIT_MAX);
         }
         this.visitLimit = visitLimit;
+    }
+
+    private void copy(Node src, Node dest)
+    {
+        src.setAccepts(dest.accepts());
+        src.getProperties().addAll(dest.getProperties());
+        src.setProvides(dest.provides());
     }
 
 }

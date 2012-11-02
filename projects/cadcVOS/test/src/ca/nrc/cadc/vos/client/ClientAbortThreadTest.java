@@ -40,7 +40,7 @@ public class ClientAbortThreadTest
     @BeforeClass
     public static void setUpClass()
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
     }
 
     /**

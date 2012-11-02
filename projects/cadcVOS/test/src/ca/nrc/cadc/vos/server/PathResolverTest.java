@@ -95,7 +95,7 @@ public class PathResolverTest
 {
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
     }
     
     @Test
