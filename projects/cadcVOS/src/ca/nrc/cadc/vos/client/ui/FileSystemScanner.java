@@ -77,7 +77,6 @@ import java.util.Queue;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.VOSURI;
 
@@ -131,8 +130,7 @@ public class FileSystemScanner implements Runnable
             Queue<String> filePathQueue = new LinkedList<String>();
             filePathQueue.add(sourceFile.getPath());
 
-            while (!filePathQueue.isEmpty()
-                   && !commandQueue.isAbortedProduction())
+            while (!filePathQueue.isEmpty())
             {
                 // Next file in the queue.
                 final File file = new File(filePathQueue.remove());
@@ -142,7 +140,7 @@ public class FileSystemScanner implements Runnable
                     // Check if file is a symlink.
                     if (isSymLink(file))
                     {
-                        log.error("Symbolic link found: "
+                        log.warn("Symbolic link found: "
                                   + file.getAbsolutePath());
                     }
 
@@ -151,18 +149,10 @@ public class FileSystemScanner implements Runnable
                     {
                         queueDataNode(file);
                     }
+                    
+                    // directories will be automatically created as a part
+                    // of the file creation
 
-                    // Create a ContainerNode command and add it to the CommandQueue
-                    // and add directory listing to the queue.
-                    else
-                    {
-                        queueContainerNode(file);
-                        for (final String filename : file.list())
-                        {
-                            filePathQueue.add(file.getPath() + File.separator
-                                              + filename);
-                        }
-                    }
                 }
                 catch (IOException ioe)
                 {
@@ -183,7 +173,7 @@ public class FileSystemScanner implements Runnable
         }
         catch (InterruptedException ie)
         {
-            log.error("Processing stopped");
+            log.debug("Processing stopped");
         }
         catch (Exception e)
         {
@@ -191,16 +181,7 @@ public class FileSystemScanner implements Runnable
         }
         finally
         {
-            //
-            // TODO - If a CommandQueue is aborted, is it also considered
-            // TODO - 'Done'?  It seems unlikely.
-            //
-            // TODO - jenkinsd 2012.10.23
-            //
-            if (!commandQueue.isAbortedProduction())
-            {
-                commandQueue.doneProduction();
-            }
+            commandQueue.doneProduction();
         }
     }
 
@@ -243,28 +224,6 @@ public class FileSystemScanner implements Runnable
 
         // Add node and InputStream from file.
         VOSpaceCommand command = new UploadFile(node, file);
-        commandQueue.put(command);
-    }
-
-    /**
-     * Create a ContainerNode from the given file and
-     * add it to the CommandQueue.
-     *
-     * @param file the file to add to the CommandQueue
-     * @throws InterruptedException
-     */
-    protected void queueContainerNode(File file)
-        throws InterruptedException
-    {
-        // Get the path starting from the root file.
-        String path = getRelativePath(file);
-
-        // Create a DataNode.
-        URI uri = URI.create(targetURI.toString() + path);
-        ContainerNode node = new ContainerNode(new VOSURI(uri));
-
-        // Add node and InputStream from file.
-        VOSpaceCommand command = new CreateDirectory(node);
         commandQueue.put(command);
     }
 

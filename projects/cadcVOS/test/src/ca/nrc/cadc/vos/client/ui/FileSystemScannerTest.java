@@ -150,28 +150,7 @@ public class FileSystemScannerTest
             File file = new File("test/src/resources/testFile");
             scanner.queueDataNode(file);
 
-            assertNotNull(queue.peek());
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testQueueContainerNode()
-    {
-        try
-        {
-            CommandQueue queue = new CommandQueue(1, null);
-            File sourceFile = new File("test");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, TEST_VOSURI, queue);
-
-            File file = new File("test/src/resources/testFile");
-            scanner.queueContainerNode(file);
-
-            assertNotNull(queue.peek());
+            assertNotNull(queue.take());
         }
         catch(Exception unexpected)
         {

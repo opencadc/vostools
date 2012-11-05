@@ -70,7 +70,6 @@
 package ca.nrc.cadc.vos.client.ui;
 
 import java.io.File;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,14 +81,11 @@ import org.easymock.EasyMock;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -196,106 +192,7 @@ public class UploadFileTest
         UploadFile uploadFile = new UploadFile(dataNode, testFile);
         
         VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getParentURI().getPath())).andReturn(parentNode).once();
-        
-        setupSuccessfulFileUpload(dataNode, testFile, mockClient);
-        EasyMock.replay(mockClient);
-        
-        uploadFile.execute(mockClient);
-        
-        EasyMock.verify(mockClient);
-    }
-    
-    @Test
-    public void testParentDoesntExist() throws Exception
-    {
-        VOSURI uri = new VOSURI(ROOT_URI + "/newDataNode");
-        DataNode dataNode = new DataNode(uri);
-        File testFile = new File("test/src/resources/testFile");
-        UploadFile uploadFile = new UploadFile(dataNode, testFile);
-        
-        VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        EasyMock.expect(mockClient.getNode(uri.getParentURI().getPath())).andThrow(new NodeNotFoundException("not found")).once();
-        
-        EasyMock.replay(mockClient);
-        
-        try
-        {
-            uploadFile.execute(mockClient);
-            Assert.fail("Expected NodeNotFoundException");
-        }
-        catch (NodeNotFoundException e)
-        {
-            // expected
-        }
-        
-        EasyMock.verify(mockClient);
-    }
-    
-    @Test
-    public void testDontReplaceMD5SumsMatch() throws Exception
-    {
-        VOSURI uri = new VOSURI(ROOT_URI + "/modifiedDataNode");
-        DataNode dataNode = new DataNode(uri);
-        ContainerNode parentNode = new ContainerNode(dataNode.getUri().getParentURI());
-        parentNode.getNodes().add(dataNode);
-        File testFile = new File("test/src/resources/testFile");
-        UploadFile uploadFile = new UploadFile(dataNode, testFile);
-        
-        VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getParentURI().getPath())).andReturn(parentNode).once();
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getPath())).andReturn(dataNode).once();
-        
-        // set the md5 on the node (the server/client objects are the same)
-        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, "d41d8cd98f00b204e9800998ecf8427e"));
-        
-        EasyMock.replay(mockClient);
-        
-        uploadFile.execute(mockClient);
-        
-        EasyMock.verify(mockClient);
-    }
-    
-    @Test
-    public void testDontReplaceSizeAndDateMatch() throws Exception
-    {
-        VOSURI uri = new VOSURI(ROOT_URI + "/modifiedDataNode");
-        DataNode dataNode = new DataNode(uri);
-        ContainerNode parentNode = new ContainerNode(dataNode.getUri().getParentURI());
-        parentNode.getNodes().add(dataNode);
-        File testFile = new File("test/src/resources/testFile");
-        UploadFile uploadFile = new UploadFile(dataNode, testFile);
-        
-        VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getParentURI().getPath())).andReturn(parentNode).once();
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getPath())).andReturn(dataNode).once();
-        
-        // set the date and size on the file to be the same
-        DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        long size = 28;
-        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(testFile.lastModified())));
-        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(size)));
-        
-        EasyMock.replay(mockClient);
-        
-        uploadFile.execute(mockClient);
-        
-        EasyMock.verify(mockClient);
-    }
-    
-    @Test
-    public void testDoReplaceDifferentFile() throws Exception
-    {
-        VOSURI uri = new VOSURI(ROOT_URI + "/modifiedDataNode");
-        DataNode dataNode = new DataNode(uri);
-        ContainerNode parentNode = new ContainerNode(dataNode.getUri().getParentURI());
-        parentNode.getNodes().add(dataNode);
-        File testFile = new File("test/src/resources/testFile");
-        UploadFile uploadFile = new UploadFile(dataNode, testFile);
-        
-        VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getParentURI().getPath())).andReturn(parentNode).once();
-        EasyMock.expect(mockClient.getNode(dataNode.getUri().getPath())).andReturn(dataNode).once();
+        EasyMock.expect(mockClient.createNode(dataNode, false)).andReturn(dataNode).once();
         
         setupSuccessfulFileUpload(dataNode, testFile, mockClient);
         EasyMock.replay(mockClient);

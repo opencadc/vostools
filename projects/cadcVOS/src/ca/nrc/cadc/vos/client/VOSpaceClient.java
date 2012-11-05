@@ -192,7 +192,7 @@ public class VOSpaceClient
      * already exists.
      * @return the created node
      */
-    private Node createNode(Node node, boolean checkForDuplicate)
+    public Node createNode(Node node, boolean checkForDuplicate)
     {
         Node rtnNode = null;
         try

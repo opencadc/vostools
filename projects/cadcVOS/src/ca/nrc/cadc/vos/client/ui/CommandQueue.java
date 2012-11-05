@@ -93,9 +93,9 @@ public class CommandQueue
     
     private CommandQueueListener listener;
     private boolean doneProduction = false;
-    private boolean abortedProduction = false;
     private long commandsProcessed = 0;
     private ArrayBlockingQueue<VOSpaceCommand> queue;
+    
     
     public CommandQueue(int maxCapacity, CommandQueueListener listener)
     {
@@ -105,26 +105,11 @@ public class CommandQueue
     }
     
     /**
-     * Inform the listener that processing has begun.
-     */
-    public void startedConsumption()
-    {
-        listener.processingStarted();
-    }
-    
-    /**
-     * Inform the listener that processing is complete.
-     */
-    public void doneConsumption()
-    {
-        listener.processingComplete();
-    }
-    
-    /**
      * Method to indicate that the producer is finished working.
      */
     public void doneProduction()
     {
+        listener.productionComplete();
         doneProduction = true;
     }
     
@@ -138,65 +123,37 @@ public class CommandQueue
     }
     
     /**
+     * Removes the command at the top of the queue.
+     */
+    public void commandCompleted(VOSpaceCommand command, Throwable error)
+    {
+        log.debug("Command " + command + " completed.");
+        commandsProcessed++;
+        listener.commandConsumed(commandsProcessed, new Long(queue.size()));
+        log.debug("New queue size after remove: " + queue.size());
+    }
+    
+    /**
      * Push the command on the queue, wait if full.
      * @param command
      */
-    public void put(VOSpaceCommand command)
+    public void put(VOSpaceCommand command) throws InterruptedException
     {
-        try
-        {
-            queue.put(command);
-        }
-        catch (InterruptedException e)
-        {
-            log.debug("Queue put interrupted: " + e);
-        }
+        queue.put(command);
         log.debug("New queue size after put: " + queue.size());
     }
-
-    public int size()
-    {
-        return queue.size();
-    }
-
+    
     /**
-     * Returns the command at the top of the queue.
-     * @return
-     */
-    public VOSpaceCommand peek()
-    {
-        return queue.peek();
-    }
-
-    /**
-     * Removes the command at the top of the queue.
-     */
-    public void remove()
-    {
-        queue.remove();
-        commandsProcessed++;
-        listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        log.debug("New queue size after remove: " + queue.size());
-    }
-
-    /**
-     * Removes and returns the command at the head of the queue.
+     * Removes and returns the command at the head of the queue.  Will block
+     * indefinitely if the queue is empty.
+     *  
      * @return VOSpaceCommand.
      */
-    public VOSpaceCommand poll()
+    public VOSpaceCommand take() throws InterruptedException
     {
-        VOSpaceCommand command = queue.poll();
-        if (command != null)
-        {
-            commandsProcessed++;
-            listener.commandProcessed(commandsProcessed, new Long(queue.size()));
-        }
+        VOSpaceCommand command = queue.take();
+        log.debug("New queue size after take: " + queue.size());
         return command;
-    }
-
-    public void clear()
-    {
-        queue.clear();
     }
 
     /**
@@ -205,16 +162,11 @@ public class CommandQueue
      *
      * @return  long    Count of items remaining in the queue.
      */
-    public long abortProduction()
+    public long clear()
     {
         listener.onAbort();
-        abortedProduction = true;
-
-        return queue.size();
-    }
-
-    public boolean isAbortedProduction()
-    {
-        return abortedProduction;
+        int remaining = queue.size();
+        queue.clear();
+        return remaining;
     }
 }

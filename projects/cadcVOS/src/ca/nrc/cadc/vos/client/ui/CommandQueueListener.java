@@ -80,21 +80,21 @@ public interface CommandQueueListener
 {
     
     /**
+     * Indicates that production has started.
+     */
+    void productionStarted();
+    
+    /**
+     * Indicates that command production is complete.
+     */
+    void productionComplete();
+    
+    /**
      * Indicates that a command has been processed
      * @param commandsProcessed Total number that have been processed.
      * @param commandsRemaining Total known number remaining to be processed.
      */
-    void commandProcessed(Long commandsProcessed, Long commandsRemaining);
-    
-    /**
-     * Indicates that processing has started.
-     */
-    void processingStarted();
-    
-    /**
-     * Indicates that processing is complete.
-     */
-    void processingComplete();
+    void commandConsumed(Long commandsProcessed, Long commandsRemaining);
 
     /**
      * Indicates that an Abort was issued.

@@ -74,7 +74,6 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import javax.security.auth.Subject;
@@ -84,11 +83,8 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -128,78 +124,11 @@ public class UploadFile implements VOSpaceCommand
     @Override
     public void execute(VOSpaceClient vospaceClient) throws Exception
     {
+        // create the data node (and any directories above that don't
+        // exist.)
+        vospaceClient.createNode(dataNode, false);
         
-        // see if the parent container exists (throws NodeNotFound if it doesn't)
-        Node serverNode = null;
-        Node parentNode = vospaceClient.getNode(dataNode.getUri().getParentURI().getPath());
-        if (! (parentNode instanceof ContainerNode))
-        {
-            throw new NodeNotFoundException(dataNode.getUri().getParentURI().getPath());
-        }
-        
-        // see if the dataNode exists
-        ContainerNode container = (ContainerNode) parentNode;
-        for (Node child : container.getNodes())
-        {
-            if (child.getName().equals(dataNode.getName()))
-            {
-                serverNode = child;
-            }
-        }
-        
-        // if it does, see it we need to replace it
-        if (serverNode != null)
-        {
-            log.debug("Server dataNode already exists, checking metadata.");
-            // get the persistent version
-            serverNode = vospaceClient.getNode(dataNode.getUri().getPath());
-            
-            // See if a MD5 value for the file exists
-            String clientMD5 = dataNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            String serverMD5 = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-            if (clientMD5 != null && serverMD5 != null)
-            {
-                if (clientMD5.equals(serverMD5))
-                {
-                    log.debug("MD5 values match, not uploading.");
-                    return;
-                }
-            }
-            else
-            {
-                // compare the sizes and date
-                boolean sizesMatch = false;
-                boolean datesMatch = false;
-                
-                String serverSize = serverNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-                long clientSize = file.length();
-                if (serverSize != null && (Long.parseLong(serverSize) == clientSize))
-                {
-                    sizesMatch = true;
-                }
-                
-                try
-                {
-                    Date serverDate = dateFormat.parse(serverNode.getPropertyValue(VOS.PROPERTY_URI_DATE));
-                    Date clientDate = new Date(file.lastModified());
-                    if (serverDate.equals(clientDate))
-                    {
-                        datesMatch = true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    log.debug("Couldn't determine file dates: " + e);
-                }
-                
-                if (sizesMatch && datesMatch)
-                {
-                    log.debug("Size and dates match, not uploading.");
-                    return;
-                }
-            }
-        }
-    
+        // upload the file through a transfer    
         log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
         List<Protocol> protocols = new ArrayList<Protocol>();
         

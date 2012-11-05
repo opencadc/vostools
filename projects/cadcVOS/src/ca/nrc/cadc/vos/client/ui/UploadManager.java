@@ -41,21 +41,16 @@ public interface UploadManager
     void start();
 
     /**
-     * Abort the process(es) while they're working.
-     */
-    void abort();
-
-    /**
      * Shutdown the Manager.  This is a hard stop issued after completion.
      */
     void stop();
 
     /**
-     * Obtain whether an Abort was issued.
+     * Obtain whether a stop command was issued.
      *
-     * @return      True if aborted, False otherwise.
+     * @return      True if stopped, False otherwise.
      */
-    boolean isAbortIssued();
+    boolean isStopIssued();
 
     /**
      * Register a new listener to this UploadManager.

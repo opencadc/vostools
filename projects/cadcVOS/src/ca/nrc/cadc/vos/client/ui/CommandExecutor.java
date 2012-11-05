@@ -94,62 +94,40 @@ public class CommandExecutor implements Runnable
     }
     
     /**
-     * Executes the commands in the queue until queue production is
-     * complete or aborted.
+     * Executes the commands in the queue.
      */
     public void run()
     {
-        queue.startedConsumption();
+        VOSpaceCommand nextCommand;
+        Throwable throwable;
         try
         {
-            VOSpaceCommand nextCommand;
-            while (!queue.isAbortedProduction()
-                   && (!queue.isDoneProduction() || (queue.peek() != null)))
+            while (true)
             {
-                while (!queue.isAbortedProduction()
-                       && ((nextCommand = queue.peek()) != null))
+                throwable = null;
+                // take() will block if queue is empty
+                nextCommand = queue.take();
+                log.debug("Executing command: " + nextCommand);
+                try
                 {
-                    log.debug("Executing command: " + nextCommand);
-                    try
-                    {
-                        nextCommand.execute(vospaceClient);
-                    }
-                    catch (Exception e)
-                    {
-                        log.info("Error executing command: " + nextCommand
-                                 + ": " + e);
-                    }
-                    queue.remove();
-                    log.debug(String.format("Command %s is complete.  "
-                                            + "New queue size is %d.",
-                                            nextCommand, queue.size()));
+                    nextCommand.execute(vospaceClient);
                 }
-                
-                // sleep for a while
-                Thread.sleep(10);
+                catch (Throwable t)
+                {
+                    log.info("Error executing command: " + nextCommand
+                             + ": " + t);
+                    throwable = t;
+                }
+                finally
+                {
+                    queue.commandCompleted(nextCommand, throwable);
+                }
             }
         }
         catch (InterruptedException e)
         {
-            // exit
-            log.debug("Interrupted.  Exiting.");
-            e.printStackTrace();
+            // vm exiting...
         }
-        finally
-        {
-            log.debug("Completed.");
 
-            //
-            // TODO - If a CommandQueue is aborted, is it also considered
-            // TODO - to be 'Done'?  It seems unlikely.
-            //
-            // TODO - jenkinsd 2012.10.23
-            //
-            if (!queue.isAbortedProduction())
-            {
-                log.debug("Not aborted, just done.");
-                queue.doneConsumption();
-            }
-        }
     }
 }

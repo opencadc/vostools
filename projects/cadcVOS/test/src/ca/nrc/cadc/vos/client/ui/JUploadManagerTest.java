@@ -33,20 +33,25 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JProgressBar;
 
 import org.junit.Test;
 
-import javax.swing.*;
-
-import static org.easymock.EasyMock.*;
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
@@ -128,7 +133,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
 
         replay(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
 
-        getTestSubject().processingComplete();
+        getTestSubject().productionComplete();
 
         verify(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
     }
@@ -191,7 +196,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
         expect(mockUploadProgressLabel.getText()).andReturn(
                 " Completed uploading:").once();
 
-        expect(mockUploadManager.isAbortIssued()).andReturn(false).once();
+        expect(mockUploadManager.isStopIssued()).andReturn(false).once();
 
         mockProgressPercentageLabel.setText("19.67%");
         expectLastCall().once();
@@ -204,7 +209,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
 
         // 1977 jobs
         // 19.67% complete
-        getTestSubject().commandProcessed(325l, 1652l);
+        getTestSubject().commandConsumed(325l, 1652l);
 
         verify(mockProgressBar, mockProgressPercentageLabel, mockUploadManager,
                mockUploadProgressLabel);

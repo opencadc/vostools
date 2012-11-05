@@ -33,15 +33,17 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import org.apache.log4j.Logger;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 /**
@@ -60,9 +62,10 @@ public class UploadManagerImpl implements UploadManager
     private final VOSURI targetVOSpaceURI;
     private final VOSpaceClient voSpaceClient;
 
-    private boolean abortIssued;
+    private boolean stopIssued;
 
-    private ExecutorService commandController;
+    private ExecutorService producerExecutorService;
+    private ExecutorService consumerExecutorService;
     private final CommandQueue commandQueue;
 
     private final List<CommandQueueListener> commandQueueListeners =
@@ -105,31 +108,22 @@ public class UploadManagerImpl implements UploadManager
      */
     protected void initializeCommandController()
     {
-        setCommandController(Executors.newFixedThreadPool(2));
-
-        getCommandController().execute(
+        
+        setConsumerExecutorService(
+                Executors.newFixedThreadPool(1, new CommandThreadFactory("Consumer")));
+        setProducerExecutorService(
+                Executors.newSingleThreadExecutor(new CommandThreadFactory("Producer")));
+        
+        getConsumerExecutorService().execute(
                 new CommandExecutor(getVOSpaceClient(), getCommandQueue()));
-        getCommandController().submit(
+        getProducerExecutorService().execute(
                 new FileSystemScanner(getSourceDirectory(),
                                       getTargetVOSpaceURI(),
                                       getCommandQueue()));
 
-        // Ensure the producer/consumer thread counts do not grow.  Shutdown
-        // after the queue is done.
-        getCommandController().shutdown();
-    }
-
-    /**
-     * Abort the process(es) while they're working.
-     */
-    @Override
-    public void abort()
-    {
-        LOGGER.info("Abort issued.");
-        abortIssued = true;
-
-        getCommandQueue().abortProduction();
-        getCommandController().shutdownNow();
+        // Shutdown the producer thread when it's finished.  The consumer can
+        // block on the queue until the upload manager is closed.
+        getProducerExecutorService().shutdown();
     }
 
     /**
@@ -139,9 +133,9 @@ public class UploadManagerImpl implements UploadManager
     public void stop()
     {
         LOGGER.info("Full stop.");
-        abortIssued = false;
-
-        getCommandController().shutdownNow();
+        stopIssued = false;
+        getProducerExecutorService().shutdownNow();
+        getCommandQueue().clear();
     }
 
     /**
@@ -150,9 +144,9 @@ public class UploadManagerImpl implements UploadManager
      * @return True if aborted, False otherwise.
      */
     @Override
-    public boolean isAbortIssued()
+    public boolean isStopIssued()
     {
-        return abortIssued;
+        return stopIssued;
     }
 
     public File getSourceDirectory()
@@ -169,15 +163,25 @@ public class UploadManagerImpl implements UploadManager
     {
         return voSpaceClient;
     }
-
-    public ExecutorService getCommandController()
+    
+    public ExecutorService getProducerExecutorService()
     {
-        return commandController;
+        return producerExecutorService;
     }
-
-    public void setCommandController(ExecutorService commandController)
+    
+    public void setProducerExecutorService(ExecutorService executorService)
     {
-        this.commandController = commandController;
+        this.producerExecutorService = executorService;
+    }
+    
+    public ExecutorService getConsumerExecutorService()
+    {
+        return consumerExecutorService;
+    }
+    
+    public void setConsumerExecutorService(ExecutorService executorService)
+    {
+        this.consumerExecutorService = executorService;
     }
 
     public CommandQueue getCommandQueue()
@@ -194,6 +198,31 @@ public class UploadManagerImpl implements UploadManager
     public List<CommandQueueListener> getCommandQueueListeners()
     {
         return commandQueueListeners;
+    }
+    
+    /**
+     * ThreadFactory to create named daemon threads for command execution
+     * and file scanning.
+     */
+    private class CommandThreadFactory implements ThreadFactory
+    {
+        
+        private String role;
+        
+        CommandThreadFactory(String role)
+        {
+            this.role = role;
+        }
+
+        @Override
+        public Thread newThread(Runnable r)
+        {
+            Thread next = new Thread(r);
+            next.setDaemon(true);
+            next.setName("UploadContainer-" + role);
+            return next;
+        }
+        
     }
 
 }

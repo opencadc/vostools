@@ -33,15 +33,15 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
+import static org.easymock.EasyMock.createMock;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import static org.easymock.EasyMock.*;
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 public class UploadManagerImplTest
@@ -75,20 +75,20 @@ public class UploadManagerImplTest
                                              new CommandQueueListener()
         {
             @Override
-            public void commandProcessed(Long commandsProcessed,
+            public void commandConsumed(Long commandsProcessed,
                                          Long commandsRemaining)
             {
 
             }
 
             @Override
-            public void processingStarted()
+            public void productionStarted()
             {
 
             }
 
             @Override
-            public void processingComplete()
+            public void productionComplete()
             {
 
             }

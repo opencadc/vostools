@@ -68,19 +68,23 @@
 */
 package ca.nrc.cadc.vos.client.ui;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.net.URI;
 
-import ca.nrc.cadc.vos.client.VOSpaceClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.VOSURI;
-
-import static org.junit.Assert.*;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 /**
@@ -101,7 +105,7 @@ public class CommandQueueTest
 
 
     @Test
-    public void abort() throws Exception
+    public void testStop() throws Exception
     {
         final TestListener listener = new TestListener();
         final CommandQueue testSubject = new CommandQueue(100, listener);
@@ -118,57 +122,15 @@ public class CommandQueueTest
             });
         }
 
-        // Remove forty of them.
+        // Take forty of them.
         for (int i = 0; i < 40; i++)
         {
-            testSubject.remove();
+            testSubject.take();
         }
 
-        final long remainingItems = testSubject.abortProduction();
+        final long remainingItems = testSubject.clear();
 
-        assertTrue("Abort not properly issued.",
-                   testSubject.isAbortedProduction());
         assertEquals("Should be sixty items left.", 60l, remainingItems);
-    }
-
-    /**
-     * Test of startedConsumption method, of class CommandQueue.
-     */
-    @Test
-    public void testStartedConsumption()
-    {
-        try
-        {
-            TestListener listener = new TestListener();
-            CommandQueue queue = new CommandQueue(1, listener);
-            queue.startedConsumption();
-            assertTrue(listener.started);
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    /**
-     * Test of doneConsumption method, of class CommandQueue.
-     */
-    @Test
-    public void testDoneConsumption()
-    {
-        try
-        {
-            TestListener listener = new TestListener();
-            CommandQueue queue = new CommandQueue(1, listener);
-            queue.doneConsumption();
-            assertTrue(listener.completed);
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
     }
 
     /**
@@ -224,12 +186,16 @@ public class CommandQueueTest
             TestListener listener = new TestListener();
             CommandQueue queue = new CommandQueue(1, listener);
 
-            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
-            VOSpaceCommand command = new CreateDirectory(node);
-
-            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
+            VOSpaceCommand command = new VOSpaceCommand()
+            {
+                public void execute(VOSpaceClient vospaceClient)
+                        throws Exception
+                {
+                    //no-op
+                }
+            };
             queue.put(command);
-            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
+            assertNotNull("CommandQueue should contain a command after command offered", queue.take());
         }
         catch(Exception unexpected)
         {
@@ -239,49 +205,28 @@ public class CommandQueueTest
     }
 
     /**
-     * Test of peek method, of class CommandQueue.
+     * Test of take method, of class CommandQueue.
      */
     @Test
-    public void testPeek()
+    public void testTake()
     {
         try
         {
             TestListener listener = new TestListener();
             CommandQueue queue = new CommandQueue(1, listener);
 
-            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
-            VOSpaceCommand command = new CreateDirectory(node);
+            DataNode node = new DataNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root/file")));
+            VOSpaceCommand command = new VOSpaceCommand()
+            {
+                public void execute(VOSpaceClient vospaceClient)
+                        throws Exception
+                {
+                    //no-op
+                }
+            };
 
-            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
             queue.put(command);
-            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    /**
-     * Test of remove method, of class CommandQueue.
-     */
-    @Test
-    public void testRemove()
-    {
-        try
-        {
-            TestListener listener = new TestListener();
-            CommandQueue queue = new CommandQueue(1, listener);
-
-            ContainerNode node = new ContainerNode(new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root")));
-            VOSpaceCommand command = new CreateDirectory(node);
-
-            assertNull("CommandQueue should be empty before any commands offered", queue.peek());
-            queue.put(command);
-            assertNotNull("CommandQueue should contain a command after command offered", queue.peek());
-            queue.remove();
-            assertNull("CommandQueue should be empty after command removed", queue.peek());
+            assertNotNull("CommandQueue should contain a command after command offered", queue.take());
         }
         catch(Exception unexpected)
         {
@@ -326,20 +271,10 @@ public class CommandQueueTest
         }
 
         // long commandsProcessed, long commandsRemaining
-        public void commandProcessed(Long processed, Long remaining)
+        public void commandConsumed(Long processed, Long remaining)
         {
             this.processed = processed;
             this.remaining = remaining;
-        }
-
-        public void processingStarted()
-        {
-            started = true;
-        }
-
-        public void processingComplete()
-        {
-            completed = true;
         }
 
         /**
@@ -349,6 +284,18 @@ public class CommandQueueTest
         public void onAbort()
         {
             aborted = true;
+        }
+
+        @Override
+        public void productionStarted()
+        {
+            started = true;
+        }
+
+        @Override
+        public void productionComplete()
+        {
+            completed = true;
         }
     }
     

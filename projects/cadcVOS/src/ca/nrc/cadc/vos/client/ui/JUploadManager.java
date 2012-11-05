@@ -33,19 +33,29 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.net.Authenticator;
 import java.text.MessageFormat;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 public class JUploadManager extends JPanel implements CommandQueueListener,
@@ -180,7 +190,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      * @param commandsRemaining Total known number remaining to be processed.
      */
     @Override
-    public void commandProcessed(final Long commandsProcessed,
+    public void commandConsumed(final Long commandsProcessed,
                                  final Long commandsRemaining)
     {
         executeInEDT(new CommandProcessedAction(commandsProcessed,
@@ -200,7 +210,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      * Indicates that processing has started.
      */
     @Override
-    public void processingStarted()
+    public void productionStarted()
     {
         executeInEDT(new ProcessingStartedAction());
     }
@@ -209,8 +219,11 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      * Indicates that processing is complete.
      */
     @Override
-    public void processingComplete()
+    public void productionComplete()
     {
+        // TODO: This should only tell the file scanner progress
+        // bar that the files have been scanned.  
+        
         executeInEDT(new ProcessingCompletedAction());
     }
 
@@ -360,7 +373,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         public void run()
         {
             getAbortButton().setEnabled(false);
-            getUploadManager().abort();
+            getUploadManager().stop();
         }
     }
 
@@ -439,7 +452,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
 
             getUploadProgressBar().setIndeterminate(false);
 
-            if (!getUploadManager().isAbortIssued())
+            if (!getUploadManager().isStopIssued())
             {
                 getUploadProgressBar().setMaximum(commandsProcessed.intValue()
                                             + commandsRemaining.intValue());

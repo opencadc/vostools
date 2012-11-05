@@ -108,15 +108,9 @@ public class CommandExecutorTest
     {
         CommandQueueListener listener = EasyMock.createMock(CommandQueueListener.class);
         
-        listener.processingStarted();
-        EasyMock.expectLastCall().once();
-        
-        listener.processingComplete();
-        EasyMock.expectLastCall().once();
-        
         for (long i=1; i<=commands; i++)
         {
-            listener.commandProcessed(matchQueueCommandsProcessed(i), matchQueueCommandsRemaining(bufferSize));
+            listener.commandConsumed(matchQueueCommandsProcessed(i), matchQueueCommandsRemaining(bufferSize));
             EasyMock.expectLastCall().once();
         }
         
@@ -130,6 +124,7 @@ public class CommandExecutorTest
         EasyMock.replay(listener, command);
         
         Thread t = new Thread(commandExecutor);
+        t.setDaemon(true);
         t.start();
         
         for (int i=0; i<commands; i++)
@@ -138,9 +133,8 @@ public class CommandExecutorTest
             log.debug("Added command " + (i + 1) + " to queue.");
         }
         
-        queue.doneProduction();
-        
-        t.join();
+        // wait for 5 seconds and ensure the we were notified on each command processed
+        Thread.sleep(5000);
         
         EasyMock.verify(listener);
     }

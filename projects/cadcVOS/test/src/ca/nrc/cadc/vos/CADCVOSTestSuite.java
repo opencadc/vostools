@@ -66,13 +66,18 @@
  */
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.vos.client.ui.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
 import ca.nrc.cadc.vos.client.FileSizeTypeTest;
 import ca.nrc.cadc.vos.client.MainTest;
+import ca.nrc.cadc.vos.client.ui.CommandExecutorTest;
+import ca.nrc.cadc.vos.client.ui.CommandQueueTest;
+import ca.nrc.cadc.vos.client.ui.FileSystemScannerTest;
+import ca.nrc.cadc.vos.client.ui.GraphicUITest;
+import ca.nrc.cadc.vos.client.ui.JUploadManagerTest;
+import ca.nrc.cadc.vos.client.ui.UploadFileTest;
 import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
 import ca.nrc.cadc.vos.server.NodeDAOTest;
 import ca.nrc.cadc.vos.server.RssFeedTest;
@@ -105,7 +110,6 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
     TransferInlineContentHandlerTest.class,
 
     // Upload Manager UI testing.
-    CreateDirectoryTest.class,
     UploadFileTest.class,
     CommandExecutorTest.class,
     FileSystemScannerTest.class,
