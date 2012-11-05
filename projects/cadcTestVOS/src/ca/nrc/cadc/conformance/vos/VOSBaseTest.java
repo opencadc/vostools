@@ -780,7 +780,7 @@ public abstract class VOSBaseTest
         WebConversation conversation = new WebConversation();
         conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
-        assertNotNull("POST response to " + resourceUrl + " is null", response);
+        assertNotNull("PUT response to " + resourceUrl + " is null", response);
 
         log.debug(getResponseHeaders(response));
         log.debug("Response code: " + response.getResponseCode());

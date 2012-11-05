@@ -166,15 +166,17 @@ public class VOSTransferTest extends VOSBaseTest
         assertEquals("POST response code should be 303", 303, response.getResponseCode());
 
         // poll the phase
+        // We want to test to succeed even when the web service is very slow,
+        // so the timeout is increased to 180 seconds in total.
         WebResponse phaseResp = get(location + "/phase");
         String phase = phaseResp.getText();
         log.debug("phase: " + phase);
         int tries = 0;
-        while (tries < 10
+        while (tries < 60
                 && ( ExecutionPhase.QUEUED.getValue().equals(phase)
                     || ExecutionPhase.EXECUTING.getValue().equals(phase) ) )
         {
-            try { Thread.sleep(66L); }
+            try { Thread.sleep(3000L); }
             catch(InterruptedException ex) { throw new RuntimeException("polling loop interrupted", ex); }
             phaseResp = get(location + "/phase");
             phase = phaseResp.getText();
