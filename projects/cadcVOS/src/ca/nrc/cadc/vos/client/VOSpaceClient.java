@@ -594,7 +594,7 @@ public class VOSpaceClient
             if (get.getThrowable() != null)
             {
                 log.debug("Unable to run the job", get.getThrowable());
-                throw new RuntimeException("Unable to run the job because " + httpPost.getThrowable().getMessage());
+                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
             }
             
             TransferReader txfReader = new TransferReader(schemaValidation);
