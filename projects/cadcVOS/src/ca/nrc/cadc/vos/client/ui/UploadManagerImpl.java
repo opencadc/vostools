@@ -108,11 +108,12 @@ public class UploadManagerImpl implements UploadManager
      */
     protected void initializeCommandController()
     {
-        
         setConsumerExecutorService(
-                Executors.newFixedThreadPool(1, new CommandThreadFactory("Consumer")));
+                Executors.newFixedThreadPool(1, new CommandThreadFactory(
+                        "Consumer")));
         setProducerExecutorService(
-                Executors.newSingleThreadExecutor(new CommandThreadFactory("Producer")));
+                Executors.newSingleThreadExecutor(
+                        new CommandThreadFactory("Producer")));
         
         getConsumerExecutorService().execute(
                 new CommandExecutor(getVOSpaceClient(), getCommandQueue()));
@@ -124,16 +125,18 @@ public class UploadManagerImpl implements UploadManager
         // Shutdown the producer thread when it's finished.  The consumer can
         // block on the queue until the upload manager is closed.
         getProducerExecutorService().shutdown();
+        getConsumerExecutorService().shutdown();
     }
 
     /**
-     * Shutdown the Manager.  This is a hard stop issued after completion.
+     * Shutdown the Manager.  This is a hard stop for an abort.
      */
     @Override
     public void stop()
     {
         LOGGER.info("Full stop.");
-        stopIssued = false;
+        stopIssued = true;
+
         getProducerExecutorService().shutdownNow();
         getCommandQueue().clear();
     }

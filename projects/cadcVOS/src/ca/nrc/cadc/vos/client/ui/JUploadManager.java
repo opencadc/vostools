@@ -62,18 +62,14 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                                                       ActionListener
 {
     private static final Logger LOGGER = Logger.getLogger(JUploadManager.class);
-
-    private static final String COMPLETED_SCANNING = " Completed scanning:";
-    private static final String COMPLETED_UPLOADING = " Completed uploading:";
+    private static final String COMPLETED_UPLOADING = " Uploaded:";
 
     private final UploadManager uploadManager;
-
     private final JProgressBar uploadProgressBar;
     private final JLabel uploadProgressLabel;
     private final JLabel uploadProgressPercentageLabel;
     private final JProgressBar scannerProgressBar;
     private final JLabel scannerProgressLabel;
-    private final JLabel scannerProgressPercentageLabel;
     private final JButton abortButton;
     private final JLabel messageLabel;
 
@@ -88,7 +84,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         uploadProgressPercentageLabel = null;
         scannerProgressBar = null;
         scannerProgressLabel = null;
-        scannerProgressPercentageLabel = null;
         abortButton = null;
         messageLabel = null;
         uploadManager = null;
@@ -120,8 +115,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         this.uploadProgressPercentageLabel = new JLabel("0%");
 
         this.scannerProgressBar = new JProgressBar();
-        this.scannerProgressLabel = new JLabel(COMPLETED_SCANNING);
-        this.scannerProgressPercentageLabel = new JLabel("0%");
+        this.scannerProgressLabel = new JLabel(" Scanning...");
 
         abortButton = new JButton("Abort");
         abortButton.setActionCommand("Abort");
@@ -131,7 +125,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         getMessageLabel().setForeground(Color.RED);
 
         getUploadProgressBar().setMinimum(0);
-        getUploadProgressBar().setIndeterminate(true);
         getScannerProgressBar().setMinimum(0);
 
         // add an empty border to the exterior
@@ -144,8 +137,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
 
         getUploadProgressPercentageLabel().setHorizontalAlignment(
                 SwingConstants.LEFT);
-        getScannerProgressPercentageLabel().setHorizontalAlignment(
-                SwingConstants.LEFT);
 
         uploadProgressHolder.add(getUploadProgressLabel());
         uploadProgressHolder.add(getUploadProgressBar());
@@ -153,7 +144,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
 
         scannerProgressHolder.add(getScannerProgressLabel());
         scannerProgressHolder.add(getScannerProgressBar());
-        scannerProgressHolder.add(getScannerProgressPercentageLabel());
 
         statusBox.add(scannerProgressHolder);
         statusBox.add(uploadProgressHolder);
@@ -193,8 +183,8 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     public void commandConsumed(final Long commandsProcessed,
                                  final Long commandsRemaining)
     {
-        executeInEDT(new CommandProcessedAction(commandsProcessed,
-                                                commandsRemaining));
+        executeInEDT(new CommandConsumedAction(commandsProcessed,
+                                               commandsRemaining));
     }
 
     /**
@@ -212,7 +202,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void productionStarted()
     {
-        executeInEDT(new ProcessingStartedAction());
+        executeInEDT(new ProductionStartedAction());
     }
 
     /**
@@ -221,10 +211,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void productionComplete()
     {
-        // TODO: This should only tell the file scanner progress
-        // bar that the files have been scanned.  
-        
-        executeInEDT(new ProcessingCompletedAction());
+        executeInEDT(new ProductionCompletedAction());
     }
 
     /**
@@ -292,11 +279,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     public JLabel getScannerProgressLabel()
     {
         return scannerProgressLabel;
-    }
-
-    public JLabel getScannerProgressPercentageLabel()
-    {
-        return scannerProgressPercentageLabel;
     }
 
     protected JButton getAbortButton()
@@ -400,7 +382,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         }
     }
 
-    private class ProcessingStartedAction implements Runnable
+    private class ProductionStartedAction implements Runnable
     {
         /**
          * When an object implementing interface <code>Runnable</code> is used
@@ -417,18 +399,18 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         public void run()
         {
             LOGGER.info("Processing started.");
-            getUploadProgressBar().setIndeterminate(false);
+            getScannerProgressBar().setIndeterminate(true);
             getAbortButton().setEnabled(true);
         }
     }
 
-    private class CommandProcessedAction implements Runnable
+    private class CommandConsumedAction implements Runnable
     {
         Long commandsProcessed;
         Long commandsRemaining;
 
-        private CommandProcessedAction(final Long commandsProcessed,
-                                       final Long commandsRemaining)
+        private CommandConsumedAction(final Long commandsProcessed,
+                                      final Long commandsRemaining)
         {
             this.commandsProcessed = commandsProcessed;
             this.commandsRemaining = commandsRemaining;
@@ -468,11 +450,20 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                         MessageFormat.format("{0,number,#.00%}",
                                              getUploadProgressBar().
                                                      getPercentComplete()));
+
+                if (getUploadProgressBar().getPercentComplete() == 1.0)
+                {
+                    getAbortButton().setEnabled(false);
+                    getMessageLabel().setText(
+                            "Upload complete.  Please use the refresh button "
+                            + "in the VOSpace browser to see the new "
+                            + "directory.");
+                }
             }
         }
     }
 
-    private class ProcessingCompletedAction implements Runnable
+    private class ProductionCompletedAction implements Runnable
     {
         /**
          * When an object implementing interface <code>Runnable</code> is used
@@ -491,10 +482,15 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
             if (getAbortButton().isEnabled())
             {
                 LOGGER.info("Processing completed.");
-                getAbortButton().setEnabled(false);
-                getMessageLabel().setText(
-                        "Please use the refresh button in the "
-                        + "VOSpace Browser to see the new Directory.");
+
+                // Not busy anymore.
+                getScannerProgressBar().setIndeterminate(false);
+
+                // Fill the bar.
+                getScannerProgressBar().setMaximum(1);
+                getScannerProgressBar().setValue(1);
+
+                getScannerProgressLabel().setText(" Completed scanning.");
             }
         }
     }

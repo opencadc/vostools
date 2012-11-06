@@ -109,13 +109,30 @@ public class CommandQueue
      */
     public void doneProduction()
     {
-        listener.productionComplete();
+        if (listener != null)
+        {
+            listener.productionComplete();
+        }
+
         doneProduction = true;
+    }
+
+    public void startProduction()
+    {
+        if (listener != null)
+        {
+            listener.productionStarted();
+        }
+    }
+
+    protected int size()
+    {
+        return queue.size();
     }
     
     /**
      * Returns true if command production is complete.
-     * @return
+     * @return  True if done producing (Adding to the queue), False otherwise.
      */
     public boolean isDoneProduction()
     {
@@ -129,13 +146,18 @@ public class CommandQueue
     {
         log.debug("Command " + command + " completed.");
         commandsProcessed++;
-        listener.commandConsumed(commandsProcessed, new Long(queue.size()));
+
+        if (listener != null)
+        {
+            listener.commandConsumed(commandsProcessed, (long) queue.size());
+        }
+
         log.debug("New queue size after remove: " + queue.size());
     }
     
     /**
      * Push the command on the queue, wait if full.
-     * @param command
+     * @param command   The command to put.
      */
     public void put(VOSpaceCommand command) throws InterruptedException
     {
@@ -164,7 +186,11 @@ public class CommandQueue
      */
     public long clear()
     {
-        listener.onAbort();
+        if (listener != null)
+        {
+            listener.onAbort();
+        }
+
         int remaining = queue.size();
         queue.clear();
         return remaining;

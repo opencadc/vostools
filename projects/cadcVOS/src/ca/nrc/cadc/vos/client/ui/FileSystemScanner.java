@@ -126,8 +126,10 @@ public class FileSystemScanner implements Runnable
     {
         try
         {
+            commandQueue.startProduction();
+
             // Queue to hold file paths.
-            Queue<String> filePathQueue = new LinkedList<String>();
+            final Queue<String> filePathQueue = new LinkedList<String>();
             filePathQueue.add(sourceFile.getPath());
 
             while (!filePathQueue.isEmpty())
@@ -141,7 +143,7 @@ public class FileSystemScanner implements Runnable
                     if (isSymLink(file))
                     {
                         log.warn("Symbolic link found: "
-                                  + file.getAbsolutePath());
+                                 + file.getAbsolutePath());
                     }
 
                     // Create a DataNode command and add it to the CommandQueue.
@@ -150,9 +152,15 @@ public class FileSystemScanner implements Runnable
                         queueDataNode(file);
                     }
                     
-                    // directories will be automatically created as a part
-                    // of the file creation
-
+                    // Directories will be automatically created as a part
+                    // of the file creation, so just add it to the queue.
+                    else if (file.isDirectory())
+                    {
+                        for (final File childFile : file.listFiles())
+                        {
+                            filePathQueue.add(childFile.getPath());
+                        }
+                    }
                 }
                 catch (IOException ioe)
                 {

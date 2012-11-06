@@ -77,6 +77,8 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.net.URI;
 
+import ca.nrc.cadc.uws.server.RandomStringGenerator;
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
@@ -90,12 +92,57 @@ import ca.nrc.cadc.vos.VOSURI;
  * @author jburke
  */
 public class FileSystemScannerTest
+        extends AbstractCADCVOSTest<FileSystemScanner>
 {
     private static Logger log = Logger.getLogger(FileSystemScannerTest.class);
 
     private static VOSURI TEST_VOSURI;
 
-    public FileSystemScannerTest() { }
+    private static final char[] SEED_CHARS;
+
+    static
+    {
+        final StringBuilder chars = new StringBuilder(128);
+
+        for (char c = 'a'; c <= 'z'; c++)
+        {
+            chars.append(c);
+        }
+
+        for (char c = 'A'; c <= 'Z'; c++)
+        {
+            chars.append(c);
+        }
+
+        for (char c = '0'; c <= '9'; c++)
+        {
+            chars.append(c);
+        }
+
+        chars.append("_-()=+!,;:@&*$.");
+
+        SEED_CHARS = chars.toString().toCharArray();
+    }
+
+    public FileSystemScannerTest()
+    {
+    }
+
+
+    /**
+     * Generate an ASCII string, replacing the '\' and '+' characters with
+     * underscores to keep them URL friendly.
+     *
+     * @param length        The desired length of the generated string.
+     * @return              An ASCII string of the given length.
+     */
+    protected String generateAlphaNumeric(final int length)
+    {
+        return new RandomStringGenerator(length,
+                                         String.copyValueOf(
+                                                 SEED_CHARS)).getID();
+    }
+
 
     @BeforeClass
     public static void setUpClass() throws Exception
@@ -104,12 +151,25 @@ public class FileSystemScannerTest
         TEST_VOSURI = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/root"));
     }
 
+
+    /**
+     * Set and initialize the Test Subject.
+     *
+     * @throws Exception If anything goes awry.
+     */
+    @Override
+    protected void initializeTestSubject() throws Exception
+    {
+        // Just a basic one.  Each test should set their own.
+        setTestSubject(new FileSystemScanner());
+    }
+
     @Test
     public void testIsSymLink() throws Exception
     {
         try
         {
-            FileSystemScanner scanner = new FileSystemScanner();
+            final FileSystemScanner scanner = getTestSubject();
 
             // a directory
             File file = new File("test/src/resources/testDir");
@@ -145,7 +205,9 @@ public class FileSystemScannerTest
         {
             CommandQueue queue = new CommandQueue(1, null);
             File sourceFile = new File("test");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, TEST_VOSURI, queue);
+            FileSystemScanner scanner = new FileSystemScanner(sourceFile,
+                                                              TEST_VOSURI,
+                                                              queue);
 
             File file = new File("test/src/resources/testFile");
             scanner.queueDataNode(file);
@@ -165,7 +227,8 @@ public class FileSystemScannerTest
         try
         {
             File sourceFile = new File("/a/b/c");
-            FileSystemScanner scanner = new FileSystemScanner(sourceFile, null, null);
+            FileSystemScanner scanner = new FileSystemScanner(sourceFile, null,
+                                                              null);
             
             File file = new File("/a/b/c/d/e/f");
             String path = scanner.getRelativePath(file);
@@ -176,5 +239,38 @@ public class FileSystemScannerTest
             log.error("unexpected exception", unexpected);
             fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Test
+    public void buildQueue() throws Exception
+    {
+        final String sourceDirectoryName = generateAlphaNumeric(16);
+        final File sourceDirectory = File.createTempFile(sourceDirectoryName,
+                                                         "");
+        assertTrue("Couldn't make temp directory", sourceDirectory.delete()
+                                                   && sourceDirectory.mkdir());
+
+        final File sourceDirectoryFile =
+                File.createTempFile("tempfile", generateAlphaNumeric(8),
+                                    sourceDirectory);
+
+        assertTrue("Couldn't make temp file.", sourceDirectoryFile.exists());
+
+        final CommandQueue commandQueue = new CommandQueue(5, null);
+
+        setTestSubject(new FileSystemScanner(sourceDirectory, TEST_VOSURI,
+                                             commandQueue));
+
+        getTestSubject().run();
+
+        assertTrue("Should be done production.",
+                   commandQueue.isDoneProduction());
+        assertEquals("Queue size should be 1 for the file.", 1,
+                     commandQueue.size());
+        final UploadFile command = (UploadFile) commandQueue.take();
+        assertEquals("Temp file is not in command queue.",
+                     "Upload file vos://cadc.nrc.ca!vospace/root/"
+                     + sourceDirectory.getName() + File.separator
+                     + sourceDirectoryFile.getName(), command.toString());
     }
 }

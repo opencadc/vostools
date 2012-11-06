@@ -87,7 +87,9 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
     public void processingComplete() throws Exception
     {
         final JLabel mockProgressPercentageLabel = createMock(JLabel.class);
-        final JLabel mockMessageLabel = createMock(JLabel.class);
+        final JProgressBar mockScannerProgressBar =
+                createMock(JProgressBar.class);
+        final JLabel mockScannerLabel = createMock(JLabel.class);
         final JButton mockAbortButton = createMock(JButton.class);
 
         setTestSubject(new JUploadManager()
@@ -99,15 +101,21 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
             }
 
             @Override
-            protected JButton getAbortButton()
+            public JProgressBar getScannerProgressBar()
             {
-                return mockAbortButton;
+                return mockScannerProgressBar;
             }
 
             @Override
-            protected JLabel getMessageLabel()
+            public JLabel getScannerProgressLabel()
             {
-                return mockMessageLabel;
+                return mockScannerLabel;
+            }
+
+            @Override
+            protected JButton getAbortButton()
+            {
+                return mockAbortButton;
             }
 
             /**
@@ -124,18 +132,25 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
 
         expect(mockAbortButton.isEnabled()).andReturn(true).once();
 
-        mockAbortButton.setEnabled(false);
+        mockScannerProgressBar.setIndeterminate(false);
         expectLastCall().once();
 
-        mockMessageLabel.setText(
-                "Please use the refresh button in the VOSpace Browser to see "
-                + "the new Directory.");
+        mockScannerProgressBar.setMaximum(1);
+        expectLastCall().once();
 
-        replay(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
+        mockScannerProgressBar.setValue(1);
+        expectLastCall().once();
+
+        mockScannerLabel.setText(" Completed scanning.");
+        expectLastCall().once();
+
+        replay(mockAbortButton, mockProgressPercentageLabel,
+               mockScannerProgressBar, mockScannerLabel);
 
         getTestSubject().productionComplete();
 
-        verify(mockAbortButton, mockProgressPercentageLabel, mockMessageLabel);
+        verify(mockAbortButton, mockProgressPercentageLabel,
+               mockScannerProgressBar, mockScannerLabel);
     }
 
     @Test
@@ -191,10 +206,10 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
         expectLastCall().once();
 
         expect(mockProgressBar.getPercentComplete()).andReturn(
-                0.196731235d).once();
+                0.196731235d).times(2);
 
-        expect(mockUploadProgressLabel.getText()).andReturn(
-                " Completed uploading:").once();
+        expect(mockUploadProgressLabel.getText()).andReturn(" Uploaded:").
+                once();
 
         expect(mockUploadManager.isStopIssued()).andReturn(false).once();
 
