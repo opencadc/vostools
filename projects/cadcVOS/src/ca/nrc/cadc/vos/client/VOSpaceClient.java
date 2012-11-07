@@ -195,6 +195,7 @@ public class VOSpaceClient
     public Node createNode(Node node, boolean checkForDuplicate)
     {
         Node rtnNode = null;
+        log.debug("createNode(), node=" + node + ", checkForDuplicate=" + checkForDuplicate);
         try
         {
             VOSURI parentURI = node.getUri().getParentURI();

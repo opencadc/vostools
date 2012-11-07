@@ -125,7 +125,7 @@ public class CommandQueue
         }
     }
 
-    protected int size()
+    public int size()
     {
         return queue.size();
     }

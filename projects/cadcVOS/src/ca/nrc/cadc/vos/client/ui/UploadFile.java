@@ -126,9 +126,10 @@ public class UploadFile implements VOSpaceCommand
     {
         // create the data node (and any directories above that don't
         // exist.)
+        log.debug("Creating data node: " + dataNode);
         vospaceClient.createNode(dataNode, false);
         
-        // upload the file through a transfer    
+        // upload the file through a transfer
         log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
         List<Protocol> protocols = new ArrayList<Protocol>();
         

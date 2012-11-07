@@ -71,64 +71,51 @@ package ca.nrc.cadc.vos.client.ui;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 /**
- * Executes the commands in the command queue.
- * 
+ * Class to create the vospace directory denoted by the supplied
+ * container node.
+ *  
  * @author majorb
  *
  */
-public class CommandExecutor implements Runnable
+public class CreateDirectory implements VOSpaceCommand
 {
+    protected static final Logger log = Logger.getLogger(CreateDirectory.class);
     
-    protected static final Logger log = Logger.getLogger(CommandExecutor.class);
+    private ContainerNode containerNode;
     
-    private VOSpaceClient vospaceClient;
-    private CommandQueue queue;
-    
-    public CommandExecutor(VOSpaceClient vospaceClient, CommandQueue queue)
+    public CreateDirectory(ContainerNode containerNode)
     {
-        this.vospaceClient = vospaceClient;
-        this.queue = queue;
+        if (containerNode == null)
+            throw new IllegalArgumentException("containerNode cannot be null.");
+        this.containerNode = containerNode;
     }
-    
-    /**
-     * Executes the commands in the queue.
-     */
-    public void run()
+
+    @Override
+    public void execute(VOSpaceClient vospaceClient) throws Exception
     {
-        VOSpaceCommand nextCommand;
-        Throwable throwable;
         try
         {
-            while (true)
-            {
-                throwable = null;
-                // take() will block if queue is empty
-                nextCommand = queue.take();
-                log.debug("Executing command: " + nextCommand);
-                try
-                {
-                    nextCommand.execute(vospaceClient);
-                }
-                catch (Throwable t)
-                {
-                    log.info("Error executing command: " + nextCommand
-                             + ": " + t);
-                    throwable = t;
-                }
-                finally
-                {
-                    log.debug("Finished command: " + nextCommand + ", throwable=" + throwable);
-                    queue.commandCompleted(nextCommand, throwable);
-                }
-            }
+            // see if the node exists
+            log.debug("Creating node: " + containerNode.getUri());
+            vospaceClient.getNode(containerNode.getUri().getPath());
+            log.debug("Node already exists: " + containerNode.getUri());
         }
-        catch (InterruptedException e)
+        catch (NodeNotFoundException e)
         {
-            // vm exiting...
+            // create it if it doesn't
+            vospaceClient.createNode(containerNode);
         }
-
     }
+    
+    @Override
+    public String toString()
+    {
+        return "Create directory " + containerNode.getUri();
+    }
+
 }

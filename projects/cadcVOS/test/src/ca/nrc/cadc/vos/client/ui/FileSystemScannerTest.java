@@ -77,14 +77,14 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.net.URI;
 
-import ca.nrc.cadc.uws.server.RandomStringGenerator;
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.server.RandomStringGenerator;
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import ca.nrc.cadc.vos.VOSURI;
 
 /**
@@ -190,6 +190,27 @@ public class FileSystemScannerTest
             // test/src/resource/testFileSymlink is a symlink to test/src/resources/testFile
             file = new File("test/src/resources/testFileSymlink");
             assertTrue("Should return true for a symlink", scanner.isSymLink(file));
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testQueueContainerNode()
+    {
+        try
+        {
+            CommandQueue queue = new CommandQueue(1, null);
+            File sourceFile = new File("test");
+            FileSystemScanner scanner = new FileSystemScanner(sourceFile, TEST_VOSURI, queue);
+
+            File file = new File("test/src/resources/testFile");
+            scanner.queueContainerNode(file);
+
+            assertNotNull(queue.take());
         }
         catch(Exception unexpected)
         {
