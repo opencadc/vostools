@@ -413,8 +413,8 @@ public class VOTableReader
                     TableField field = fields.get(i);
                     Format format = FormatFactory.getFormat(field);
                     String text = td.getText();
-                    row.add(format.parse(text));
                     Object o = format.parse(text);
+                    row.add(o);
                 }
                 tableData.getArrayList().add(row);
             }

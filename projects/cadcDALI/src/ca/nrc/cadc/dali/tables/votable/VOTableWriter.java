@@ -246,38 +246,50 @@ public class VOTableWriter implements TableWriter<VOTable>
         
         // Add content.
         int rowCount = 0;
-        Iterator<List<Object>> it = votable.getTableData().iterator();
-        while (it.hasNext())
+        try
         {
-            // If maxRec reached, write overflow INFO and exit loop.
-            if (rowCount++ > maxrec)
+            Iterator<List<Object>> it = votable.getTableData().iterator();
+            while (it.hasNext())
             {
-                Element info = new Element("INFO", namespace);
-                info.setAttribute("name", "QUERY_STATUS");
-                info.setAttribute("value", "OVERFLOW");
-                resource.addContent(info);
-                break;
-            }
-
-            // TR element.
-            Element tr = new Element("TR", namespace);
-            tabledata.addContent(tr);
-
-            // TD elements.
-            List<Object> columns = it.next();
-            for (int i = 0; i < columns.size(); i++)
-            {
-                Object column = columns.get(i);
-                Class c = null;
-                if (column != null)
+                // If maxRec reached, write overflow INFO and exit loop.
+                if (rowCount++ > maxrec)
                 {
-                    c = column.getClass();
+                    Element info = new Element("INFO", namespace);
+                    info.setAttribute("name", "QUERY_STATUS");
+                    info.setAttribute("value", "OVERFLOW");
+                    resource.addContent(info);
+                    break;
                 }
-                Format format = FormatFactory.getFormat(c);
-                Element td = new Element("TD", namespace);
-                td.setText(format.format(column));
-                tr.addContent(td);
+
+                // TR element.
+                Element tr = new Element("TR", namespace);
+                tabledata.addContent(tr);
+
+                // TD elements.
+                List<Object> columns = it.next();
+                for (int i = 0; i < columns.size(); i++)
+                {
+                    Object column = columns.get(i);
+                    Class c = null;
+                    if (column != null)
+                    {
+                        c = column.getClass();
+                    }
+                    Format format = FormatFactory.getFormat(c);
+                    Element td = new Element("TD", namespace);
+                    td.setText(format.format(column));
+                    tr.addContent(td);
+                }
             }
+        }
+        catch(Throwable t)
+        {
+            log.debug("failure while iterating", t);
+            Element info = new Element("INFO", namespace);
+            info.setAttribute("name", "QUERY_STATUS");
+            info.setAttribute("value", "ERROR");
+            info.setText(t.toString());
+            resource.addContent(info);
         }
 
         // Write out the VOTABLE.
