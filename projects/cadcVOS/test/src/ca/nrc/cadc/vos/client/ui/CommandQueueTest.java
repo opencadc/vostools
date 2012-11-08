@@ -271,7 +271,7 @@ public class CommandQueueTest
         }
 
         // long commandsProcessed, long commandsRemaining
-        public void commandConsumed(Long processed, Long remaining)
+        public void commandConsumed(Long processed, Long remaining, Throwable t)
         {
             this.processed = processed;
             this.remaining = remaining;

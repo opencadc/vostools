@@ -92,18 +92,23 @@ public class FileSystemScanner implements Runnable
     private static Logger log = Logger.getLogger(FileSystemScanner.class);
 
     // Queue to hold the Node commands
-    private CommandQueue commandQueue;
+    private final CommandQueue commandQueue;
 
     // Root file of the file structure to be replicated.
-    private File sourceFile;
+    private final File sourceFile;
 
     // Base VOSURI of the target VOSpace.
-    private VOSURI targetURI;
+    private final VOSURI targetURI;
 
     /**
      * Package access constructor for unit testing.
      */
-    FileSystemScanner() { }
+    FileSystemScanner()
+    {
+        commandQueue = null;
+        sourceFile = null;
+        targetURI = null;
+    }
     
     /**
      * Constructor.
@@ -119,6 +124,7 @@ public class FileSystemScanner implements Runnable
         this.targetURI = targetURI;
         this.commandQueue = commandQueue;
     }
+
 
     /**
      * Runs the scanner.
@@ -206,8 +212,7 @@ public class FileSystemScanner implements Runnable
      * @return true if the file path contains a symlink, false otherwise.
      * @throws IOException
      */
-    protected boolean isSymLink(File file)
-        throws IOException
+    protected boolean isSymLink(File file) throws IOException
     {
         if (file == null)
         {
@@ -221,20 +226,21 @@ public class FileSystemScanner implements Runnable
      * add it to the CommandQueue.
      *
      * @param file the file to add to the CommandQueue
+     * @throws URISyntaxException   For invalid URI characters.
      * @throws InterruptedException
      */
     protected void queueContainerNode(File file)
-        throws InterruptedException
+        throws URISyntaxException, InterruptedException
     {
         // Get the path starting from the root file.
         String path = getRelativePath(file);
 
         // Create a DataNode.
-        URI uri = URI.create(targetURI.toString() + path);
-        ContainerNode node = new ContainerNode(new VOSURI(uri));
+        final URI uri = new URI(targetURI.toString() + path);
+        final ContainerNode node = new ContainerNode(new VOSURI(uri));
 
         // Add node and InputStream from file.
-        VOSpaceCommand command = new CreateDirectory(node);
+        final VOSpaceCommand command = new CreateDirectory(node);
         commandQueue.put(command);
     }
 
@@ -243,7 +249,7 @@ public class FileSystemScanner implements Runnable
      * add it to the CommandQueue.
      *
      * @param file the file to add to the CommandQueue
-     * @throws URISyntaxException
+     * @throws URISyntaxException   For invalid URI characters.
      * @throws InterruptedException
      */
     protected void queueDataNode(File file)

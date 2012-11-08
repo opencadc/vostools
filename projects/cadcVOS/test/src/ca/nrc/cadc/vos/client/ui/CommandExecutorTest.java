@@ -106,11 +106,15 @@ public class CommandExecutorTest
     
     private void testCommandExecutor(int commands, int bufferSize) throws Exception
     {
-        CommandQueueListener listener = EasyMock.createMock(CommandQueueListener.class);
+        CommandQueueListener listener =
+                EasyMock.createMock(CommandQueueListener.class);
+        final Throwable error = null;
         
         for (long i=1; i<=commands; i++)
         {
-            listener.commandConsumed(matchQueueCommandsProcessed(i), matchQueueCommandsRemaining(bufferSize));
+            listener.commandConsumed(matchQueueCommandsProcessed(i),
+                                     matchQueueCommandsRemaining(bufferSize),
+                                     EasyMock.eq(error));
             EasyMock.expectLastCall().once();
         }
         

@@ -93,8 +93,10 @@ public interface CommandQueueListener
      * Indicates that a command has been processed
      * @param commandsProcessed Total number that have been processed.
      * @param commandsRemaining Total known number remaining to be processed.
+     * @param error             Last command's error.  Null when no error.
      */
-    void commandConsumed(Long commandsProcessed, Long commandsRemaining);
+    void commandConsumed(final Long commandsProcessed,
+                         final Long commandsRemaining, final Throwable error);
 
     /**
      * Indicates that an Abort was issued.

@@ -213,7 +213,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
 
         expect(mockUploadManager.isStopIssued()).andReturn(false).once();
 
-        mockProgressPercentageLabel.setText("19.67%");
+        mockProgressPercentageLabel.setText("20%");
         expectLastCall().once();
 
         mockProgressBar.setIndeterminate(false);
@@ -224,7 +224,7 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
 
         // 1977 jobs
         // 19.67% complete
-        getTestSubject().commandConsumed(325l, 1652l);
+        getTestSubject().commandConsumed(325l, 1652l, null);
 
         verify(mockProgressBar, mockProgressPercentageLabel, mockUploadManager,
                mockUploadProgressLabel);

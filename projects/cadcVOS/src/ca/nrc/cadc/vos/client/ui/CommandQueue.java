@@ -149,7 +149,8 @@ public class CommandQueue
 
         if (listener != null)
         {
-            listener.commandConsumed(commandsProcessed, (long) queue.size());
+            listener.commandConsumed(commandsProcessed, (long) queue.size(),
+                                     error);
         }
 
         log.debug("New queue size after remove: " + queue.size());

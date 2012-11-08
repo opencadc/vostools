@@ -72,6 +72,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     private final JLabel scannerProgressLabel;
     private final JButton abortButton;
     private final JLabel messageLabel;
+    private final JLabel errorLabel;
+
+    private int errorCount;
 
 
     /**
@@ -86,6 +89,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         scannerProgressLabel = null;
         abortButton = null;
         messageLabel = null;
+        errorLabel = null;
         uploadManager = null;
     }
 
@@ -122,7 +126,10 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         abortButton.addActionListener(this);
 
         messageLabel = new JLabel();
-        getMessageLabel().setForeground(Color.RED);
+        getMessageLabel().setForeground(new Color(0, 165, 0));
+
+        errorLabel = new JLabel();
+        getErrorLabel().setForeground(Color.RED);
 
         getUploadProgressBar().setMinimum(0);
         getScannerProgressBar().setMinimum(0);
@@ -154,7 +161,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         statusBox.add(new Box.Filler(new Dimension(10, 10),
                                      new Dimension(10, 10),
                                      new Dimension(10, 10)));
+
         statusBox.add(getMessageLabel());
+        statusBox.add(getErrorLabel());
 
         add(statusBox);
     }
@@ -178,11 +187,26 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      *
      * @param commandsProcessed Total number that have been processed.
      * @param commandsRemaining Total known number remaining to be processed.
+     * @param error             Last command's error.  Null when no error.
      */
     @Override
     public void commandConsumed(final Long commandsProcessed,
-                                 final Long commandsRemaining)
+                                final Long commandsRemaining,
+                                final Throwable error)
     {
+        if (error != null)
+        {
+            errorCount++;
+            executeInEDT(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    getErrorLabel().setText("Errors found: " + getErrorCount());
+                }
+            });
+        }
+
         executeInEDT(new CommandConsumedAction(commandsProcessed,
                                                commandsRemaining));
     }
@@ -289,6 +313,16 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     protected JLabel getMessageLabel()
     {
         return messageLabel;
+    }
+
+    public JLabel getErrorLabel()
+    {
+        return errorLabel;
+    }
+
+    protected int getErrorCount()
+    {
+        return errorCount;
     }
 
     public void registerCommandQueueListener(
@@ -447,7 +481,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                 }
 
                 getUploadProgressPercentageLabel().setText(
-                        MessageFormat.format("{0,number,#.00%}",
+                        MessageFormat.format("{0,number,#%}",
                                              getUploadProgressBar().
                                                      getPercentComplete()));
 
@@ -458,6 +492,20 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                             "Upload complete.  Please use the refresh button "
                             + "in the VOSpace browser to see the new "
                             + "directory.");
+
+                    if (getErrorCount() == 0)
+                    {
+                        getErrorLabel().setText(
+                                "Check the Log Messages tab for any ERROR "
+                                + "messages.");
+                    }
+                    else
+                    {
+                        getErrorLabel().setText(
+                                "Found " + getErrorCount() + " problems with "
+                                + "your upload.  Check the Log Messages tab "
+                                + "for any ERRORs.");
+                    }
                 }
             }
         }

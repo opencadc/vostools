@@ -286,12 +286,19 @@ public class FileSystemScannerTest
 
         assertTrue("Should be done production.",
                    commandQueue.isDoneProduction());
-        assertEquals("Queue size should be 1 for the file.", 1,
+        assertEquals("Queue size should be 1 for the file and 1 dir.", 2,
                      commandQueue.size());
-        final UploadFile command = (UploadFile) commandQueue.take();
+
+        final CreateDirectory createDirectory =
+                (CreateDirectory) commandQueue.take();
+        assertEquals("Temp dir is not in command queue.",
+                     "Create directory vos://cadc.nrc.ca!vospace/root/"
+                     + sourceDirectory.getName(), createDirectory.toString());
+
+        final UploadFile uploadFile = (UploadFile) commandQueue.take();
         assertEquals("Temp file is not in command queue.",
                      "Upload file vos://cadc.nrc.ca!vospace/root/"
                      + sourceDirectory.getName() + File.separator
-                     + sourceDirectoryFile.getName(), command.toString());
+                     + sourceDirectoryFile.getName(), uploadFile.toString());
     }
 }

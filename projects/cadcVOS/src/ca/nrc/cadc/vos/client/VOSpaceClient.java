@@ -254,10 +254,12 @@ public class VOSpaceClient
         }
         catch (NodeParsingException e)
         {
+            log.debug("failed to create node", e);
             throw new IllegalStateException("failed to create node", e);
         }
         catch (NodeNotFoundException e)
         {
+            log.debug("failed to create node", e);
             throw new IllegalStateException("Node not found", e);
         }
         return rtnNode;
@@ -311,10 +313,12 @@ public class VOSpaceClient
         }
         catch (IOException ex)
         {
+            log.debug("failed to get node", ex);
             throw new IllegalStateException("failed to get node", ex);
         }
         catch (NodeParsingException e)
         {
+            log.debug("failed to get node", e);
             throw new IllegalStateException("failed to get node", e);
         }
         return rtnNode;

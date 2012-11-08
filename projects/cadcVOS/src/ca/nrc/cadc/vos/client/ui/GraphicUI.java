@@ -136,7 +136,8 @@ public class GraphicUI extends AbstractApplication
     @Override
     protected void makeUI()
     {
-        new Thread(new UICreator()).start();
+//        new Thread(new UICreator()).start();
+        new UICreator().run();
     }
 
     /**

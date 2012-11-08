@@ -125,7 +125,7 @@ public class UploadManagerImpl implements UploadManager
         // Shutdown the producer thread when it's finished.  The consumer can
         // block on the queue until the upload manager is closed.
         getProducerExecutorService().shutdown();
-        getConsumerExecutorService().shutdown();
+//        getConsumerExecutorService().shutdown();
     }
 
     /**
@@ -218,11 +218,12 @@ public class UploadManagerImpl implements UploadManager
         }
 
         @Override
-        public Thread newThread(Runnable r)
+        public Thread newThread(final Runnable r)
         {
-            Thread next = new Thread(r);
+            final Thread next = new Thread(r);
             next.setDaemon(true);
             next.setName("UploadContainer-" + role);
+
             return next;
         }
         

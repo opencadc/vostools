@@ -76,7 +76,7 @@ public class UploadManagerImplTest
         {
             @Override
             public void commandConsumed(Long commandsProcessed,
-                                         Long commandsRemaining)
+                                        Long commandsRemaining, Throwable t)
             {
 
             }
