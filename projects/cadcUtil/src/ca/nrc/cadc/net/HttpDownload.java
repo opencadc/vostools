@@ -642,6 +642,7 @@ public class HttpDownload extends HttpTransfer
         throws IOException, TransientException
     {
         int code = conn.getResponseCode();
+        this.responseCode = code;
         log.debug("HTTP GET status: " + code + " for " + remoteURL);
 
         if (code != HttpURLConnection.HTTP_OK)
@@ -655,6 +656,8 @@ public class HttpDownload extends HttpTransfer
             checkTransient(code, msg, conn);
             switch(code)
             {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    break;
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
                     throw new AccessControlException("authentication failed " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:

@@ -180,6 +180,8 @@ public abstract class HttpTransfer implements Runnable
     // state that observer(s) might be interested in
     public String eventID = null;
     public Throwable failure;
+    
+    protected int responseCode = -1;
 
     private SSLSocketFactory sslSocketFactory;
 
@@ -353,6 +355,17 @@ public abstract class HttpTransfer implements Runnable
     {
         return numRetries;
     }
+
+    /**
+     * Get the ultimate (possibly after retries) HTTP response code. 
+     * 
+     * @return HTTP response code or -1 if no HTTP call made
+     */
+    public int getResponseCode()
+    {
+        return responseCode;
+    }
+
 
     /**
      * If the transfer ultimately failed, this will return the last failure.

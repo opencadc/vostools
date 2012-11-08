@@ -151,7 +151,7 @@ public class HttpPost extends HttpTransfer
         this.followRedirects = followRedirects;
         if (url == null)
             throw new IllegalArgumentException("dest cannot be null.");
-        if (map == null || map.size() == 0)
+        if (map == null || map.isEmpty())
             throw new IllegalArgumentException("parameters cannot be empty.");
     }
     
@@ -342,6 +342,7 @@ public class HttpPost extends HttpTransfer
         log.debug("POST - done: " + remoteURL.toString());
         
         int statusCode = checkStatusCode(conn);
+        this.responseCode = statusCode;
         
         // check for a redirect
         String location = conn.getHeaderField("Location");
@@ -409,6 +410,8 @@ public class HttpPost extends HttpTransfer
             checkTransient(code, msg, conn);
             switch(code)
             {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    break;
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
                     throw new AccessControlException("permission denied: " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:

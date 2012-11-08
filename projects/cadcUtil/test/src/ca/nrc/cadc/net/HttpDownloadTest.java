@@ -211,6 +211,7 @@ public class HttpDownloadTest
             dl.setOverwrite(true);
             dl.setHeadOnly(true);
             dl.run();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             File out = dl.getFile();
             Assert.assertNull("result file", out);
             Assert.assertFalse("dest file does not exist after download", dest.exists());
@@ -244,6 +245,7 @@ public class HttpDownloadTest
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
             dl.run();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());
@@ -328,6 +330,7 @@ public class HttpDownloadTest
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
             dl.run();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());
@@ -359,6 +362,7 @@ public class HttpDownloadTest
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
             dl.run();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());
@@ -419,6 +423,7 @@ public class HttpDownloadTest
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
             dl.run();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             out = dl.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());
@@ -449,6 +454,7 @@ public class HttpDownloadTest
             dl.run();
             dest.close();
             byte[] out = dest.toByteArray();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             Assert.assertNull(dl.getFile());
             Assert.assertNotNull("dest stream after download", out);
             Assert.assertTrue("size > 0", out.length > 0);
@@ -477,6 +483,7 @@ public class HttpDownloadTest
             dl.run();
             dest.close();
             byte[] out = dest.toByteArray();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             Assert.assertNull(dl.getFile());
             Assert.assertNotNull("dest stream after download", out);
             Assert.assertTrue("size > 0", out.length > 0);
@@ -525,6 +532,7 @@ public class HttpDownloadTest
             dl.run();
             dest.close();
             byte[] out = dest.toByteArray();
+            Assert.assertEquals("response code", 200, dl.getResponseCode());
             Assert.assertNull(dl.getFile());
             Assert.assertNotNull("dest stream after download", out);
             Assert.assertTrue("size > 0", out.length > 0);
@@ -549,6 +557,7 @@ public class HttpDownloadTest
             dl.run();
             dest.close();
             Throwable t = dl.getThrowable();
+            Assert.assertEquals("response code", 404, dl.getResponseCode());
             Assert.assertNotNull(t);
             Assert.assertTrue("throwable should be FileNotFoundException", t instanceof FileNotFoundException);
             log.debug("found expected exception: " + t.toString());

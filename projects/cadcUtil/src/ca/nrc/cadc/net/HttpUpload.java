@@ -436,6 +436,7 @@ public class HttpUpload extends HttpTransfer
 
         int code = conn.getResponseCode();
         log.debug("code: " + code);
+        this.responseCode = code;
         if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
