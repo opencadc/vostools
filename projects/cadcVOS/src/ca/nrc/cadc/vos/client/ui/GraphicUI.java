@@ -82,6 +82,7 @@ import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -279,6 +280,7 @@ public class GraphicUI extends AbstractApplication
         }
         catch (RuntimeException rex)
         {
+            rex.printStackTrace();
             LOGGER.error("Failed to determine Source Directory", rex);
         }
     }
@@ -299,7 +301,7 @@ public class GraphicUI extends AbstractApplication
 
     private class LogWriter extends Writer
     {
-        private JTextArea logTextArea;
+        private final JTextArea logTextArea;
 
 
         LogWriter(final JTextArea textArea)
@@ -311,12 +313,12 @@ public class GraphicUI extends AbstractApplication
 
         @Override
         public void close() throws IOException
-        { }
+        {
+        }
 
         @Override
         public void flush() throws IOException
         {
-
         }
 
         public JTextArea getLogTextArea()
@@ -337,19 +339,20 @@ public class GraphicUI extends AbstractApplication
                         @Override
                         public void run()
                         {
-                            doWrite(String.copyValueOf(cbuf, off, len));
+                            doWrite(new String(cbuf, off, len));
                         }
                     });
                 }
                 catch (Throwable t)
                 {
-                    System.out.println("Error writing to log.");
+                    System.out.println("Error writing to log.  Possible abort "
+                                       + "issued.");
                     t.printStackTrace();
                 }
             }
             else
             {
-                doWrite(String.copyValueOf(cbuf, off, len));
+                doWrite(new String(cbuf, off, len));
             }
         }
 
@@ -377,6 +380,8 @@ public class GraphicUI extends AbstractApplication
             }
             catch (final Throwable t)
             {
+                t.printStackTrace();
+
                 if (LOGGER.isDebugEnabled())
                 {
                     LOGGER.error("DelayedInit failed", t);
@@ -391,7 +396,8 @@ public class GraphicUI extends AbstractApplication
 
     protected class UICreator implements Runnable
     {
-        private final Subject currentSubject = Subject.getSubject(AccessController.getContext());
+        private final Subject currentSubject =
+                Subject.getSubject(AccessController.getContext());
 
         /**
          * When an object implementing interface <code>Runnable</code> is used
@@ -413,11 +419,14 @@ public class GraphicUI extends AbstractApplication
                 {
                     public void run()
                     {
-                        final Subject subjectInContext = Subject.getSubject(AccessController.getContext());
+                        final Subject subjectInContext =
+                                Subject.getSubject(
+                                        AccessController.getContext());
 
                         if (subjectInContext == null)
                         {
-                            Subject.doAs(currentSubject, new PrivilegedAction<Void>()
+                            Subject.doAs(currentSubject,
+                                         new PrivilegedAction<Void>()
                             {
                                 @Override
                                 public Void run()
@@ -440,14 +449,13 @@ public class GraphicUI extends AbstractApplication
 
                         logWriter = new LogWriter(new JTextArea());
 
-                        Log4jInit.setLevel("ca.nrc.cadc",
-                                LOGGER.getLevel(), getLogWriter());
+                        Log4jInit.setLevel("ca.nrc.cadc", LOGGER.getLevel(),
+                                           new BufferedWriter(getLogWriter()));
                         LOGGER.debug("Executing tasks against VOSpace found at "
                                 + getVOSpaceClient().getBaseURL());
 
                         addMainPane();
-                        setBorder(BorderFactory.createEmptyBorder(4, 4,
-                                4, 4));
+                        setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
                         final JScrollPane sp =
                                 createLogScrollPane(
@@ -462,7 +470,8 @@ public class GraphicUI extends AbstractApplication
                                 new SourceDirectoryChooserCallback()
                                 {
                                     @Override
-                                    public void onCallback(final File chosenDirectory)
+                                    public void onCallback(
+                                            final File chosenDirectory)
                                     {
                                         setUploadManager(
                                                 new JUploadManager(chosenDirectory,
@@ -470,14 +479,14 @@ public class GraphicUI extends AbstractApplication
                                                         getVOSpaceClient()));
 
                                         getTabPane().addTab("Upload",
-                                                getUploadManager());
+                                                            getUploadManager());
                                         getTabPane().setSelectedIndex(1);
 
                                         GraphicUI.this.run();
                                     }
                                 });
                     }
-                });
+                }) ;
             }
             catch (final Exception e)
             {

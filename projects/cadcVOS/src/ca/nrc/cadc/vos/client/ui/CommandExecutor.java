@@ -120,7 +120,8 @@ public class CommandExecutor implements Runnable
                 }
                 finally
                 {
-                    log.debug("Finished command: " + nextCommand + ", throwable=" + throwable);
+                    log.debug("Finished command: " + nextCommand
+                              + ", throwable=" + throwable);
                     queue.commandCompleted(nextCommand, throwable);
                 }
             }

@@ -54,8 +54,8 @@ public class UploadManagerImpl implements UploadManager
 {
     // If we don't use a different logger here, then it will try to log to the
     // AWT console outside the EDT.
-    private static final Logger LOGGER =
-            Logger.getLogger(UploadManagerImpl.class);
+//    private static final Logger LOGGER =
+//            Logger.getLogger(UploadManagerImpl.class);
     private static final int MAX_COMMAND_COUNT = 500;
 
     private final File sourceDirectory;
@@ -99,7 +99,7 @@ public class UploadManagerImpl implements UploadManager
     @Override
     public void start()
     {
-        LOGGER.info("Starting process.");
+//        LOGGER.info("Starting process.");
         initializeCommandController();
     }
 
@@ -111,21 +111,21 @@ public class UploadManagerImpl implements UploadManager
         setConsumerExecutorService(
                 Executors.newFixedThreadPool(1, new CommandThreadFactory(
                         "Consumer")));
+
         setProducerExecutorService(
                 Executors.newSingleThreadExecutor(
                         new CommandThreadFactory("Producer")));
-        
-        getConsumerExecutorService().execute(
-                new CommandExecutor(getVOSpaceClient(), getCommandQueue()));
+
         getProducerExecutorService().execute(
                 new FileSystemScanner(getSourceDirectory(),
                                       getTargetVOSpaceURI(),
                                       getCommandQueue()));
+        getConsumerExecutorService().execute(
+                new CommandExecutor(getVOSpaceClient(), getCommandQueue()));
 
         // Shutdown the producer thread when it's finished.  The consumer can
         // block on the queue until the upload manager is closed.
         getProducerExecutorService().shutdown();
-//        getConsumerExecutorService().shutdown();
     }
 
     /**
@@ -134,11 +134,19 @@ public class UploadManagerImpl implements UploadManager
     @Override
     public void stop()
     {
-        LOGGER.info("Full stop.");
+//        LOGGER.info("Full stop.");
         stopIssued = true;
 
-        getProducerExecutorService().shutdownNow();
-        getCommandQueue().clear();
+        try
+        {
+            getConsumerExecutorService().shutdownNow();
+//            getProducerExecutorService().shutdownNow();
+            getCommandQueue().clear();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     /**

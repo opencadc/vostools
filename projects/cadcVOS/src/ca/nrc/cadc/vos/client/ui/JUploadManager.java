@@ -220,6 +220,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void onAbort()
     {
+        logInfo("Command processed.");
         executeInEDT(new AbortListenerAction());
     }
 
@@ -229,6 +230,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void productionStarted()
     {
+        logInfo("Started production.");
         executeInEDT(new ProductionStartedAction());
     }
 
@@ -238,6 +240,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     @Override
     public void productionComplete()
     {
+        logInfo("Completed production.");
         executeInEDT(new ProductionCompletedAction());
     }
 
@@ -252,26 +255,30 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         {
             try
             {
-                final Subject currentSubject = Subject.getSubject(AccessController.getContext());
+                final Subject currentSubject = Subject.getSubject(
+                        AccessController.getContext());
 
                 SwingUtilities.invokeAndWait(new Runnable()
                 {
                     @Override
                     public void run()
                     {
-                        final Subject subjectInContext = Subject.getSubject(AccessController.getContext());
+                        final Subject subjectInContext =
+                                Subject.getSubject(
+                                        AccessController.getContext());
 
                         if (subjectInContext == null)
                         {
-                            Subject.doAs(currentSubject, new PrivilegedAction<Object>()
-                            {
-                                @Override
-                                public Object run()
-                                {
-                                    action.run();
-                                    return null;
-                                }
-                            });
+                            Subject.doAs(currentSubject,
+                                         new PrivilegedAction<Object>()
+                                         {
+                                             @Override
+                                             public Object run()
+                                             {
+                                                 action.run();
+                                                 return null;
+                                             }
+                                         });
                         }
                         else
                         {
@@ -362,6 +369,29 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         getUploadManager().registerCommandQueueListener(commandQueueListener);
     }
 
+    protected void logDebug(final String message)
+    {
+        SwingUtilities.invokeLater(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                LOGGER.debug(message);
+            }
+        });
+    }
+
+    protected void logInfo(final String message)
+    {
+        SwingUtilities.invokeLater(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                LOGGER.info(message);
+            }
+        });
+    }
 
     private class StartUploadManagerAction implements Runnable
     {
@@ -463,7 +493,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         @Override
         public void run()
         {
-            LOGGER.info("Processing started.");
             getScannerProgressBar().setIndeterminate(true);
             getAbortButton().setEnabled(true);
         }
@@ -495,8 +524,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         @Override
         public void run()
         {
-            LOGGER.info("Command processed.");
-
             getUploadProgressBar().setIndeterminate(false);
 
             if (!getUploadManager().isStopIssued())
@@ -560,8 +587,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         {
             if (getAbortButton().isEnabled())
             {
-                LOGGER.info("Processing completed.");
-
                 // Not busy anymore.
                 getScannerProgressBar().setIndeterminate(false);
 
