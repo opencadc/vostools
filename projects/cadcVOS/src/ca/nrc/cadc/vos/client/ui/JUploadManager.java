@@ -39,8 +39,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.net.Authenticator;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 
+import javax.security.auth.Subject;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -249,7 +252,33 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         {
             try
             {
-                SwingUtilities.invokeAndWait(action);
+                final Subject currentSubject = Subject.getSubject(AccessController.getContext());
+
+                SwingUtilities.invokeAndWait(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        final Subject subjectInContext = Subject.getSubject(AccessController.getContext());
+
+                        if (subjectInContext == null)
+                        {
+                            Subject.doAs(currentSubject, new PrivilegedAction<Object>()
+                            {
+                                @Override
+                                public Object run()
+                                {
+                                    action.run();
+                                    return null;
+                                }
+                            });
+                        }
+                        else
+                        {
+                            action.run();
+                        }
+                    }
+                });
             }
             catch (Throwable t)
             {
@@ -264,7 +293,8 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
 
     public void start()
     {
-        executeInEDT(new StartUploadManagerAction());
+//        executeInEDT(new StartUploadManagerAction());
+        new StartUploadManagerAction().run();
     }
 
     /**
@@ -272,7 +302,8 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      */
     public void stop()
     {
-        executeInEDT(new StopUploadManagerAction());
+//        executeInEDT(new StopUploadManagerAction());
+        new StopUploadManagerAction().run();
     }
 
     public UploadManager getUploadManager()

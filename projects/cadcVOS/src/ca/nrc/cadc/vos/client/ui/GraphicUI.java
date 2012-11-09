@@ -77,6 +77,7 @@ import ca.onfire.ak.AbstractApplication;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import javax.security.auth.Subject;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -84,6 +85,8 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 
 /**
@@ -388,6 +391,8 @@ public class GraphicUI extends AbstractApplication
 
     protected class UICreator implements Runnable
     {
+        private final Subject currentSubject = Subject.getSubject(AccessController.getContext());
+
         /**
          * When an object implementing interface <code>Runnable</code> is used
          * to create a thread, starting the thread causes the object's
@@ -408,20 +413,41 @@ public class GraphicUI extends AbstractApplication
                 {
                     public void run()
                     {
+                        final Subject subjectInContext = Subject.getSubject(AccessController.getContext());
+
+                        if (subjectInContext == null)
+                        {
+                            Subject.doAs(currentSubject, new PrivilegedAction<Void>()
+                            {
+                                @Override
+                                public Void run()
+                                {
+                                    runPrivileged();
+                                    return null;
+                                }
+                            });
+                        }
+                        else
+                        {
+                            runPrivileged();
+                        }
+                    }
+
+                    private void runPrivileged()
+                    {
                         tabPane = new JTabbedPane();
                         getTabPane().setName("tabPane");
 
                         logWriter = new LogWriter(new JTextArea());
 
                         Log4jInit.setLevel("ca.nrc.cadc",
-                                           LOGGER.getLevel(),
-                                           getLogWriter());
+                                LOGGER.getLevel(), getLogWriter());
                         LOGGER.debug("Executing tasks against VOSpace found at "
-                                     + getVOSpaceClient().getBaseURL());
+                                + getVOSpaceClient().getBaseURL());
 
                         addMainPane();
                         setBorder(BorderFactory.createEmptyBorder(4, 4,
-                                                                  4, 4));
+                                4, 4));
 
                         final JScrollPane sp =
                                 createLogScrollPane(
@@ -429,27 +455,27 @@ public class GraphicUI extends AbstractApplication
                         getTabPane().addTab("Log Messages", sp);
 
                         Util.recursiveSetBackground(GraphicUI.this,
-                                                    Color.WHITE);
+                                Color.WHITE);
                         getTabPane().setVisible(true);
 
                         selectSourceDirectory(GraphicUI.this,
-                                              new SourceDirectoryChooserCallback()
-                                              {
-                                                  @Override
-                                                  public void onCallback(final File chosenDirectory)
-                                                  {
-                                                      setUploadManager(
-                                                              new JUploadManager(chosenDirectory,
-                                                                                 getTargetVOSpaceURI(),
-                                                                                 getVOSpaceClient()));
+                                new SourceDirectoryChooserCallback()
+                                {
+                                    @Override
+                                    public void onCallback(final File chosenDirectory)
+                                    {
+                                        setUploadManager(
+                                                new JUploadManager(chosenDirectory,
+                                                        getTargetVOSpaceURI(),
+                                                        getVOSpaceClient()));
 
-                                                      getTabPane().addTab("Upload",
-                                                                          getUploadManager());
-                                                      getTabPane().setSelectedIndex(1);
+                                        getTabPane().addTab("Upload",
+                                                getUploadManager());
+                                        getTabPane().setSelectedIndex(1);
 
-                                                      GraphicUI.this.run();
-                                                  }
-                                              });
+                                        GraphicUI.this.run();
+                                    }
+                                });
                     }
                 });
             }
