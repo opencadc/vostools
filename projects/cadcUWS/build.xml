@@ -170,9 +170,8 @@
             </classpath>
 
             <test name="ca.nrc.cadc.uws.server.JobDAOTest_Sybase" />
-            <!-- code works but we have no test server setup yet
-              <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
-            -->
+            <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
+            
             <formatter type="plain" usefile="false" />
         </junit>
     </target>

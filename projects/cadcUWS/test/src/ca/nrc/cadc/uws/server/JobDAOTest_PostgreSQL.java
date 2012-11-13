@@ -26,7 +26,8 @@ public class JobDAOTest_PostgreSQL extends JobDAOTest
             dataSource = DBUtil.getDataSource(cc);
             log.info("configured data source: " + cc.getServer() + "," + cc.getDatabase() + "," + cc.getDriver() + "," + cc.getURL());
 
-            JOB_SCHEMA = new JobDAO.JobSchema("uws.Job", "uws.JobDetail");
+            String userName = System.getProperty("user.name");
+            JOB_SCHEMA = new JobDAO.JobSchema(userName + ".Job", userName + ".JobDetail");
         }
         catch(Exception ex)
         {
