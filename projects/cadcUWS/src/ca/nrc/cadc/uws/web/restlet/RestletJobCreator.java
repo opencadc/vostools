@@ -147,27 +147,14 @@ public class RestletJobCreator extends JobCreator
         return job;
     }
 
+    // this is called by JobAsynchResource and ParameterListResource, could be refactored
+    // to be less wasteful
     public List<Parameter> getParameterList(Form form)
     {
         Job job = new Job();
         for (String name : form.getNames())
             processParameter(job, name, form.getValuesArray(name, true));
         return job.getParameterList();
-        /*
-        List<Parameter> parameters = new ArrayList<Parameter>();
-        Set<String> names = form.getNames();
-        for (String name : names)
-        {
-            if (!JobAttribute.isValue(name))
-            {
-                String[] vals = form.getValuesArray(name, true);
-                for (String v : vals)
-                    parameters.add(new Parameter(name, v));
-            }
-        }
-        return parameters;
-         * 
-         */
     }
 
     private String getErrorMessage(Map<String, String> errors)
