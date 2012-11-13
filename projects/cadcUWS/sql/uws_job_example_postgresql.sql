@@ -70,7 +70,7 @@
 -- table names: these can be changed since the names of table used at runtime
 -- are configured via the JobDAO.JobSchema class
 
-create table uws.Job
+create table Job
 (
     jobID                   varchar(16)     not null,
     runID                   varchar,
@@ -95,7 +95,7 @@ create table uws.Job
     jobInfo_contentType     varchar,
     jobInfo_valid           smallint,
 
-    deletedByUser           tinyint         default 0,
+    deletedByUser           smallint        default 0,
     lastModified            timestamp       not null,
 
     primary key (jobID)
@@ -104,18 +104,18 @@ create table uws.Job
 --tablespace <name of tablespace>
 ;
 
-create table uws.JobDetail
+create table JobDetail
 (
     jobID                   varchar(16)     not null,
     type                    char(1)         not null,
     name                    varchar         not null,
     value                   varchar,
 
-    foreign key (jobID) references uws.Job (jobID)
+    foreign key (jobID) references Job (jobID)
 )
 --tablespace <name of tablespace>
 ;
 
-create index uws_param_i1 on uws.JobDetail(jobID)
+create index uws_param_i1 on JobDetail(jobID)
 -- using tablespace <name of tablespace>
 ;
