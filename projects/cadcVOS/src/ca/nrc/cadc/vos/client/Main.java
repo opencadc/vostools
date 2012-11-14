@@ -253,6 +253,7 @@ public class Main implements Runnable
         catch(Throwable t)
         {
             log.error("unexpected failure", t);
+            System.exit(NET_STATUS);
         }
         System.exit(0);
     }
