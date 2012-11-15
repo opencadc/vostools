@@ -33,8 +33,7 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import java.awt.Color;
-import java.awt.Dimension;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -74,7 +73,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     private final JProgressBar scannerProgressBar;
     private final JLabel scannerProgressLabel;
     private final JButton abortButton;
-    private final JLabel messageLabel;
+    private final WrappingLabel messageLabel;
     private final JLabel errorLabel;
 
     private int errorCount;
@@ -128,11 +127,13 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         abortButton.setActionCommand("Abort");
         abortButton.addActionListener(this);
 
-        messageLabel = new JLabel();
+        messageLabel = new WrappingLabel(80);
         getMessageLabel().setForeground(new Color(0, 165, 0));
+        getMessageLabel().setBackground(getBackground());
 
         errorLabel = new JLabel();
         getErrorLabel().setForeground(Color.RED);
+        getErrorLabel().setHorizontalAlignment(SwingConstants.LEFT);
 
         getUploadProgressBar().setMinimum(0);
         getScannerProgressBar().setMinimum(0);
@@ -348,7 +349,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         return abortButton;
     }
 
-    protected JLabel getMessageLabel()
+    protected WrappingLabel getMessageLabel()
     {
         return messageLabel;
     }
@@ -547,17 +548,12 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                 {
                     getAbortButton().setEnabled(false);
                     getMessageLabel().setText(
-                            "Upload complete.  Please use the refresh button "
+                            "Upload complete.\nPlease use the refresh button "
                             + "in the VOSpace browser to see the new "
-                            + "directory.");
+                            + "directory.\nCheck the Log Messages tab for any "
+                            + "unexpected ERROR messages.");
 
-                    if (getErrorCount() == 0)
-                    {
-                        getErrorLabel().setText(
-                                "Check the Log Messages tab for any ERROR "
-                                + "messages.");
-                    }
-                    else
+                    if (getErrorCount() > 0)
                     {
                         getErrorLabel().setText(
                                 "Found " + getErrorCount() + " problems with "
