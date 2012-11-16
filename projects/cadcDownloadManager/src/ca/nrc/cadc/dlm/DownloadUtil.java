@@ -76,13 +76,14 @@ import java.util.Iterator;
 import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.StringUtil;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 /**
@@ -158,7 +159,7 @@ public class DownloadUtil
 
     private  static Map<String,List<String>> toParamMap(String[] params)
     {
-        Map<String,List<String>> paramSet = new HashMap<String,List<String>>();
+        Map<String,List<String>> paramSet = new TreeMap<String,List<String>>(new CaseInsensitiveStringComparator());
         if (params != null)
             for (String p : params)
             {
