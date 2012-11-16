@@ -95,8 +95,8 @@ class SourceDirectoryChooser
         this.fileChooserName = fileChooserName;
 
         // force native dialog on OSX
-        final String os = System.getProperty("os.name");
-        useNativeDialog = os.equals("Mac OS X");
+        //final String os = System.getProperty("os.name");
+        //useNativeDialog = os.equals("Mac OS X");
     }
 
 
