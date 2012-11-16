@@ -71,18 +71,20 @@
 package ca.nrc.cadc.dlm.client;
 
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.Frame;
 import java.awt.HeadlessException;
-import java.awt.Point;
 import java.io.File;
+import java.io.FilenameFilter;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import org.apache.log4j.Logger;
 
 
 class MyFileChooser
 {
+    private static final Logger log = Logger.getLogger(MyFileChooser.class);
+
     private boolean debug = false;
     private File initialDir;
     private boolean useNativeDialog;
@@ -91,10 +93,11 @@ class MyFileChooser
     public MyFileChooser(File initialDir) 
     {
         this.initialDir = initialDir;
-        // force native dialog on OSX
-        String os = System.getProperty("os.name");
-        if ( os.equals("Mac OS X") )
-            useNativeDialog = true;
+        // force native dialog on OSX -- this is broken in Java 7 but better to give all
+        // users the same experience -- so use Swing
+        //String os = System.getProperty("os.name");
+        //if ( os.equals("Mac OS X") )
+        //    useNativeDialog = true;
     }
     
     public MyFileChooser(File initialDir, boolean useNativeDialog) 
@@ -102,10 +105,7 @@ class MyFileChooser
         this.initialDir = initialDir; 
         this.useNativeDialog = useNativeDialog;
     }
-    private void msg(String s)
-    {
-        if (debug) System.out.println("[MyFileChooser] " + s);
-    }
+    
     public int showDialog(Component parent, String acceptText)
     {
         if (useNativeDialog)
@@ -147,6 +147,14 @@ class MyFileChooser
         }
     }
 
+    private class FolderFilter implements FilenameFilter
+    {
+        public boolean accept(File dir, String name)
+        {
+            return new File(dir,name).isDirectory();
+        }
+    }
+
     private class AwtImpl extends FileDialog
     {
         private File resultFile;
@@ -157,6 +165,7 @@ class MyFileChooser
             super(f, title);
             // HACK: allow directories to be selected on apple
             System.setProperty("apple.awt.fileDialogForDirectories", "true");
+            setFilenameFilter(new FolderFilter());
             String s = null;
             if (initialDir != null)
                 s = initialDir.getAbsolutePath();
@@ -171,13 +180,13 @@ class MyFileChooser
             String f = getFile();
             String d = getDirectory();
             String str = null;
-            msg("AppleAwtImpl: file = " + f);
-            msg("AppleAwtImpl:  dir = " + d);
+            log.debug("file = " + f);
+            log.debug("dir = " + d);
             
             if (f != null && d != null)
             {
                 this.resultFile = new File(d, f);
-                msg("AppleAwtImpl: resultFile = " + resultFile);
+                log.debug("resultFile = " + resultFile);
                 return JFileChooser.APPROVE_OPTION;
             }
             return JFileChooser.CANCEL_OPTION;

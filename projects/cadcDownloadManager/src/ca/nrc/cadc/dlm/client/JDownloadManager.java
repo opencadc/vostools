@@ -605,7 +605,7 @@ public class JDownloadManager extends JPanel implements ChangeListener, Transfer
 
         if ( queuedURL.contains(dd.url) )
         {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             sb.append("duplicate URL: ");
             if (dd.uri != null)
                 sb.append(dd.uri);
@@ -626,7 +626,10 @@ public class JDownloadManager extends JPanel implements ChangeListener, Transfer
         JDownload jdl = new JDownload(dl);
         Util.recursiveSetBackground(jdl, Color.WHITE);
         downloads.add(jdl);
-        validateTree();
+        //validateTree(); // this fails with an
+        // java.lang.IllegalStateException: This function should be called while holding treeLock
+        // on Java 7 -- use validate() instead
+        validate();
         repaint();
         downloadManager.addDownload(dl);
         numTotal++;
