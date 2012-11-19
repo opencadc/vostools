@@ -229,6 +229,7 @@ public class SimpleJobManager implements JobManager
     }
     
     public Iterator<Job> iterator()
+        throws JobPersistenceException, TransientException
     {
         return jobPersistence.iterator();
     }

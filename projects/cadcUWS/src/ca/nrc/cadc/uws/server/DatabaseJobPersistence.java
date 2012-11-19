@@ -82,6 +82,8 @@ import java.security.AccessController;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
@@ -128,8 +130,20 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
 
 
     protected JobDAO getDAO()
+        throws JobPersistenceException
     {
-        return new JobDAO(getDataSource(), getJobSchema(), identityManager, idGenerator);
+        try
+        {
+            DataSource ds = getDataSource();
+            JobDAO.JobSchema js = getJobSchema();
+            return new JobDAO(ds, js, identityManager, idGenerator);
+        }
+        catch(NamingException ex)
+        {
+            throw new JobPersistenceException("failed to find/create DataSource", ex);
+        }
+        finally { }
+        
     }
 
     /**
@@ -144,7 +158,8 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
      * 
      * @return
      */
-    protected abstract DataSource getDataSource();
+    protected abstract DataSource getDataSource()
+        throws NamingException;
 
     public Job get(String jobID)
         throws JobNotFoundException, JobPersistenceException, TransientException
@@ -161,6 +176,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
     }
 
     public Iterator<Job> iterator()
+        throws JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();
         return dao.iterator();

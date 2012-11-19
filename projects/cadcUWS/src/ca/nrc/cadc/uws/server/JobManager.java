@@ -126,7 +126,8 @@ public interface JobManager
      * 
      * @return
      */
-    public Iterator<Job> iterator();
+    public Iterator<Job> iterator()
+        throws JobPersistenceException, TransientException;
 
     /**
      * Delete the specified job.

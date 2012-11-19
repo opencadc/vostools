@@ -22,7 +22,7 @@ public class JobDAOTest_PostgreSQL extends JobDAOTest
         try
         {
             DBConfig conf = new DBConfig();
-            ConnectionConfig cc = conf.getConnectionConfig("UWS_PG_TEST", "cvodb");
+            ConnectionConfig cc = conf.getConnectionConfig("UWS_PG_TEST", "cadctest");
             dataSource = DBUtil.getDataSource(cc);
             log.info("configured data source: " + cc.getServer() + "," + cc.getDatabase() + "," + cc.getDriver() + "," + cc.getURL());
 

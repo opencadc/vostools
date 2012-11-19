@@ -137,7 +137,8 @@ public interface JobPersistence
      *
      * @return iterator over visible jobs
      */
-    public Iterator<Job> iterator();
+    public Iterator<Job> iterator()
+        throws JobPersistenceException, TransientException;
 
     // optimised access methods
 
