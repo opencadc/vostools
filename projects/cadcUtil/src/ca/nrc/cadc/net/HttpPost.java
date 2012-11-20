@@ -396,7 +396,8 @@ public class HttpPost extends HttpTransfer
     {
         int code = conn.getResponseCode();
         log.debug("HTTP POST status: " + code + " for " + remoteURL);
-    
+        this.responseCode = code;
+        
         if (code != HttpURLConnection.HTTP_OK &&
             code != HttpURLConnection.HTTP_MOVED_TEMP &&
             code != HttpURLConnection.HTTP_SEE_OTHER)
