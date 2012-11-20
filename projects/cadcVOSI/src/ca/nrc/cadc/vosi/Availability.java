@@ -69,13 +69,16 @@
 
 package ca.nrc.cadc.vosi;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
+
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vosi.util.Util;
-import java.text.DateFormat;
 
 /**
  * @author zhangsa
@@ -99,6 +102,21 @@ public class Availability
             throw new IllegalArgumentException("Availability Status is null.");
         _status = status;
     }
+    
+    public Availability(Document xml)
+    {
+        super();
+        if (xml == null)
+            throw new IllegalArgumentException("Document is null.");
+        try
+        {
+            _status = fromXmlDocument(xml);
+        }
+        catch (ParseException e)
+        {
+            throw new IllegalStateException("Invalid date format in XML", e);
+        }
+    }
 
     public Document toXmlDocument()
     {
@@ -121,5 +139,46 @@ public class Availability
         document.addContent(eleAvailability);
 
         return document;
+    }
+    
+    public AvailabilityStatus fromXmlDocument(Document doc) throws ParseException
+    {
+        Namespace vosi = Namespace.getNamespace("vosi", VOSI.AVAILABILITY_NS_URI);
+        Element availability = doc.getRootElement();
+        if (!availability.getName().equals("availability"))
+            throw new IllegalArgumentException("missing root element 'availability'");
+        
+        Element elemAvailable = availability.getChild("available", vosi);
+        if (elemAvailable == null)
+            throw new IllegalArgumentException("missing element 'available'");
+        boolean available = elemAvailable.getText().equalsIgnoreCase("true");
+        
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        
+        Element elemUpSince = availability.getChild("upSince", vosi);
+        Element elemDownAt = availability.getChild("downAt", vosi);
+        Element elemBackAt = availability.getChild("backAt", vosi);
+        Element elemNote = availability.getChild("note", vosi);
+        
+        Date upSince = null;
+        Date downAt = null;
+        Date backAt = null;
+        String note = null;
+        
+        if (elemUpSince != null)
+            upSince = df.parse(elemUpSince.getText());
+        if (elemDownAt != null)
+            downAt = df.parse(elemDownAt.getText());
+        if (elemBackAt != null)
+            backAt = df.parse(elemBackAt.getText());
+        if (elemNote != null)
+            note = elemNote.getText();
+        
+        return new AvailabilityStatus(available, upSince, downAt, backAt, note);
+    }
+    
+    public AvailabilityStatus getStatus()
+    {
+        return _status;
     }
 }

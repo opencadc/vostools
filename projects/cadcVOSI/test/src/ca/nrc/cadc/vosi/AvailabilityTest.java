@@ -72,8 +72,16 @@ package ca.nrc.cadc.vosi;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.text.ParseException;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Map;
 
+import junit.framework.Assert;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
@@ -86,11 +94,6 @@ import org.junit.Test;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * @author zhangsa
@@ -194,18 +197,29 @@ public class AvailabilityTest
         TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:backAt");
         TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:note");
     }
-
+    
     @Test
-    public void testAvailabilityNullStatus() throws Exception
+    public void testAvailabilityRoundTrip() throws Exception
     {
-        try
-        {
-            new Availability(null);
-        }
-        catch (IllegalArgumentException e)
-        {
-            assert (true);
-        }
+        Calendar c1 = new GregorianCalendar();
+        Calendar c2 = new GregorianCalendar();
+        Calendar c3 = new GregorianCalendar();
+        c2.add(Calendar.MONTH, 1);
+        c3.add(Calendar.MONTH, 2);
+        AvailabilityStatus status1 = new AvailabilityStatus(false, c1.getTime(), c2.getTime(), c3.getTime(), "status message");
+        
+        Availability availability = new Availability(status1);
+        Document doc = availability.toXmlDocument();
+        
+        availability = new Availability(doc);
+        AvailabilityStatus status2 = availability.fromXmlDocument(doc);
+        
+        Assert.assertEquals("is available", status1.isAvailable(), status2.isAvailable());
+        Assert.assertEquals("up since", status1.getUpSince(), status2.getUpSince());
+        Assert.assertEquals("down at", status1.getDownAt(), status2.getDownAt());
+        Assert.assertEquals("back at", status1.getBackAt(), status2.getBackAt());
+        Assert.assertEquals("note", status1.getNote(), status2.getNote());
+        
     }
 
 }
