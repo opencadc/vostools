@@ -406,6 +406,10 @@ public class HttpDownload extends HttpTransfer
             throwTE = true;
             throw tex;
         }
+        catch(AccessControlException ex)
+        {
+            failure = ex;
+        }
         catch(Throwable t)
         {
             failure = t;
