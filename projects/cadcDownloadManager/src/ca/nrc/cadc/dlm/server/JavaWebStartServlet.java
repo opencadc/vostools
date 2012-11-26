@@ -125,7 +125,14 @@ public class JavaWebStartServlet extends HttpServlet
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
-                    
+        // encode & in the param list for safe use in XML
+        String params = (String) request.getAttribute("params");
+        if (params != null)
+        {
+            params = params.replaceAll("&", "&amp;");
+            request.setAttribute("params", params);
+        }
+
         // codebase for applet and webstart deployments
         String codebase = ServerUtil.getCodebase(request);
         request.setAttribute("codebase", codebase);

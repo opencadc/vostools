@@ -140,7 +140,7 @@ public class DownloadUtil
             for (String value : me.getValue())
             {
                 if (params.length() > 0)
-                    params.append(URI_SEPARATOR);
+                    params.append(PARAM_SEPARATOR);
                 params.append(me.getKey());
                 params.append("=");
                 params.append(value);
