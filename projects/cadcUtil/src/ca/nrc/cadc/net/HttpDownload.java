@@ -113,6 +113,7 @@ public class HttpDownload extends HttpTransfer
     private static int ZIP = 2;
 
     private boolean headOnly = false;
+    private String logAction = "HTTP GET";
     private boolean decompress = false;
     private boolean overwrite = false;
     
@@ -274,6 +275,8 @@ public class HttpDownload extends HttpTransfer
     public void setHeadOnly(boolean headOnly)
     {
         this.headOnly = headOnly;
+        if (headOnly)
+            this.logAction = "HTTP HEAD";
     }
 
 
@@ -647,7 +650,7 @@ public class HttpDownload extends HttpTransfer
     {
         int code = conn.getResponseCode();
         this.responseCode = code;
-        log.debug("HTTP GET status: " + code + " for " + remoteURL);
+        log.debug(logAction+" status: " + code + " for " + remoteURL);
 
         if (code != HttpURLConnection.HTTP_OK)
         {
@@ -763,7 +766,7 @@ public class HttpDownload extends HttpTransfer
                 rconn.setRequestProperty(pkey, pvalue);
                 rconn.setRequestMethod("GET");
                 int rcode = rconn.getResponseCode();
-                log.debug("HTTP GET status: " + rcode + " for range request to " + remoteURL);
+                log.debug(logAction + " status: " + rcode + " for range request to " + remoteURL);
                 if (pkey != null && code == 416) // server doesn't like range
                 {
                     try 
