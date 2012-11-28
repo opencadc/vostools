@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,69 +65,44 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
+package ca.nrc.cadc.log;
 
-	<property environment="env" />
-	<property file="local.build.properties" />
+import javax.servlet.http.HttpServletRequest;
 
-	<!-- site-specific build properties or overrides of values in opencadc.properties -->
-	<property file="${env.CADC_PREFIX}/etc/local.properties" />
+/**
+ * Class to be used by web services to log at INFO level the start and
+ * end messages for each request from a HttpServlet web service
+ * 
+ * @author majorb
+ *
+ */
+public class ServletLogInfo extends WebServiceLogInfo
+{
+    
+    /**
+     * Servlet request constructor that automatically
+     * determines the path.
+     * @param request
+     */
+    public ServletLogInfo(HttpServletRequest request)
+    {
+        this(request, request.getPathInfo());
+    }
+    
+    /**
+     * Servlet request constructor that takes a path
+     * override parameter.
+     * @param request
+     * @param path
+     */
+    public ServletLogInfo(HttpServletRequest request, String path)
+    {
+        super();
+        this.method = request.getMethod().toUpperCase();
+        this.from = request.getRemoteAddr();
+        this.path = path;
+    }
 
-	<!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-	<import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
-
-	<!-- default properties and targets -->
-	<property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-	<import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml" />
-
-	<!-- developer convenience: place for extra targets and properties -->
-	<import file="extras.xml" optional="true" />
-
-	<property name="project" value="cadcLog" />
-
-	<!-- JAR files to be included in classpath and war file -->
-	<property name="ext.log4j" value="${ext.lib}/log4j.jar" />
-	<property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-	<property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
-	<property name="ext.gson" value="${ext.lib}/gson.jar" />
-
-	<property name="jars" value="${lib}/cadcUtil.jar:${ext.log4j}:${ext.servlet-api}:${ext.restlet}:${ext.gson}" />
-
-	<target name="build" depends="cadcLog" />
-
-	<target name="cadcLog" depends="compile">
-		<jar jarfile="${build}/lib/cadcLog.jar" basedir="${build}/class" update="no">
-			<exclude name="test/**" />
-		</jar>
-	</target>
-
-	<!-- JAR files needed to run the test suite -->
-	<property name="dev.junit" value="${ext.dev}/junit.jar" />
-	<property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-	<property name="dev.cglib" value="${ext.dev}/cglib.jar" />
-	<property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
-	<property name="dev.asm" value="${ext.dev}/asm.jar" />
-	<property name="testingJars" value="${dev.junit}:${dev.easyMock}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
-
-
-  <target name="test" depends="compile-test">
-    <echo message="Running test" />
-
-    <!-- Run the junit test suite -->
-    <echo message="Running test suite..." />
-    <junit printsummary="yes" haltonfailure="yes" fork="yes">
-      <classpath>
-        <pathelement path="${build}/test/class" />
-        <pathelement path="${build}/class" />
-        <pathelement path="${jars}:${testingJars}" />
-      </classpath>
-      <test name="ca.nrc.cadc.log.WebServiceLogInfoTest" />
-      <formatter type="plain" usefile="false" />
-    </junit>
-  </target>
-</project>
-
-
+}

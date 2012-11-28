@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,69 +65,156 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
+package ca.nrc.cadc.log;
 
-	<property environment="env" />
-	<property file="local.build.properties" />
+import java.security.Principal;
+import java.util.Iterator;
+import java.util.Set;
 
-	<!-- site-specific build properties or overrides of values in opencadc.properties -->
-	<property file="${env.CADC_PREFIX}/etc/local.properties" />
+import javax.security.auth.Subject;
 
-	<!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-	<import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.util.StringUtil;
 
-	<!-- default properties and targets -->
-	<property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-	<import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml" />
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
 
-	<!-- developer convenience: place for extra targets and properties -->
-	<import file="extras.xml" optional="true" />
+/**
+ * Class to be used by web services to log at INFO level the start and
+ * end messages for each request.
+ * 
+ * @author majorb
+ *
+ */
+public abstract class WebServiceLogInfo
+{
+    
+    private static final String ANONYMOUS_USER = "anonUser";
+    
+    Gson gson;
+    
+    @Expose
+    protected String method;
+    
+    @Expose
+    protected String path;
+    
+    protected boolean userSuccess = true;
+    
+    @Expose
+    protected Boolean success;
+    
+    @Expose
+    protected String user;
+    
+    @Expose
+    protected String from;
+    
+    @Expose
+    protected Long time;
+    
+    @Expose
+    protected Long bytes;
+    
+    @Expose
+    protected String message;
+    
+    protected WebServiceLogInfo()
+    {
+        gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+    }
+    
+    /**
+     * Generates the log.info message for the start of the request.
+     * @return
+     */
+    public String start()
+    {
+        return "START: " + gson.toJson(this, this.getClass());
+    }
+    
+    /**
+     * Generates the log.info message for the end of the request.
+     * @return
+     */
+    public String end()
+    {
+        this.success = userSuccess;
+        return "END: " + gson.toJson(this, this.getClass());
+    }
 
-	<property name="project" value="cadcLog" />
+    /**
+     * Set the success/fail boolean.
+     * @param success
+     */
+    public void setSuccess(boolean success)
+    {
+        this.userSuccess = success;
+    }
 
-	<!-- JAR files to be included in classpath and war file -->
-	<property name="ext.log4j" value="${ext.lib}/log4j.jar" />
-	<property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-	<property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
-	<property name="ext.gson" value="${ext.lib}/gson.jar" />
+    /**
+     * Set the subject.  This will automatically determine the
+     * userid for logging.
+     * @param subject
+     */
+    public void setSubject(Subject subject)
+    {
+        this.user = getUser(subject);
+    }
 
-	<property name="jars" value="${lib}/cadcUtil.jar:${ext.log4j}:${ext.servlet-api}:${ext.restlet}:${ext.gson}" />
+    /**
+     * Set the elapsed time for the request to complete.
+     * @param elapsedTime
+     */
+    public void setElapsedTime(Long elapsedTime)
+    {
+        this.time = elapsedTime;
+    }
 
-	<target name="build" depends="cadcLog" />
+    /**
+     * Set the number of bytes transferred in the request.
+     * @param bytes
+     */
+    public void setBytes(Long bytes)
+    {
+        this.bytes = bytes;
+    }
+    
+    /**
+     * Set a success or failure message.
+     * @param message
+     */
+    public void setMessage(String message)
+    {
+        if (StringUtil.hasText(message))
+            this.message = message.trim();
+    }
+    
+    private String getUser(Subject subject)
+    {
+        if (subject != null)
+        {
+            final Set<Principal> principals = subject.getPrincipals();
+            if (!principals.isEmpty())
+            {
+                Principal userPrincipal = null;
+                Iterator<Principal> i = principals.iterator();
+                while (i.hasNext())
+                {
+                    Principal nextPrincipal = i.next();
+                    if (!(userPrincipal instanceof HttpPrincipal))
+                    {
+                        userPrincipal = nextPrincipal;
+                    }
+                }
+                return userPrincipal.getName();
+            }
+        }
+        
+        return ANONYMOUS_USER;
+    }
 
-	<target name="cadcLog" depends="compile">
-		<jar jarfile="${build}/lib/cadcLog.jar" basedir="${build}/class" update="no">
-			<exclude name="test/**" />
-		</jar>
-	</target>
-
-	<!-- JAR files needed to run the test suite -->
-	<property name="dev.junit" value="${ext.dev}/junit.jar" />
-	<property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-	<property name="dev.cglib" value="${ext.dev}/cglib.jar" />
-	<property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
-	<property name="dev.asm" value="${ext.dev}/asm.jar" />
-	<property name="testingJars" value="${dev.junit}:${dev.easyMock}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
-
-
-  <target name="test" depends="compile-test">
-    <echo message="Running test" />
-
-    <!-- Run the junit test suite -->
-    <echo message="Running test suite..." />
-    <junit printsummary="yes" haltonfailure="yes" fork="yes">
-      <classpath>
-        <pathelement path="${build}/test/class" />
-        <pathelement path="${build}/class" />
-        <pathelement path="${jars}:${testingJars}" />
-      </classpath>
-      <test name="ca.nrc.cadc.log.WebServiceLogInfoTest" />
-      <formatter type="plain" usefile="false" />
-    </junit>
-  </target>
-</project>
-
-
+}
