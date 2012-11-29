@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 
+import ca.nrc.cadc.log.RestletLogInfo;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.ViewsWriter;
@@ -104,40 +105,34 @@ public class ViewsResource extends BaseResource
     @Get("xml")
     public Representation represent()
     {
-        String success = "yes";
-        String message = "";
-        String bytes = "";
         long start = System.currentTimeMillis();
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
         try
         {
             log.debug("Enter ViewsResource.represent()");
-            log.info("START " + getRequestMethod()
-                    + " Path: " + getPath());
+            String startMessage = logInfo.start();
+            log.info(startMessage);
 
             return new ViewsRepresentation(Views.accepts(), Views.provides(), new ViewsWriter());
         }
         catch (Throwable t)
         {
             log.error(t);
-            success = "no";
-            message = "Unexpected exception: " + t.getClass().getSimpleName();
+            logInfo.setSuccess(false);
+            String message = "Unexpected exception: " + t.getClass().getSimpleName();
             if (StringUtil.hasText(t.getMessage()))
             {
                 message = message + ": " + t.getMessage();
             }
+            logInfo.setMessage(message);
             return null;
         }
         finally
         {
             long end = System.currentTimeMillis();
-            log.info("END " + getRequestMethod()
-                    + " Path: " + getPath()
-                    + " User: " + getUser()
-                    + " From: " + getRemoteAddr()
-                    + " Success: " + success
-                    + " Time: " + (end - start)
-                    + " Bytes: " + bytes
-                    + " Message: " + message);
+            logInfo.setElapsedTime(end - start);
+            String endMessage = logInfo.end();
+            log.info(endMessage);
         }
     }
     

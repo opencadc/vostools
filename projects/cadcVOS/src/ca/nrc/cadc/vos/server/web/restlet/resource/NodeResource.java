@@ -84,6 +84,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
+import ca.nrc.cadc.log.RestletLogInfo;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.NodeFault;
@@ -110,6 +111,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
     private NodeFault nodeFault;
     private VOSURI vosURI;
     private NodeAction action;
+    private RestletLogInfo logInfo;
     
     /**
      * Called after object instantiation.
@@ -184,23 +186,18 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         
         long start = System.currentTimeMillis();
         long end = -1;
-        
-        // logging fields
-        String success = "yes";
-        String time = "";
-        String bytes = "";
-        String message = "";
+        String message = null;
         
         try
         {
-
-            LOGGER.info("START " + getRequestMethod() + " Path: " + getPath());
+            String startMessage = logInfo.start();
+            LOGGER.info(startMessage);
             
             if (nodeFault != null)
             {
                 setStatus(nodeFault.getStatus());
-                success = "no";
-                message = getErrorMessage(nodeFault);
+                logInfo.setSuccess(false);
+                logInfo.setMessage(getErrorMessage(nodeFault));
                 return new NodeErrorRepresentation(nodeFault);
             }
             
@@ -227,8 +224,8 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
             {
                 if (result.getNodeFault() != null)
                 {
-                    success = "no";
                     message = getErrorMessage(result.getNodeFault());
+                    logInfo.setSuccess(false);
                 }
                 
                 setStatus(result.getStatus());
@@ -254,7 +251,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         catch (TransientException t)
         {
             LOGGER.debug(t);
-            success = "no";
+            logInfo.setSuccess(false);
             message = "Transient exception: " + t.getMessage();
             setStatus(NodeFault.ServiceBusy.getStatus());
             
@@ -270,7 +267,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         {
             LOGGER.debug(t);
             setStatus(NodeFault.InternalFault.getStatus());
-            success = "no";
+            logInfo.setSuccess(false);
             message = getErrorMessage(NodeFault.InternalFault);
             if (StringUtil.hasText(t.getMessage()))
             {
@@ -289,26 +286,26 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
         finally
         {
             end = System.currentTimeMillis();
-            time = Long.toString(end - start);
-            
-            LOGGER.info("END " + getRequestMethod()
-                    + " Path: " + getPath()
-                    + " User: " + getUser()
-                    + " From: " + getRemoteAddr()
-                    + " Success: " + success
-                    + " Time: " + time
-                    + " Bytes: " + bytes
-                    + " Message: " + message);
+            logInfo.setElapsedTime(end - start);
+            logInfo.setMessage(message);
+            String endMessage = logInfo.end();
+            LOGGER.info(endMessage);
         }
     }
     
     private Representation runPrivilegedAction(NodeAction action)
     {
         this.action = action;
-        if (getSubject() == null)
+        logInfo = new RestletLogInfo(getRequest());
+        Subject subject = getSubject();
+        
+        if (subject == null)
             return run();
         else
+        {
+            logInfo.setSubject(subject);
             return Subject.doAs(getSubject(), this);
+        }
     }
     
     @Get("xml")

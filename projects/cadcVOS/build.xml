@@ -93,6 +93,7 @@
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
     <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
     <property name="cadcCDP" value="${lib}/cadcCDP.jar" />
+    <property name="cadcLog" value="${lib}/cadcLog.jar" />
 
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
@@ -103,7 +104,7 @@
     <property name="resources.dir" value="test/resources/" />    
     
 
-    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}" />
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
 
     <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
     <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
