@@ -125,10 +125,11 @@
     <property name="easyMock"           value="${ext.dev}/easymock.jar" />
     <property name="junit"              value="${ext.dev}/junit.jar" />
     <property name="xerces"             value="${ext.lib}/xerces.jar" />
+    <property name="gson"               value="${ext.lib}/gson.jar" />
 
-    <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easyMock}:${ext.dev}/objenesis.jar:${junit}:${xerces}" />
+    <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easyMock}:${ext.dev}/objenesis.jar:${junit}:${xerces}:${gson}" />
     
-    <target name="test" depends="build,xml-test,dao-test">
+    <target name="test" depends="build,log-test,xml-test,dao-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
@@ -139,12 +140,27 @@
 
             <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
             <test name="ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractorTest" />
-            <test name="ca.nrc.cadc.uws.util.JobLogInfoTest" />
             <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
 
             <formatter type="plain" usefile="false" />
         </junit>
 
+    </target>
+    
+    <target name="log-test" depends="compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${build}/test/src"/>
+                <pathelement path="${jars}:${testingJars}"/>
+            </classpath>
+
+            <test name="ca.nrc.cadc.uws.util.JobLogInfoTest" />
+            <test name="ca.nrc.cadc.uws.util.RestletLogInfoTest" />
+
+            <formatter type="plain" usefile="false" />
+        </junit>
     </target>
 
     <target name="xml-test" depends="compile-test">
