@@ -191,6 +191,7 @@
             <test name="ca.nrc.cadc.io.ByteCountInputStreamTest"/>
             <test name="ca.nrc.cadc.io.ByteCountOutputStreamTest"/>
             <test name="ca.nrc.cadc.io.ByteCountReaderTest"/>
+            <test name="ca.nrc.cadc.io.ByteCountWriterTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
