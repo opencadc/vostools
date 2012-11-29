@@ -73,8 +73,8 @@ import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 
-import ca.nrc.cadc.log.RestletLogInfo;
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.ViewsWriter;
 import ca.nrc.cadc.vos.server.web.representation.ViewsRepresentation;
