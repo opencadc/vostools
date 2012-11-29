@@ -124,7 +124,9 @@ public abstract class WebServiceLogInfo
     
     protected WebServiceLogInfo()
     {
-        gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        GsonBuilder builder = new GsonBuilder().excludeFieldsWithoutExposeAnnotation();
+        builder.disableHtmlEscaping();
+        gson = builder.create();
     }
     
     /**
