@@ -90,6 +90,7 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.log.WebServiceLogInfo;
 import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
@@ -105,6 +106,7 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.SyncOutput;
+import ca.nrc.cadc.uws.util.JobLogInfo;
 
 /**
  * Implementation of the JobRunner interface from the cadcUWS framework. This is the
@@ -163,6 +165,7 @@ public class QueryRunner implements JobRunner
     private Job job;
     private JobUpdater jobUpdater;
     private SyncOutput syncOutput;
+    private WebServiceLogInfo logInfo;
 
     public QueryRunner()
     {
@@ -187,7 +190,18 @@ public class QueryRunner implements JobRunner
 
     public void run()
     {
-        log.debug("START");
+        logInfo = new JobLogInfo(job);
+        log.info(logInfo.start());
+        long start = System.currentTimeMillis();
+        
+        doIt();
+        
+        logInfo.setElapsedTime(System.currentTimeMillis() - start);
+        log.info(logInfo.end());
+    }
+    
+    private void doIt()
+    {
         List<Long> tList = new ArrayList<Long>();
         List<String> sList = new ArrayList<String>();
 
@@ -225,6 +239,8 @@ public class QueryRunner implements JobRunner
             {
                 ep = jobUpdater.getPhase(job.getID());
                 log.debug(job.getID() + ": QUEUED -> EXECUTING [FAILED] -- DONE");
+                logInfo.setSuccess(false);
+                logInfo.setMessage("Could not set job phase to completed.");                
                 return;
             }
             log.debug(job.getID() + ": QUEUED -> EXECUTING [OK]");
@@ -366,7 +382,7 @@ public class QueryRunner implements JobRunner
                     pstmt.setFetchSize(1000);
                     pstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
                     
-                    log.info("executing query: " + sql);
+                    log.debug("executing query: " + sql);
                     resultSet = pstmt.executeQuery();
                 }
 
@@ -457,9 +473,12 @@ public class QueryRunner implements JobRunner
                     throw e;
                 }
             }
+            
+            logInfo.setMessage("ExecutionPhase = " + ExecutionPhase.COMPLETED);
         }
         catch (Throwable t)
         {
+        	logInfo.setMessage(t.getMessage());
             String errorMessage = null;
             URL errorURL = null;
             try
@@ -517,10 +536,8 @@ public class QueryRunner implements JobRunner
             for (int i = 1; i < tList.size(); i++)
             {
                 long dt = tList.get(i) - tList.get(i - 1);
-                log.info(job.getID() + " -- " + sList.get(i) + dt + "ms");
+                log.debug(job.getID() + " -- " + sList.get(i) + dt + "ms");
             }
-
-            log.debug("DONE");
         }
     }
     
