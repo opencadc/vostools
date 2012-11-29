@@ -93,10 +93,9 @@
 	<!-- JAR files to be included in classpath and war file -->
 	<property name="ext.log4j" value="${ext.lib}/log4j.jar" />
 	<property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-	<property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
 	<property name="ext.gson" value="${ext.lib}/gson.jar" />
 
-	<property name="jars" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${ext.log4j}:${ext.servlet-api}:${ext.restlet}:${ext.gson}" />
+	<property name="jars" value="${lib}/cadcUtil.jar:${ext.log4j}:${ext.servlet-api}:${ext.gson}" />
 
 	<target name="build" depends="cadcLog" />
 

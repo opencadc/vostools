@@ -5,6 +5,5 @@ Name in build.xml    Versioned Name          Project URL
 -----------------    --------------          -----------
 log4j.jar            log4j-1.2.15            http://logging.apache.org
 servlet-api.jar      apache-tomcat-5.5.20    http://tomcat.apache.org
-org.restlet.jar      restlet-jee-2.0.2       http://www.restlet.org
+gson.jar             gson-2.2.1              http://code.google.com/p/google-gson/
 cadcUtil.jar                                 http://code.google.com/p/opencadc
-cadcUWS.jar                                  http://code.google.com/p/opencadc    

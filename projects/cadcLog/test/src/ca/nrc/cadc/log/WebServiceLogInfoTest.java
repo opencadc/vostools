@@ -35,13 +35,8 @@ import junit.framework.Assert;
 
 import org.easymock.EasyMock;
 import org.junit.Test;
-import org.restlet.Request;
-import org.restlet.data.ClientInfo;
-import org.restlet.data.Method;
-import org.restlet.data.Reference;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.uws.Job;
 
 public class WebServiceLogInfoTest
 {
@@ -86,79 +81,6 @@ public class WebServiceLogInfoTest
         String end = logInfo.end();
         Assert.assertEquals("Wrong end", "END: {\"method\":\"GET\",\"path\":\"/path/of/request\",\"success\":false,\"user\":\"the user\",\"from\":\"192.168.0.0\",\"time\":1234,\"bytes\":10,\"message\":\"the message\"}", end);
         EasyMock.verify(request);
-    }
-    
-    @Test
-    public void testMinimalContentRestlet()
-    {
-        Request request = EasyMock.createMock(Request.class);
-        EasyMock.expect(request.getMethod()).andReturn(Method.GET).once();
-        Reference reference = EasyMock.createMock(Reference.class);
-        EasyMock.expect(request.getResourceRef()).andReturn(reference).once();
-        EasyMock.expect(reference.getPath()).andReturn("/path/of/request").once();
-        ClientInfo clientInfo = new ClientInfo();
-        clientInfo.setAddress("192.168.0.0");
-        EasyMock.expect(request.getClientInfo()).andReturn(clientInfo).once();
-        
-        EasyMock.replay(request, reference);
-        
-        WebServiceLogInfo logInfo = new RestletLogInfo(request);
-        String start = logInfo.start();
-        String end = logInfo.end();
-        Assert.assertEquals("Wrong start", "START: {\"method\":\"GET\",\"path\":\"/path/of/request\",\"from\":\"192.168.0.0\"}", start);
-        Assert.assertEquals("Wrong end", "END: {\"method\":\"GET\",\"path\":\"/path/of/request\",\"success\":true,\"from\":\"192.168.0.0\"}", end);
-        
-        EasyMock.verify(request, reference);
-    }
-    
-    @Test
-    public void testMaximalContentRestlet()
-    {
-        Request request = EasyMock.createMock(Request.class);
-        EasyMock.expect(request.getMethod()).andReturn(Method.GET).once();
-        Reference reference = EasyMock.createMock(Reference.class);
-        EasyMock.expect(request.getResourceRef()).andReturn(reference).once();
-        EasyMock.expect(reference.getPath()).andReturn("/path/of/request").once();
-        ClientInfo clientInfo = new ClientInfo();
-        clientInfo.setAddress("192.168.0.0");
-        EasyMock.expect(request.getClientInfo()).andReturn(clientInfo).once();
-        
-        EasyMock.replay(request, reference);
-        
-        WebServiceLogInfo logInfo = new RestletLogInfo(request);
-        String start = logInfo.start();
-        Assert.assertEquals("Wrong start", "START: {\"method\":\"GET\",\"path\":\"/path/of/request\",\"from\":\"192.168.0.0\"}", start);
-        logInfo.setSuccess(false);
-        logInfo.setSubject(createSubject("the user"));
-        logInfo.setElapsedTime(1234L);
-        logInfo.setBytes(10L);
-        logInfo.setMessage("the message");
-        String end = logInfo.end();
-        Assert.assertEquals("Wrong end", "END: {\"method\":\"GET\",\"path\":\"/path/of/request\",\"success\":false,\"user\":\"the user\",\"from\":\"192.168.0.0\",\"time\":1234,\"bytes\":10,\"message\":\"the message\"}", end);
-        
-        EasyMock.verify(request, reference);
-    }
-    
-    @Test
-    public void testJobLogInfo()
-    {
-        Job job = EasyMock.createMock(Job.class);
-        EasyMock.expect(job.getRemoteIP()).andReturn("192.168.0.0").once();
-        EasyMock.expect(job.getRequestPath()).andReturn("/path/of/request").once();
-        EasyMock.expect(job.getID()).andReturn("jobid").once();
-        job.ownerSubject = null;
-        
-        EasyMock.replay(job);
-        
-        WebServiceLogInfo logInfo = new JobLogInfo(job);
-        String start = logInfo.start();
-        Assert.assertEquals("Wrong start", "START: {\"method\":\"UWS\",\"path\":\"/path/of/request\",\"user\":\"anonUser\",\"from\":\"192.168.0.0\",\"jobID\":\"jobid\"}", start);
-        logInfo.setElapsedTime(1234L);
-        logInfo.setMessage("the message");
-        String end = logInfo.end();
-        Assert.assertEquals("Wrong end", "END: {\"method\":\"UWS\",\"path\":\"/path/of/request\",\"success\":true,\"user\":\"anonUser\",\"from\":\"192.168.0.0\",\"time\":1234,\"message\":\"the message\",\"jobID\":\"jobid\"}", end);
-        
-        EasyMock.verify(job);
     }
     
     private Subject createSubject(String userid)
