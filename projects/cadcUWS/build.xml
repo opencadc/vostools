@@ -87,6 +87,7 @@
     <property name="project"            value="cadcUWS" />
 
     <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
+    <property name="cadcLog"            value="${lib}/cadcLog.jar" />
 
     <property name="fileupload"         value="${ext.lib}/commons-fileupload.jar" />
     <property name="jdom"               value="${ext.lib}/jdom.jar" />
@@ -95,7 +96,7 @@
     <property name="restlet-fileupload" value="${ext.lib}/org.restlet.ext.fileupload.jar" />
     <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
     <property name="spring"             value="${ext.lib}/spring.jar" />
-    <property name="cadc"               value="${cadcUtil}" />
+    <property name="cadc"               value="${cadcUtil}:${cadcLog}" />
     <property name="external"           value="${fileupload}:${jdom}:${log4j}:${restlet}:${restlet-fileupload}:${servlet-api}:${spring}" />
 
     <property name="jars"               value="${cadc}:${external}" />
@@ -138,6 +139,7 @@
 
             <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
             <test name="ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractorTest" />
+            <test name="ca.nrc.cadc.uws.util.JobLogInfoTest" />
             <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
 
             <formatter type="plain" usefile="false" />
