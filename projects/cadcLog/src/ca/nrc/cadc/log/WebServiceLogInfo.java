@@ -122,6 +122,9 @@ public abstract class WebServiceLogInfo
     @Expose
     protected String message;
     
+    @Expose
+    protected String jobID;
+    
     protected WebServiceLogInfo()
     {
         GsonBuilder builder = new GsonBuilder().excludeFieldsWithoutExposeAnnotation();
@@ -195,7 +198,13 @@ public abstract class WebServiceLogInfo
             this.message = message.trim();
     }
     
-    private String getUser(Subject subject)
+    protected void setJobID(String jobID)
+    {
+        if (StringUtil.hasText(jobID))
+            this.jobID = jobID.trim();
+    }
+    
+    protected String getUser(Subject subject)
     {
         if (subject != null)
         {
