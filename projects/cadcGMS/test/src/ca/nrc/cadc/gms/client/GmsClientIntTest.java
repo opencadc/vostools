@@ -110,7 +110,7 @@ public class GmsClientIntTest
     
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.gms.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.gms.client", Level.INFO);
     }
     
     private URL localURL;

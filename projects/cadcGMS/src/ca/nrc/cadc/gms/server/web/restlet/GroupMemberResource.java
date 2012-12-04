@@ -90,6 +90,7 @@ import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.server.GroupService;
 import ca.nrc.cadc.gms.server.UserService;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 public class GroupMemberResource extends GroupResource
 {
@@ -130,7 +131,7 @@ public class GroupMemberResource extends GroupResource
      *             If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource()
+    protected boolean obtainResource(RestletLogInfo logInfo)
     {
         LOGGER.debug("Enter GroupMemberResource.obtainResource()");
         String groupID = null;
@@ -150,7 +151,7 @@ public class GroupMemberResource extends GroupResource
             {
                 final String message = String.format(
                         "User [%s] is not a member of Group [%s].", userDN, groupID);
-                processError(null, Status.CLIENT_ERROR_NOT_FOUND, message);
+                processError(null, Status.CLIENT_ERROR_NOT_FOUND, message, logInfo);
                 return false;
             }
             else
@@ -162,20 +163,20 @@ public class GroupMemberResource extends GroupResource
                     "You are not authorized to check membership info of user ID "
                             + "'%s' with Group ID '%s'.", userDN,
                     groupID);
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
         catch (UnsupportedEncodingException e)
         {
             final String message = String.format(
                     "Could not URL decode groupMemberID (%s) or "
                             + "groupID (%s).", userDN, groupID);
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (URISyntaxException e)
         {
             final String message = String.format(
                     "Could not URI decode groupID (%s).", groupID);
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         return false;
     }
@@ -186,6 +187,9 @@ public class GroupMemberResource extends GroupResource
     @Post
     public void acceptPost(Representation entity)
     {
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        LOGGER.info(logInfo.start());
+        long start = System.currentTimeMillis();
         LOGGER.debug("Delete member " + getMemberID() + " from group "
                 + getGroupID());
         try
@@ -203,7 +207,7 @@ public class GroupMemberResource extends GroupResource
         {
             final String message = String.format(
                     "Cannot add User with ID %s", getMemberID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (AuthorizationException e)
         {
@@ -211,19 +215,19 @@ public class GroupMemberResource extends GroupResource
                     "You are not authorized to add Member ID "
                             + "'%s' in Group ID '%s'.", getMemberID(),
                     getGroupID());
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
             final String message = "Invalid group: " + e.getMessage();
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (URISyntaxException e)
         {
             final String message = String.format(
                     "Could not URI decode groupID (%s).", getGroupID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (UnsupportedEncodingException e)
         {
@@ -231,7 +235,13 @@ public class GroupMemberResource extends GroupResource
                     "Could not URL decode groupMemberID (%s) or "
                             + "groupID (%s).", getMemberID(),
                     getGroupID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            LOGGER.info(logInfo.end());
         }
     }
 
@@ -241,6 +251,9 @@ public class GroupMemberResource extends GroupResource
     @Delete
     public void acceptDelete(Representation entity)
     {
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        LOGGER.info(logInfo.start());
+        long start = System.currentTimeMillis();
         LOGGER.debug("Delete member " + getMemberID() + " to group "
                 + getGroupID());
         try
@@ -257,7 +270,7 @@ public class GroupMemberResource extends GroupResource
         {
             final String message = String.format(
                     "Cannot add User with ID %s", getMemberID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (AuthorizationException e)
         {
@@ -265,19 +278,19 @@ public class GroupMemberResource extends GroupResource
                     "You are not authorized to delete Member ID "
                             + "'%s' from Group ID '%s'.", getMemberID(),
                     getGroupID());
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
             final String message = "Invalid group: " + e.getMessage();
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (URISyntaxException e)
         {
             final String message = String.format(
                     "Could not URI decode groupID (%s).", getGroupID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (UnsupportedEncodingException e)
         {
@@ -285,7 +298,13 @@ public class GroupMemberResource extends GroupResource
                     "Could not URL decode groupMemberID (%s) or "
                             + "groupID (%s).", getMemberID(),
                     getGroupID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            LOGGER.info(logInfo.end());
         }
     }
 

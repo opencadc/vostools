@@ -78,8 +78,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import javax.security.auth.Subject;
-
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -98,10 +96,10 @@ import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.WebRepresentationException;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 /**
  * Base resource.
@@ -187,11 +185,14 @@ public abstract class AbstractResource extends ServerResource
     @Get("xml")
     public Representation represent()
     {
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        LOGGER.info(logInfo.start());
+        long start = System.currentTimeMillis();
         try
         {
             // get the resource and return nothing if this fails or
             // if this is an HTTP HEAD request
-            if (!obtainResource() || getMethod().equals(Method.HEAD))
+            if (!obtainResource(logInfo) || getMethod().equals(Method.HEAD))
             {
                 return null;
             }
@@ -203,41 +204,57 @@ public abstract class AbstractResource extends ServerResource
         catch (final IOException e)
         {
             setExisting(false);
-            LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
+            String message = "Unable to create XML Document.";
+            logInfo.setSuccess(false);
+            logInfo.setMessage(message);
+            LOGGER.error(message);
+            throw new WebRepresentationException(message, e);
         }
         catch (final URISyntaxException e)
         {
             setExisting(false);
-            LOGGER.error("Unable to create the group URI.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
+            String message = "Unable to create the group URI.";
+            logInfo.setSuccess(false);
+            logInfo.setMessage(message);
+            LOGGER.error(message);
+            throw new WebRepresentationException(message, e);
         }
         catch (InvalidGroupException e)
         {
             setExisting(false);
-            LOGGER.error("Unable to get groups");
-            throw new WebRepresentationException(
-                    "Unable to get groups.", e);
+            String message = "Unable to get groups";
+            logInfo.setSuccess(false);
+            logInfo.setMessage(message);
+            LOGGER.error(message);
+            throw new WebRepresentationException(message, e);
         }
         catch (AuthorizationException e)
         {
             setExisting(false);
-            LOGGER.error("Not authorized operation.");
-            throw new WebRepresentationException("Not authorized operation.", e);
+            String message = "Not authorized operation.";
+            logInfo.setSuccess(false);
+            logInfo.setMessage(message);
+            LOGGER.error(message);
+            throw new WebRepresentationException(message, e);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            LOGGER.info(logInfo.end());
         }
     }
     
     /**
      * Get a reference to the resource identified by the user.
      * @return TODO
-     * 
+     *
+     * @param logInfo 
      * @throws FileNotFoundException If the resource doesn't exist.
      * @throws InvalidGroupException 
      * @throws AuthorizationException 
      */
-    protected abstract boolean obtainResource()
+    protected abstract boolean obtainResource(RestletLogInfo logInfo)
                 throws FileNotFoundException, URISyntaxException, InvalidGroupException, AuthorizationException;
 
     /**
@@ -353,8 +370,11 @@ public abstract class AbstractResource extends ServerResource
      * @param message       The message to return.
      */
     protected void processError(final Throwable throwable,
-                                final Status status, final String message)
+                                final Status status, final String message,
+                                RestletLogInfo logInfo)
     {
+        logInfo.setSuccess(false);
+        logInfo.setMessage(message);
         LOGGER.debug(message, throwable);
         if (getMethod().equals(Method.HEAD))
         {

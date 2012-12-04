@@ -87,14 +87,16 @@
 
     <property name="project"        value="cadcGMS" />
 
+    <property name="cadcLog"        value="${lib}/cadcLog.jar" />
     <property name="cadcUtil"       value="${lib}/cadcUtil.jar" />
+    <property name="cadcUWS"        value="${lib}/cadcUWS.jar" />
     <property name="cadcRegistry"   value="${lib}/cadcRegistryClient.jar" />
     <property name="jdom"           value="${ext.lib}/jdom.jar" />
     <property name="xerces"         value="${ext.lib}/xerces.jar" />
     <property name="log4j"          value="${ext.lib}/log4j.jar" />
     <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
 
-    <property name="jars" value="${cadcUtil}:${cadcRegistry}:${jdom}:${log4j}:${restlet}" />
+    <property name="jars" value="${cadcLog}:${cadcUtil}:${cadcUWS}:${cadcRegistry}:${jdom}:${log4j}:${restlet}" />
     <property name="client.jars" value="${cadcUtil} ${cadcRegistry} ${jdom} ${log4j} ${xerces} jdom.jar log4j.jar xerces.jar" />
 
     <target name="build" depends="client,server" />

@@ -70,7 +70,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -82,6 +81,7 @@ import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.gms.*;
 import ca.nrc.cadc.gms.server.GroupService;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 
 public class GroupResource extends AbstractResource
@@ -116,7 +116,7 @@ public class GroupResource extends AbstractResource
      * Get a reference to the resource identified by the user.
      */
     @Override
-    protected boolean obtainResource()
+    protected boolean obtainResource(RestletLogInfo logInfo)
     {
         LOGGER.debug("Enter GroupResource.obtainResource()");
         String groupMemberID = null;
@@ -124,7 +124,6 @@ public class GroupResource extends AbstractResource
 
         try
         {
-//            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s", groupID));
 
@@ -136,7 +135,7 @@ public class GroupResource extends AbstractResource
         {
             final String message = String.format(
                     "No such Group with ID %s", groupID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message, logInfo);
         }
         catch (AuthorizationException e)
         {
@@ -144,19 +143,12 @@ public class GroupResource extends AbstractResource
                     "You are not authorized to view Member ID "
                             + "'%s' of Group ID '%s'.", groupMemberID,
                     groupID);
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
-//        catch (UnsupportedEncodingException e)
-//        {
-//            final String message = String.format(
-//                    "Could not URL decode groupMemberID (%s) or "
-//                            + "groupID (%s).", groupMemberID, groupID);
-//            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-//        }
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         return false;
     }
@@ -184,9 +176,11 @@ public class GroupResource extends AbstractResource
     @Post
     public void acceptPost(final Representation entity)
     {
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        LOGGER.info(logInfo.start());
+        long start = System.currentTimeMillis();
         try
         {
-//            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             String groupID = getGroupID();
             LOGGER.debug("Create a new group with ID." + groupID);
 
@@ -200,34 +194,40 @@ public class GroupResource extends AbstractResource
         catch (AuthorizationException e)
         {
             final String message = "You are not authorized to create new groups.";
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
             final String message = "Creation of new groups not supported";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (UnsupportedEncodingException e)
         {
             final String message = String.format(
                     "Could not URL decode groupID (%s).", getGroupID());
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (ReaderException e)
         {
             final String message = "Unable to read POSTed Group.";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (IOException e)
         {
             final String message = "BUG *** Bad error with I/O";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            LOGGER.info(logInfo.end());
         }
     }
 
@@ -250,10 +250,11 @@ public class GroupResource extends AbstractResource
     @Delete
     public void acceptDelete()
     {
-        LOGGER.debug("Delete group.");
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        LOGGER.info(logInfo.start());
+        long start = System.currentTimeMillis();
         try
         {
-//            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             final String groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s", groupID));
 
@@ -264,23 +265,24 @@ public class GroupResource extends AbstractResource
         catch (AuthorizationException e)
         {
             final String message = "You are not authorized to delete groups.";
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message, logInfo);
         }
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
             final String message = "Deletion of new groups not supported";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
-//        catch (UnsupportedEncodingException e)
-//        {
-//            final String message = "Client encoding not supported in delete";
-//            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-//        }
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            LOGGER.info(logInfo.end());
         }
     }
 

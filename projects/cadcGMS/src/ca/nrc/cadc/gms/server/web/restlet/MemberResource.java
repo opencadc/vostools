@@ -81,6 +81,7 @@ import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.server.UserService;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 public class MemberResource extends AbstractResource
 {
@@ -111,7 +112,7 @@ public class MemberResource extends AbstractResource
      * Get a reference to the resource identified by the user.
      */
     @Override
-    protected boolean obtainResource()
+    protected boolean obtainResource(RestletLogInfo logInfo)
     {
         LOGGER.debug("Enter MemberResource.obtainResource()");
         String memberUserID = null;
@@ -129,19 +130,19 @@ public class MemberResource extends AbstractResource
             final String message = String.format(
                     "Could not URL decode groupMemberID (%s)",
                     memberUserID);
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message, logInfo);
         }
         catch (InvalidMemberException e)
         {
             final String message = String.format(
                     "Could not find resource (%s)", memberUserID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message, logInfo);
         }
         catch (AuthorizationException e)
         {
             final String message = String.format(
                     "Could not find resource (%s)", memberUserID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message, logInfo);
         }
         return false;
     }

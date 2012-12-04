@@ -72,6 +72,7 @@ import java.io.IOException;
 import org.jdom.Document;
 
 import ca.nrc.cadc.gms.server.UserService;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 
 public class UserResource extends AbstractResource
@@ -102,11 +103,13 @@ public class UserResource extends AbstractResource
      * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException
+    protected boolean obtainResource(RestletLogInfo logInfo) throws FileNotFoundException
     {
-        processNotImplemented(String.format("The Service to see User with ID "
-                                            + "'%s' is not yet implemented.",
-                                            getUserID()));
+        String message = "The Service to see User with ID " + getUserID() +
+                         " is not yet implemented.";
+        logInfo.setSuccess(false);
+        logInfo.setMessage(message);
+        processNotImplemented(message);
         return false;
     }
 

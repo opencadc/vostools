@@ -89,6 +89,7 @@ import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.server.GroupService;
+import ca.nrc.cadc.uws.util.RestletLogInfo;
 
 
 public class GroupListResource extends AbstractResource
@@ -128,9 +129,8 @@ public class GroupListResource extends AbstractResource
      * @throws AuthorizationException 
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException,
-                                              InvalidGroupException,
-                                              AuthorizationException
+    protected boolean obtainResource(RestletLogInfo logInfo)
+        throws FileNotFoundException,InvalidGroupException, AuthorizationException
     {
         // Get the criteria from http query
         Form queryForm = getForm();
@@ -152,6 +152,9 @@ public class GroupListResource extends AbstractResource
     @Put
     public void store(final Representation payload)
     {
+        RestletLogInfo logInfo = new RestletLogInfo(getRequest());
+        logger.info(logInfo.start());
+        long start = System.currentTimeMillis();
         try
         {
             final Group group = GroupReader.read(payload.getStream());
@@ -163,27 +166,36 @@ public class GroupListResource extends AbstractResource
         catch (ReaderException e)
         {
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
-                         "Unable to build Group from input.");
+                         "Unable to build Group from input.", logInfo);
         }
         catch (AuthorizationException e)
         {
             processError(e, Status.CLIENT_ERROR_FORBIDDEN,
-                         "Not Authorized to Create Groups.");
+                         "Not Authorized to Create Groups.", logInfo);
         }
         catch (IOException e)
         {
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
-                         "Unable to build Group from input: " + e.getMessage());
+                         "Unable to build Group from input: " + e.getMessage(),
+                         logInfo);
         }
         catch (InvalidGroupException e)
         {
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST,
-                         "Unable to build Group from input: " + e.getMessage());            
+                         "Unable to build Group from input: " + e.getMessage(),
+                         logInfo);
         }
         catch (URISyntaxException e)
         {
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
-                         "Unable to build Group from input: " + e.getMessage());
+                         "Unable to build Group from input: " + e.getMessage(),
+                         logInfo);
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            logInfo.setElapsedTime(end - start);
+            logger.info(logInfo.end());
         }
     }
 
