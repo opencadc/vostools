@@ -40,7 +40,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import org.apache.log4j.Logger;
+import javax.security.auth.Subject;
 
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
@@ -58,9 +58,10 @@ public class UploadManagerImpl implements UploadManager
 //            Logger.getLogger(UploadManagerImpl.class);
     private static final int MAX_COMMAND_COUNT = 500;
 
-    private final File sourceDirectory;
+    private File sourceDirectory;
     private final VOSURI targetVOSpaceURI;
     private final VOSpaceClient voSpaceClient;
+    private Subject subject;
 
     private boolean stopIssued;
 
@@ -80,16 +81,16 @@ public class UploadManagerImpl implements UploadManager
      * @param vospaceClient         The VOSpace client instance to use.
      * @param commandQueueListener  The main listener.
      */
-    public UploadManagerImpl(final File sourceDirectory,
-                             final VOSURI targetVOSpaceURI,
+    public UploadManagerImpl(final VOSURI targetVOSpaceURI,
                              final VOSpaceClient vospaceClient,
-                             final CommandQueueListener commandQueueListener)
+                             final CommandQueueListener commandQueueListener,
+                             Subject subject)
     {
-        this.sourceDirectory = sourceDirectory;
         this.targetVOSpaceURI = targetVOSpaceURI;
         this.voSpaceClient = vospaceClient;
         this.commandQueue = new CommandQueue(MAX_COMMAND_COUNT,
                                              commandQueueListener);
+        this.subject = subject;
     }
 
 
@@ -97,8 +98,9 @@ public class UploadManagerImpl implements UploadManager
      * Begin the UploadManager's Producer and Consumer threads.
      */
     @Override
-    public void start()
+    public void start(File sourceDirectory)
     {
+        this.sourceDirectory = sourceDirectory;
 //        LOGGER.info("Starting process.");
         initializeCommandController();
     }
@@ -121,7 +123,7 @@ public class UploadManagerImpl implements UploadManager
                                       getTargetVOSpaceURI(),
                                       getCommandQueue()));
         getConsumerExecutorService().execute(
-                new CommandExecutor(getVOSpaceClient(), getCommandQueue()));
+                new CommandExecutor(getVOSpaceClient(), getCommandQueue(), subject));
 
         // Shutdown the producer thread when it's finished.  The consumer can
         // block on the queue until the upload manager is closed.

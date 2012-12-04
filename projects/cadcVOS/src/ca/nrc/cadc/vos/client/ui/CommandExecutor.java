@@ -69,6 +69,11 @@
 
 package ca.nrc.cadc.vos.client.ui;
 
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+
+import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.client.VOSpaceClient;
@@ -86,11 +91,13 @@ public class CommandExecutor implements Runnable
     
     private VOSpaceClient vospaceClient;
     private CommandQueue queue;
+    private Subject subject;
     
-    public CommandExecutor(VOSpaceClient vospaceClient, CommandQueue queue)
+    public CommandExecutor(VOSpaceClient vospaceClient, CommandQueue queue, Subject subject)
     {
         this.vospaceClient = vospaceClient;
         this.queue = queue;
+        this.subject = subject;
     }
     
     /**
@@ -98,7 +105,6 @@ public class CommandExecutor implements Runnable
      */
     public void run()
     {
-        VOSpaceCommand nextCommand;
         Throwable throwable;
         try
         {
@@ -106,14 +112,24 @@ public class CommandExecutor implements Runnable
             {
                 throwable = null;
                 // take() will block if queue is empty
-                nextCommand = queue.take();
-                log.debug("Executing command: " + nextCommand);
+                final VOSpaceCommand nextCommand = queue.take();
+                log.info("Executing command: " + nextCommand);
                 try
                 {
-                    nextCommand.execute(vospaceClient);
+                    PrivilegedExceptionAction<Object> action = new PrivilegedExceptionAction<Object>()
+                    {
+                        public Object run() throws Exception
+                        {
+                            nextCommand.execute(vospaceClient);
+                            return null;
+                        }
+                    };
+                    Subject.doAs(subject, action);
                 }
                 catch (Throwable t)
                 {
+                    if (t instanceof PrivilegedActionException)
+                        t = ((PrivilegedActionException)t).getCause();
                     log.info("Error executing command: " + nextCommand
                              + ": " + t);
                     throwable = t;

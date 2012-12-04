@@ -33,7 +33,8 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -74,7 +75,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
     private final JLabel scannerProgressLabel;
     private final JButton abortButton;
     private final WrappingLabel messageLabel;
-    private final JLabel errorLabel;
+    private final WrappingLabel errorLabel;
 
     private int errorCount;
 
@@ -99,13 +100,12 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
      * Creates a new <code>JPanel</code> with a double buffer
      * and a flow layout.
      */
-    public JUploadManager(final File sourceDirectory,
-                          final VOSURI targetVOSpaceURI,
-                          final VOSpaceClient vospaceClient)
+    public JUploadManager(final VOSURI targetVOSpaceURI,
+                          final VOSpaceClient vospaceClient,
+                          Subject subject)
     {
-        this.uploadManager = new UploadManagerImpl(sourceDirectory,
-                                                   targetVOSpaceURI,
-                                                   vospaceClient, this);
+        this.uploadManager = new UploadManagerImpl(targetVOSpaceURI,
+                                                   vospaceClient, this, subject);
 
         registerCommandQueueListener(this);
 
@@ -131,9 +131,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         getMessageLabel().setForeground(new Color(0, 165, 0));
         getMessageLabel().setBackground(getBackground());
 
-        errorLabel = new JLabel();
+        errorLabel = new WrappingLabel(80);
         getErrorLabel().setForeground(Color.RED);
-        getErrorLabel().setHorizontalAlignment(SwingConstants.LEFT);
+        getErrorLabel().setBackground(getBackground());
 
         getUploadProgressBar().setMinimum(0);
         getScannerProgressBar().setMinimum(0);
@@ -167,6 +167,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                                      new Dimension(10, 10)));
 
         statusBox.add(getMessageLabel());
+        statusBox.add(new Box.Filler(new Dimension(10, 10),
+                new Dimension(10, 10),
+                new Dimension(10, 10)));
         statusBox.add(getErrorLabel());
 
         add(statusBox);
@@ -259,7 +262,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                 final Subject currentSubject = Subject.getSubject(
                         AccessController.getContext());
 
-                SwingUtilities.invokeAndWait(new Runnable()
+                SwingUtilities.invokeLater(new Runnable()
                 {
                     @Override
                     public void run()
@@ -299,10 +302,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         }
     }
 
-    public void start()
+    public void start(File sourceDirectory)
     {
-//        executeInEDT(new StartUploadManagerAction());
-        new StartUploadManagerAction().run();
+        getUploadManager().start(sourceDirectory);
     }
 
     /**
@@ -354,7 +356,7 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
         return messageLabel;
     }
 
-    public JLabel getErrorLabel()
+    public WrappingLabel getErrorLabel()
     {
         return errorLabel;
     }
@@ -392,26 +394,6 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                 LOGGER.info(message);
             }
         });
-    }
-
-    private class StartUploadManagerAction implements Runnable
-    {
-        /**
-         * When an object implementing interface <code>Runnable</code> is used
-         * to create a thread, starting the thread causes the object's
-         * <code>run</code> method to be called in that separately executing
-         * thread.
-         * <p/>
-         * The general contract of the method <code>run</code> is that it may
-         * take any action whatsoever.
-         *
-         * @see Thread#run()
-         */
-        @Override
-        public void run()
-        {
-            getUploadManager().start();
-        }
     }
 
     private class StopUploadManagerAction implements Runnable

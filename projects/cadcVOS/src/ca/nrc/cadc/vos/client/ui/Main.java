@@ -33,6 +33,14 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
+import java.net.URI;
+import java.net.URL;
+import java.security.PrivilegedAction;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Level;
+
 import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -41,12 +49,6 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.client.VOSpaceClient;
 import ca.onfire.ak.ApplicationFrame;
-import org.apache.log4j.Level;
-
-import javax.security.auth.Subject;
-import java.net.URI;
-import java.net.URL;
-import java.security.PrivilegedAction;
 
 
 public class Main
@@ -84,7 +86,6 @@ public class Main
         {
             logLevel = Level.WARN;
         }
-
 
         final VOSURI targetVOSpaceURI =
                 new VOSURI(URI.create(argumentMap.getValue("dest")));
@@ -126,10 +127,12 @@ public class Main
                                                          "http");
 
                     final GraphicUI graphicUploadUI =
-                            new GraphicUI(logLevel, targetVOSpaceURI,
+                            new GraphicUI(logLevel,
+                                          targetVOSpaceURI,
                                           new VOSpaceClient(
                                                   vospaceServiceURL.
-                                                          toString()));
+                                                          toString()),
+                                          subject);
                     final ApplicationFrame frame =
                             new ApplicationFrame(Constants.name,
                                                  graphicUploadUI);

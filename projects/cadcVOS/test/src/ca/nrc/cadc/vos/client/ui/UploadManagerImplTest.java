@@ -69,10 +69,7 @@ public class UploadManagerImplTest
     @Override
     protected void initializeTestSubject() throws Exception
     {
-        setTestSubject(new UploadManagerImpl(getSourceDirectory(),
-                                             getTargetVOSpaceURI(),
-                                             getMockVOSpaceClient(),
-                                             new CommandQueueListener()
+        CommandQueueListener listener = new CommandQueueListener()
         {
             @Override
             public void commandConsumed(Long commandsProcessed,
@@ -98,7 +95,12 @@ public class UploadManagerImplTest
             {
 
             }
-        }));
+        };
+        
+        setTestSubject(new UploadManagerImpl(getTargetVOSpaceURI(),
+                                             getMockVOSpaceClient(),
+                                             listener,
+                                             null));
     }
 
     /**

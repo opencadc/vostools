@@ -70,24 +70,34 @@
 package ca.nrc.cadc.vos.client.ui;
 
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import ca.onfire.ak.AbstractApplication;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-import javax.security.auth.Subject;
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+
+import javax.security.auth.Subject;
+import javax.swing.BorderFactory;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.thread.ConditionVar;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
+import ca.onfire.ak.AbstractApplication;
 
 
 /**
@@ -114,13 +124,16 @@ public class GraphicUI extends AbstractApplication
     private LogWriter logWriter;
     private JTabbedPane tabPane;
     private JUploadManager uploadManager;
+    private ConditionVar uiInitCond;
 
     private final VOSURI targetVOSpaceURI;
     private final VOSpaceClient voSpaceClient;
+    
+    private Subject subject;
 
 
     public GraphicUI(final Level logLevel, final VOSURI targetVOSpaceURI,
-                     final VOSpaceClient voSpaceClient)
+                     final VOSpaceClient voSpaceClient, Subject subject)
     {
         super(new BorderLayout());
         LOGGER.setLevel(logLevel);
@@ -128,6 +141,10 @@ public class GraphicUI extends AbstractApplication
 
         this.targetVOSpaceURI = targetVOSpaceURI;
         this.voSpaceClient = voSpaceClient;
+        this.subject = subject;
+        
+        this.uiInitCond = new ConditionVar();
+        uiInitCond.set(false);
     }
 
 
@@ -140,8 +157,46 @@ public class GraphicUI extends AbstractApplication
     @Override
     protected void makeUI()
     {
-//        new Thread(new UICreator()).start();
-        new UICreator().run();
+        
+        tabPane = new JTabbedPane();
+        getTabPane().setName("tabPane");
+
+        logWriter = new LogWriter(new JTextArea());
+
+        Log4jInit.setLevel("ca.nrc.cadc", LOGGER.getLevel(),
+                           new BufferedWriter(getLogWriter()));
+        LOGGER.debug("Executing tasks against VOSpace found at "
+                + getVOSpaceClient().getBaseURL());
+
+        addMainPane();
+        setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        
+        setUploadManager(
+                new JUploadManager(getTargetVOSpaceURI(),
+                        getVOSpaceClient(), subject));
+
+        getTabPane().addTab("Upload",
+                getUploadManager());
+        
+        final JScrollPane sp =
+                createLogScrollPane(
+                        getLogWriter().getLogTextArea());
+        getTabPane().addTab("Log Messages", sp);
+
+        Util.recursiveSetBackground(GraphicUI.this,
+                Color.WHITE);
+        getTabPane().setVisible(true);
+        
+        DirectoryChooser dirChooser = new DirectoryChooser();
+        Thread dirChooserThread = new Thread(dirChooser);
+        dirChooserThread.start();
+    }
+    
+    @Override
+    public void paint(Graphics g)
+    {
+        super.paint(g);
+        uiInitCond.setNotifyAll();
     }
 
     /**
@@ -161,16 +216,6 @@ public class GraphicUI extends AbstractApplication
     protected JScrollPane createLogScrollPane(final JTextArea logTextArea)
     {
         return new JScrollPane(logTextArea);
-    }
-
-    /**
-     * Start the source directory chooser.
-     */
-    protected void run()
-    {
-        // Fire off a thread to complete init once the app is displayed on
-        // screen.
-        new Thread(new DelayedInit()).start();
     }
 
     /**
@@ -330,30 +375,39 @@ public class GraphicUI extends AbstractApplication
         public void write(final char[] cbuf, final int off, final int len)
                 throws IOException
         {
-            if (!SwingUtilities.isEventDispatchThread())
+            String logMessage = new String(cbuf, off, len);
+            if (getLogTextArea() != null)
             {
-                try
-                {
-                    SwingUtilities.invokeAndWait(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            doWrite(new String(cbuf, off, len));
-                        }
-                    });
-                }
-                catch (Throwable t)
-                {
-                    System.out.println("Error writing to log.  Possible abort "
-                                       + "issued.");
-                    t.printStackTrace();
-                }
+                getLogTextArea().append(logMessage);
             }
             else
             {
-                doWrite(new String(cbuf, off, len));
+                System.out.println(logMessage);
             }
+//            if (!SwingUtilities.isEventDispatchThread())
+//            {
+//                try
+//                {
+//                    SwingUtilities.invokeAndWait(new Runnable()
+//                    {
+//                        @Override
+//                        public void run()
+//                        {
+//                            doWrite(new String(cbuf, off, len));
+//                        }
+//                    });
+//                }
+//                catch (Throwable t)
+//                {
+//                    System.out.println("Error writing to log.  Possible abort "
+//                                       + "issued.");
+//                    t.printStackTrace();
+//                }
+//            }
+//            else
+//            {
+//                doWrite(new String(cbuf, off, len));
+//            }
         }
 
         protected void doWrite(final String s)
@@ -364,108 +418,22 @@ public class GraphicUI extends AbstractApplication
             }
         }
     }
-
-    protected class DelayedInit implements Runnable
+    
+    protected class DirectoryChooser implements Runnable
     {
-        public DelayedInit()
-        {
-
-        }
-
-        public void run()
-        {
-            try
-            {
-                getUploadManager().start();
-            }
-            catch (final Throwable t)
-            {
-                t.printStackTrace();
-
-                if (LOGGER.isDebugEnabled())
-                {
-                    LOGGER.error("DelayedInit failed", t);
-                }
-                else
-                {
-                    LOGGER.error("DelayedInit failed: " + t);
-                }
-            }
-        }
-    }
-
-    protected class UICreator implements Runnable
-    {
-        private final Subject currentSubject =
-                Subject.getSubject(AccessController.getContext());
-
-        /**
-         * When an object implementing interface <code>Runnable</code> is used
-         * to create a thread, starting the thread causes the object's
-         * <code>run</code> method to be called in that separately executing
-         * thread.
-         * <p/>
-         * The general contract of the method <code>run</code> is that it may
-         * take any action whatsoever.
-         *
-         * @see Thread#run()
-         */
+    
         @Override
         public void run()
         {
             try
             {
-                SwingUtilities.invokeAndWait(new Runnable()
+                uiInitCond.waitForTrue();
+                
+                SwingUtilities.invokeAndWait((new Runnable()
                 {
+                
                     public void run()
                     {
-                        final Subject subjectInContext =
-                                Subject.getSubject(
-                                        AccessController.getContext());
-
-                        if (subjectInContext == null)
-                        {
-                            Subject.doAs(currentSubject,
-                                         new PrivilegedAction<Void>()
-                            {
-                                @Override
-                                public Void run()
-                                {
-                                    runPrivileged();
-                                    return null;
-                                }
-                            });
-                        }
-                        else
-                        {
-                            runPrivileged();
-                        }
-                    }
-
-                    private void runPrivileged()
-                    {
-                        tabPane = new JTabbedPane();
-                        getTabPane().setName("tabPane");
-
-                        logWriter = new LogWriter(new JTextArea());
-
-                        Log4jInit.setLevel("ca.nrc.cadc", LOGGER.getLevel(),
-                                           new BufferedWriter(getLogWriter()));
-                        LOGGER.debug("Executing tasks against VOSpace found at "
-                                + getVOSpaceClient().getBaseURL());
-
-                        addMainPane();
-                        setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-
-                        final JScrollPane sp =
-                                createLogScrollPane(
-                                        getLogWriter().getLogTextArea());
-                        getTabPane().addTab("Log Messages", sp);
-
-                        Util.recursiveSetBackground(GraphicUI.this,
-                                Color.WHITE);
-                        getTabPane().setVisible(true);
-
                         selectSourceDirectory(GraphicUI.this,
                                 new SourceDirectoryChooserCallback()
                                 {
@@ -473,20 +441,10 @@ public class GraphicUI extends AbstractApplication
                                     public void onCallback(
                                             final File chosenDirectory)
                                     {
-                                        setUploadManager(
-                                                new JUploadManager(chosenDirectory,
-                                                        getTargetVOSpaceURI(),
-                                                        getVOSpaceClient()));
-
-                                        getTabPane().addTab("Upload",
-                                                            getUploadManager());
-                                        getTabPane().setSelectedIndex(1);
-
-                                        GraphicUI.this.run();
+                                        getUploadManager().start(chosenDirectory);
                                     }
                                 });
-                    }
-                }) ;
+                    }}));
             }
             catch (final Exception e)
             {

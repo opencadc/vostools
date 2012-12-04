@@ -119,7 +119,7 @@ public class CommandExecutorTest
         }
         
         CommandQueue queue = new CommandQueue(bufferSize, listener);
-        CommandExecutor commandExecutor = new CommandExecutor(null, queue);
+        CommandExecutor commandExecutor = new CommandExecutor(null, queue, null);
         
         VOSpaceCommand command = EasyMock.createMock(VOSpaceCommand.class);
         command.execute(null);

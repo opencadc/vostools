@@ -33,20 +33,31 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import org.apache.log4j.Level;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Insets;
 import java.io.File;
 import java.net.URI;
 
+import javax.swing.JFileChooser;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+
+import org.apache.log4j.Level;
 import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
+
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
 
 public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
@@ -73,7 +84,7 @@ public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
         final JScrollPane mockLogPane = createMock(JScrollPane.class);
 
         setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
-                                     getMockVOSpaceClient())
+                                     getMockVOSpaceClient(), null)
         {
             @Override
             public JTabbedPane getTabPane()
@@ -146,7 +157,7 @@ public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
         final StringBuilder errorMessage = new StringBuilder();
 
         setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
-                                     getMockVOSpaceClient())
+                                     getMockVOSpaceClient(), null)
         {
             @Override
             protected SourceDirectoryChooser getSourceDirectoryChooser()
@@ -198,7 +209,7 @@ public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
         final StringBuilder errorMessage = new StringBuilder();
 
         setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
-                                     getMockVOSpaceClient())
+                                     getMockVOSpaceClient(), null)
         {
             @Override
             protected SourceDirectoryChooser getSourceDirectoryChooser()
@@ -252,7 +263,7 @@ public class GraphicUITest extends AbstractCADCVOSTest<GraphicUI>
     protected void initializeTestSubject() throws Exception
     {
         setTestSubject(new GraphicUI(Level.OFF, getTargetVOSpaceURI(),
-                                     getMockVOSpaceClient()));
+                                     getMockVOSpaceClient(), null));
     }
 
     public VOSURI getTargetVOSpaceURI()

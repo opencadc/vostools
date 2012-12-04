@@ -70,13 +70,9 @@
 package ca.nrc.cadc.vos.client.ui;
 
 import java.io.File;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
@@ -85,6 +81,7 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -124,27 +121,28 @@ public class UploadFile implements VOSpaceCommand
     @Override
     public void execute(VOSpaceClient vospaceClient) throws Exception
     {
-        // create the data node (and any directories above that don't
-        // exist.)
-        log.debug("Creating data node: " + dataNode);
-        vospaceClient.createNode(dataNode, false);
+        // see if the node exists
+        log.debug("Checking node: " + dataNode);
+        try
+        {
+            vospaceClient.getNode(dataNode.getUri().getPath(), "limit=0&detail=min");
+        }
+        catch (NodeNotFoundException e)
+        {
+            // create it if it doesn't exist
+        
+            // create the data node (and any directories above that don't
+            // exist.)
+            log.debug("Creating data node: " + dataNode);
+            vospaceClient.createNode(dataNode, false);
+        }
         
         // upload the file through a transfer
         log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
         List<Protocol> protocols = new ArrayList<Protocol>();
-        
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
 
-        if ((subject != null) && !subject.getPrincipals().isEmpty()
-            && !subject.getPublicCredentials().isEmpty())
-        {
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-        }
-        else
-        {
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-        }
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
         Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
         ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);

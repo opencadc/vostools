@@ -83,9 +83,9 @@ import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
@@ -187,11 +187,14 @@ public class UploadFileTest
     {
         VOSURI uri = new VOSURI(ROOT_URI + "/newDataNode");
         DataNode dataNode = new DataNode(uri);
-        ContainerNode parentNode = new ContainerNode(dataNode.getUri().getParentURI());
+        
         File testFile = new File("test/src/resources/testFile");
         UploadFile uploadFile = new UploadFile(dataNode, testFile);
         
         VOSpaceClient mockClient = EasyMock.createMock(VOSpaceClient.class);
+        
+        EasyMock.expect(mockClient.getNode("/uploadFileTest/newDataNode", "limit=0&detail=min")).andThrow(new NodeNotFoundException(uri.getPath())).once();
+        
         EasyMock.expect(mockClient.createNode(dataNode, false)).andReturn(dataNode).once();
         
         setupSuccessfulFileUpload(dataNode, testFile, mockClient);

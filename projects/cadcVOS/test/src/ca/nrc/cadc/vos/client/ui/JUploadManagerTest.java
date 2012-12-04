@@ -78,9 +78,9 @@ public class JUploadManagerTest extends AbstractCADCVOSTest<JUploadManager>
     @Override
     protected void initializeTestSubject() throws Exception
     {
-        setTestSubject(new JUploadManager(getSourceDirectory(),
-                                          getTargetVOSpaceURI(),
-                                          getMockVOSpaceClient()));
+        setTestSubject(new JUploadManager(getTargetVOSpaceURI(),
+                                          getMockVOSpaceClient(),
+                                          null));
     }
 
     @Test

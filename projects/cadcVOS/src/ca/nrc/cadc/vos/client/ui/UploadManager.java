@@ -33,12 +33,14 @@
  */
 package ca.nrc.cadc.vos.client.ui;
 
+import java.io.File;
+
 public interface UploadManager
 {
     /**
      * Begin the UploadManager's Producer and Consumer threads.
      */
-    void start();
+    void start(File sourceDirectory);
 
     /**
      * Shutdown the Manager.  This is a hard stop issued after completion.
