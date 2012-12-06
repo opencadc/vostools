@@ -40,7 +40,6 @@ import org.restlet.data.Method;
 import org.restlet.data.Reference;
 
 import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.log.RestletLogInfo;
 import ca.nrc.cadc.log.WebServiceLogInfo;
 
 public class RestletLogInfoTest
