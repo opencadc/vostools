@@ -78,6 +78,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 
 
 /**
@@ -193,42 +194,23 @@ public class NetUtilTest
     public void getDomainName() throws Exception
     {
         final String domainName1 =
-                NetUtil.getDomainName("http://www.google.com/my/path");
+                NetUtil.getDomainName(new URL("http://www.google.com/my/path"));
         Assert.assertEquals("Domain Name should be google.com",
                             "google.com", domainName1);
 
-        final String domainName2 = NetUtil.getDomainName("http://cadc.ca");
+        final String domainName2 = NetUtil.getDomainName(new URL("http://cadc.ca"));
         Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
                             domainName2);
 
         final String domainName3 =
-                NetUtil.getDomainName("http://user:pass@cadc.ca/path");
+                NetUtil.getDomainName(new URL("http://user:pass@cadc.ca/path"));
         Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
                             domainName3);
 
         final String domainName4 =
-                NetUtil.getDomainName("http://gimli.cadc.dao.nrc.ca");
+                NetUtil.getDomainName(new URL("http://gimli.cadc.dao.nrc.ca"));
         Assert.assertEquals("Domain Name should be cadc.dao.nrc.ca",
                             "cadc.dao.nrc.ca", domainName4);
 
-        try
-        {
-            NetUtil.getDomainName("htt://cadc.ca");
-            Assert.fail("Should throw an exception.");
-        }
-        catch (MalformedURLException e)
-        {
-            // Good!
-        }
-
-        try
-        {
-            NetUtil.getDomainName(null);
-            Assert.fail("Should throw an exception.");
-        }
-        catch (MalformedURLException e)
-        {
-            // Good!
-        }
     }
 }

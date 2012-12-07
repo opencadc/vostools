@@ -156,12 +156,10 @@ public class JavaWebStartServlet extends HttpServlet
                 {
                     request.setAttribute("ssocookie", cookie.getValue());
                     log.debug("ssocookie attribute: " + cookie.getValue());
-                    request.setAttribute("ssocookiedomain", NetUtil
-                            .getDomainName(request.getRequestURL()
-                                    .toString()));
-                    log.debug("ssocookie domain: "
-                            + NetUtil.getDomainName(request
-                                    .getRequestURL().toString()));
+                    String servername = NetUtil.getServerName(this.getClass());
+                    String domain = NetUtil.getDomainName(servername);
+                    request.setAttribute("ssocookiedomain", domain);
+                    log.debug("ssocookie domain: " + domain);
                 }
             }
         }

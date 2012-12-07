@@ -254,26 +254,29 @@ public class NetUtil
      * @return              String domain name.
      * @throws IOException  If anything goes awry during URL handling.
      */
-    public static String getDomainName(final String stringURL)
+    public static String getDomainName(final URL url)
             throws IOException
     {
-        // Test for a valid URL.
-        final URL url = new URL(stringURL);
-
         final InetAddress address = InetAddress.getByName(url.getHost());
         final String fqdn = address.getHostName();
-        final String[] splitName = fqdn.split("\\.");
+        return getDomainName(fqdn);
+    }
+
+    public static String getDomainName(final String serverName)
+            throws IOException
+    {
+        final String[] splitName = serverName.split("\\.");
         final String domainName;
 
         // If the result ends up being something similar to myhost.com, or
         // localhost.
         if (splitName.length < 3)
         {
-            domainName = fqdn;
+            domainName = serverName;
         }
         else
         {
-            domainName = fqdn.substring(fqdn.indexOf(".") + 1);
+            domainName = serverName.substring(serverName.indexOf(".") + 1);
         }
 
         return domainName;
