@@ -95,9 +95,16 @@ public class CheckCertificate implements CheckResource
     private File key;
 
     /**
-     * Constructor to check a DataSource.
-     * The test query should be something that always executes quickly and
-     * returns a small result set, such as <code>select x from someTable limit 0</code>.
+     * Check a certficate. This certficate is assumed to hold a cert and key.
+     * @param cert
+     */
+    public CheckCertificate(File cert)
+    {
+        this.cert = cert;
+    }
+
+    /**
+     * Check a certficate. This certficate and key file are separate.
      *
      * @param cert
      * @param key
@@ -115,31 +122,34 @@ public class CheckCertificate implements CheckResource
         Subject s = null;
         try
         {
-            s = SSLUtil.createSubject(cert, key);
+            if (key != null)
+                s = SSLUtil.createSubject(cert, key);
+            else
+                s=  SSLUtil.createSubject(cert);
         }
         catch(Throwable t)
         {
-            log.warn("test failed: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+            log.warn("test failed: " + cert + " " + key);
             throw new CheckException("internal certificate check failed");
         }
 
         try
         {
             Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
-            if (certs.size() == 0)
+            if (certs.isEmpty())
             {
                 // subject without certs means something went wrong above
-                throw new RuntimeException("failed to load X509 certficate from files");
+                throw new RuntimeException("failed to load X509 certficate from file(s)");
             }
             X509CertificateChain chain = certs.iterator().next(); // the first one
             checkValidity(chain);
         }
         catch(Throwable t)
         {
-            log.warn("test failed: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+            log.warn("test failed: " + cert + " " + key);
             throw new CheckException("certificate check failed", t);
         }
-        log.info("test succeeded: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+        log.info("test succeeded: " + cert + " " + key);
     }
 
     private void checkValidity(X509CertificateChain chain)
