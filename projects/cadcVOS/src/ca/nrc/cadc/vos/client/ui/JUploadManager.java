@@ -530,10 +530,9 @@ public class JUploadManager extends JPanel implements CommandQueueListener,
                 {
                     getAbortButton().setEnabled(false);
                     getMessageLabel().setText(
-                            "Upload complete.\nPlease use the refresh button "
-                            + "in the VOSpace browser to see the new "
-                            + "directory.\nCheck the Log Messages tab for any "
-                            + "unexpected ERROR messages.");
+                            "Upload complete.  See the Log Messages tab for details.\n"
+                            + "To see newly uploaded directories, refresh the view in\n"
+                            + "the VOSpace browser.");
 
                     if (getErrorCount() > 0)
                     {
