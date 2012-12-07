@@ -473,12 +473,11 @@ public class QueryRunner implements JobRunner
                     throw e;
                 }
             }
-            
-            logInfo.setMessage("ExecutionPhase = " + ExecutionPhase.COMPLETED);
         }
         catch (Throwable t)
         {
-        	logInfo.setMessage(t.getMessage());
+            logInfo.setMessage(t.getMessage());
+            logInfo.setSuccess(false);
             String errorMessage = null;
             URL errorURL = null;
             try

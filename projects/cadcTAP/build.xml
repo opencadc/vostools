@@ -94,9 +94,10 @@
     <property name="log4j" value="${ext.lib}/log4j.jar" />
     <property name="spring" value="${ext.lib}/spring.jar" />
     <property name="jdom" value="${ext.lib}/jdom.jar" />
+    <property name="gson" value="${ext.lib}/gson.jar" />
     <property name="javacsv" value="${ext.lib}/javacsv.jar" />
     <property name="servlet" value="${ext.lib}/servlet-api.jar" />
-    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${jdom}:${javacsv}:${servlet}" />
+    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${jdom}:${gson}:${javacsv}:${servlet}" />
 
     <property name="jars" value="${cadc}:${extlib}" />
 
