@@ -155,7 +155,7 @@ public class TapSchemaDAO
         {
             Class c = Class.forName(extensionClassName);
             this.delegate = (TapSchemaDAO) c.newInstance();
-            log.info("loaded: " + extensionClassName);
+            log.debug("loaded: " + extensionClassName);
             delegate.dataSource = dataSource;
             delegate.ordered = ordered;
         }
