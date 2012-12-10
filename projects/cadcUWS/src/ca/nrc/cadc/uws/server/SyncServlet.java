@@ -336,11 +336,9 @@ public class SyncServlet extends HttpServlet
                 // create
                 job = getJobCreator().create(request);
                 job = jobManager.create(job);
-                log.debug("persisted job: " + job);
                 jobID = job.getID();
-
                 
-                log.info("created job: " + jobID);
+                log.debug("created job: " + jobID);
                 if (execOnCreate)
                 {
                     log.debug("no redirect, action = " + JOB_EXEC);
@@ -388,7 +386,7 @@ public class SyncServlet extends HttpServlet
                 return;
             }
 
-            log.info("executing job: " + jobID);
+            log.debug("executing job: " + jobID);
             syncOutput = new SyncOutputImpl(response);
             jobManager.execute(job, syncOutput);
         }

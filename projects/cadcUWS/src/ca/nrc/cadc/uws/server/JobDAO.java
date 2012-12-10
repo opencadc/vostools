@@ -1084,7 +1084,7 @@ public class JobDAO
             log.debug(sb);
         }
 
-        String getInsertSQL()
+        private String getInsertSQL()
         {
             StringBuilder sb = new StringBuilder();
             sb.append("INSERT INTO ");
@@ -1376,6 +1376,12 @@ public class JobDAO
                 sb.append(",");
             }
 
+            Date now = new Date();
+            Timestamp nowts = new Timestamp(now.getTime());
+            ps.setTimestamp(col++, nowts, cal);
+            sb.append(dateFormat.format(now));
+            sb.append(",");
+
             ps.setString(col++, jobID);
             sb.append(jobID);
             sb.append(",");
@@ -1430,6 +1436,7 @@ public class JobDAO
                 else
                     date = null; // ignore
             }
+            sb.append(", lastModified = ?");
             sb.append(" WHERE jobID = ?");
             if (start != null)
                 sb.append(" AND executionPhase = ?");
