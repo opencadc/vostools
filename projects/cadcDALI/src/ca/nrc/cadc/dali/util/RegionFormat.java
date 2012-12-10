@@ -71,8 +71,6 @@ package ca.nrc.cadc.dali.util;
 import ca.nrc.cadc.stc.Region;
 import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.stc.StcsParsingException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
