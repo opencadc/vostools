@@ -70,9 +70,15 @@
 package ca.nrc.cadc.vos.client.ui;
 
 import java.io.File;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.Principal;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 
@@ -140,9 +146,23 @@ public class UploadFile implements VOSpaceCommand
         // upload the file through a transfer
         log.debug("Uploading file: " + file.getName() + " to " + dataNode.getUri());
         List<Protocol> protocols = new ArrayList<Protocol>();
-
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+        
+        boolean ssl = false;
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        if (subject != null)
+        {
+            for (Principal p : subject.getPrincipals())
+            {
+                if (p instanceof X500Principal)
+                    ssl = true;
+            }
+        }
+        
+        if (ssl)
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        else
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
         Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace, null, protocols);
         ClientTransfer clientTransfer = vospaceClient.createTransfer(transfer);
