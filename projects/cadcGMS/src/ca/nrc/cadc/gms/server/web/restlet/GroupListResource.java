@@ -135,7 +135,7 @@ public class GroupListResource extends AbstractResource
         // Get the criteria from http query
         Form queryForm = getForm();
         String dn = queryForm.getFirstValue(GmsConsts.PROPERTY_OWNER_DN);
-        logger.info("DN=" + dn);
+        logger.debug("DN=" + dn);
         
         Map<String, String> criteria = new HashMap<String, String>();
         criteria.put(GmsConsts.PROPERTY_OWNER_DN, dn);
