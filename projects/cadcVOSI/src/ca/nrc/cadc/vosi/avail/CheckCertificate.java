@@ -69,9 +69,6 @@
 
 package ca.nrc.cadc.vosi.avail;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.auth.X509CertificateChain;
-import ca.nrc.cadc.date.DateUtil;
 import java.io.File;
 import java.security.Principal;
 import java.security.cert.CertificateExpiredException;
@@ -80,8 +77,14 @@ import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.Set;
+
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.date.DateUtil;
 
 /**
  * @author zhangsa
@@ -149,7 +152,7 @@ public class CheckCertificate implements CheckResource
             log.warn("test failed: " + cert + " " + key);
             throw new CheckException("certificate check failed", t);
         }
-        log.info("test succeeded: " + cert + " " + key);
+        log.debug("test succeeded: " + cert + " " + key);
     }
 
     private void checkValidity(X509CertificateChain chain)

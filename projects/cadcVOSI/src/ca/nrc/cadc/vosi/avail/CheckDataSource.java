@@ -73,6 +73,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -139,7 +140,7 @@ public class CheckDataSource implements CheckResource
             st = con.createStatement();
             rs = st.executeQuery(testSQL);
             rs.next(); // just check the result set, but don't care if there are any rows
-            log.info("test succeeded: " + dataSourceName + " (" + testSQL + ")");
+            log.debug("test succeeded: " + dataSourceName + " (" + testSQL + ")");
         }
         catch(NamingException e)
         {

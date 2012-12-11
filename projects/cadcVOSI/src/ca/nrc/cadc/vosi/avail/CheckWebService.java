@@ -69,19 +69,20 @@
 
 package ca.nrc.cadc.vosi.avail;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.JDOMException;
 import org.jdom.xpath.XPath;
 
 import ca.nrc.cadc.vosi.VOSI;
 import ca.nrc.cadc.vosi.util.WebGet;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.HashMap;
-import java.util.Map;
-import org.jdom.JDOMException;
 
 /**
  * Check the /availability resource of another web service.
@@ -118,7 +119,7 @@ public class CheckWebService implements CheckResource
             WebGet webGet = new WebGet(wsURL);
             wgReturn = webGet.submit();
             checkReturnedXml(wgReturn);
-            log.info("test succeeded: " + wsURL);
+            log.debug("test succeeded: " + wsURL);
         }
         catch (MalformedURLException e)
         {
