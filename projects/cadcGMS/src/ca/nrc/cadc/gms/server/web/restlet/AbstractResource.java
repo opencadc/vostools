@@ -237,6 +237,15 @@ public abstract class AbstractResource extends ServerResource
             LOGGER.error(message);
             throw new WebRepresentationException(message, e);
         }
+        catch (IllegalArgumentException e)
+        {
+            setExisting(false);
+            String message = "Bad usage: " + e.getMessage();
+            logInfo.setSuccess(false);
+            logInfo.setMessage(message);
+            this.setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
+            return null;
+        }
         finally
         {
             long end = System.currentTimeMillis();

@@ -137,6 +137,12 @@ public class GroupListResource extends AbstractResource
         String dn = queryForm.getFirstValue(GmsConsts.PROPERTY_OWNER_DN);
         logger.debug("DN=" + dn);
         
+        if (dn == null)
+        {
+            logger.debug("No DN provided.");
+            throw new IllegalArgumentException("No DN provided.");
+        }
+        
         Map<String, String> criteria = new HashMap<String, String>();
         criteria.put(GmsConsts.PROPERTY_OWNER_DN, dn);
 
