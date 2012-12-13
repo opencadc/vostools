@@ -1703,9 +1703,9 @@ public class NodeDAO
         sb.append(getNodeTableName());
         sb.append(" SET delta = coalesce(delta, 0) ");
         if (increment)
-            sb.append("+");
+            sb.append("+ ");
         else
-            sb.append("-");
+            sb.append("- ");
         sb.append(nodeSize);
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(dest));
