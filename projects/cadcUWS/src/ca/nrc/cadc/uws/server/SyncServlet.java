@@ -392,6 +392,7 @@ public class SyncServlet extends HttpServlet
         }
         catch(JobPhaseException ex)
         {
+            log.debug("failed to change phase of job " + jobID, ex);
             if (syncOutput != null && syncOutput.isOpen())
             {
                 log.error("failure after OutputStream opened, cannot report error to user");
@@ -407,6 +408,7 @@ public class SyncServlet extends HttpServlet
         }
         catch(JobNotFoundException ex)
         {
+            log.debug("failed to find job " + jobID, ex);
             if (syncOutput != null && syncOutput.isOpen())
             {
                 log.error("failure after OutputStream opened, cannot report error to user");
@@ -439,6 +441,7 @@ public class SyncServlet extends HttpServlet
         }
         catch(JobPersistenceException ex)
         {
+            log.error("failed to persist job", ex);
             if (syncOutput != null && syncOutput.isOpen())
             {
                 log.error("failure after OutputStream opened, cannot report error to user");
