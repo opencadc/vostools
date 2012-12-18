@@ -1,4 +1,5 @@
-#!/home/nis/cadc/bin/python
+#!/usr/bin/env python2.7
+
 """A script for sending files to VOSpace via multiple connection streams."""
 
 

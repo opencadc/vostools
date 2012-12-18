@@ -1,4 +1,5 @@
-#!python
+#!/usr/bin/env python2.7
+
 """A FUSE based filesystem view of VOSpace."""
 
 from sys import argv, exit, platform

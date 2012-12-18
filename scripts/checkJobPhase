@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python2.7
 """set/read/(list) a property(ies) if a node.
 
 This script is used to retrieve the state of a job using X509 authentication. """
