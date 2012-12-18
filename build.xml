@@ -23,7 +23,7 @@
 
 
 <!-- project-specific properties -->
-<property name="project"    value="cadcVOFS" />
+<property name="project"    value="vos" />
 <property file="local.build.properties" />
 
 

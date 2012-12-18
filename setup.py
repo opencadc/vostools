@@ -38,9 +38,6 @@
 #-*/
 
 # Use "distribute"
-import distribute_setup
-distribute_setup.use_setuptools()
-
 from setuptools import setup, find_packages
 import sys
 
@@ -71,7 +68,8 @@ setup(name="vos",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       packages=['vos'],
-      scripts=['getCert','vsync','vmv','vcp','vrm','vls','vmkdir','mountvofs','vrmdir', 'vln', 'vcat', 'vtag', 'vchmod', 'checkJobPhase' ],
+      install_requires=['distribute'],
+      scripts=['scripts/getCert','scripts/vsync','scripts/vmv','scripts/vcp','scripts/vrm','scripts/vls','scripts/vmkdir','scripts/mountvofs','scripts/vrmdir', 'scripts/vln', 'scripts/vcat', 'scripts/vtag', 'scripts/vchmod', 'scripts/checkJobPhase' ],
       classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
