@@ -1253,8 +1253,13 @@ public class Main implements Runnable
                     throw new IllegalArgumentException("Local copy and move operations not yet supported.");
                 }
                 else
-                {
+                {   
                     // server to server copy/move
+                    if (this.operation.equals(Operation.COPY))
+                    {
+                        throw new IllegalArgumentException("Copy within vospace is not yet supported.");
+                    }   
+                    
                     URI destServerUri = null;
                     try
                     {
