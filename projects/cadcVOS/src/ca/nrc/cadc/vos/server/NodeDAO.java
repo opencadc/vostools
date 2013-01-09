@@ -138,6 +138,7 @@ public class NodeDAO
     static final String NODE_TYPE_LINK = "L";
     
     private static final int NODE_NAME_COLUMN_SIZE = 256;
+    private static final int NODE_PROPERTY_COLUMN_SIZE = 700;
 
     // Database connection.
     protected DataSource dataSource;
@@ -690,6 +691,10 @@ public class NodeDAO
             while (propertyIterator.hasNext())
             {
                 NodeProperty prop = propertyIterator.next();
+                
+                if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
+                    throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
+                
                 if ( usePropertyTable(prop.getPropertyURI()) )
                 {
                     PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, false);
@@ -1054,6 +1059,10 @@ public class NodeDAO
                     String currentValue = cur.getPropertyValue();
                     if (!currentValue.equals(prop.getPropertyValue()))
                     {
+                        
+                        if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
+                            throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
+                        
                         log.debug("doUpdateNode " + prop.getPropertyURI() + ": "
                                 + currentValue + " != " + prop.getPropertyValue());
                         if (propTable)
@@ -1076,6 +1085,9 @@ public class NodeDAO
             }
             else
             {
+                if (prop.getPropertyValue() != null && prop.getPropertyValue().length() > NODE_PROPERTY_COLUMN_SIZE)
+                    throw new IllegalArgumentException("length of node property value exceeds limit ("+NODE_PROPERTY_COLUMN_SIZE+"): " + prop.getPropertyURI());
+                
                 if (propTable)
                 {
                     log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted into NodeProperty");
