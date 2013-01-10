@@ -76,8 +76,13 @@ import java.awt.Frame;
 import java.awt.HeadlessException;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileFilter;
+
 import org.apache.log4j.Logger;
 
 
@@ -120,9 +125,37 @@ class MyFileChooser
         }
         // default: Swing
         SwingImpl impl = new SwingImpl(initialDir);
-        int ret = impl.showDialog(parent, acceptText);
+        impl.setFileFilter(new FileFilter()
+        {
+            /**
+             * Whether the given file is accepted by this filter.
+             */
+            @Override
+            public boolean accept(final File f)
+            {
+                return f.isDirectory();
+            }
+
+            /**
+             * The description of this filter. For example: "JPG and GIF Images"
+             *
+             * @see javax.swing.filechooser.FileView#getName
+             */
+            @Override
+            public String getDescription()
+            {
+                // Wish we could translate this appropriately...
+                // jenkinsd 2013.01.10
+                return "All Directories";
+            }
+        });
+
+        int ret = impl.showOpenDialog(parent);
         if (ret == JFileChooser.APPROVE_OPTION)
+        {
             this.selectedFile = impl.getSelectedFile();
+        }
+
         return ret;
     }
     

@@ -111,7 +111,7 @@ public class ConsoleUI implements UserInterface, TransferListener
         Log4jInit.setLevel("ca.nrc.cadc", logLevel);
         
         this.downloadsCompeleteCond = downloadsCompleteCond;
-        this.userAgent = this.userAgent = "CADC DownloadManager(ConsoleUI) " + HttpTransfer.DEFAULT_USER_AGENT;
+        this.userAgent = "CADC DownloadManager(ConsoleUI) " + HttpTransfer.DEFAULT_USER_AGENT;
         this.decompress = decompress;
         this.overwrite = overwrite;
         
