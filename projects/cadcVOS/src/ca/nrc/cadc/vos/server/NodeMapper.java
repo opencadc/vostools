@@ -77,7 +77,6 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -89,8 +88,8 @@ import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Class to map a result set into a Node object.
@@ -249,7 +248,7 @@ public class NodeMapper implements RowMapper
         // set the read-only flag on the properties
         for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
         {
-            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""));
             if (propertyIndex != -1)
             {
                 node.getProperties().get(propertyIndex).setReadOnly(true);

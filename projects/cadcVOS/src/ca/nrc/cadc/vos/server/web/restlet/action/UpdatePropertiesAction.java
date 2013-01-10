@@ -148,7 +148,7 @@ public class UpdatePropertiesAction extends NodeAction
     {
         for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
         {
-            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""));
             if (propertyIndex != -1)
             {
                 node.getProperties().remove(propertyIndex);

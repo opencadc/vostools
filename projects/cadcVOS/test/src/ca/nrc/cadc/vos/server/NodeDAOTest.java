@@ -722,8 +722,8 @@ public class NodeDAOTest
             compareProperties("assert3", testNode.getProperties(), pNode.getProperties());
 
             // replace values
-            testNode.getProperties().remove(new NodeProperty("some:thing", null));
-            testNode.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, null));
+            testNode.getProperties().remove(new NodeProperty("some:thing", ""));
+            testNode.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, ""));
 
             props.clear();
             props.add(new NodeProperty("some:thing", "value2"));
@@ -760,10 +760,10 @@ public class NodeDAOTest
 
             // remove properties
             props.clear();
-            NodeProperty newURI2 = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, null); // NP table
+            NodeProperty newURI2 = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, ""); // NP table
             newURI2.setMarkedForDeletion(true);
             props.add(newURI2);
-            NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, null); // N table
+            NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, ""); // N table
             newEncoding.setMarkedForDeletion(true);
             props.add(newEncoding);
 

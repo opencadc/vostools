@@ -69,6 +69,10 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
 /**
  * A VOSpace property representing metadata for a node.
  * 
@@ -77,6 +81,9 @@ package ca.nrc.cadc.vos;
  */
 public class NodeProperty
 {
+    
+    // Maximum number of groups allowed
+    static final int MAX_GROUPS = 4;
     
     // The property identifier
     private String propertyURI;
@@ -95,15 +102,29 @@ public class NodeProperty
      * 
      * @param uri The property identifier.
      * @param value The property value.
-     * @param readonly True if the property cannot be modified.
      */
     public NodeProperty(String uri, String value)
     {
         this.propertyURI = uri;
         this.propertyValue = value;
         this.markedForDeletion = false;
+        validateProperty();
     }
     
+    /**
+     * Property constructor.
+     * 
+     * @param uri The property identifier.
+     * @param values The list of values for the property.
+     */
+    public NodeProperty(String uri, List<String> values)
+    {
+        this(uri, serializePropertyValueList(uri, values));
+    }
+    
+    /**
+     * Return true iff the property URIs are equal.
+     */
     public boolean equals(Object o)
     {
         if (o instanceof NodeProperty)
@@ -168,6 +189,117 @@ public class NodeProperty
     public void setMarkedForDeletion(boolean markedForDeletion)
     {
         this.markedForDeletion = markedForDeletion;
+    }
+    
+    /**
+     * Perform validation on the property.  
+     * 
+     * @throws IllegalArgumentException If validation fails.
+     */
+    private void validateProperty() throws IllegalArgumentException
+    {
+        // group read
+        if (VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(propertyURI))
+        {
+            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            if (values != null && values.size() > MAX_GROUPS)
+            {
+                throw new IllegalArgumentException(
+                    "No more than " + MAX_GROUPS
+                    + " groups allowed for property " + propertyURI);
+            }
+        }
+        
+        // group write
+        if (VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(propertyURI))
+        {
+            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            if (values != null && values.size() > MAX_GROUPS)
+            {
+                throw new IllegalArgumentException(
+                    "No more than " + MAX_GROUPS
+                    + " groups allowed for property " + propertyURI);
+            }
+        }
+        
+        // is public
+        if (VOS.PROPERTY_URI_ISPUBLIC.equalsIgnoreCase(propertyURI))
+        {
+            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            if (values != null && values.size() > 1)
+            {
+                throw new IllegalArgumentException(
+                    "Only one values allowed for property " + propertyURI);
+            }
+        }
+        
+    }
+    
+    /**
+     * Given multiple values for a certain property specified by uri, return
+     * the string representing the list of values with the correct delimiter(s)
+     * in place.
+     * 
+     * @param uri
+     * @param values
+     * @return
+     */
+    public static String serializePropertyValueList(String uri, List<String> values)
+    {
+        if (uri == null || values == null)
+            return null;
+        
+        String delim = getPropertyValueDelimiter(uri);
+        StringBuilder sb = new StringBuilder();
+        for (int index=0; index<values.size(); index++)
+        {
+            sb.append(values.get(index));
+            if ((index + 1) < values.size())
+                sb.append(delim);
+        }
+        return sb.toString();
+    }
+    
+    /**
+     * Given a string representing multiple values of a property specified by uri,
+     * return the values as an array.
+     * 
+     * @param uri
+     * @param values
+     * @return
+     */
+    public static List<String> extractPropertyValueList(String uri, String values)
+    {
+        if (uri == null || values == null)
+            return null;
+        
+        String delim = getPropertyValueDelimiter(uri);
+        StringTokenizer st = new StringTokenizer(values, delim);
+        List<String> ret = new ArrayList<String>(st.countTokens());
+        while (st.hasMoreElements())
+        {
+            ret.add(st.nextToken());
+        }
+        return ret;
+    }
+    
+    /**
+     * Given a property URI, return the delimiter used for separating multiple
+     * values.
+     * 
+     * @param uri
+     * @return
+     */
+    private static String getPropertyValueDelimiter(String uri)
+    {
+        // For now, new delimiters for properties must be added manually to this method.
+        if (VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(uri))
+            return VOS.PROPERTY_DELIM_GROUPREAD;
+        
+        if (VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(uri))
+            return VOS.PROPERTY_DELIM_GROUPWRITE;
+        
+        return VOS.DEFAULT_PROPERTY_VALUE_DELIM;
     }
     
 }

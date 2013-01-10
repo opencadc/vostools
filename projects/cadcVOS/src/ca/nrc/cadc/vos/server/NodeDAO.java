@@ -2711,7 +2711,7 @@ public class NodeDAO
 	            // set the read-only flag on the properties
 	            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
 	            {
-	                int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+	                int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""));
 	                if (propertyIndex != -1)
 	                {
 	                    node.getProperties().get(propertyIndex).setReadOnly(true);

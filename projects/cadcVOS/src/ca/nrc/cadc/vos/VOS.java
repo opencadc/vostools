@@ -153,6 +153,11 @@ public class VOS
     }
     
     /*
+     * Default property delimiter for multi-valued properties
+     */
+    public static final String DEFAULT_PROPERTY_VALUE_DELIM = ",";
+    
+    /*
      * Standard Node Properties defined by the IVOA
      */
     
@@ -243,9 +248,11 @@ public class VOS
     
     // The groups who can read the resource
     public static final String PROPERTY_URI_GROUPREAD = "ivo://ivoa.net/vospace/core#groupread";
+    public static final String PROPERTY_DELIM_GROUPREAD = " ";
     
     // The groups who can write to the resource
     public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
+    public static final String PROPERTY_DELIM_GROUPWRITE = " ";
     
     // Flag indicating if the Node is public (true/false)
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
