@@ -52,6 +52,14 @@ public interface FileChooser
     int showDialog(final Component parent, final String acceptText);
 
     /**
+     * Show the open file item chooser dialog.
+     *
+     * @param parent        The Component parent (Container).
+     * @return              integer return code.
+     */
+    int showOpenDialog(final Component parent);
+
+    /**
      * Obtain the selected file item.
      *
      * @return  File object, or null if none chosen.

@@ -163,7 +163,7 @@ class SourceDirectoryChooser
     protected int showDialog(final FileChooser fileChooser,
                              final Component parent, final String acceptText)
     {
-        return fileChooser.showDialog(parent, acceptText);
+        return fileChooser.showOpenDialog(parent);
     }
 
     private class SwingImpl extends JFileChooser implements FileChooser
@@ -233,6 +233,18 @@ class SourceDirectoryChooser
             }
 
             return returnCode;
+        }
+
+        /**
+         * Show the open file item chooser dialog.
+         *
+         * @param parent The Component parent (Container).
+         * @return integer return code.
+         */
+        @Override
+        public int showOpenDialog(Component parent)
+        {
+            return showDialog(parent, null);
         }
 
         /**
