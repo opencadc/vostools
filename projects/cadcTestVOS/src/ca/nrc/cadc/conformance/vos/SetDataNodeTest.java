@@ -199,7 +199,7 @@ public class SetDataNodeTest extends VOSNodeTest
             int expectedNumProps = updatedNode.getProperties().size() - 1;
 
             List<NodeProperty> del = new ArrayList<NodeProperty>();
-            NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, null);
+            NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, new ArrayList<String>());
             np.setMarkedForDeletion(true);
             node.sampleNode.setProperties(del);
 
