@@ -180,9 +180,9 @@ public class MainTest
     		    fail("Unexpected exception: " + ex.getMessage());
     	}    	
     	
-    	// test --set --target=vos://cadc.nrc.ca~vospace/foo/bar --group-read="test:g1,test:g2" --group-write="test:g3,test:g4"
+    	// test --set --target=vos://cadc.nrc.ca~vospace/foo/bar --group-read="test:g1 test:g2" --group-write="test:g3 test:g4"
     	String[] args9 = {"--set", "--target=vos://cadc.nrc.ca~vospace/foo/bar", 
-    			"--group-read=test:g1 test:g2", "--group-write=test:g3 test:g4"};
+    			"--group-read=\"test:g1 test:g2\"", "--group-write=\"test:g3 test:g4\""};
     	ArgumentMap argMap9 = new ArgumentMap(args9);
     	validateCommand.invoke(command, argMap9);
     	validateCommandArguments.invoke(command, argMap9);

@@ -90,8 +90,7 @@ public class NodePropertyTest
         String expected = "val1" + VOS.PROPERTY_DELIM_GROUPREAD + "val2"
                 + VOS.PROPERTY_DELIM_GROUPREAD + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
-        List<String> extracted = NodeProperty.extractPropertyValueList(
-                VOS.PROPERTY_URI_GROUPREAD, stringValues);
+        List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, stringValues).extractPropertyValueList();
         Assert.assertArrayEquals("bad extraction",
                 values.toArray(new String[0]), extracted.toArray(new String[0]));
 
@@ -142,8 +141,7 @@ public class NodePropertyTest
         String expected = "val1" + VOS.PROPERTY_DELIM_GROUPWRITE + "val2"
                 + VOS.PROPERTY_DELIM_GROUPWRITE + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
-        List<String> extracted = NodeProperty.extractPropertyValueList(
-                VOS.PROPERTY_URI_GROUPWRITE, stringValues);
+        List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, stringValues).extractPropertyValueList();
         Assert.assertArrayEquals("bad extraction",
                 values.toArray(new String[0]), extracted.toArray(new String[0]));
 
@@ -212,8 +210,7 @@ public class NodePropertyTest
         String expected = "val1" + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val2"
                 + VOS.DEFAULT_PROPERTY_VALUE_DELIM + "val3";
         Assert.assertEquals("bad serialization", expected, stringValues);
-        List<String> extracted = NodeProperty.extractPropertyValueList(
-                VOS.PROPERTY_URI_CONTRIBUTOR, stringValues);
+        List<String> extracted = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, stringValues).extractPropertyValueList();
         Assert.assertArrayEquals("bad extraction",
                 values.toArray(new String[0]), extracted.toArray(new String[0]));
 

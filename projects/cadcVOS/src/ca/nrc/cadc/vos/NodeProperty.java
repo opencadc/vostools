@@ -201,7 +201,7 @@ public class NodeProperty
         // group read
         if (VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(propertyURI))
         {
-            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            List<String> values = extractPropertyValueList();
             if (values != null && values.size() > MAX_GROUPS)
             {
                 throw new IllegalArgumentException(
@@ -213,7 +213,7 @@ public class NodeProperty
         // group write
         if (VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(propertyURI))
         {
-            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            List<String> values = extractPropertyValueList();
             if (values != null && values.size() > MAX_GROUPS)
             {
                 throw new IllegalArgumentException(
@@ -225,7 +225,7 @@ public class NodeProperty
         // is public
         if (VOS.PROPERTY_URI_ISPUBLIC.equalsIgnoreCase(propertyURI))
         {
-            List<String> values = extractPropertyValueList(propertyURI, propertyValue);
+            List<String> values = extractPropertyValueList();
             if (values != null && values.size() > 1)
             {
                 throw new IllegalArgumentException(
@@ -268,13 +268,13 @@ public class NodeProperty
      * @param values
      * @return
      */
-    public static List<String> extractPropertyValueList(String uri, String values)
+    public List<String> extractPropertyValueList()
     {
-        if (uri == null || values == null)
+        if (propertyURI == null || propertyValue == null)
             return null;
         
-        String delim = getPropertyValueDelimiter(uri);
-        StringTokenizer st = new StringTokenizer(values, delim);
+        String delim = getPropertyValueDelimiter(propertyURI);
+        StringTokenizer st = new StringTokenizer(propertyValue, delim);
         List<String> ret = new ArrayList<String>(st.countTokens());
         while (st.hasMoreElements())
         {
