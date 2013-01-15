@@ -66,126 +66,25 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 /**
- * Base class for a STC-S Region.
+ * Allowed values for unit in a STC-S SpectralInterval.
  * 
  */
-public abstract class Region
+public enum SpectralUnit
 {
-    private String name;
-    private String frame;
-    private String refpos;
-    private String flavor;
+    Hz, MHz, GHz, m, mm, um, nm, Angstrom, eV, keV, MeV;
 
-    public Region(String name, String frame, String refpos, String flavor)
+    public static boolean contains(final String value)
     {
-        this.name = name;
-        this.frame = frame;
-        this.refpos = refpos;
-        this.flavor = flavor;
-
-        if (name == null || name.trim().isEmpty())
-            throw new IllegalArgumentException("Null or empty name");
-
-        if (frame == null || frame.trim().isEmpty())
-            this.frame = null;
-        else
+        SpectralUnit[] values = SpectralUnit.values();
+        for (int i = 0; i < values.length; i++)
         {
-            if (!Frame.contains(frame.toUpperCase()))
-                throw new IllegalArgumentException("Invalid frame: " + frame);
+            if (values[i].name().equals(value))
+                return true;
         }
-
-        if (refpos == null || refpos.trim().isEmpty())
-            this.refpos = null;
-        else
-        {
-            if (!ReferencePosition.contains(refpos.toUpperCase()))
-                throw new IllegalArgumentException("Invalid reference position: " + refpos);
-        }
-
-        if (flavor == null || flavor.trim().isEmpty())
-            this.flavor = null;
-        else
-        {
-            if (!Flavor.contains(flavor.toUpperCase()))
-                throw new IllegalArgumentException("Invalid coordinate flavor: " + flavor);
-        }
+        return false;
     }
-
-    public Region(String name, String coordsys)
-    {
-        this.name = name;
-        this.frame = null;
-        this.refpos = null;
-        this.flavor = null;
-
-        if (name == null || name.trim().isEmpty())
-            throw new IllegalArgumentException("Null or empty name");
-        
-        // If coordsys is null or empty string.
-        if (coordsys == null || coordsys.trim().isEmpty())
-            return;
-
-        // Split coordsys on whitespace.
-        String[] tokens = coordsys.split("\\s+");
-
-        // First token could be Frame, Reference Position, or Flavor.
-        if (tokens.length >= 1)
-        {
-            String token = tokens[0].toUpperCase();
-            if (Frame.contains(token))
-                frame = tokens[0];
-            else if (ReferencePosition.contains(token))
-                this.refpos = tokens[0];
-            else if (Flavor.contains(token))
-                flavor = tokens[0];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[0]);
-        }
-
-        // Second token can only be Reference Position or Flavor.
-        if (tokens.length >= 2)
-        {
-            String token = tokens[1].toUpperCase();
-            if (ReferencePosition.contains(token))
-                refpos = tokens[1];
-            else if (Flavor.contains(token))
-                flavor = tokens[1];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[1]);
-        }
-
-        // Third token must be Reference Position.
-        if (tokens.length == 3)
-        {
-            if (Flavor.contains(tokens[2].toUpperCase()))
-                flavor = tokens[2];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[2]);
-        }
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public String getFrame()
-    {
-        return frame;
-    }
-
-    public String getRefPos()
-    {
-        return refpos;
-    }
-
-    public String getFlavor()
-    {
-        return flavor;
-    }
-
+    
 }

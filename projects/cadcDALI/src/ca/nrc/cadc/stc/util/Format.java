@@ -66,71 +66,17 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Format interface.
  */
-public class PointFormatTest
+public interface Format<T>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
-    {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+    T parse(String s)
+        throws StcsParsingException;
 
-    public PointFormatTest() { }
-
-    /**
-     * Test of format and parse method, of class PointFormat.
-     */
-    @Test
-    public void testValue()
-    {
-        log.debug("testValue");
-        try
-        {
-            PointFormat format = new PointFormat();
-
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
-    }
-
+    String format(T t);
 }

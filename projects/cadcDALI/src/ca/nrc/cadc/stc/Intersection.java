@@ -69,133 +69,39 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Class to represent a STC-S Intersection operator.
  *
  */
-public class Intersection extends SpatialSubphrase implements Region
+public class Intersection extends Region
 {
-    public static final String NAME = "INTERSECTION";
-
+    public static final String NAME = Intersection.class.getSimpleName();
+    
     private List<Region> regions;
-
-    Intersection() { }
 
     public Intersection(String coordsys, List<Region> regions)
     {
-        super(coordsys);
+        super(NAME, coordsys);
         this.regions = regions;
+
+        if (regions == null || regions.size() < 2)
+            throw new IllegalArgumentException("Intersection requires 2 or more Regions");
     }
 
     public Intersection(String frame, String refpos, String flavor, List<Region> regions)
     {
-        super(frame, refpos, flavor);
+        super(NAME, frame, refpos, flavor);
         this.regions = regions;
+
+        if (regions == null || regions.size() < 2)
+            throw new IllegalArgumentException("Intersection requires 2 or more Regions");
     }
 
-    public String format(Region space)
-    {
-        if (!(space instanceof Intersection))
-            throw new IllegalArgumentException("Expected Intersection, was " + space.getClass().getName());
-        Intersection intersection = (Intersection) space;
-        StringBuilder sb = new StringBuilder();
-        if (intersection.region == null)
-            sb.append(NAME).append(" ");
-        else
-            sb.append(intersection.region).append(" ");
-        if (intersection.frame != null)
-            sb.append(intersection.frame).append(" ");
-        if (intersection.refpos != null)
-            sb.append(intersection.refpos).append(" ");
-        if (intersection.flavor != null)
-            sb.append(intersection.flavor).append(" ");
-        sb.append("( ");
-        for (Region r : intersection.regions)
-            sb.append(STC.format(r)).append(" ");
-        sb.append(")");
-        return sb.toString();
-    }
-
-    public Region parse(String phrase)
-        throws StcsParsingException
-    {
-        init(phrase);
-        return this;
-    }
-
-    /**
-     * 
-     * @return
-     */
     public List<Region> getRegions()
     {
         return regions;
-    }
-    
-    protected void parseCoordinates()
-        throws StcsParsingException
-    {
-        // Get the string within the opening and closing parentheses.
-        int open = phrase.indexOf("(");
-        int close = phrase.lastIndexOf(")");
-        if (open == -1 || close == -1)
-            throw new StcsParsingException("Intersection arguments must be enclosed in parentheses: " + phrase);
-        String union = phrase.substring(open + 1, close).trim();
-
-        int index = 0;
-        String subPhrase = getNextRegion(union, index);
-        while (subPhrase != null)
-        {
-            if (regions == null)
-                regions = new ArrayList<Region>();
-            regions.add(STC.parse(subPhrase));
-            index = index + subPhrase.length();
-            subPhrase = getNextRegion(union, index);
-        }
-    }
-
-    private String getNextRegion(String phrase, int index)
-    {
-        // Uppercase phrase.
-        String upperPhrase = phrase.toUpperCase();
-
-        // Search the phrase for a Region.
-        Regions[] values = Regions.values();
-        int[] indexes = new int[values.length];
-        for (int i = 0; i < indexes.length; i++)
-            indexes[i] = upperPhrase.indexOf(values[i].name(), index);
-
-        // Sort in descending order.
-        Arrays.sort(indexes);
-
-        // Assign start the first positive index.
-        // Assign end the second positive index.
-        int start = -1;
-        int end = -1;
-        for (int i = 0; i < indexes.length; i++)
-        {
-            if (indexes[i] == -1)
-                continue;
-            if (start == -1)
-            {
-                start = indexes[i];
-                continue;
-            }
-            if (end == -1)
-            {
-                end = indexes[i];
-                break;
-            }
-        }
-        if (start != -1 && end == -1)
-            return phrase.substring(start);
-        else if (start != -1 && end != -1)
-            return phrase.substring(start, end);
-        return null;
     }
 
 }

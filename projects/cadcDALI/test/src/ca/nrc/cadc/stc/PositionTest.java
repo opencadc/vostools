@@ -6,13 +6,8 @@
 package ca.nrc.cadc.stc;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.util.ArrayList;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -27,90 +22,181 @@ public class PositionTest
     public PositionTest() {}
 
     @Test
-    public void testFormat() throws Exception
+    public void testFormatValid()
     {
-        log.debug("testFormat");
+        log.debug("testFormatValid");
+        try
+        {
+            String phrase = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
+            Position position = new Position("ICRS", "BARYCENTER", "SPHERICAL2", 1.0, 2.0);
 
-        String phrase = "POSITION ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-        Position position = new Position("ICRS", "BARYCENTER", "SPHERICAL2", 1.0, 2.0);
-
-        String actual = STC.format(position);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testFormat passed");
+            String actual = STC.format(position);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testFormatValid passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testFormatLowerCase() throws Exception
+    public void testFormatLowerCase()
     {
         log.debug("testFormatLowerCase");
+        try
+        {
+            String phrase = "Position icrs barycenter spherical2 1.0 2.0";
+            Position position = new Position("icrs", "barycenter", "spherical2", 1.0, 2.0);
 
-        String phrase = "POSITION icrs barycenter spherical2 1.0 2.0";
-        Position position = new Position("icrs", "barycenter", "spherical2", 1.0, 2.0);
-
-        String actual = STC.format(position);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testFormatLowerCase passed");
+            String actual = STC.format(position);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testFormatLowerCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testFormatMixedCase() throws Exception
+    public void testFormatMixedCase()
     {
         log.debug("testFormatMixedCase");
+        try
+        {
+            String phrase = "Position Icrs BaryCenter Spherical2 1.0 2.0";
+            Position position = new Position("Icrs", "BaryCenter", "Spherical2", 1.0, 2.0);
 
-        String phrase = "POSITION Icrs BaryCenter Spherical2 1.0 2.0";
-        Position position = new Position("Icrs", "BaryCenter", "Spherical2", 1.0, 2.0);
-
-        String actual = STC.format(position);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testFormatMixedCase passed");
+            String actual = STC.format(position);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testFormatMixedCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testParse() throws Exception
+    public void testParse()
     {
         log.debug("parse");
-
-        String phrase = "POSITION ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParse passed");
+        try
+        {
+            String phrase = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParse passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testParseLowerCase() throws Exception
+    public void testParseLowerCase()
     {
         log.debug("testParseLowerCase");
-
-        String phrase = "position icrs barycenter spherical2 1.0 2.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseLowerCase passed");
+        try
+        {
+            String phrase = "position icrs barycenter spherical2 1.0 2.0";
+            String expected = "Position icrs barycenter spherical2 1.0 2.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testParseLowerCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testParseMixedCase() throws Exception
+    public void testParseMixedCase()
     {
         log.debug("testParseMixedCase");
-
-        String phrase = "Position Icrs BaryCenter Spherical2 1.0 2.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseMixedCase passed");
+        try
+        {
+            String phrase = "Position Icrs BaryCenter Spherical2 1.0 2.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseMixedCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
+    @Test
+    public void testInvalidPositionPhrase()
+    {
+        log.debug("testInvalidPositionPhrase");
+        try
+        {
+            try
+            {
+                String phrase = "Position";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            try
+            {
+                String phrase = "Position 1.0";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            try
+            {
+                String phrase = "Position ICRS";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            log.info("testInvalidPositionPhrase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }

@@ -66,71 +66,78 @@
 *
 ************************************************************************
 */
-
-package ca.nrc.cadc.dali.util;
+package ca.nrc.cadc.stc.util;
 
 import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class PositionFormat extends RegionFormat implements Format<Position>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Position.
+     *
+     * @param phrase the String to parse.
+     * @return Position value of the String.
+     */
+    public Position parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
 
-    public PointFormatTest() { }
+        // CoordPair x.
+        double x;
+        if (currentWord == null)
+        {
+            if (words.hasNextDouble())
+                x = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+        }
+        else
+        {
+            try
+            {
+                x = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+            }
+        }
+
+        // CoordPair y.
+        double y;
+        if (words.hasNextDouble())
+            y = words.nextDouble();
+        else
+            throw new StcsParsingException("Coordpair not found in " + phrase);
+
+        return new Position(frame, refpos, flavor, x, y);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Position and returns a String representation.
+     * If the Position is null an empty String is returned.
+     *
+     * @param position Position to format
+     * @return String representation of the Position.
      */
-    @Test
-    public void testValue()
+    public String format(Position position)
     {
-        log.debug("testValue");
-        try
-        {
-            PointFormat format = new PointFormat();
+        if (!(position instanceof Position))
+            throw new IllegalArgumentException("Expected Position, was " + position.getClass().getName());
 
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(position));
+        sb.append(" ");
+        sb.append(position.getCoordPair());
+        return sb.toString().trim();
     }
 
 }

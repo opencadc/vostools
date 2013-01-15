@@ -72,10 +72,6 @@ package ca.nrc.cadc.stc;
 import ca.nrc.cadc.util.Log4jInit;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -93,207 +89,392 @@ public class BoxTest
 
     public BoxTest() { }
 
+    
+
     @Test
-    public void testFormatAll() throws Exception
+    public void testFormatValid() throws Exception
     {
-        log.debug("testFormatAll");
+        log.debug("testFormatValid");
+        try
+        {
+            Box box = new Box("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatAll passed");
+            String actual = STC.format(box);
+            String expected = "Box ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatValid passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatLowerCase() throws Exception
     {
         log.debug("testFormatLowerCase");
+        try
+        {
+            Box box = new Box("icrs", "geocenter", "spherical2", 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box("icrs", "geocenter", "spherical2", 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX icrs geocenter spherical2 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatLowerCase passed");
+            String actual = STC.format(box);
+            String expected = "Box icrs geocenter spherical2 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatLowerCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatMixedCase() throws Exception
     {
         log.debug("testFormatMixedCase");
+        try
+        {
+            Box box = new Box("Icrs", "GeoCenter", "Spherical2", 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box("Icrs", "GeoCenter", "Spherical2", 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX Icrs GeoCenter Spherical2 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatMixedCase passed");
+            String actual = STC.format(box);
+            String expected = "Box Icrs GeoCenter Spherical2 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatMixedCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatNone() throws Exception
     {
         log.debug("testFormatNone");
+        try
+        {
+            Box box = new Box(null, null, null, 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box(null, null, null, 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatNone passed");
+            String actual = STC.format(box);
+            String expected = "Box 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatNone passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatOnlyFrame() throws Exception
     {
         log.debug("testFormatOnlyFrame");
+        try
+        {
+            Box box = new Box("ICRS", null, null, 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box("ICRS", null, null, 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX ICRS 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyFrame passed");
+            String actual = STC.format(box);
+            String expected = "Box ICRS 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatOnlyFrame passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatOnlyRefPos() throws Exception
     {
         log.debug("testFormatOnlyRefPos");
+        try
+        {
+            Box box = new Box(null, "GEOCENTER", null, 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box(null, "GEOCENTER", null, 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX GEOCENTER 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyRefPos passed");
+            String actual = STC.format(box);
+            String expected = "Box GEOCENTER 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatOnlyRefPos passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testFormatOnlyFlavor() throws Exception
     {
         log.debug("testFormatOnlyFlavor");
+        try
+        {
+            Box box = new Box(null, null, "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
 
-        Box box = new Box(null, null, "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
-
-        String actual = STC.format(box);
-        String expected = "BOX SPHERICAL2 1.0 2.0 3.0 4.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyFlavor passed");
+            String actual = STC.format(box);
+            String expected = "Box SPHERICAL2 1.0 2.0 3.0 4.0";
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testFormatOnlyFlavor passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
+    @Test
+    public void testParseNullPhrase()
+    {
+        log.debug("testParseNullPhrase");
+        try
+        {
+            String phrase = null;
+            Region box = STC.parse(phrase);
+            assertNull("Null phrase should return null Box", box);
+            log.info("testParseNullPhrase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testParseEmptyPhrase()
+    {
+        log.debug("testParseEmptyPhrase");
+        try
+        {
+            String phrase = "";
+            Region box = STC.parse(phrase);
+            assertNull("Empty phrase should return null box", box);
+            log.info("testParseEmptyPhrase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
 
     @Test
     public void testParseAll() throws Exception
     {
         log.debug("testParseAll");
-
-        String phrase = "BOX ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseAll passed");
+        try
+        {
+            String phrase = "Box ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseAll passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseNone() throws Exception
     {
         log.debug("testParseNone");
-
-        String phrase = "BOX 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseNone passed");
+        try
+        {
+            String phrase = "Box 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseNone passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseOnlyFrame() throws Exception
     {
         log.debug("testParseOnlyFrame");
-
-        String phrase = "BOX ICRS 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseOnlyFrame passed");
+        try
+        {
+            String phrase = "Box ICRS 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseOnlyFrame passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseOnlyRefPos() throws Exception
     {
         log.debug("testParseOnlyRefPos");
-
-        String phrase = "BOX GEOCENTER 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseOnlyRefPos passed");
+        try
+        {
+            String phrase = "Box GEOCENTER 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseOnlyRefPos passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseOnlyFlavor() throws Exception
     {
         log.debug("testParseOnlyFlavor");
-
-        String phrase = "BOX SPHERICAL2 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseOnlyFlavor passed");
+        try
+        {
+            String phrase = "Box SPHERICAL2 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseOnlyFlavor passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseLowerCase() throws Exception
     {
         log.debug("testParseLowerCase");
-
-        String phrase = "box spherical2 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseLowerCase passed");
+        try
+        {
+            String phrase = "box spherical2 1.0 2.0 3.0 4.0";
+            String expected = "Box spherical2 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + expected);
+            log.debug("  actual: " + actual);
+            assertEquals(expected, actual);
+            log.info("testParseLowerCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
     public void testParseMixedCase() throws Exception
     {
         log.debug("testParseMixedCase");
-
-        String phrase = "Box Spherical2 1.0 2.0 3.0 4.0";
-        Region space = STC.parse(phrase);
-        String actual = STC.format(space);
-        log.debug("expected: " + phrase);
-        log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
-        log.info("testParseMixedCase passed");
+        try
+        {
+            String phrase = "Box Spherical2 1.0 2.0 3.0 4.0";
+            Region space = STC.parse(phrase);
+            String actual = STC.format(space);
+            log.debug("expected: " + phrase);
+            log.debug("  actual: " + actual);
+            assertEquals(phrase, actual);
+            log.info("testParseMixedCase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
+
+    @Test
+    public void testInvalidBoxPhrase()
+    {
+        log.debug("testInvalidBoxPhrase");
+        try
+        {
+            try
+            {
+                String phrase = "Box";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            try
+            {
+                String phrase = "Box 1.0 2.0 3.0";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            try
+            {
+                String phrase = "Box 1.0 2.0 ICRS";
+                Region space = STC.parse(phrase);
+                fail("Invalid phrase should throw StcsParsingException");
+            }
+            catch (StcsParsingException e)
+            {
+                log.debug("Invalid phrase threw exception " + e.getMessage());
+            }
+
+            log.info("testInvalidBoxPhrase passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+
 }

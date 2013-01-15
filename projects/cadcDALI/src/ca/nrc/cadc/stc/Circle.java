@@ -73,113 +73,35 @@ package ca.nrc.cadc.stc;
  * Class to represent a STC-S Circle.
  *
  */
-public class Circle extends SpatialSubphrase implements Region
+public class Circle extends Region
 {
-    public static final String NAME = "CIRCLE";
+    public static final String NAME = Circle.class.getSimpleName();
+    
     private CoordPair coordPair;
     private double radius;
-
-    Circle() { }
     
     public Circle(String coordsys, double x, double y, double r)
     {
-        super(coordsys);
+        super(NAME, coordsys);
         this.coordPair = new CoordPair(x, y);
         this.radius = r;
     }
 
     public Circle(String frame, String refpos, String flavor, double x, double y, double r)
     {
-        super(frame, refpos, flavor);
+        super(NAME, frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);
         this.radius = r;
     }
 
-    public String format(Region space)
-    {
-        if (!(space instanceof Circle))
-            throw new IllegalArgumentException("Expected Circle, was " + space.getClass().getName());
-        Circle circle = (Circle) space;
-        StringBuilder sb = new StringBuilder();
-        if (circle.region == null)
-            sb.append(NAME).append(" ");
-        else
-            sb.append(circle.region).append(" ");
-        if (circle.frame != null)
-            sb.append(circle.frame).append(" ");
-        if (circle.refpos != null)
-            sb.append(circle.refpos).append(" ");
-        if (circle.flavor != null)
-            sb.append(circle.flavor).append(" ");
-        sb.append(circle.coordPair).append(" ");;
-        sb.append(circle.radius);
-        return sb.toString().trim();
-    }
-
-    public Region parse(String phrase)
-        throws StcsParsingException
-    {
-        init(phrase);
-        return this;
-    }
-
-    /**
-     * 
-     * @return
-     */
     public CoordPair getCoordPair()
     {
         return coordPair;
     }
 
-    /**
-     * 
-     * @return
-     */
     public double getRadius()
     {
         return radius;
-    }
-    
-    protected void parseCoordinates()
-        throws StcsParsingException
-    {
-        // current word as a Double.
-        Double value = null;
-        if (currentWord == null)
-        {
-            if (words.hasNextDouble())
-                value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid coordpair element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
-        }
-        else
-        {
-            try
-            {
-                value = Double.valueOf(currentWord);
-            }
-            catch (NumberFormatException e)
-            {
-                throw new StcsParsingException("Invalid coordpair value " + currentWord, e);
-            }
-        }
-
-        // coordpair values.
-        if (words.hasNextDouble())
-            coordPair = new CoordPair(value, words.nextDouble());
-        else
-            throw new StcsParsingException("coordpair values not found");
-
-        // width
-        if (words.hasNextDouble())
-            radius = words.nextDouble();
-        else
-            throw new StcsParsingException("width value not found");
-
-        currentWord = null;
     }
 
 }

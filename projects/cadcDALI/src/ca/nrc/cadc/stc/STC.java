@@ -66,8 +66,16 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
+
+import ca.nrc.cadc.stc.util.BoxFormat;
+import ca.nrc.cadc.stc.util.CircleFormat;
+import ca.nrc.cadc.stc.util.IntersectionFormat;
+import ca.nrc.cadc.stc.util.NotFormat;
+import ca.nrc.cadc.stc.util.PolygonFormat;
+import ca.nrc.cadc.stc.util.PositionFormat;
+import ca.nrc.cadc.stc.util.SpectralIntervalFormat;
+import ca.nrc.cadc.stc.util.UnionFormat;
 
 /**
  * Factory methods to create a Region from a STC-S phrase,
@@ -76,73 +84,209 @@ package ca.nrc.cadc.stc;
  */
 public class STC
 {
-    public static Region parse(String phrase)
+    public static Region parseRegion(String phrase)
         throws StcsParsingException
     {
-        if (phrase == null || phrase.trim().length() == 0)
+        if (phrase == null || phrase.trim().isEmpty())
             return null;
 
         // Find index of first whitespace in phrase.
         phrase = phrase.trim();
         int index = phrase.indexOf(" ");
-        
+
         // Parse out the first word which should be the region.
         String region;
         if (index == -1)
-            region = phrase.toUpperCase();
+            region = phrase;
         else
-            region = phrase.substring(0, index).toUpperCase();
+            region = phrase.substring(0, index);
 
-        if (region.equals(Box.NAME))
-        {   Region box = new Box();
-            return box.parse(phrase);
-        }
-        if (region.equals(Circle.NAME))
+        if (region.equalsIgnoreCase(Box.NAME))
         {
-            Region circle = new Circle();
-            return circle.parse(phrase);
+            BoxFormat format = new BoxFormat();
+            return format.parse(phrase);
         }
-        if (region.equals(Not.NAME))
+        if (region.equalsIgnoreCase(Circle.NAME))
         {
-            Region not = new Not();
-            return not.parse(phrase);
+            CircleFormat format = new CircleFormat();
+            return format.parse(phrase);
         }
-        if (region.equals(Polygon.NAME))
+        if (region.equalsIgnoreCase(Not.NAME))
         {
-            Region polygon = new Polygon();
-            return polygon.parse(phrase);
+            NotFormat format = new NotFormat();
+            return format.parse(phrase);
         }
-        if (region.equals(Position.NAME))
+        if (region.equalsIgnoreCase(Polygon.NAME))
         {
-            Region position = new Position();
-            return position.parse(phrase);
+            PolygonFormat format = new PolygonFormat();
+            return format.parse(phrase);
         }
-        if (region.equals(Union.NAME))
+        if (region.equalsIgnoreCase(Position.NAME))
         {
-            Region union = new Union();
-            return union.parse(phrase);
+            PositionFormat format = new PositionFormat();
+            return format.parse(phrase);
         }
-        if (region.equals(Intersection.NAME))
+        if (region.equalsIgnoreCase(Union.NAME))
         {
-            Region intersection = new Intersection();
-            return intersection.parse(phrase);
+            UnionFormat format = new UnionFormat();
+            return format.parse(phrase);
+        }
+        if (region.equalsIgnoreCase(Intersection.NAME))
+        {
+            IntersectionFormat format = new IntersectionFormat();
+            return format.parse(phrase);
         }
         throw new UnsupportedOperationException("Unsupported phrase " + phrase);
     }
 
-    public static String format(Region space)
+    public static SpectralInterval parseSpectralInterval(String phrase)
+        throws StcsParsingException
     {
-        return space.format(space);
+        if (phrase == null || phrase.trim().isEmpty())
+            return null;
+
+        // Find index of first whitespace in phrase.
+        phrase = phrase.trim();
+        SpectralIntervalFormat format = new SpectralIntervalFormat();
+        return format.parse(phrase);
     }
 
-    public static boolean arrayContains(String[] array, String value)
+    public static AstroCoordArea parseAstroCoordArea(String phrase)
+        throws StcsParsingException
     {
-        for (int i = 0; i < array.length; i++)
+        if (phrase == null || phrase.trim().isEmpty())
+            return null;
+
+        // Find index of first whitespace in phrase.
+        phrase = phrase.trim();
+
+        // Get the first word of the phrase.
+        int index = 0;
+        String[] words = phrase.split("\\s+");
+        String currentWord = words[index];
+
+        Region region = null;
+        if (Regions.contains(currentWord.toUpperCase()))
         {
-            if (array[i].equals(value))
-                return true;
+            StringBuilder sb = new StringBuilder();
+            sb.append(currentWord);
+            sb.append(" ");
+            for (index = 1; index < words.length; index++)
+            {
+                currentWord = words[index];
+                if (currentWord.equalsIgnoreCase(SpectralInterval.NAME))
+                {
+                    break;
+                }
+                else
+                {
+                    sb.append(currentWord);
+                    sb.append(" ");
+                    currentWord = null;
+                }
+            }
+            region = parseRegion(sb.toString().trim());
         }
-        return false;
+
+        SpectralInterval spectralInterval = null;
+        if (currentWord != null)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = index; i < words.length; i++)
+            {
+                sb.append(words[i]);
+                sb.append(" ");
+            }
+            spectralInterval = parseSpectralInterval(sb.toString().trim());
+        }
+        return new AstroCoordArea(region, spectralInterval);
+    }
+    
+    /**
+     * @deprecated 
+     */
+    public static Region parse(String phrase)
+        throws StcsParsingException
+    {
+        return parseRegion(phrase);
+    }
+
+    /**
+     *
+     * @param space
+     * @return
+     */
+    public static String format(Region region)
+    {
+        if (region == null)
+            return "";
+        
+        if (region instanceof Box)
+        {
+            BoxFormat format = new BoxFormat();
+            return format.format((Box) region);
+        }
+        if (region instanceof Circle)
+        {
+            CircleFormat format = new CircleFormat();
+            return format.format((Circle) region);
+        }
+        if (region instanceof Not)
+        {
+            NotFormat format = new NotFormat();
+            return format.format((Not) region);
+        }
+        if (region instanceof Polygon)
+        {
+            PolygonFormat format = new PolygonFormat();
+            return format.format((Polygon) region);
+        }
+        if (region instanceof Position)
+        {
+            PositionFormat format = new PositionFormat();
+            return format.format((Position) region);
+        }
+        if (region instanceof Union)
+        {
+            UnionFormat format = new UnionFormat();
+            return format.format((Union) region);
+        }
+        if (region instanceof Intersection)
+        {
+            IntersectionFormat format = new IntersectionFormat();
+            return format.format((Intersection) region);
+        }
+        throw new UnsupportedOperationException("Unsupported Region " + region.getClass().getName());
+    }
+
+    public static String format(SpectralInterval spectralInterval)
+    {
+        if (spectralInterval == null)
+            return "";
+        
+        SpectralIntervalFormat format = new SpectralIntervalFormat();
+        return format.format(spectralInterval);
+    }
+
+    public static String format(AstroCoordArea area)
+    {
+        if (area == null)
+            return "";
+
+        StringBuilder sb = new StringBuilder();
+        if (area.getRegion() != null)
+        {
+            sb.append(format(area.getRegion()));
+        }
+        if (area.getRegion() != null && area.getSpectralInterval() != null)
+        {
+            sb.append(" ");
+        }
+        if (area.getSpectralInterval() != null)
+        {
+            sb.append(format(area.getSpectralInterval()));
+        }
+        return sb.toString();
     }
     
 }

@@ -1,0 +1,105 @@
+<!-- 
+    Document   : package.html
+    Created on : 08-Jan-2013, 12:04:14 PM
+    Author     : jburke
+-->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>
+  <body>
+  
+  <h1>The CADC STC library</h1>
+  <p>
+    The CADC STC library is an implementation of STC-S 
+    <a href="http://www.ivoa.net/Documents/latest/STC-S.html">
+      http://www.ivoa.net/Documents/latest/STC-S.html
+    </a>
+  </p>
+  
+  <h2>ca.nrc.cadc.wcs.STC</h2>
+  <p>
+    The class <code>ca.nrc.cadc.wcs.STC</code> contains factory methods to create a Region 
+    from a STC-S phrase, and to build a STC-S phrase from a Region.
+  </p>
+  
+  <h2>STC-S Phrase</h2>
+  <p>
+    A STC-S phrase consists of one or more sub-phrases. Each sub-phrase pertains to a 
+    particular coordinate frame. The sub-phrases concatenated togeather form the phrase, 
+    and shall be in the following order:
+  </p>
+  <p>
+    &emsp;<code>Time Space Spectrum Redshift</code>
+  </p>
+  <p>
+    Currently only the Space and Spectrum sub-phrases are supported.
+  </p>
+  
+  <h2>Space Sub-phrase</h2>
+  <p>
+    The following syntax is supported to describe a Space sub-phrase.
+  </p>
+  
+  <p>
+    &emsp;Box [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] &lt;pos&gt; &lt;bsize&gt;
+  </p>
+  <p>
+    &emsp;Circle [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] &lt;pos&gt; &lt;radius&gt;
+  </p>
+  <p>
+    &emsp;Polygon [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] &lt;pos&gt; ...
+  </p>
+  <p>
+    &emsp;Position [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] &lt;pos&gt;
+  </p>
+  <p>
+    &emsp;Union [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] ( &lt;region&gt; ... )
+  </p>
+  <p>
+    &emsp;Not ( &lt;region&gt; )
+  </p>
+  <p>
+    &emsp;Intersection [&lt;frame&gt;] [&lt;refpos&gt;] [&lt;flavor&gt;] ( &lt;region&gt; ... )
+  </p>
+  
+  <h3>
+    Notes:
+  </h3>
+  <ul>
+    <li>&lt;frame&gt; is one of the following: ECLIPTIC, FK4, FK5, GALACTIC, ICRS, UNKNOWNFRAME</li>
+
+    <li>&lt;flavor&gt; is one of the following: CARTESIAN2, CARTESIAN3, SPHERICAL2</li>
+
+    <li>&lt;refpos&gt; is one of the following: BARYCENTER, GEOCENTER, HELIOCENTER, LSR, TOPOCENTER, RELOCATABLE, UNKNOWNREFPOS</li>
+
+    <li>&lt;pos&gt; &lt;bsize&gt; are pairs of doubles</li>
+    
+    <li>&lt;radius&gt; is a double</li>
+    
+    <li>&lt;region&gt; is a Space sub-phrase, one of the following: Box, Circle, Polygon, Position, Union, Not, Intersection</li>
+    
+  </ul>
+
+  <h2>Spectrum Sub-phrase</h2>
+  <p>
+    The following syntax is supported to describe a Spectrum sub-phrase.
+  </p>
+  
+  <p>
+    &emsp;SpectralInterval &lt;lolimit&gt; &lt;hilimit&gt; unit &lt;unit&gt;
+  </p>
+  
+  <h3>
+    Notes:
+  </h3>
+  <ul>
+    <li>&lt;lolimit&gt; &lt;hilimit&gt; are doubles</li>
+    
+    <li>&lt;unit&gt; is one of the following: Hz, MHz, GHz, m, mm, um, nm, Angstrom, eV, keV, MeV</li>
+  </ul>
+    
+  </body>
+</html>

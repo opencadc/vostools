@@ -69,24 +69,21 @@
 
 package ca.nrc.cadc.stc;
 
-
 /**
  * Class to represent a STC-S Box.
  * 
- * @author jburke, zhangsa
  */
-public class Box extends SpatialSubphrase implements Region
+public class Box extends Region
 {
-    public static final String NAME = "BOX";
+    public static final String NAME = Box.class.getSimpleName();
+    
     private CoordPair coordPair;
     private double width;
     private double height;
-
-    Box() { }
     
     public Box(String coordsys, double x, double y, double w, double h)
     {
-        super(coordsys);
+        super(NAME, coordsys);
         this.coordPair = new CoordPair(x, y);
         this.width = w;
         this.height = h;
@@ -94,111 +91,22 @@ public class Box extends SpatialSubphrase implements Region
 
     public Box(String frame, String refpos, String flavor, double x, double y, double w, double h)
     {
-        super(frame, refpos, flavor);
+        super(NAME, frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);
         this.width = w;
         this.height = h;
     }
     
-    public String format(Region space)
-    {
-        if (!(space instanceof Box))
-            throw new IllegalArgumentException("Expected Box, was " + space.getClass().getName());
-        Box box = (Box) space;
-        StringBuilder sb = new StringBuilder();
-        if (box.region == null)
-            sb.append(NAME).append(" ");
-        else
-            sb.append(box.region).append(" ");
-        if (box.frame != null)
-            sb.append(box.frame).append(" ");
-        if (box.refpos != null)
-            sb.append(box.refpos).append(" ");
-        if (box.flavor != null)
-            sb.append(box.flavor).append(" ");
-        if (box.coordPair != null)
-            sb.append(box.coordPair).append(" ");
-        sb.append(box.width).append(" ");
-        sb.append(box.height);
-        return sb.toString().trim();
-    }
-
-    public Region parse(String phrase)
-        throws StcsParsingException
-    {
-        init(phrase);
-        return this;
-    }
-
-    protected void parseCoordinates()
-        throws StcsParsingException
-    {
-        // current word or next word as a Double.
-        Double value = null;
-        if (currentWord == null)
-        {
-            if (words.hasNextDouble())
-                value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid coordpair element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
-        }
-        else
-        {
-            try
-            {
-                value = Double.valueOf(currentWord);
-            }
-            catch (NumberFormatException e)
-            {
-                throw new StcsParsingException("Invalid coordpair value " + currentWord, e);
-            }
-        }
-
-        // coordpair values.
-        if (words.hasNextDouble())
-            coordPair = new CoordPair(value, words.nextDouble());
-        else
-            throw new StcsParsingException("coordpair values not found");
-
-        // width
-        if (words.hasNextDouble())
-            width = words.nextDouble();
-        else
-            throw new StcsParsingException("width value not found");
-
-        // height
-        if (words.hasNextDouble())
-            height = words.nextDouble();
-        else
-            throw new StcsParsingException("height value not found");
-
-        currentWord = null;
-    }
-
-    /**
-     *
-     * @return
-     */
     public CoordPair getCoordPair()
     {
         return coordPair;
     }
 
-    /**
-     *
-     * @return
-     */
     public double getWidth()
     {
         return width;
     }
 
-    /**
-     * 
-     * @return
-     */
     public double getHeight()
     {
         return height;

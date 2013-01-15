@@ -67,125 +67,135 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.stc;
+package ca.nrc.cadc.stc.util;
+
+import ca.nrc.cadc.stc.Flavor;
+import ca.nrc.cadc.stc.Frame;
+import ca.nrc.cadc.stc.ReferencePosition;
+import ca.nrc.cadc.stc.Region;
+import ca.nrc.cadc.stc.Regions;
+import ca.nrc.cadc.stc.StcsParsingException;
+import java.text.DecimalFormat;
+import java.util.Scanner;
 
 /**
- * Base class for a STC-S Region.
- * 
+ * Base class for a STC-S Space.
+ *
  */
-public abstract class Region
+public abstract class RegionFormat
 {
-    private String name;
-    private String frame;
-    private String refpos;
-    private String flavor;
+    // Default values.
+    public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME.name();
+    public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS.name();
+    public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2.name();
 
-    public Region(String name, String frame, String refpos, String flavor)
+    // Formatter for Double values.
+//    protected static DecimalFormat doubleFormat;
+//    static
+//    {
+//        // TODO should support SN
+//        doubleFormat = new DecimalFormat("####.########");
+//        doubleFormat.setDecimalSeparatorAlwaysShown(true);
+//        doubleFormat.setMinimumFractionDigits(1);
+//    }
+
+    protected String name;
+    protected String frame;
+    protected String refpos;
+    protected String flavor;
+
+    protected Scanner words;
+    protected String currentWord;
+
+    /**
+     *
+     * @param phrase
+     * @throws StcsParsingException
+     */
+    protected void parseRegion(String phrase)
+        throws StcsParsingException
     {
-        this.name = name;
-        this.frame = frame;
-        this.refpos = refpos;
-        this.flavor = flavor;
-
-        if (name == null || name.trim().isEmpty())
-            throw new IllegalArgumentException("Null or empty name");
-
-        if (frame == null || frame.trim().isEmpty())
-            this.frame = null;
-        else
-        {
-            if (!Frame.contains(frame.toUpperCase()))
-                throw new IllegalArgumentException("Invalid frame: " + frame);
-        }
-
-        if (refpos == null || refpos.trim().isEmpty())
-            this.refpos = null;
-        else
-        {
-            if (!ReferencePosition.contains(refpos.toUpperCase()))
-                throw new IllegalArgumentException("Invalid reference position: " + refpos);
-        }
-
-        if (flavor == null || flavor.trim().isEmpty())
-            this.flavor = null;
-        else
-        {
-            if (!Flavor.contains(flavor.toUpperCase()))
-                throw new IllegalArgumentException("Invalid coordinate flavor: " + flavor);
-        }
-    }
-
-    public Region(String name, String coordsys)
-    {
-        this.name = name;
-        this.frame = null;
-        this.refpos = null;
-        this.flavor = null;
-
-        if (name == null || name.trim().isEmpty())
-            throw new IllegalArgumentException("Null or empty name");
-        
-        // If coordsys is null or empty string.
-        if (coordsys == null || coordsys.trim().isEmpty())
+        if (phrase == null || phrase.isEmpty())
             return;
+        phrase = phrase.trim();
 
-        // Split coordsys on whitespace.
-        String[] tokens = coordsys.split("\\s+");
+        frame = null;
+        refpos = null;
+        flavor = null;
+        currentWord = null;
+        words = new Scanner(phrase);
+        words.useDelimiter("\\s+");
 
-        // First token could be Frame, Reference Position, or Flavor.
-        if (tokens.length >= 1)
+        // The phrase must contain a Region name, i.e. BOX
+        currentWord = getNextWord(words, currentWord);
+        if (!Regions.contains(currentWord.toUpperCase()))
         {
-            String token = tokens[0].toUpperCase();
-            if (Frame.contains(token))
-                frame = tokens[0];
-            else if (ReferencePosition.contains(token))
-                this.refpos = tokens[0];
-            else if (Flavor.contains(token))
-                flavor = tokens[0];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[0]);
+            throw new StcsParsingException("Invalid region " + currentWord);
+        }
+        name = currentWord;
+        currentWord = null;
+
+        currentWord = getNextWord(words, currentWord);
+        if (Frame.contains(currentWord.toUpperCase()))
+        {
+            frame = currentWord;
+            currentWord = null;
         }
 
-        // Second token can only be Reference Position or Flavor.
-        if (tokens.length >= 2)
+        currentWord = getNextWord(words, currentWord);
+        if (ReferencePosition.contains(currentWord.toUpperCase()))
         {
-            String token = tokens[1].toUpperCase();
-            if (ReferencePosition.contains(token))
-                refpos = tokens[1];
-            else if (Flavor.contains(token))
-                flavor = tokens[1];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[1]);
+            refpos = currentWord;
+            currentWord = null;
         }
 
-        // Third token must be Reference Position.
-        if (tokens.length == 3)
+        currentWord = getNextWord(words, currentWord);
+        if (Flavor.contains(currentWord.toUpperCase()))
         {
-            if (Flavor.contains(tokens[2].toUpperCase()))
-                flavor = tokens[2];
-            else
-                throw new IllegalArgumentException("Invalid coordsys value: " + tokens[2]);
+            flavor = currentWord;
+            currentWord = null;
         }
     }
 
-    public String getName()
+    /**
+     * 
+     * @param region
+     * @return
+     */
+    protected String formatRegion(Region region)
     {
-        return name;
+        StringBuilder sb = new StringBuilder();
+        sb.append(region.getName());
+        sb.append(" ");
+        if (region.getFrame() != null)
+        {
+            sb.append(region.getFrame());
+            sb.append(" ");
+        }
+        if (region.getRefPos() != null)
+        {
+            sb.append(region.getRefPos());
+            sb.append(" ");
+        }
+        if (region.getFlavor() != null)
+        {
+            sb.append(region.getFlavor());
+            sb.append(" ");
+        }
+        return sb.toString().trim();
     }
 
-    public String getFrame()
+    protected String getNextWord(Scanner words, String currentWord)
+        throws StcsParsingException
     {
-        return frame;
-    }
-
-    public String getRefPos()
-    {
-        return refpos;
-    }
-
-    public String getFlavor()
-    {
-        return flavor;
+        if (currentWord == null)
+        {
+            if (words.hasNext())
+                return words.next();
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase " + words.toString());
+        }
+        return currentWord;
     }
 
 }

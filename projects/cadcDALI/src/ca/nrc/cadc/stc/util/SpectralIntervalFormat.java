@@ -66,71 +66,66 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.SpectralInterval;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class SpectralIntervalFormat implements Format<SpectralInterval>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a SpectralInterval.
+     *
+     * @param phrase the String to parse.
+     * @return SpectralInterval value of the String.
+     */
+    public SpectralInterval parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        if (phrase == null || phrase.length() == 0)
+            return null;
+        phrase = phrase.trim();
 
-    public PointFormatTest() { }
+        String[] tokens = phrase.split("\\s+");
+        if (tokens.length != 4)
+            throw new StcsParsingException("Expected 4 words in " + phrase);
+
+        if (!tokens[0].equalsIgnoreCase(SpectralInterval.NAME))
+            throw new IllegalArgumentException("Expected SpectralInterval, was " + tokens[0]);
+        
+        double lolimit = Double.parseDouble(tokens[1]);
+        double hilimit = Double.parseDouble(tokens[2]);
+        String unit = tokens[3];
+
+        return new SpectralInterval(lolimit, hilimit, unit);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a SpectralInterval and returns a String representation.
+     * If the SpectralInterval is null an empty String is returned.
+     *
+     * @param spectralInterval SpectralInterval to format
+     * @return String representation of the SpectralInterval.
      */
-    @Test
-    public void testValue()
+    public String format(SpectralInterval spectralInterval)
     {
-        log.debug("testValue");
-        try
-        {
-            PointFormat format = new PointFormat();
+        if (!(spectralInterval instanceof SpectralInterval))
+            throw new IllegalArgumentException("Expected SpectralInterval, was " + spectralInterval.getClass().getName());
 
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        StringBuilder sb = new StringBuilder();
+        sb.append(SpectralInterval.NAME);
+        sb.append(" ");
+        sb.append(spectralInterval.getLoLimit());
+        sb.append(" ");
+        sb.append(spectralInterval.getHiLimit());
+        sb.append(" ");
+        sb.append(spectralInterval.getUnit());
+        sb.append(" ");
+        return sb.toString().trim();
     }
 
 }

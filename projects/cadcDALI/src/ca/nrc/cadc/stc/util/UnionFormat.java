@@ -66,71 +66,126 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.Region;
+import ca.nrc.cadc.stc.Regions;
+import ca.nrc.cadc.stc.STC;
+import ca.nrc.cadc.stc.StcsParsingException;
+import ca.nrc.cadc.stc.Union;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class UnionFormat extends RegionFormat implements Format<Union>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Union.
+     *
+     * @param phrase the String to parse.
+     * @return Union value of the String.
+     */
+    public Union parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
+        
+        // Get the string within the opening and closing parentheses.
+        int open = phrase.indexOf("(");
+        int close = phrase.lastIndexOf(")");
+        if (open == -1 || close == -1)
+            throw new StcsParsingException("Union arguments must be enclosed in parentheses: " + phrase);
+        String union = phrase.substring(open + 1, close).trim();
 
-    public PointFormatTest() { }
+        List<String> phrases = getRegions(union);
+        List<Region> regions = new ArrayList<Region>(phrases.size());
+        for (String s : phrases)
+        {
+            regions.add(STC.parse(s));
+        }
+
+        // Must be two or more regions in a Union.
+        if (regions.size() < 2)
+            throw new StcsParsingException("Union must contain 2 or more regions: " + phrase);
+
+        return new Union(frame, refpos, flavor, regions);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Union and returns a String representation.
+     * If the Union is null an empty String is returned.
+     *
+     * @param union Union to format
+     * @return String representation of the Union.
      */
-    @Test
-    public void testValue()
+    public String format(Union union)
     {
-        log.debug("testValue");
-        try
+        if (!(union instanceof Union))
+            throw new IllegalArgumentException("Expected Union, was " + union.getClass().getName());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(union));
+        sb.append(" ( ");
+        for (Region r : union.getRegions())
         {
-            PointFormat format = new PointFormat();
-
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
+            sb.append(STC.format(r));
+            sb.append(" ");
         }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
+        sb.append(")");
+        return sb.toString().trim();
     }
 
-    @Test
-    public void testNull() throws Exception
+    private List<String> getRegions(String subPhrase)
     {
-        log.debug("testNull");
+        // Uppercase phrase.
+        String upperPhrase = subPhrase.toUpperCase();
 
-        PointFormat format = new PointFormat();
+        // List of parsed regions.
+        List<String> phrases = new ArrayList<String>();
 
-        String s = format.format(null);
-        assertEquals("", s);
+        int index = -1;
+        int start = 0;
+        int end = 0;
+        while (start != -1)
+        {
+            index = findRegion(upperPhrase, index);
+            end = index;
+            if (start != -1 && end > start)
+                phrases.add(subPhrase.substring(start, end));
+            else if (start != -1 && end == -1)
+                phrases.add(subPhrase.substring(start));
+            start = index;
+            index = index + 1;
+        }
 
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        return phrases;
     }
 
+    private int findRegion(String s, int start)
+    {
+        String upper = s.toUpperCase();
+        Regions[] candidates = Regions.values();
+        int[] indexes = new int[candidates.length];
+        for (int i = 0; i < candidates.length; i++)
+            indexes[i] = upper.indexOf(candidates[i].name(), start);
+
+        // Sort in ascending order.
+        Arrays.sort(indexes);
+
+        int index = -1;
+        for (int i = 0; i < indexes.length; i++)
+        {
+            if (indexes[i] != -1)
+            {
+                index = indexes[i];
+                break;
+            }
+        }
+        return index;
+    }
+    
 }

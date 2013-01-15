@@ -66,71 +66,99 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class BoxFormat extends RegionFormat implements Format<Box>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Box.
+     *
+     * @param phrase the String to parse.
+     * @return Box value of the String.
+     */
+    public Box parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
 
-    public PointFormatTest() { }
+        // CoordPair x.
+        Double x = null;
+        if (currentWord == null)
+        {
+            if (words.hasNextDouble())
+                x = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+        }
+        else
+        {
+            try
+            {
+                x = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+            }
+        }
+
+        // CoordPair y.
+        Double y;
+        if (words.hasNextDouble())
+            y = words.nextDouble();
+        else
+            throw new StcsParsingException("Coordpair not found in " + phrase);
+
+        // width
+        double width;
+        if (words.hasNextDouble())
+            width = words.nextDouble();
+        else
+            throw new StcsParsingException("Width not found in " + phrase);
+
+        // height
+        double height;
+        if (words.hasNextDouble())
+            height = words.nextDouble();
+        else
+            throw new StcsParsingException("Height not found in " + phrase);
+
+        return new Box(frame, refpos, flavor, x, y, width, height);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Box and returns a String representation.
+     * If the Box is null an empty String is returned.
+     *
+     * @param box Box to format
+     * @return String representation of the Box.
      */
-    @Test
-    public void testValue()
+    public String format(Box box)
     {
-        log.debug("testValue");
-        try
+        if (!(box instanceof Box))
+            throw new IllegalArgumentException("Expected Box, was " + box.getClass().getName());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(box));
+        sb.append(" ");
+        if (box.getCoordPair() != null)
         {
-            PointFormat format = new PointFormat();
-
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
+            sb.append(box.getCoordPair());
+            sb.append(" ");
         }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        sb.append(box.getWidth());
+        sb.append(" ");
+        sb.append(box.getHeight());
+        return sb.toString().trim();
     }
 
 }

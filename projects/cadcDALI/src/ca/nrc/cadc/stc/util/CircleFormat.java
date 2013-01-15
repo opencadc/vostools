@@ -66,71 +66,88 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.stc.Circle;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class CircleFormat extends RegionFormat implements Format<Circle>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Circle.
+     *
+     * @param phrase the String to parse.
+     * @return Circle value of the String.
+     */
+    public Circle parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
 
-    public PointFormatTest() { }
+        // CoordPair x.
+        Double x = null;
+        if (currentWord == null)
+        {
+            if (words.hasNextDouble())
+                x = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+        }
+        else
+        {
+            try
+            {
+                x = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+            }
+        }
+
+        // CoordPair y.
+        double y;
+        if (words.hasNextDouble())
+            y = words.nextDouble();
+        else
+            throw new StcsParsingException("Coordpair not found in " + phrase);
+
+        // radius
+        double radius;
+        if (words.hasNextDouble())
+            radius = words.nextDouble();
+        else
+            throw new StcsParsingException("Radius not found in " + phrase);
+
+        return new Circle(frame, refpos, flavor, x, y, radius);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Circle and returns a String representation.
+     * If the Box is null an empty String is returned.
+     *
+     * @param circle Circle to format
+     * @return String representation of the Circle.
      */
-    @Test
-    public void testValue()
+    public String format(Circle circle)
     {
-        log.debug("testValue");
-        try
-        {
-            PointFormat format = new PointFormat();
+        if (!(circle instanceof Circle))
+            throw new IllegalArgumentException("Expected Circle, was " + circle.getClass().getName());
 
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(circle));
+        sb.append(" ");
+        sb.append(circle.getCoordPair());
+        sb.append(" ");
+        sb.append(circle.getRadius());
+        return sb.toString().trim();
     }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
-    }
-
+    
 }

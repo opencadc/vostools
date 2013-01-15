@@ -66,71 +66,62 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.Not;
+import ca.nrc.cadc.stc.Region;
+import ca.nrc.cadc.stc.STC;
+import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class NotFormat extends RegionFormat implements Format<Not>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Not.
+     *
+     * @param phrase the String to parse.
+     * @return Not value of the String.
+     */
+    public Not parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        // Get the string within the opening and closing parentheses.
+        int open = phrase.indexOf("(");
+        int close = phrase.lastIndexOf(")");
+        if (open == -1 || close == -1)
+            throw new StcsParsingException("Not arguments must be enclosed in parentheses: " + phrase);
+        String not = phrase.substring(open + 1, close).trim();
 
-    public PointFormatTest() { }
+        if (not.isEmpty())
+            throw new StcsParsingException("Not must contain a region: " + phrase);
+
+        // Get the Region for this operator.
+        Region region = STC.parse(not);
+
+        return new Not(region);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Not and returns a String representation.
+     * If the Not is null an empty String is returned.
+     *
+     * @param not Not to format
+     * @return String representation of the Not.
      */
-    @Test
-    public void testValue()
+    public String format(Not not)
     {
-        log.debug("testValue");
-        try
-        {
-            PointFormat format = new PointFormat();
+        if (!(not instanceof Not))
+            throw new IllegalArgumentException("Expected Not, was " + not.getClass().getName());
 
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(not));
+        sb.append(" ( ");
+        sb.append(STC.format(not.getRegion()));
+        sb.append(" )");
+        return sb.toString().trim();
     }
 
 }

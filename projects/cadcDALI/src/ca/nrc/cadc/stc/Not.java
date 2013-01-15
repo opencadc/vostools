@@ -73,62 +73,24 @@ package ca.nrc.cadc.stc;
  * Class to represent a STC-S Not operator.
  *
  */
-public class Not extends SpatialSubphrase implements Region
+public class Not extends Region
 {
-    public static final String NAME = "NOT";
-    private Region regions;
+    public static final String NAME = Not.class.getSimpleName();
 
-    Not() { }
+    private Region regions;
 
     public Not(Region region)
     {
-        super(null);
+        super(NAME, null);
         this.regions = region;
+
+        if (region == null)
+            throw new IllegalArgumentException("Not requires a Region");
     }
 
-    public String format(Region space)
-    {
-        if (!(space instanceof Not))
-            throw new IllegalArgumentException("Expected Not, was " + space.getClass().getName());
-        Not not = (Not) space;
-        StringBuilder sb = new StringBuilder();
-        if (not.region == null)
-            sb.append(NAME);
-        else
-            sb.append(not.region);
-        sb.append(" ( ");
-        sb.append(STC.format(not.regions));
-        sb.append(" )");
-        return sb.toString();
-    }
-
-    public Region parse(String phrase)
-        throws StcsParsingException
-    {
-        init(phrase);
-        return this;
-    }
-
-    /**
-     * 
-     * @return
-     */
     public Region getRegion()
     {
         return regions;
     }
 
-    protected void parseCoordinates()
-        throws StcsParsingException
-    {
-        // Get the string within the opening and closing parentheses.
-        int open = phrase.indexOf("(");
-        int close = phrase.lastIndexOf(")");
-        if (open == -1 || close == -1)
-            throw new StcsParsingException("Not arguments must be enclosed in parentheses: " + phrase);
-        String not = phrase.substring(open + 1, close);
-
-        // Get the Region for this operator.
-        regions = STC.parse(not);
-    }
 }

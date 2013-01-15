@@ -66,71 +66,125 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.Intersection;
+import ca.nrc.cadc.stc.Region;
+import ca.nrc.cadc.stc.Regions;
+import ca.nrc.cadc.stc.STC;
+import ca.nrc.cadc.stc.StcsParsingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class IntersectionFormat extends RegionFormat implements Format<Intersection>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Intersection.
+     *
+     * @param phrase the String to parse.
+     * @return Intersection value of the String.
+     */
+    public Intersection parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
+        
+        // Get the string within the opening and closing parentheses.
+        int open = phrase.indexOf("(");
+        int close = phrase.lastIndexOf(")");
+        if (open == -1 || close == -1)
+            throw new StcsParsingException("Intersection arguments must be enclosed in parentheses: " + phrase);
+        String union = phrase.substring(open + 1, close).trim();
 
-    public PointFormatTest() { }
+        int index = 0;
+        List<Region> regions = null;
+        String subPhrase = getNextRegion(union, index);
+        if (subPhrase == null)
+            throw new StcsParsingException("Intersection must contain a region: " + phrase);
+        while (subPhrase != null)
+        {
+            if (regions == null)
+                regions = new ArrayList<Region>();
+            regions.add(STC.parseRegion(subPhrase));
+            index = index + subPhrase.length();
+            subPhrase = getNextRegion(union, index);
+        }
+
+        if (regions == null || regions.size() < 2)
+            throw new StcsParsingException("Intersection must contain 2 or more regions: " + phrase);
+
+        return new Intersection(frame, refpos, flavor, regions);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Intersection and returns a String representation.
+     * If the Intersection is null an empty String is returned.
+     *
+     * @param intersection Intersection to format
+     * @return String representation of the Box.
      */
-    @Test
-    public void testValue()
+    public String format(Intersection intersection)
     {
-        log.debug("testValue");
-        try
+        if (!(intersection instanceof Intersection))
+            throw new IllegalArgumentException("Expected Intersection, was " + intersection.getClass().getName());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(intersection));
+        sb.append(" ( ");
+        for (Region r : intersection.getRegions())
         {
-            PointFormat format = new PointFormat();
-
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
+            sb.append(STC.format(r));
+            sb.append(" ");
         }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
+        sb.append(")");
+        return sb.toString().trim();
     }
 
-    @Test
-    public void testNull() throws Exception
+    private String getNextRegion(String phrase, int index)
     {
-        log.debug("testNull");
+        // Uppercase phrase.
+        String upperPhrase = phrase.toUpperCase();
 
-        PointFormat format = new PointFormat();
+        // Search the phrase for a Region.
+        Regions[] values = Regions.values();
+        int[] indexes = new int[values.length];
+        for (int i = 0; i < indexes.length; i++)
+        {
+            indexes[i] = upperPhrase.indexOf(values[i].name(), index);
+        }
 
-        String s = format.format(null);
-        assertEquals("", s);
+        // Sort in descending order.
+        Arrays.sort(indexes);
 
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        // Assign start the first positive index.
+        // Assign end the second positive index.
+        int start = -1;
+        int end = -1;
+        for (int i = 0; i < indexes.length; i++)
+        {
+            if (indexes[i] == -1)
+                continue;
+            if (start == -1)
+            {
+                start = indexes[i];
+                continue;
+            }
+            if (end == -1)
+            {
+                end = indexes[i];
+                break;
+            }
+        }
+        if (start != -1 && end == -1)
+            return phrase.substring(start);
+        else if (start != -1 && end != -1)
+            return phrase.substring(start, end);
+        return null;
     }
 
 }

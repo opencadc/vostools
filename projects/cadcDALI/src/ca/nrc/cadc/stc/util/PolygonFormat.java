@@ -66,71 +66,101 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.stc.util;
 
-package ca.nrc.cadc.dali.util;
-
-import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.util.Log4jInit;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import ca.nrc.cadc.stc.CoordPair;
+import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.stc.StcsParsingException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  * @author jburke
  */
-public class PointFormatTest
+public class PolygonFormat extends RegionFormat implements Format<Polygon>
 {
-    private static final Logger log = Logger.getLogger(PointFormatTest.class);
-    static
+    /**
+     * Parses a String to a Polygon.
+     *
+     * @param phrase the String to parse.
+     * @return Polygon value of the String.
+     */
+    public Polygon parse(String phrase)
+        throws StcsParsingException
     {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
+        parseRegion(phrase);
 
-    public PointFormatTest() { }
+        // current word or next word as a Double.
+        Double value = null;
+        if (currentWord == null)
+        {
+            if (words.hasNextDouble())
+                value = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+        }
+        else
+        {
+            try
+            {
+                value = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+            }
+        }
+
+        // Get the first coordpair.
+        List<CoordPair> coordPairs = new ArrayList<CoordPair>();
+        if (words.hasNextDouble())
+            coordPairs.add(new CoordPair(value, words.nextDouble()));
+        else
+            throw new StcsParsingException("Polygon must contain at least 3 coordpair: " + phrase);
+
+        // Get the rest of the coordpairs.
+        while (words.hasNextDouble())
+        {
+            value = words.nextDouble();
+            if (words.hasNextDouble())
+                coordPairs.add(new CoordPair(value, words.nextDouble()));
+            else
+                throw new StcsParsingException("Polygon must contain at least 3 coordpairs: " + phrase);
+        }
+
+        if (coordPairs.size() < 3)
+            throw new StcsParsingException("Polygon must contain at least 3 coordpairs: " + phrase);
+
+        return new Polygon(frame, refpos, flavor, coordPairs);
+    }
 
     /**
-     * Test of format and parse method, of class PointFormat.
+     * Takes a Polygon and returns a String representation.
+     * If the Polygon is null an empty String is returned.
+     *
+     * @param polygon Polygon to format
+     * @return String representation of the Polygon.
      */
-    @Test
-    public void testValue()
+    public String format(Polygon polygon)
     {
-        log.debug("testValue");
-        try
+        if (!(polygon instanceof Polygon))
+            throw new IllegalArgumentException("Expected Polygon, was " + polygon.getClass().getName());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(formatRegion(polygon));
+        sb.append(" ");
+        if (polygon.getCoordPairs() != null)
         {
-            PointFormat format = new PointFormat();
-
-            String expected = "Position ICRS BARYCENTER SPHERICAL2 1.0 2.0";
-
-            Position result = format.parse(expected);
-            String actual = format.format(result);
-
-            assertEquals(expected, actual);
-
-            log.info("testValue passed");
+            for (CoordPair coordPair : polygon.getCoordPairs())
+            {
+                sb.append(coordPair);
+                sb.append(" ");
+            }
         }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testNull() throws Exception
-    {
-        log.debug("testNull");
-
-        PointFormat format = new PointFormat();
-
-        String s = format.format(null);
-        assertEquals("", s);
-
-        Position object = format.parse(null);
-        assertNull(object);
-
-        log.info("testNull passed");
+        return sb.toString().trim();
     }
 
 }

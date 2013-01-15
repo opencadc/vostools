@@ -101,7 +101,7 @@ public class RegionFormatTest
         {
             RegionFormat format = new RegionFormat();
 
-            String expected = "CIRCLE ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
+            String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
 
             Region result = format.parse(expected);
             String actual = format.format(result);

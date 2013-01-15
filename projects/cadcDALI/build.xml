@@ -175,6 +175,7 @@
                 <pathelement path="${runtimeJars}:${testingJars}"/>
             </classpath>
             <formatter type="plain" usefile="false"/>
+            <test name="ca.nrc.cadc.stc.RegionTest"/>
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
@@ -182,6 +183,8 @@
             <test name="ca.nrc.cadc.stc.NotTest"/>
             <test name="ca.nrc.cadc.stc.UnionTest"/>
             <test name="ca.nrc.cadc.stc.IntersectionTest"/>
+            <test name="ca.nrc.cadc.stc.SpectralIntervalTest"/>
+            <test name="ca.nrc.cadc.stc.AstroCoordAreaTest"/>
         </junit>
     </target>
 
