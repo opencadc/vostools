@@ -72,8 +72,8 @@ import ca.nrc.cadc.stc.SpectralInterval;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a SpectralInterval object, and format
+ * a SpectralInterval object to a STC-S phrase.
  */
 public class SpectralIntervalFormat implements Format<SpectralInterval>
 {

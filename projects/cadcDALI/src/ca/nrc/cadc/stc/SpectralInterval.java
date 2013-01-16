@@ -69,7 +69,8 @@
 package ca.nrc.cadc.stc;
 
 /**
- * Class to represent a STC-S SpectralInterval.
+ * Class to represent a STC-S SpectralInterval. A SpectralInterval describes
+ * an interval bound by the low and high limits.
  *
  */
 public class SpectralInterval
@@ -80,6 +81,14 @@ public class SpectralInterval
     private double hilimit;
     private String unit;
 
+    /**
+     * Construct a SpectralInterval with the given limits and unit.
+     * 
+     * @param lolimit the lower limit of the interval.
+     * @param hilimit the higher limit of the interval.
+     * @param unit the unit of the interval. Allowed values for unit are
+     *             from <code>ca.nrc.cadc.stc.SpectralUnit</code>.
+     */
     public SpectralInterval(double lolimit, double hilimit, String unit)
     {
         this.lolimit = lolimit;
@@ -92,16 +101,31 @@ public class SpectralInterval
         }
     }
 
+    /**
+     * Get the low limit of the Interval.
+     *
+     * @return the interval low limit.
+     */
     public double getLoLimit()
     {
         return lolimit;
     }
 
+    /**
+     * Get the interval high limit.
+     *
+     * @return the interval high limit.
+     */
     public double getHiLimit()
     {
         return hilimit;
     }
 
+    /**
+     * The unit of the interval.
+     *
+     * @return the interval unit.
+     */
     public String getUnit()
     {
         return unit;

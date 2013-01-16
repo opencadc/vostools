@@ -80,7 +80,18 @@ public class Box extends Region
     private CoordPair coordPair;
     private double width;
     private double height;
-    
+
+    /**
+     * Construct a Box with the given coordinate system and coordinates.
+     *
+     * @param coordsys the Box coordinate system, which is a space delimited 
+     *                 string containing any of frame, reference position, or flavor.
+     *                 Can be null or an empty string.
+     * @param x the x coordinate describing the center point of the Box.
+     * @param y the y coordinate describing the center point o the Box.
+     * @param w the width of the Box.
+     * @param h the height of the Box.
+     */
     public Box(String coordsys, double x, double y, double w, double h)
     {
         super(NAME, coordsys);
@@ -89,6 +100,20 @@ public class Box extends Region
         this.height = h;
     }
 
+    /**
+     * Construct a Box with the given coordinate descriptions and coordinates.
+     *
+     * @param frame the frame describing the Box. Allowed values for frame are
+     *              from <code>ca.nrc.cadc.stc.Frame</code>.
+     * @param refpos the reference position describing the Box. Allowed values
+     *               for reference position are from <code>ca.nrc.cadc.stc.ReferencePosition</code>.
+     * @param flavor the flavor describing the Box. Allowed values for flavor are
+     *               from <code>ca.nrc.cadc.stc.Flavor</code>.
+     * @param x the x coordinate describing the center point of the Box.
+     * @param y the y coordinate describing the center point o the Box.
+     * @param w the width of the Box.
+     * @param h the height of the Box.
+     */
     public Box(String frame, String refpos, String flavor, double x, double y, double w, double h)
     {
         super(NAME, frame, refpos, flavor);
@@ -96,17 +121,32 @@ public class Box extends Region
         this.width = w;
         this.height = h;
     }
-    
+
+    /**
+     * Get the CoordPair describing the center point of the Box.
+     *
+     * @return the center point of this Box.
+     */
     public CoordPair getCoordPair()
     {
         return coordPair;
     }
 
+    /**
+     * Get the width of the Box.
+     *
+     * @return the width of this Box.
+     */
     public double getWidth()
     {
         return width;
     }
 
+    /**
+     * Get the height of the Box.
+     *
+     * @return the height of this Box.
+     */
     public double getHeight()
     {
         return height;

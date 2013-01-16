@@ -77,6 +77,13 @@ public enum ReferencePosition
 {
     BARYCENTER, GEOCENTER, HELIOCENTER, LSR, TOPOCENTER, RELOCATABLE, UNKNOWNREFPOS;
 
+    /**
+     * Check if the given value is an allowed value for ReferencePosition.
+     *
+     * @param value the value to check.
+     * @return true if the value is an allowed value for ReferencePosition,
+     *         false otherwise.
+     */
     public static boolean contains(final String value)
     {
         ReferencePosition[] values = ReferencePosition.values();

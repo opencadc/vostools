@@ -13,29 +13,30 @@
   
   <h1>The CADC STC library</h1>
   <p>
-    The CADC STC library is an implementation of STC-S 
-    <a href="http://www.ivoa.net/Documents/latest/STC-S.html">
-      http://www.ivoa.net/Documents/latest/STC-S.html
-    </a>
+    The CADC STC library is an implementation of
+    <a href="http://www.ivoa.net/Documents/latest/STC-S.html">STC-S</a>
+    , a String serialization of
+    <a href="http://www.ivoa.net/Documents/latest/STC.html">STC</a>.
   </p>
   
   <h2>ca.nrc.cadc.wcs.STC</h2>
   <p>
-    The class <code>ca.nrc.cadc.wcs.STC</code> contains factory methods to create a Region 
-    from a STC-S phrase, and to build a STC-S phrase from a Region.
+    The class <code>ca.nrc.cadc.wcs.STC</code> contains factory methods to create
+    a Region, SpectralInterval, or AstroCoordArea from a STC-S phrase, and to
+    build a STC-S phrase from a Region, SpectralInterval, or AstroCoordArea.
   </p>
   
   <h2>STC-S Phrase</h2>
   <p>
     A STC-S phrase consists of one or more sub-phrases. Each sub-phrase pertains to a 
-    particular coordinate frame. The sub-phrases concatenated togeather form the phrase, 
+    particular coordinate frame. The sub-phrases are concatenated together to form the phrase,
     and shall be in the following order:
   </p>
   <p>
     &emsp;<code>Time Space Spectrum Redshift</code>
   </p>
   <p>
-    Currently only the Space and Spectrum sub-phrases are supported.
+    Currently only Space and Spectrum sub-phrases are supported.
   </p>
   
   <h2>Space Sub-phrase</h2>

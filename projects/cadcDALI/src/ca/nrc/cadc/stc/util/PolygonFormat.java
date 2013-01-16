@@ -75,8 +75,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Polygon object, and format a Polygon
+ * object to a STC-S phrase.
  */
 public class PolygonFormat extends RegionFormat implements Format<Polygon>
 {

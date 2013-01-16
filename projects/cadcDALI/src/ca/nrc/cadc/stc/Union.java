@@ -66,13 +66,13 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 import java.util.List;
 
 /**
- * Class to represent a STC-S Union operator.
+ * Class to represent a STC-S Union operator. The Union of two Regions
+ * is the Region that is contained in either or both of them.
  *
  */
 public class Union extends Region
@@ -81,6 +81,16 @@ public class Union extends Region
 
     private List<Region> regions;
 
+    /**
+     * Construct a Union with the given coordinate system and list of
+     * Regions. It is expected that the List of Regions will contain at least
+     * two Regions.
+     *
+     * @param coordsys the Union coordinate system, which is a space delimited
+     *                 string containing any of frame, refpos, or flavor.
+     *                 Can be null or an empty string.
+     * @param regions the regions of the Union.
+     */
     public Union(String coordsys, List<Region> regions)
     {
         super(NAME, coordsys);
@@ -90,6 +100,19 @@ public class Union extends Region
             throw new IllegalArgumentException("Union requires 2 or more Regions");
     }
 
+    /**
+     * Construct a Union with the given given coordinate descriptions
+     * and list of Regions. It is expected that the List of Regions will
+     * contain at least two Regions.
+     *
+     * @param frame the frame describing the Union. Allowed values for frame are
+     *              from <code>ca.nrc.cadc.stc.Frame</code>.
+     * @param refpos the reference position describing the Union. Allowed values
+     *               for refpos are from <code>ca.nrc.cadc.stc.ReferencePosition</code>.
+     * @param flavor the flavor describing the Union. Allowed values for flavor are
+     *               from <code>ca.nrc.cadc.stc.Flavor</code>.
+     * @param regions the regions of the Intersection.
+     */
     public Union(String frame, String refpos, String flavor, List<Region> regions)
     {
         super(NAME, frame, refpos, flavor);
@@ -99,6 +122,11 @@ public class Union extends Region
             throw new IllegalArgumentException("Union requires 2 or more Regions");
     }
 
+    /**
+     * Get the List of Regions for this Union.
+     *
+     * @return List of Regions.
+     */
     public List<Region> getRegions()
     {
         return regions;

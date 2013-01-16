@@ -78,8 +78,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
- * @author jburke
+ *Class to parse a STC-S phrase to a Intersection object, and Intersection
+ * a Box object to a STC-S phrase.
  */
 public class IntersectionFormat extends RegionFormat implements Format<Intersection>
 {

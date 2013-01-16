@@ -84,6 +84,14 @@ import ca.nrc.cadc.stc.util.UnionFormat;
  */
 public class STC
 {
+    /**
+     * Parse a STC-S phrase to a Region. If the phrase is null or empty, null
+     * is returned.
+     *
+     * @param phrase the STC-S phrase to parse.
+     * @return a Region object.
+     * @throws StcsParsingException if unable to parse the phrase.
+     */
     public static Region parseRegion(String phrase)
         throws StcsParsingException
     {
@@ -139,6 +147,14 @@ public class STC
         throw new UnsupportedOperationException("Unsupported phrase " + phrase);
     }
 
+    /**
+     * Parse a STC-S phrase to a SpectralInterval. If the phrase is null or
+     * empty, null is returned.
+     *
+     * @param phrase the STC-S phrase to parse.
+     * @return a SpectralInterval object.
+     * @throws StcsParsingException if unable to parse the phrase.
+     */
     public static SpectralInterval parseSpectralInterval(String phrase)
         throws StcsParsingException
     {
@@ -151,6 +167,14 @@ public class STC
         return format.parse(phrase);
     }
 
+    /**
+     * Parse a STC-S phrase to a AstroCoordArea. If the phrase is null or empty,
+     * null is returned.
+     *
+     * @param phrase the STC-S phrase to parse.
+     * @return an AstroCoordArea object.
+     * @throws StcsParsingException if unable to parse the phrase.
+     */
     public static AstroCoordArea parseAstroCoordArea(String phrase)
         throws StcsParsingException
     {
@@ -203,6 +227,9 @@ public class STC
     }
     
     /**
+     * Parse a phrase to a Region. Deprecated, use <code>parseRegion</code>,
+     * <code>parseSpectralInterval</code>, or <code>parseAstroCoordArea</code>.
+     *
      * @deprecated 
      */
     public static Region parse(String phrase)
@@ -212,9 +239,11 @@ public class STC
     }
 
     /**
+     * Format a Region object to a STC-S phrase. If region is null an empty
+     * String is returned.
      *
-     * @param space
-     * @return
+     * @param region the Region to format.
+     * @return STC-S String representation of the Region.
      */
     public static String format(Region region)
     {
@@ -259,6 +288,13 @@ public class STC
         throw new UnsupportedOperationException("Unsupported Region " + region.getClass().getName());
     }
 
+    /**
+     * Format a SpectralInterval object to a STC-S phrase. If spectralInterval
+     * is null, an empty String is returned.
+     *
+     * @param spectralInterval the SpectralInterval to format.
+     * @return STC-S String representation of the SpectralInterval.
+     */
     public static String format(SpectralInterval spectralInterval)
     {
         if (spectralInterval == null)
@@ -268,23 +304,30 @@ public class STC
         return format.format(spectralInterval);
     }
 
-    public static String format(AstroCoordArea area)
+    /**
+     * Format a AstroCoordArea object to a STC-S phrase. If astroCoordArea is
+     * null an empty String is returned.
+     *
+     * @param astroCoordArea the AstroCoordArea to format.
+     * @return STC-S String representation of the AstroCoordArea.
+     */
+    public static String format(AstroCoordArea astroCoordArea)
     {
-        if (area == null)
+        if (astroCoordArea == null)
             return "";
 
         StringBuilder sb = new StringBuilder();
-        if (area.getRegion() != null)
+        if (astroCoordArea.getRegion() != null)
         {
-            sb.append(format(area.getRegion()));
+            sb.append(format(astroCoordArea.getRegion()));
         }
-        if (area.getRegion() != null && area.getSpectralInterval() != null)
+        if (astroCoordArea.getRegion() != null && astroCoordArea.getSpectralInterval() != null)
         {
             sb.append(" ");
         }
-        if (area.getSpectralInterval() != null)
+        if (astroCoordArea.getSpectralInterval() != null)
         {
-            sb.append(format(area.getSpectralInterval()));
+            sb.append(format(astroCoordArea.getSpectralInterval()));
         }
         return sb.toString();
     }

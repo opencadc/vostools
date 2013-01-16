@@ -69,25 +69,43 @@
 package ca.nrc.cadc.stc;
 
 /**
- *
- * @author jburke
+ * An AstroCoordArea contains for coordinate frames that describe a STC-S phrase.
+ * STC-S supports Time Space Spectrum Redshift coordinates, but currently only
+ * Space and Spectrum are supported.
+ * 
  */
 public class AstroCoordArea
 {
     private Region region;
     private SpectralInterval spectralInterval;
 
+    /**
+     * Construct a AstroCoordArea with the given Space and Spectrum.
+     *
+     * @param region the Space coordinates.
+     * @param spectralInterval the Spectrum coordinates.
+     */
     public AstroCoordArea(Region region, SpectralInterval spectralInterval)
     {
         this.region = region;
         this.spectralInterval = spectralInterval;
     }
 
+    /**
+     * Get the Region for this AstroCoordArea.
+     *
+     * @return the Region.
+     */
     public Region getRegion()
     {
         return region;
     }
 
+    /**
+     * Get the SpectralInterval for this AstroCoordArea.
+     *
+     * @return the SpectralInterval.
+     */
     public SpectralInterval getSpectralInterval()
     {
         return spectralInterval;

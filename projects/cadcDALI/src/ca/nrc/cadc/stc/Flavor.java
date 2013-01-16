@@ -66,7 +66,6 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 /**
@@ -77,6 +76,12 @@ public enum Flavor
 {
     CARTESIAN2, CARTESIAN3, SPHERICAL2;
 
+    /**
+     * Check if the given value is an allowed value for Flavor.
+     *
+     * @param value the value to check.
+     * @return true if the value is an allowed value for Flavor, false otherwise.
+     */
     public static boolean contains(final String value)
     {
         Flavor[] values = Flavor.values();

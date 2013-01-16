@@ -79,7 +79,7 @@ import java.text.DecimalFormat;
 import java.util.Scanner;
 
 /**
- * Base class for a STC-S Space.
+ * Base class for parsing and formatting STC-S phrases and objects.
  *
  */
 public abstract class RegionFormat
@@ -88,16 +88,6 @@ public abstract class RegionFormat
     public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME.name();
     public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS.name();
     public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2.name();
-
-    // Formatter for Double values.
-//    protected static DecimalFormat doubleFormat;
-//    static
-//    {
-//        // TODO should support SN
-//        doubleFormat = new DecimalFormat("####.########");
-//        doubleFormat.setDecimalSeparatorAlwaysShown(true);
-//        doubleFormat.setMinimumFractionDigits(1);
-//    }
 
     protected String name;
     protected String frame;
@@ -108,9 +98,11 @@ public abstract class RegionFormat
     protected String currentWord;
 
     /**
+     * Parse a Region to it's name and coordinate descriptions (frame,
+     * reference position, flavor).
      *
-     * @param phrase
-     * @throws StcsParsingException
+     * @param phrase the phrase to parse.
+     * @throws StcsParsingException if unable to parse the phrase.
      */
     protected void parseRegion(String phrase)
         throws StcsParsingException
@@ -158,9 +150,11 @@ public abstract class RegionFormat
     }
 
     /**
-     * 
-     * @param region
-     * @return
+     * Format a Region to a STC-S phrase containing the name and
+     * coordinate descriptions (frame, reference position, flavor).
+     *
+     * @param region the region to format.
+     * @return a STC-S string of the name and coordinate descriptions.
      */
     protected String formatRegion(Region region)
     {
@@ -198,4 +192,50 @@ public abstract class RegionFormat
         return currentWord;
     }
 
+    /**
+     * Get the name of this Region.
+     *
+     * @return the region name.
+     */
+    public String getName()
+    {
+        return name;
+    }
+
+    /**
+     * Get the frame of this Region.
+     *
+     * @return the region frame.
+     */
+    public String getFrame()
+    {
+        if (frame == null)
+            return DEFAULT_FRAME;
+        return frame;
+    }
+
+    /**
+     * Get the reference position of this Region.
+     *
+     * @return the region reference position.
+     */
+    public String getReferencePosition()
+    {
+        if (refpos == null)
+            return DEFAULT_REFPOS;
+        return refpos;
+    }
+
+    /**
+     * get the flavor of this Region.
+     *
+     * @return the region flavor.
+     */
+    public String getFlavor()
+    {
+        if (flavor == null)
+            return DEFAULT_FLAVOR;
+        return flavor;
+    }
+    
 }

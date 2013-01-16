@@ -70,7 +70,7 @@
 package ca.nrc.cadc.stc;
 
 /**
- * Base class for a STC-S Region.
+ * Abstract base class for a STC-S Region.
  * 
  */
 public abstract class Region
@@ -80,41 +80,14 @@ public abstract class Region
     private String refpos;
     private String flavor;
 
-    public Region(String name, String frame, String refpos, String flavor)
-    {
-        this.name = name;
-        this.frame = frame;
-        this.refpos = refpos;
-        this.flavor = flavor;
-
-        if (name == null || name.trim().isEmpty())
-            throw new IllegalArgumentException("Null or empty name");
-
-        if (frame == null || frame.trim().isEmpty())
-            this.frame = null;
-        else
-        {
-            if (!Frame.contains(frame.toUpperCase()))
-                throw new IllegalArgumentException("Invalid frame: " + frame);
-        }
-
-        if (refpos == null || refpos.trim().isEmpty())
-            this.refpos = null;
-        else
-        {
-            if (!ReferencePosition.contains(refpos.toUpperCase()))
-                throw new IllegalArgumentException("Invalid reference position: " + refpos);
-        }
-
-        if (flavor == null || flavor.trim().isEmpty())
-            this.flavor = null;
-        else
-        {
-            if (!Flavor.contains(flavor.toUpperCase()))
-                throw new IllegalArgumentException("Invalid coordinate flavor: " + flavor);
-        }
-    }
-
+    /**
+     * Construct an Region with the given name and coordinate system. The
+     * name should not be null or an empty String.
+     * 
+     * @param name the name of the Region.
+     * @param coordsys the Region coordinate system, which is a space delimited
+     *                 string containing any of frame, reference position, or flavor.
+     */
     public Region(String name, String coordsys)
     {
         this.name = name;
@@ -124,7 +97,7 @@ public abstract class Region
 
         if (name == null || name.trim().isEmpty())
             throw new IllegalArgumentException("Null or empty name");
-        
+
         // If coordsys is null or empty string.
         if (coordsys == null || coordsys.trim().isEmpty())
             return;
@@ -168,21 +141,89 @@ public abstract class Region
         }
     }
 
+    /**
+     * Construct a Region with the given name and coordinate descriptions. The
+     * name should not be null or an empty String.
+     *
+     * @param name the name of the Region.
+     * @param frame the frame describing the Region. Allowed values for frame are
+     *              from <code>ca.nrc.cadc.stc.Frame</code>.
+     * @param refpos the reference position describing the Region. Allowed values
+     *               for reference position are from <code>ca.nrc.cadc.stc.ReferencePosition</code>.
+     * @param flavor the flavor describing the Region. Allowed values for flavor are
+     *               from <code>ca.nrc.cadc.stc.Flavor</code>.
+     * @param regions the regions of the Intersection.
+     */
+    public Region(String name, String frame, String refpos, String flavor)
+    {
+        this.name = name;
+        this.frame = frame;
+        this.refpos = refpos;
+        this.flavor = flavor;
+
+        if (name == null || name.trim().isEmpty())
+            throw new IllegalArgumentException("Null or empty name");
+
+        if (frame == null || frame.trim().isEmpty())
+            this.frame = null;
+        else
+        {
+            if (!Frame.contains(frame.toUpperCase()))
+                throw new IllegalArgumentException("Invalid frame: " + frame);
+        }
+
+        if (refpos == null || refpos.trim().isEmpty())
+            this.refpos = null;
+        else
+        {
+            if (!ReferencePosition.contains(refpos.toUpperCase()))
+                throw new IllegalArgumentException("Invalid reference position: " + refpos);
+        }
+
+        if (flavor == null || flavor.trim().isEmpty())
+            this.flavor = null;
+        else
+        {
+            if (!Flavor.contains(flavor.toUpperCase()))
+                throw new IllegalArgumentException("Invalid coordinate flavor: " + flavor);
+        }
+    }
+
+    /**
+     * Get the name of this Region.
+     *
+     * @return the name of the Region.
+     */
     public String getName()
     {
         return name;
     }
 
+    /**
+     * Get the frame of this Region.
+     *
+     * @return the frame of this Region.
+     */
     public String getFrame()
     {
         return frame;
     }
 
+    /**
+     * Get the reference position of this Region.
+     *
+     * @return the reference position of this Region.
+     */
     public String getRefPos()
     {
         return refpos;
     }
 
+    /**
+     * Get the flavor of this Region.
+     *
+     * @return the flavor of this Region.
+     */
     public String getFlavor()
     {
         return flavor;

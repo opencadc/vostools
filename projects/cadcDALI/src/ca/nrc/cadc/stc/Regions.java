@@ -77,6 +77,12 @@ public enum Regions
 {
     BOX, CIRCLE, POLYGON, POSITION, UNION, NOT, INTERSECTION;
 
+    /**
+     * Check if the given value is an allowed value for Region.
+     *
+     * @param value the value to check.
+     * @return true if the value is an allowed value for Region, false otherwise.
+     */
     public static boolean contains(final String value)
     {
         Regions[] values = Regions.values();

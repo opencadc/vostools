@@ -70,27 +70,38 @@
 package ca.nrc.cadc.stc;
 
 /**
- * Class to represent a STC-S Not operator.
+ * Class to represent a STC-S Not operator. The Not of a Region is the Region
+ * that is not contained in the original.
  *
  */
 public class Not extends Region
 {
     public static final String NAME = Not.class.getSimpleName();
 
-    private Region regions;
+    private Region region;
 
+    /**
+     * Construct an Not with the given Region. The Region should not be null.
+     * 
+     * @param region the Region to be negated.
+     */
     public Not(Region region)
     {
         super(NAME, null);
-        this.regions = region;
+        this.region = region;
 
         if (region == null)
             throw new IllegalArgumentException("Not requires a Region");
     }
 
+    /**
+     * Get the Region for this Not.
+     * 
+     * @return the Region.
+     */
     public Region getRegion()
     {
-        return regions;
+        return region;
     }
 
 }

@@ -68,13 +68,12 @@
 */
 package ca.nrc.cadc.stc.util;
 
-import ca.nrc.cadc.stc.Box;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Circle object, and format a Circle object 
+ * to a STC-S phrase.
  */
 public class CircleFormat extends RegionFormat implements Format<Circle>
 {

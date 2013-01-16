@@ -74,8 +74,8 @@ import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Not object, and format a Not object to a
+ * STC-S phrase.
  */
 public class NotFormat extends RegionFormat implements Format<Not>
 {

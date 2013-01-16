@@ -66,7 +66,6 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 /**
@@ -79,7 +78,17 @@ public class Circle extends Region
     
     private CoordPair coordPair;
     private double radius;
-    
+
+    /**
+     * Construct a Circle with the given coordinate system and coordinates.
+     * 
+     * @param coordsys the Box coordinate system, which is a space delimited
+     *                 string containing any of frame, reference position, or flavor.
+     *                 Can be null or an empty string.
+     * @param x the x coordinate describing the center point of the Circle.
+     * @param y the y coordinate describing the center point of the Circle.
+     * @param r the radius of the Circle.
+     */
     public Circle(String coordsys, double x, double y, double r)
     {
         super(NAME, coordsys);
@@ -87,6 +96,19 @@ public class Circle extends Region
         this.radius = r;
     }
 
+    /**
+     * Construct a Circle with the given coordinate system and coordinates.
+     *
+     * @param frame the frame describing the Circle. Allowed values for frame are
+     *              from <code>ca.nrc.cadc.stc.Frame</code>.
+     * @param refpos the reference position describing the Circle. Allowed values
+     *               for reference position are from <code>ca.nrc.cadc.stc.ReferencePosition</code>.
+     * @param flavor the flavor describing the Circle. Allowed values for flavor are
+     *               from <code>ca.nrc.cadc.stc.Flavor</code>.
+     * @param x the x coordinate describing the center point of the Circle.
+     * @param y the y coordinate describing the center point of the Circle.
+     * @param r the radius of the Circle.
+     */
     public Circle(String frame, String refpos, String flavor, double x, double y, double r)
     {
         super(NAME, frame, refpos, flavor);
@@ -94,11 +116,19 @@ public class Circle extends Region
         this.radius = r;
     }
 
+    /**
+     *
+     * @return the CoordPair describing the center points of the Circle.
+     */
     public CoordPair getCoordPair()
     {
         return coordPair;
     }
 
+    /**
+     * 
+     * @return the radius of the Circle
+     */
     public double getRadius()
     {
         return radius;

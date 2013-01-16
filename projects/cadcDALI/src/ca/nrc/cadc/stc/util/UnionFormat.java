@@ -78,8 +78,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Union object, and format a Union object
+ * to a STC-S phrase.
  */
 public class UnionFormat extends RegionFormat implements Format<Union>
 {

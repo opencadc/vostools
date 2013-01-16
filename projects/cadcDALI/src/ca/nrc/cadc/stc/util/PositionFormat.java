@@ -72,8 +72,8 @@ import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Position object, and format a Position
+ * object to a STC-S phrase.
  */
 public class PositionFormat extends RegionFormat implements Format<Position>
 {

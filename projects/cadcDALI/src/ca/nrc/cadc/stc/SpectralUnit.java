@@ -76,6 +76,13 @@ public enum SpectralUnit
 {
     Hz, MHz, GHz, m, mm, um, nm, Angstrom, eV, keV, MeV;
 
+    /**
+     * Check if the given value is an allowed value for SpectralUnit.
+     *
+     * @param value the value to check.
+     * @return true if the value is an allowed value for SpectralUnit,
+     *         false otherwise.
+     */
     public static boolean contains(final String value)
     {
         SpectralUnit[] values = SpectralUnit.values();

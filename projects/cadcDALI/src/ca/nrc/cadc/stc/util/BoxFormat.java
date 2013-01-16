@@ -72,8 +72,9 @@ import ca.nrc.cadc.stc.Box;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
- *
- * @author jburke
+ * Class to parse a STC-S phrase to a Box object, and format a Box object to a
+ * STC-S phrase.
+ * 
  */
 public class BoxFormat extends RegionFormat implements Format<Box>
 {

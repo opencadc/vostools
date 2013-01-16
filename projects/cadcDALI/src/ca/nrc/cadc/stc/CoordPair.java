@@ -66,18 +66,24 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 /**
- *
- * @author jburke
+ * Class to represent a CoordPair containing a x and y coordinates
+ * which describe a point in space.
+ * 
  */
 public class CoordPair
 {
     private double x;
     private double y;
 
+    /**
+     * Construct a CoordPair from the given coordinates.
+     *
+     * @param x the x coordinate of the point.
+     * @param y the y coordinate of the point.
+     */
     public CoordPair(final double x, final double y)
     {
         this.x = x;
@@ -85,8 +91,9 @@ public class CoordPair
     }
 
     /**
+     * Overridden to return a formatted CoordPair for use in an STC-S phrase.
      *
-     * @return
+     * @return String representation of the CoordPair.
      */
     @Override
     public String toString()
@@ -99,8 +106,9 @@ public class CoordPair
     }
 
     /**
+     * Get the CoordPair x coordinate.
      *
-     * @return
+     * @return the x coordinate.
      */
     public double getX()
     {
@@ -108,8 +116,9 @@ public class CoordPair
     }
 
     /**
-     * 
-     * @return
+     * Get the CoordPair y coordinate.
+     *
+     * @return the y coordinate.
      */
     public double getY()
     {

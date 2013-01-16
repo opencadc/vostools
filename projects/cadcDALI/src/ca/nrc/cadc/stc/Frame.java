@@ -66,7 +66,6 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 /**
@@ -77,6 +76,12 @@ public enum Frame
 {
     ECLIPTIC, FK4, FK5, GALACTIC, ICRS, UNKNOWNFRAME;
 
+    /**
+     * Check if the given value is an allowed value for Frame.
+     *
+     * @param value the value to check.
+     * @return true if the value is an allowed value for Frame, false otherwise.
+     */
     public static boolean contains(final String value)
     {
         Frame[] values = Frame.values();

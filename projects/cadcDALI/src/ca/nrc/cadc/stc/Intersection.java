@@ -66,13 +66,13 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.stc;
 
 import java.util.List;
 
 /**
- * Class to represent a STC-S Intersection operator.
+ * Class to represent a STC-S Intersection operator. An Intersection is a
+ * Region that is common to two or Regions.
  *
  */
 public class Intersection extends Region
@@ -81,6 +81,16 @@ public class Intersection extends Region
     
     private List<Region> regions;
 
+    /**
+     * Construct an Intersection with the given coordinate system and list of
+     * Regions. It is expected that the List of Regions will contain at least
+     * two Regions.
+     *
+     * @param coordsys the Intersection coordinate system, which is a space delimited
+     *                 string containing any of frame, reference position, or flavor.
+     *                 Can be null or an empty string.
+     * @param regions the regions of the Intersection.
+     */
     public Intersection(String coordsys, List<Region> regions)
     {
         super(NAME, coordsys);
@@ -90,6 +100,19 @@ public class Intersection extends Region
             throw new IllegalArgumentException("Intersection requires 2 or more Regions");
     }
 
+    /**
+     * Construct an Intersection with the given coordinate descriptions
+     * and list of Regions. It is expected that the List of Regions will
+     * contain at least two Regions.
+     *
+     * @param frame the frame describing the Intersection. Allowed values for frame are
+     *              from <code>ca.nrc.cadc.stc.Frame</code>.
+     * @param refpos the reference position describing the Intersection. Allowed values
+     *               for reference position are from <code>ca.nrc.cadc.stc.ReferencePosition</code>.
+     * @param flavor the flavor describing the Intersection. Allowed values for flavor are
+     *               from <code>ca.nrc.cadc.stc.Flavor</code>.
+     * @param regions the regions of the Intersection.
+     */
     public Intersection(String frame, String refpos, String flavor, List<Region> regions)
     {
         super(NAME, frame, refpos, flavor);
@@ -99,6 +122,11 @@ public class Intersection extends Region
             throw new IllegalArgumentException("Intersection requires 2 or more Regions");
     }
 
+    /**
+     * Get the List of Regions for this Intersection.
+     *
+     * @return List of Regions.
+     */
     public List<Region> getRegions()
     {
         return regions;
