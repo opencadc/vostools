@@ -50,54 +50,6 @@ public class SpectralIntervalTest
     }
 
     @Test
-    public void testIllegalUnit()
-    {
-        log.debug("testIllegalUnit");
-        try
-        {
-            try
-            {
-                SpectralInterval interval = new SpectralInterval(1.0, 2.0, "lb");
-                fail("Illegal unit should have thrown IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("null unit threw " + e.getMessage());
-            }
-            log.info("testIllegalUnit passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidUnitCase() throws Exception
-    {
-        log.debug("testInvalidUnitCase");
-        try
-        {
-            try
-            {
-                SpectralInterval interval = new SpectralInterval(1.0, 2.0, "hz");
-                fail("Illegal unit case should have thrown IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("null unit threw " + e.getMessage());
-            }
-            log.info("testInvalidUnitCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testFormatNull()
     {
         log.debug("testFormatNull");
@@ -124,10 +76,10 @@ public class SpectralIntervalTest
         log.debug("testValidFormat");
         try
         {
-            SpectralInterval interval = new SpectralInterval(1000.5, 2000.5, "Hz");
+            SpectralInterval interval = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
 
             String actual = STC.format(interval);
-            String expected = "SpectralInterval 1000.5 2000.5 Hz";
+            String expected = "SpectralInterval 1000.5 2000.5 unit Hz";
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
             assertEquals(expected, actual);
@@ -252,13 +204,13 @@ public class SpectralIntervalTest
         log.debug("testParseMisspeltSpectralInterval");
         try
         {
-            String phrase = "SpatialInterval 1000.5 2000.5 Hz";
+            String phrase = "SpatialInterval 1000.5 2000.5 unit Hz";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
                 fail("Misspelt SpectralInterval should have thrown IllegalArgumentException");
             }
-            catch (IllegalArgumentException e)
+            catch (StcsParsingException e)
             {
                 log.debug("Misspelt SpectralInterval threw " + e.getMessage());
             }
@@ -278,25 +230,25 @@ public class SpectralIntervalTest
         try
         {
             // invalid unit
-            String phrase = "SpectralInterval 1000.5 2000.5 lbs";
+            String phrase = "SpectralInterval 1000.5 2000.5 unit lbs";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
                 fail("Invalid unit should have thrown IllegalArgumentException");
             }
-            catch (IllegalArgumentException e)
+            catch (StcsParsingException e)
             {
                 log.debug("Invalid unit threw " + e.getMessage());
             }
 
             // misspelt unit
-            phrase = "SpectralInterval 1000.5 2000.5 hz";
+            phrase = "SpectralInterval 1000.5 2000.5 unit hz";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
                 fail("Invalid unit should have thrown IllegalArgumentException");
             }
-            catch (IllegalArgumentException e)
+            catch (StcsParsingException e)
             {
                 log.debug("Invalid unit threw " + e.getMessage());
             }
@@ -315,7 +267,7 @@ public class SpectralIntervalTest
         log.debug("testParse");
         try
         {
-            String phrase = "SpectralInterval 1000.5 2000.5 Hz";
+            String phrase = "SpectralInterval 1000.5 2000.5 unit Hz";
             SpectralInterval interval = STC.parseSpectralInterval(phrase);
             String actual = STC.format(interval);
             log.debug("expected: " + phrase);

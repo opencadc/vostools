@@ -81,23 +81,6 @@ public class Circle extends Region
 
     /**
      * Construct a Circle with the given coordinate system and coordinates.
-     * 
-     * @param coordsys the Box coordinate system, which is a space delimited
-     *                 string containing any of frame, reference position, or flavor.
-     *                 Can be null or an empty string.
-     * @param x the x coordinate describing the center point of the Circle.
-     * @param y the y coordinate describing the center point of the Circle.
-     * @param r the radius of the Circle.
-     */
-    public Circle(String coordsys, double x, double y, double r)
-    {
-        super(NAME, coordsys);
-        this.coordPair = new CoordPair(x, y);
-        this.radius = r;
-    }
-
-    /**
-     * Construct a Circle with the given coordinate system and coordinates.
      *
      * @param frame the frame describing the Circle. Allowed values for frame are
      *              from <code>ca.nrc.cadc.stc.Frame</code>.
@@ -109,7 +92,7 @@ public class Circle extends Region
      * @param y the y coordinate describing the center point of the Circle.
      * @param r the radius of the Circle.
      */
-    public Circle(String frame, String refpos, String flavor, double x, double y, double r)
+    public Circle(Frame frame, ReferencePosition refpos, Flavor flavor, double x, double y, double r)
     {
         super(NAME, frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);

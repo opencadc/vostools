@@ -79,7 +79,7 @@ public class SpectralInterval
     
     private double lolimit;
     private double hilimit;
-    private String unit;
+    private SpectralUnit unit;
 
     /**
      * Construct a SpectralInterval with the given limits and unit.
@@ -89,16 +89,14 @@ public class SpectralInterval
      * @param unit the unit of the interval. Allowed values for unit are
      *             from <code>ca.nrc.cadc.stc.SpectralUnit</code>.
      */
-    public SpectralInterval(double lolimit, double hilimit, String unit)
+    public SpectralInterval(double lolimit, double hilimit, SpectralUnit unit)
     {
         this.lolimit = lolimit;
         this.hilimit = hilimit;
         this.unit = unit;
 
-        if (!SpectralUnit.contains(unit))
-        {
-            throw new IllegalArgumentException("Invalid unit " + unit);
-        }
+        if (unit == null)
+            throw new IllegalArgumentException("SpectralUnit cannot be null");
     }
 
     /**
@@ -122,11 +120,11 @@ public class SpectralInterval
     }
 
     /**
-     * The unit of the interval.
+     * The SpectralUnit of the interval.
      *
      * @return the interval unit.
      */
-    public String getUnit()
+    public SpectralUnit getUnit()
     {
         return unit;
     }

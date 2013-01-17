@@ -82,25 +82,6 @@ public class Box extends Region
     private double height;
 
     /**
-     * Construct a Box with the given coordinate system and coordinates.
-     *
-     * @param coordsys the Box coordinate system, which is a space delimited 
-     *                 string containing any of frame, reference position, or flavor.
-     *                 Can be null or an empty string.
-     * @param x the x coordinate describing the center point of the Box.
-     * @param y the y coordinate describing the center point o the Box.
-     * @param w the width of the Box.
-     * @param h the height of the Box.
-     */
-    public Box(String coordsys, double x, double y, double w, double h)
-    {
-        super(NAME, coordsys);
-        this.coordPair = new CoordPair(x, y);
-        this.width = w;
-        this.height = h;
-    }
-
-    /**
      * Construct a Box with the given coordinate descriptions and coordinates.
      *
      * @param frame the frame describing the Box. Allowed values for frame are
@@ -114,7 +95,7 @@ public class Box extends Region
      * @param w the width of the Box.
      * @param h the height of the Box.
      */
-    public Box(String frame, String refpos, String flavor, double x, double y, double w, double h)
+    public Box(Frame frame, ReferencePosition refpos, Flavor flavor, double x, double y, double w, double h)
     {
         super(NAME, frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);

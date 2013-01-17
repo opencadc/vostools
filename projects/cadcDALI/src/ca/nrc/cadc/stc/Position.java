@@ -79,21 +79,6 @@ public class Position extends Region
     private CoordPair coordPair;
 
     /**
-     * Construct a Position with the given coordinate system and coordinates.
-     *
-     * @param coordsys the Position coordinate system, which is a space delimited
-     *                 string containing any of frame, reference position, or flavor.
-     *                 Can be null or an empty string.
-     * @param x the x coordinate of the position.
-     * @param y the y coordinate of the position.
-     */
-    public Position(String coordsys, double x, double y)
-    {
-        super(NAME, coordsys);
-        this.coordPair = new CoordPair(x, y);
-    }
-
-    /**
      * Construct an Position with the given coordinate descriptions
      * and coordinates.
      *
@@ -106,7 +91,7 @@ public class Position extends Region
      * @param x the x coordinate of the position.
      * @param y the y coordinate of the position.
      */
-    public Position(String frame, String refpos, String flavor, double x, double y)
+    public Position(Frame frame, ReferencePosition refpos, Flavor flavor, double x, double y)
     {
         super(NAME, frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);

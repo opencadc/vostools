@@ -93,7 +93,7 @@ public class CircleTest
     {
         log.debug("testFormatValid");
 
-        Circle circle = new Circle("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0);
+        Circle circle = new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0);
 
         String actual = STC.format(circle);
         String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
@@ -101,36 +101,6 @@ public class CircleTest
         log.debug("  actual: " + actual);
         assertEquals(expected, actual);
         log.info("testFormatValid passed");
-    }
-
-    @Test
-    public void testFormatLowerCase() throws Exception
-    {
-        log.debug("testFormatLowerCase");
-
-        Circle circle = new Circle("icrs", "geocenter", "spherical2", 1.0, 2.0, 3.0);
-
-        String actual = STC.format(circle);
-        String expected = "Circle icrs geocenter spherical2 1.0 2.0 3.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatLowerCase passed");
-    }
-
-    @Test
-    public void testFormatMixedCase() throws Exception
-    {
-        log.debug("testFormatMixedCase");
-
-        Circle circle = new Circle("Icrs", "GeoCenter", "Spherical2", 1.0, 2.0, 3.0);
-
-        String actual = STC.format(circle);
-        String expected = "Circle Icrs GeoCenter Spherical2 1.0 2.0 3.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatMixedCase passed");
     }
 
     @Test
@@ -149,55 +119,9 @@ public class CircleTest
     }
 
     @Test
-    public void testFormatOnlyFrame() throws Exception
+    public void testParseWithRegion() throws Exception
     {
-        log.debug("testFormatOnlyFrame");
-
-        Circle circle = new Circle("ICRS", null, null, 1.0, 2.0, 3.0);
-
-        String actual = STC.format(circle);
-        String expected = "Circle ICRS 1.0 2.0 3.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyFrame passed");
-    }
-
-    @Test
-    public void testFormatOnlyRefPos() throws Exception
-    {
-        log.debug("testFormatOnlyRefPos");
-
-        Circle circle = new Circle(null, "GEOCENTER", null, 1.0, 2.0, 3.0);
-
-        String actual = STC.format(circle);
-        String expected = "Circle GEOCENTER 1.0 2.0 3.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyRefPos passed");
-    }
-
-    @Test
-    public void testFormatOnlyFlavor() throws Exception
-    {
-        log.debug("testFormatOnlyFlavor");
-
-        Circle circle = new Circle(null, null, "SPHERICAL2", 1.0, 2.0, 3.0);
-
-        String actual = STC.format(circle);
-        String expected = "Circle SPHERICAL2 1.0 2.0 3.0";
-        log.debug("expected: " + expected);
-        log.debug("  actual: " + actual);
-        assertEquals(expected, actual);
-        log.info("testFormatOnlyFlavor passed");
-    }
-
-
-    @Test
-    public void testParseAll() throws Exception
-    {
-        log.debug("testParseAll");
+        log.debug("testParseWithRegion");
 
         String phrase = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
         Region space = STC.parse(phrase);
@@ -205,13 +129,13 @@ public class CircleTest
         log.debug("expected: " + phrase);
         log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        log.info("testParseAll passed");
+        log.info("testParseWithRegion passed");
     }
 
     @Test
-    public void testParseNone() throws Exception
+    public void testParseNoRegion() throws Exception
     {
-        log.debug("testParseNone");
+        log.debug("testParseNoRegion");
 
         String phrase = "Circle 1.0 2.0 3.0";
         Region space = STC.parse(phrase);
@@ -219,7 +143,7 @@ public class CircleTest
         log.debug("expected: " + phrase);
         log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        log.info("testParseNone passed");
+        log.info("testParseNoRegion passed");
     }
 
     @Test
@@ -270,7 +194,7 @@ public class CircleTest
         log.debug("testParseLowerCase");
 
         String phrase = "circle icrs geocenter spherical2 1.0 2.0 3.0";
-        String expected = "Circle icrs geocenter spherical2 1.0 2.0 3.0";
+        String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
         Region space = STC.parse(phrase);
         String actual = STC.format(space);
         log.debug("expected: " + expected);
@@ -285,11 +209,12 @@ public class CircleTest
         log.debug("testParseMixedCase");
 
         String phrase = "Circle Icrs GeoCenter Spherical2 1.0 2.0 3.0";
+        String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0";
         Region space = STC.parse(phrase);
         String actual = STC.format(space);
-        log.debug("expected: " + phrase);
+        log.debug("expected: " + expected);
         log.debug("  actual: " + actual);
-        assertEquals(phrase, actual);
+        assertEquals(expected, actual);
         log.info("testParseMixedCase passed");
     }
 

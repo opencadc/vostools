@@ -82,25 +82,6 @@ public class Intersection extends Region
     private List<Region> regions;
 
     /**
-     * Construct an Intersection with the given coordinate system and list of
-     * Regions. It is expected that the List of Regions will contain at least
-     * two Regions.
-     *
-     * @param coordsys the Intersection coordinate system, which is a space delimited
-     *                 string containing any of frame, reference position, or flavor.
-     *                 Can be null or an empty string.
-     * @param regions the regions of the Intersection.
-     */
-    public Intersection(String coordsys, List<Region> regions)
-    {
-        super(NAME, coordsys);
-        this.regions = regions;
-
-        if (regions == null || regions.size() < 2)
-            throw new IllegalArgumentException("Intersection requires 2 or more Regions");
-    }
-
-    /**
      * Construct an Intersection with the given coordinate descriptions
      * and list of Regions. It is expected that the List of Regions will
      * contain at least two Regions.
@@ -113,7 +94,7 @@ public class Intersection extends Region
      *               from <code>ca.nrc.cadc.stc.Flavor</code>.
      * @param regions the regions of the Intersection.
      */
-    public Intersection(String frame, String refpos, String flavor, List<Region> regions)
+    public Intersection(Frame frame, ReferencePosition refpos, Flavor flavor, List<Region> regions)
     {
         super(NAME, frame, refpos, flavor);
         this.regions = regions;

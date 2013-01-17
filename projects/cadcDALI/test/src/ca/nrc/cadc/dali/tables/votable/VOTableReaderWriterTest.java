@@ -71,7 +71,10 @@ package ca.nrc.cadc.dali.tables.votable;
 import ca.nrc.cadc.dali.tables.TableData;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.stc.Circle;
+import ca.nrc.cadc.stc.Flavor;
+import ca.nrc.cadc.stc.Frame;
 import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.ReferencePosition;
 import ca.nrc.cadc.stc.Region;
 import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.util.Log4jInit;
@@ -573,8 +576,8 @@ public class VOTableReaderWriterTest
             row1.add(new Short("17"));
             row1.add("string value");
             row1.add(dateFormat.parse(DATE_TIME));
-            row1.add(new Position("ICRS", "BARYCENTER", "SPHERICAL2", 1.0, 2.0));
-            row1.add(new Circle("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0));
+            row1.add(new Position(Frame.ICRS, ReferencePosition.BARYCENTER, Flavor.SPHERICAL2, 1.0, 2.0));
+            row1.add(new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0));
             fields.add(row1);
 
             List<Object> row2 = new ArrayList<Object>();

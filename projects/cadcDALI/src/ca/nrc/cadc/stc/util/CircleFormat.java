@@ -95,9 +95,9 @@ public class CircleFormat extends RegionFormat implements Format<Circle>
             if (words.hasNextDouble())
                 x = words.nextDouble();
             else if (words.hasNext())
-                throw new StcsParsingException("Invalid coordpair element " + words.next());
+                throw new StcsParsingException("Invalid CoordPair element " + words.next());
             else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+                throw new StcsParsingException("Unexpected end to STC-S phrase before CoordPair element");
         }
         else
         {
@@ -107,7 +107,7 @@ public class CircleFormat extends RegionFormat implements Format<Circle>
             }
             catch (NumberFormatException e)
             {
-                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+                throw new StcsParsingException("Invalid CoordPair " + currentWord + " in " + phrase);
             }
         }
 

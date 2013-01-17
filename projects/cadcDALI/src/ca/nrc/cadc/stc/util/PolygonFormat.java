@@ -98,9 +98,9 @@ public class PolygonFormat extends RegionFormat implements Format<Polygon>
             if (words.hasNextDouble())
                 value = words.nextDouble();
             else if (words.hasNext())
-                throw new StcsParsingException("Invalid coordpair element " + words.next());
+                throw new StcsParsingException("Invalid CoordPair " + words.next());
             else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
+                throw new StcsParsingException("Unexpected end to STC-S phrase before CoordPair");
         }
         else
         {
@@ -110,7 +110,7 @@ public class PolygonFormat extends RegionFormat implements Format<Polygon>
             }
             catch (NumberFormatException e)
             {
-                throw new StcsParsingException("Invalid coordpair " + currentWord + " in " + phrase);
+                throw new StcsParsingException("Invalid CoordPair " + currentWord + " in " + phrase);
             }
         }
 
@@ -119,7 +119,7 @@ public class PolygonFormat extends RegionFormat implements Format<Polygon>
         if (words.hasNextDouble())
             coordPairs.add(new CoordPair(value, words.nextDouble()));
         else
-            throw new StcsParsingException("Polygon must contain at least 3 coordpair: " + phrase);
+            throw new StcsParsingException("Polygon must contain at least 3 CoordPairs: " + phrase);
 
         // Get the rest of the coordpairs.
         while (words.hasNextDouble())
@@ -128,11 +128,11 @@ public class PolygonFormat extends RegionFormat implements Format<Polygon>
             if (words.hasNextDouble())
                 coordPairs.add(new CoordPair(value, words.nextDouble()));
             else
-                throw new StcsParsingException("Polygon must contain at least 3 coordpairs: " + phrase);
+                throw new StcsParsingException("Polygon must contain at least 3 CoordPairs: " + phrase);
         }
 
         if (coordPairs.size() < 3)
-            throw new StcsParsingException("Polygon must contain at least 3 coordpairs: " + phrase);
+            throw new StcsParsingException("Polygon must contain at least 3 CoordPairs: " + phrase);
 
         return new Polygon(frame, refpos, flavor, coordPairs);
     }

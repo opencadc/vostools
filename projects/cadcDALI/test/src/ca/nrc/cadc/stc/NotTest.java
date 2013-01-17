@@ -133,7 +133,7 @@ public class NotTest
         try
         {
             String phrase = "Not ( Circle ICRS 1.0 2.0 3.0 )";
-            Region circle = new Circle("ICRS", 1.0, 2.0, 3.0);
+            Region circle = new Circle(Frame.ICRS, null, null, 1.0, 2.0, 3.0);
             Not not = new Not(circle);
 
             log.debug("expected: " + phrase);
@@ -150,52 +150,6 @@ public class NotTest
     }
 
     @Test
-    public void testFormatLowerCase()
-    {
-        log.debug("testFormatLowerCase");
-        try
-        {
-            String phrase = "Not ( Circle icrs 1.0 2.0 3.0 )";
-            Region circle = new Circle("icrs", 1.0, 2.0, 3.0);
-            Not not = new Not(circle);
-
-            log.debug("expected: " + phrase);
-            String actual = STC.format(not);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatLowerCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatMixedCase()
-    {
-        log.debug("testFormatMixedCase");
-        try
-        {
-            String phrase = "Not ( Circle Icrs 1.0 2.0 3.0 )";
-            Region circle = new Circle("Icrs", 1.0, 2.0, 3.0);
-            Not not = new Not(circle);
-
-            log.debug("expected: " + phrase);
-            String actual = STC.format(not);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatMixedCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testParse()
     {
         log.debug("testParse");
@@ -203,9 +157,9 @@ public class NotTest
         {
             String phrase = "Not ( Circle ICRS 1.0 2.0 3.0 )";
 
-            log.debug("expected: " + phrase);
             Not not = (Not) STC.parse(phrase);
             String actual = STC.format(not);
+            log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
             assertEquals(phrase, actual);
             log.info("testParse passed");
@@ -224,11 +178,11 @@ public class NotTest
         try
         {
             String phrase = "not ( circle icrs 1.0 2.0 3.0 )";
-            String expected = "Not ( Circle icrs 1.0 2.0 3.0 )";
+            String expected = "Not ( Circle ICRS 1.0 2.0 3.0 )";
 
-            log.debug("expected: " + expected);
             Not not = (Not) STC.parse(phrase);
             String actual = STC.format(not);
+            log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
             assertEquals(expected, actual);
             log.info("testParseLowerCase passed");
@@ -247,12 +201,13 @@ public class NotTest
         try
         {
             String phrase = "Not ( Circle Icrs 1.0 2.0 3.0 )";
+            String expected = "Not ( Circle ICRS 1.0 2.0 3.0 )";
 
-            log.debug("expected: " + phrase);
             Not not = (Not) STC.parse(phrase);
             String actual = STC.format(not);
+            log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testParseMixedCase passed");
         }
         catch(Exception unexpected)

@@ -89,15 +89,13 @@ public class BoxTest
 
     public BoxTest() { }
 
-    
-
     @Test
     public void testFormatValid() throws Exception
     {
         log.debug("testFormatValid");
         try
         {
-            Box box = new Box("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
+            Box box = new Box(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0, 4.0);
 
             String actual = STC.format(box);
             String expected = "Box ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
@@ -114,53 +112,9 @@ public class BoxTest
     }
 
     @Test
-    public void testFormatLowerCase() throws Exception
+    public void testFormatNullRegion() throws Exception
     {
-        log.debug("testFormatLowerCase");
-        try
-        {
-            Box box = new Box("icrs", "geocenter", "spherical2", 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box icrs geocenter spherical2 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatLowerCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatMixedCase() throws Exception
-    {
-        log.debug("testFormatMixedCase");
-        try
-        {
-            Box box = new Box("Icrs", "GeoCenter", "Spherical2", 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box Icrs GeoCenter Spherical2 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatMixedCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatNone() throws Exception
-    {
-        log.debug("testFormatNone");
+        log.debug("testFormatNullRegion");
         try
         {
             Box box = new Box(null, null, null, 1.0, 2.0, 3.0, 4.0);
@@ -170,73 +124,7 @@ public class BoxTest
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
             assertEquals(expected, actual);
-            log.info("testFormatNone passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatOnlyFrame() throws Exception
-    {
-        log.debug("testFormatOnlyFrame");
-        try
-        {
-            Box box = new Box("ICRS", null, null, 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box ICRS 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatOnlyFrame passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatOnlyRefPos() throws Exception
-    {
-        log.debug("testFormatOnlyRefPos");
-        try
-        {
-            Box box = new Box(null, "GEOCENTER", null, 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box GEOCENTER 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatOnlyRefPos passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatOnlyFlavor() throws Exception
-    {
-        log.debug("testFormatOnlyFlavor");
-        try
-        {
-            Box box = new Box(null, null, "SPHERICAL2", 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box SPHERICAL2 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatOnlyFlavor passed");
+            log.info("testFormatNullRegion passed");
         }
         catch(Exception unexpected)
         {
@@ -282,9 +170,9 @@ public class BoxTest
     }
 
     @Test
-    public void testParseAll() throws Exception
+    public void testParseWithRegion()
     {
-        log.debug("testParseAll");
+        log.debug("testParseWithRegion");
         try
         {
             String phrase = "Box ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 4.0";
@@ -293,7 +181,7 @@ public class BoxTest
             log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
             assertEquals(phrase, actual);
-            log.info("testParseAll passed");
+            log.info("testParseWithRegion passed");
         }
         catch(Exception unexpected)
         {
@@ -303,9 +191,9 @@ public class BoxTest
     }
 
     @Test
-    public void testParseNone() throws Exception
+    public void testParseNoRegion()
     {
-        log.debug("testParseNone");
+        log.debug("testParseNoRegion");
         try
         {
             String phrase = "Box 1.0 2.0 3.0 4.0";
@@ -314,7 +202,7 @@ public class BoxTest
             log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
             assertEquals(phrase, actual);
-            log.info("testParseNone passed");
+            log.info("testParseNoRegion passed");
         }
         catch(Exception unexpected)
         {
@@ -324,7 +212,7 @@ public class BoxTest
     }
 
     @Test
-    public void testParseOnlyFrame() throws Exception
+    public void testParseOnlyFrame()
     {
         log.debug("testParseOnlyFrame");
         try
@@ -345,7 +233,7 @@ public class BoxTest
     }
 
     @Test
-    public void testParseOnlyRefPos() throws Exception
+    public void testParseOnlyRefPos()
     {
         log.debug("testParseOnlyRefPos");
         try
@@ -366,7 +254,7 @@ public class BoxTest
     }
 
     @Test
-    public void testParseOnlyFlavor() throws Exception
+    public void testParseOnlyFlavor()
     {
         log.debug("testParseOnlyFlavor");
         try
@@ -387,13 +275,13 @@ public class BoxTest
     }
 
     @Test
-    public void testParseLowerCase() throws Exception
+    public void testParseLowerCase()
     {
         log.debug("testParseLowerCase");
         try
         {
             String phrase = "box spherical2 1.0 2.0 3.0 4.0";
-            String expected = "Box spherical2 1.0 2.0 3.0 4.0";
+            String expected = "Box SPHERICAL2 1.0 2.0 3.0 4.0";
             Region space = STC.parse(phrase);
             String actual = STC.format(space);
             log.debug("expected: " + expected);
@@ -409,17 +297,18 @@ public class BoxTest
     }
 
     @Test
-    public void testParseMixedCase() throws Exception
+    public void testParseMixedCase()
     {
         log.debug("testParseMixedCase");
         try
         {
             String phrase = "Box Spherical2 1.0 2.0 3.0 4.0";
+            String expected = "Box SPHERICAL2 1.0 2.0 3.0 4.0";
             Region space = STC.parse(phrase);
             String actual = STC.format(space);
-            log.debug("expected: " + phrase);
+            log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testParseMixedCase passed");
         }
         catch(Exception unexpected)

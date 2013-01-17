@@ -87,7 +87,7 @@ public class Not extends Region
      */
     public Not(Region region)
     {
-        super(NAME, null);
+        super(NAME, null, null, null);
         this.region = region;
 
         if (region == null)

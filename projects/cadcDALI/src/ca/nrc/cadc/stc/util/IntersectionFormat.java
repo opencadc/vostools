@@ -105,7 +105,7 @@ public class IntersectionFormat extends RegionFormat implements Format<Intersect
         List<Region> regions = null;
         String subPhrase = getNextRegion(union, index);
         if (subPhrase == null)
-            throw new StcsParsingException("Intersection must contain a region: " + phrase);
+            throw new StcsParsingException("Intersection must contain a Region: " + phrase);
         while (subPhrase != null)
         {
             if (regions == null)
@@ -116,7 +116,7 @@ public class IntersectionFormat extends RegionFormat implements Format<Intersect
         }
 
         if (regions == null || regions.size() < 2)
-            throw new StcsParsingException("Intersection must contain 2 or more regions: " + phrase);
+            throw new StcsParsingException("Intersection must contain 2 or more Regions: " + phrase);
 
         return new Intersection(frame, refpos, flavor, regions);
     }

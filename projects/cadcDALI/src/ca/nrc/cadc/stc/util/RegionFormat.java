@@ -85,14 +85,14 @@ import java.util.Scanner;
 public abstract class RegionFormat
 {
     // Default values.
-    public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME.name();
-    public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS.name();
-    public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2.name();
+    public static final Frame DEFAULT_FRAME = Frame.UNKNOWNFRAME;
+    public static final ReferencePosition DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
+    public static final Flavor DEFAULT_FLAVOR = Flavor.SPHERICAL2;
 
     protected String name;
-    protected String frame;
-    protected String refpos;
-    protected String flavor;
+    protected Frame frame;
+    protected ReferencePosition refpos;
+    protected Flavor flavor;
 
     protected Scanner words;
     protected String currentWord;
@@ -130,21 +130,21 @@ public abstract class RegionFormat
         currentWord = getNextWord(words, currentWord);
         if (Frame.contains(currentWord.toUpperCase()))
         {
-            frame = currentWord;
+            frame = Frame.valueOf(currentWord.toUpperCase());
             currentWord = null;
         }
 
         currentWord = getNextWord(words, currentWord);
         if (ReferencePosition.contains(currentWord.toUpperCase()))
         {
-            refpos = currentWord;
+            refpos = ReferencePosition.valueOf(currentWord.toUpperCase());
             currentWord = null;
         }
 
         currentWord = getNextWord(words, currentWord);
         if (Flavor.contains(currentWord.toUpperCase()))
         {
-            flavor = currentWord;
+            flavor =Flavor.valueOf(currentWord.toUpperCase());
             currentWord = null;
         }
     }
@@ -163,17 +163,17 @@ public abstract class RegionFormat
         sb.append(" ");
         if (region.getFrame() != null)
         {
-            sb.append(region.getFrame());
+            sb.append(region.getFrame().name());
             sb.append(" ");
         }
         if (region.getRefPos() != null)
         {
-            sb.append(region.getRefPos());
+            sb.append(region.getRefPos().name());
             sb.append(" ");
         }
         if (region.getFlavor() != null)
         {
-            sb.append(region.getFlavor());
+            sb.append(region.getFlavor().name());
             sb.append(" ");
         }
         return sb.toString().trim();
@@ -207,7 +207,7 @@ public abstract class RegionFormat
      *
      * @return the region frame.
      */
-    public String getFrame()
+    public Frame getFrame()
     {
         if (frame == null)
             return DEFAULT_FRAME;
@@ -219,7 +219,7 @@ public abstract class RegionFormat
      *
      * @return the region reference position.
      */
-    public String getReferencePosition()
+    public ReferencePosition getReferencePosition()
     {
         if (refpos == null)
             return DEFAULT_REFPOS;
@@ -231,7 +231,7 @@ public abstract class RegionFormat
      *
      * @return the region flavor.
      */
-    public String getFlavor()
+    public Flavor getFlavor()
     {
         if (flavor == null)
             return DEFAULT_FLAVOR;

@@ -84,25 +84,6 @@ public class Polygon extends Region
     private List<CoordPair> coordPairs;
 
     /**
-     * Construct a Polygon with the given coordinate system and coordinate pairs.
-     * It is expected that the List of CoordPairs <code>ca.nrc.cadc.stc.CoordPair</code>
-     * will contain at least three Coordinate Pairs.
-     *
-     * @param coordsys the Polygon coordinate system, which is a space delimited
-     *                 string containing any of frame, reference position, or flavor.
-     *                 Can be null or an empty string.
-     * @param coordPairs the List of CoordPairs.
-     */
-    public Polygon(String coordsys, List<CoordPair> coordPairs)
-    {
-        super(NAME, coordsys);
-        this.coordPairs = coordPairs;
-
-        if (coordPairs ==  null || coordPairs.size() < 3)
-            throw new IllegalArgumentException("Polygon requires at least 3 CoordPairs");
-    }
-
-    /**
      * Construct a Polygon with the given coordinate descriptions
      * and coordinate pairs. It is expected that the List of CoordPairs 
      * <code>ca.nrc.cadc.stc.CoordPair</code> will contain at least three
@@ -116,7 +97,7 @@ public class Polygon extends Region
      *               from <code>ca.nrc.cadc.stc.Flavor</code>.
      * @param coordPairs coordPairs the List of CoordPairs.
      */
-    public Polygon(String frame, String refpos, String flavor, List<CoordPair> coordPairs)
+    public Polygon(Frame frame, ReferencePosition refpos, Flavor flavor, List<CoordPair> coordPairs)
     {
         super(NAME, frame, refpos, flavor);
         this.coordPairs = coordPairs;

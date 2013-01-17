@@ -99,18 +99,18 @@ public class UnionTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        box = new Box(null, 1.0, 2.0, 3.0, 4.0);
+        box = new Box(null, null, null, 1.0, 2.0, 3.0, 4.0);
 
-        circle = new Circle(null, 1.0, 2.0, 3.0);
+        circle = new Circle(null, null, null, 1.0, 2.0, 3.0);
         
         List<CoordPair> coordPairs = new ArrayList<CoordPair>();
         coordPairs.add(new CoordPair(1.0, 2.0));
         coordPairs.add(new CoordPair(3.0, 4.0));
         coordPairs.add(new CoordPair(5.0, 6.0));
         coordPairs.add(new CoordPair(7.0, 8.0));
-        polygon = new Polygon(null, coordPairs);
+        polygon = new Polygon(null, null, null, coordPairs);
 
-        position = new Position(null, 1.0, 2.0);
+        position = new Position(null, null, null, 1.0, 2.0);
     }
 
     @Test
@@ -121,7 +121,7 @@ public class UnionTest
         {
             try
             {
-                Union union = new Union("ICRS", null);
+                Union union = new Union(null, null, null, null);
                 fail("Null Region should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -132,7 +132,7 @@ public class UnionTest
             List<Region> regions = new ArrayList<Region>();
             try
             {
-                Union union = new Union("ICRS", regions);
+                Union union = new Union(null, null, null, regions);
                 fail("Empty Region should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -140,10 +140,10 @@ public class UnionTest
                 log.debug("Empty Region threw exception " + e.getMessage());
             }
 
-            regions.add(new Circle(null, 1.0, 2.0, 3.0));
+            regions.add(new Circle(null, null, null, 1.0, 2.0, 3.0));
             try
             {
-                Union union = new Union("ICRS", regions);
+                Union union = new Union(null, null, null, regions);
                 fail("Single Region should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -188,76 +188,19 @@ public class UnionTest
         log.debug("testFormat");
         try
         {
-            String phrase = "Union ICRS ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
-
             List<Region> regions = new ArrayList<Region>();
             regions.add(box);
             regions.add(circle);
             regions.add(polygon);
             regions.add(position);
-            Union union = new Union("ICRS", null, null, regions);
+            Union union = new Union(Frame.ICRS, null, null, regions);
 
+            String expected = "Union ICRS ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
             String actual = STC.format(union);
-            log.debug("expected: " + phrase);
+            log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testFormat passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatLowerCase()
-    {
-        log.debug("testFormatLowerCase");
-        try
-        {
-            String phrase = "Union icrs ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
-
-            List<Region> regions = new ArrayList<Region>();
-            regions.add(box);
-            regions.add(circle);
-            regions.add(polygon);
-            regions.add(position);
-            Union union = new Union("icrs", null, null, regions);
-
-            String actual = STC.format(union);
-            log.debug("expected: " + phrase);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatLowerCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatMixedCase()
-    {
-        log.debug("testFormatMixedCase");
-        try
-        {
-            String phrase = "Union Icrs ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
-
-            List<Region> regions = new ArrayList<Region>();
-            regions.add(box);
-            regions.add(circle);
-            regions.add(polygon);
-            regions.add(position);
-            Union union = new Union("Icrs", null, null, regions);
-
-            String actual = STC.format(union);
-            log.debug("expected: " + phrase);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatMixedCase passed");
         }
         catch(Exception unexpected)
         {
@@ -274,8 +217,8 @@ public class UnionTest
         {
             String phrase = "Union ICRS ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
 
-            Region space = STC.parse(phrase);
-            String actual = STC.format(space);
+            Region region = STC.parse(phrase);
+            String actual = STC.format(region);
             log.debug("expected: " + phrase);
             log.debug("  actual: " + actual);
             assertEquals(phrase, actual);
@@ -295,10 +238,10 @@ public class UnionTest
         try
         {
             String phrase = "union icrs ( box 1.0 2.0 3.0 4.0 circle 1.0 2.0 3.0 polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 position 1.0 2.0 )";
-            String expected = "Union icrs ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
+            String expected = "Union ICRS ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
 
-            Region space = STC.parse(phrase);
-            String actual = STC.format(space);
+            Region region = STC.parse(phrase);
+            String actual = STC.format(region);
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
             assertEquals(expected, actual);
@@ -318,12 +261,13 @@ public class UnionTest
         try
         {
             String phrase = "Union Icrs ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
+            String expected = "Union ICRS ( Box 1.0 2.0 3.0 4.0 Circle 1.0 2.0 3.0 Polygon 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 Position 1.0 2.0 )";
 
             Region space = STC.parse(phrase);
             String actual = STC.format(space);
-            log.debug("expected: " + phrase);
+            log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testParseMixedCase passed");
         }
         catch(Exception unexpected)

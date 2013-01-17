@@ -69,6 +69,7 @@
 package ca.nrc.cadc.stc.util;
 
 import ca.nrc.cadc.stc.SpectralInterval;
+import ca.nrc.cadc.stc.SpectralUnit;
 import ca.nrc.cadc.stc.StcsParsingException;
 
 /**
@@ -91,16 +92,42 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
         phrase = phrase.trim();
 
         String[] tokens = phrase.split("\\s+");
-        if (tokens.length != 4)
-            throw new StcsParsingException("Expected 4 words in " + phrase);
+        if (tokens.length != 5)
+            throw new StcsParsingException("Expected 5 words in " + phrase);
 
         if (!tokens[0].equalsIgnoreCase(SpectralInterval.NAME))
-            throw new IllegalArgumentException("Expected SpectralInterval, was " + tokens[0]);
-        
-        double lolimit = Double.parseDouble(tokens[1]);
-        double hilimit = Double.parseDouble(tokens[2]);
-        String unit = tokens[3];
+            throw new StcsParsingException("Expected SpectralInterval, was " + tokens[0]);
 
+        double lolimit;
+        double hilimit;
+        try
+        {
+            lolimit = Double.parseDouble(tokens[1]);
+        }
+        catch (NumberFormatException e)
+        {
+            throw new StcsParsingException("Unable to parse loLimit " + tokens[1] +
+                                           " to number because " + e.getMessage());
+        }
+        try
+        {
+            hilimit = Double.parseDouble(tokens[2]);
+        }
+        catch (NumberFormatException e)
+        {
+            throw new StcsParsingException("Unable to parse hiLimit " + tokens[2] +
+                                           " to number because " + e.getMessage());
+        }
+
+        if (!tokens[3].equalsIgnoreCase("unit"))
+            throw new StcsParsingException("Invalid word in phrase, expected unit, " +
+                                           " found " + tokens[4]);
+
+        if (!SpectralUnit.contains(tokens[4]))
+            throw new StcsParsingException("Not a valid SpectralUnit " + tokens[4]);
+
+        SpectralUnit unit = SpectralUnit.valueOf(tokens[4]);
+        
         return new SpectralInterval(lolimit, hilimit, unit);
     }
 
@@ -113,19 +140,15 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
      */
     public String format(SpectralInterval spectralInterval)
     {
-        if (!(spectralInterval instanceof SpectralInterval))
-            throw new IllegalArgumentException("Expected SpectralInterval, was " + spectralInterval.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(SpectralInterval.NAME);
         sb.append(" ");
         sb.append(spectralInterval.getLoLimit());
         sb.append(" ");
         sb.append(spectralInterval.getHiLimit());
-        sb.append(" ");
-        sb.append(spectralInterval.getUnit());
-        sb.append(" ");
-        return sb.toString().trim();
+        sb.append(" unit ");
+        sb.append(spectralInterval.getUnit().name());
+        return sb.toString();
     }
 
 }

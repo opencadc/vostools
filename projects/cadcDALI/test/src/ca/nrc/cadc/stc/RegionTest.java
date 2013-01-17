@@ -130,28 +130,6 @@ public class RegionTest
     }
 
     @Test
-    public void testFormatEmptyRegion() throws Exception
-    {
-        log.debug("testFormatEmptyRegion");
-        try
-        {
-            Box box = new Box("", "", "", 1.0, 2.0, 3.0, 4.0);
-
-            String actual = STC.format(box);
-            String expected = "Box 1.0 2.0 3.0 4.0";
-            log.debug("expected: " + expected);
-            log.debug("  actual: " + actual);
-            assertEquals(expected, actual);
-            log.info("testFormatEmptyRegion passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testParseNull() throws Exception
     {
         log.debug("testParseNull");
@@ -211,109 +189,16 @@ public class RegionTest
     }
 
     @Test
-    public void testEmptyArguments()
-    {
-        log.debug("testEmptyArguments");
-        try
-        {
-            Circle circle = new Circle("", "", "", 1.0, 2.0, 3.0);
-            assertNotNull("Circle should not be null", circle);
-            assertNull("frame should be null", circle.getFrame());
-            assertNull("refpos should be null", circle.getRefPos());
-            assertNull("flavor should be null", circle.getFlavor());
-
-            log.info("testEmptyArguments passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidFrame()
-    {
-        log.debug("testInvalidFrame");
-        try
-        {
-            try
-            {
-                Circle circle = new Circle("KFC", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0);
-                fail("Invalid frame should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid frame threw exception " + e.getMessage());
-            }
-            log.info("testInvalidFrame passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidRefPos()
-    {
-        log.debug("testInvalidRefPos");
-        try
-        {
-            try
-            {
-                Circle circle = new Circle("ICRS", "KFC", "SPHERICAL2", 1.0, 2.0, 3.0);
-                fail("Invalid refpos should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid refpos threw exception " + e.getMessage());
-            }
-            log.info("testInvalidRefPos passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidFlavor()
-    {
-        log.debug("testInvalidFlavor");
-        try
-        {
-            try
-            {
-                Circle circle = new Circle("ICRS", "GEOCENTER", "KFC", 1.0, 2.0, 3.0);
-                fail("Invalid flavor should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid flavor threw exception " + e.getMessage());
-            }
-            log.info("testInvalidFlavor passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testValidArguments()
     {
         log.debug("testValidArguments");
         try
         {
-            Circle circle = new Circle("ICRS", "GEOCENTER", "SPHERICAL2", 1.0, 2.0, 3.0);
+            Circle circle = new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0);
             assertNotNull("Circle should not be null", circle);
-            assertEquals("frame should be ICRS", "ICRS", circle.getFrame());
-            assertEquals("refpos should be GEOCENTER", "GEOCENTER", circle.getRefPos());
-            assertEquals("flavor should be SPHERICAL2", "SPHERICAL2", circle.getFlavor());
+            assertEquals("frame should be ICRS", Frame.ICRS, circle.getFrame());
+            assertEquals("refpos should be GEOCENTER", ReferencePosition.GEOCENTER, circle.getRefPos());
+            assertEquals("flavor should be SPHERICAL2", Flavor.SPHERICAL2, circle.getFlavor());
 
             log.info("testValidArguments passed");
         }
@@ -329,9 +214,9 @@ public class RegionTest
      */
     private class TestRegion extends Region
     {
-        public TestRegion(String name, String coordsys)
+        public TestRegion(String name, Frame frame, ReferencePosition refpos, Flavor flavor)
         {
-            super(name, coordsys);
+            super(name, frame, refpos, flavor);
         }
     }
 
@@ -343,7 +228,7 @@ public class RegionTest
         {
             try
             {
-                TestRegion region = new TestRegion(null, "ICRS GEOCENTER SPHERICAL2");
+                TestRegion region = new TestRegion(null, Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2);
                 fail("Null name should throw IllegalArgumentException");
             }
             catch (IllegalArgumentException e)
@@ -368,7 +253,7 @@ public class RegionTest
         {
             try
             {
-                TestRegion region = new TestRegion("", "ICRS GEOCENTER SPHERICAL2");
+                TestRegion region = new TestRegion("", Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2);
                 fail("Empty name should throw IllegalArgumentException");
             }
             catch (IllegalArgumentException e)
@@ -391,7 +276,7 @@ public class RegionTest
         log.debug("testNullCoordsys");
         try
         {
-            TestRegion region = new TestRegion("foo", null);
+            TestRegion region = new TestRegion("foo", null, null, null);
             assertNotNull("Region should not be null", region);
             assertNull("frame should be null", region.getFrame());
             assertNull("refpos should be null", region.getRefPos());
@@ -407,114 +292,18 @@ public class RegionTest
     }
 
     @Test
-    public void testEmptyCoordsys()
-    {
-        log.debug("testEmptyCoordsys");
-        try
-        {
-            TestRegion region = new TestRegion("foo", "");
-            assertNotNull("Region should not be null", region);
-            assertNull("frame should be null", region.getFrame());
-            assertNull("refpos should be null", region.getRefPos());
-            assertNull("flavor should be null", region.getFlavor());
-
-            log.info("testEmptyCoordsys passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
     public void testValidCoordsys()
     {
         log.debug("testValidCoordsys");
         try
         {
-            TestRegion region = new TestRegion("foo", "ICRS GEOCENTER     SPHERICAL2");
+            TestRegion region = new TestRegion("foo", Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2);
             assertNotNull("Region should not be null", region);
-            assertEquals("frame should be ICRS", "ICRS", region.getFrame());
-            assertEquals("refpos should be GEOCENTER", "GEOCENTER", region.getRefPos());
-            assertEquals("flavor should be SPHERICAL2", "SPHERICAL2", region.getFlavor());
+            assertEquals("frame should be ICRS", Frame.ICRS, region.getFrame());
+            assertEquals("refpos should be GEOCENTER", ReferencePosition.GEOCENTER, region.getRefPos());
+            assertEquals("flavor should be SPHERICAL2", Flavor.SPHERICAL2, region.getFlavor());
 
             log.info("testValidCoordsys passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidCoordsysFrame()
-    {
-        log.debug("testInvalidCoordsysFrame");
-        try
-        {
-            try
-            {
-                TestRegion region = new TestRegion("foo", "KFC GEOCENTER SPHERICAL2");
-                fail("Invalid coordsys frame should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid coordsys frame threw exception " + e.getMessage());
-            }
-
-            log.info("testInvalidCoordsysFrame passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidCoordsysRefPos()
-    {
-        log.debug("testInvalidCoordsysRefPos");
-        try
-        {
-            try
-            {
-                TestRegion region = new TestRegion("foo", "ICRS KFC SPHERICAL2");
-                fail("Invalid coordsys refpos should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid refpos frame threw exception " + e.getMessage());
-            }
-
-            log.info("testInvalidCoordsysRefPos passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testInvalidCoordsysFlavor()
-    {
-        log.debug("testInvalidCoordsysFlavor");
-        try
-        {
-            try
-            {
-                TestRegion region = new TestRegion("foo", "ICRS GEOCENTER KFC");
-                fail("Invalid coordsys flavor should throw IllegalArgumentException");
-            }
-            catch (IllegalArgumentException e)
-            {
-                log.debug("Invalid coordsys flavor threw exception " + e.getMessage());
-            }
-
-            log.info("testInvalidCoordsysFlavor passed");
         }
         catch(Exception unexpected)
         {
@@ -529,41 +318,41 @@ public class RegionTest
         log.debug("testPartialCoordsys");
         try
         {
-            TestRegion region = new TestRegion("foo", "ICRS");
+            TestRegion region = new TestRegion("foo", Frame.ICRS, null, null);
             assertNotNull("Region should not be null", region);
-            assertEquals("frame should be ICRS", "ICRS", region.getFrame());
+            assertEquals("frame should be ICRS", Frame.ICRS, region.getFrame());
             assertNull("refpos should be null", region.getRefPos());
             assertNull("flavor should be null", region.getFlavor());
 
-            region = new TestRegion("foo", "GEOCENTER");
+            region = new TestRegion("foo", null, ReferencePosition.GEOCENTER, null);
             assertNotNull("Region should not be null", region);
             assertNull("frame should be null", region.getFrame());
-            assertEquals("refpos should be GEOCENTER", "GEOCENTER", region.getRefPos());
+            assertEquals("refpos should be GEOCENTER", ReferencePosition.GEOCENTER, region.getRefPos());
             assertNull("flavor should be null", region.getFlavor());
 
-            region = new TestRegion("foo", "SPHERICAL2");
+            region = new TestRegion("foo", null, null, Flavor.SPHERICAL2);
             assertNotNull("Region should not be null", region);
             assertNull("frame should be null", region.getFrame());
             assertNull("refpos should be null", region.getRefPos());
-            assertEquals("flavor should be SPHERICAL2", "SPHERICAL2", region.getFlavor());
+            assertEquals("flavor should be SPHERICAL2", Flavor.SPHERICAL2, region.getFlavor());
 
-            region = new TestRegion("foo", "ICRS GEOCENTER");
+            region = new TestRegion("foo", Frame.ICRS, ReferencePosition.GEOCENTER, null);
             assertNotNull("Region should not be null", region);
-            assertEquals("frame should be ICRS", "ICRS", region.getFrame());
-            assertEquals("refpos should be GEOCENTER", "GEOCENTER", region.getRefPos());
+            assertEquals("frame should be ICRS", Frame.ICRS, region.getFrame());
+            assertEquals("refpos should be GEOCENTER", ReferencePosition.GEOCENTER, region.getRefPos());
             assertNull("flavor should be null", region.getFlavor());
 
-            region = new TestRegion("foo", "GEOCENTER SPHERICAL2");
+            region = new TestRegion("foo", null, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2);
             assertNotNull("Region should not be null", region);
             assertNull("frame should be null", region.getFrame());
-            assertEquals("refpos should be GEOCENTER", "GEOCENTER", region.getRefPos());
-            assertEquals("flavor should be SPHERICAL2", "SPHERICAL2", region.getFlavor());
+            assertEquals("refpos should be GEOCENTER", ReferencePosition.GEOCENTER, region.getRefPos());
+            assertEquals("flavor should be SPHERICAL2", Flavor.SPHERICAL2, region.getFlavor());
 
-            region = new TestRegion("foo", "ICRS SPHERICAL2");
+            region = new TestRegion("foo", Frame.ICRS, null, Flavor.SPHERICAL2);
             assertNotNull("Region should not be null", region);
-            assertEquals("frame should be ICRS", "ICRS", region.getFrame());
+            assertEquals("frame should be ICRS", Frame.ICRS, region.getFrame());
             assertNull("refpos should be null", region.getRefPos());
-            assertEquals("flavor should be SPHERICAL2", "SPHERICAL2", region.getFlavor());
+            assertEquals("flavor should be SPHERICAL2", Flavor.SPHERICAL2, region.getFlavor());
 
             log.info("testPartialCoordsys passed");
         }

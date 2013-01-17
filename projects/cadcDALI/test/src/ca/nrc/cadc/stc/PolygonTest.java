@@ -94,7 +94,7 @@ public class PolygonTest
         {
             try
             {
-                Polygon polygon = new Polygon("ICRS", null);
+                Polygon polygon = new Polygon(null, null, null, null);
                 fail("Null CoordPair should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -105,7 +105,7 @@ public class PolygonTest
             List<CoordPair> coordPairs = new ArrayList<CoordPair>();
             try
             {
-                Polygon polygon = new Polygon("ICRS", coordPairs);
+                Polygon polygon = new Polygon(null, null, null, coordPairs);
                 fail("Empty CoordPairs should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -117,7 +117,7 @@ public class PolygonTest
             coordPairs.add(new CoordPair(3.0, 4.0));
             try
             {
-                Polygon polygon = new Polygon("ICRS", coordPairs);
+                Polygon polygon = new Polygon(null, null, null, coordPairs);
                 fail("Less than 3 CoordPairs should throw Exception");
             }
             catch (IllegalArgumentException e)
@@ -162,76 +162,19 @@ public class PolygonTest
         log.debug("testFormat");
         try
         {
-            String phrase = "Polygon ICRS BARYCENTER SPHERICAL2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
-
             List<CoordPair> coordPairs = new ArrayList<CoordPair>();
             coordPairs.add(new CoordPair(1.0, 2.0));
             coordPairs.add(new CoordPair(3.0, 4.0));
             coordPairs.add(new CoordPair(5.0, 6.0));
             coordPairs.add(new CoordPair(7.0, 8.0));
-            Polygon polygon = new Polygon("ICRS BARYCENTER SPHERICAL2", coordPairs);
+            Polygon polygon = new Polygon(Frame.ICRS, ReferencePosition.BARYCENTER, Flavor.SPHERICAL2, coordPairs);
 
+            String expected = "Polygon ICRS BARYCENTER SPHERICAL2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
             String actual = STC.format(polygon);
-            log.debug("expected: " + phrase);
+            log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testFormat passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatLowerCase()
-    {
-        log.debug("testFormatLowerCase");
-        try
-        {
-            String phrase = "Polygon icrs barycenter spherical2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
-
-            List<CoordPair> coordPairs = new ArrayList<CoordPair>();
-            coordPairs.add(new CoordPair(1.0, 2.0));
-            coordPairs.add(new CoordPair(3.0, 4.0));
-            coordPairs.add(new CoordPair(5.0, 6.0));
-            coordPairs.add(new CoordPair(7.0, 8.0));
-            Polygon polygon = new Polygon("icrs barycenter spherical2", coordPairs);
-
-            String actual = STC.format(polygon);
-            log.debug("expected: " + phrase);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatLowerCase passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            fail("unexpected exception: " + unexpected);
-        }
-    }
-
-    @Test
-    public void testFormatMixedCase()
-    {
-        log.debug("testFormatMixedCase");
-        try
-        {
-            String phrase = "Polygon Icrs Barycenter Spherical2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
-
-            List<CoordPair> coordPairs = new ArrayList<CoordPair>();
-            coordPairs.add(new CoordPair(1.0, 2.0));
-            coordPairs.add(new CoordPair(3.0, 4.0));
-            coordPairs.add(new CoordPair(5.0, 6.0));
-            coordPairs.add(new CoordPair(7.0, 8.0));
-            Polygon polygon = new Polygon("Icrs Barycenter Spherical2", coordPairs);
-
-            String actual = STC.format(polygon);
-            log.debug("expected: " + phrase);
-            log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
-            log.info("testFormatMixedCase passed");
         }
         catch(Exception unexpected)
         {
@@ -270,7 +213,7 @@ public class PolygonTest
         try
         {
             String phrase = "polygon icrs barycenter spherical2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
-            String expected = "Polygon icrs barycenter spherical2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
+            String expected = "Polygon ICRS BARYCENTER SPHERICAL2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
 
             Region space = STC.parse(phrase);
             String actual = STC.format(space);
@@ -293,12 +236,13 @@ public class PolygonTest
         try
         {
             String phrase = "Polygon Icrs Barycenter Spherical2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
+            String expected = "Polygon ICRS BARYCENTER SPHERICAL2 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0";
 
             Region space = STC.parse(phrase);
             String actual = STC.format(space);
-            log.debug("expected: " + phrase);
+            log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
-            assertEquals(phrase, actual);
+            assertEquals(expected, actual);
             log.info("testParseMixedCase passed");
         }
         catch(Exception unexpected)

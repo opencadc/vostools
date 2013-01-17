@@ -96,7 +96,7 @@ public class NotFormat extends RegionFormat implements Format<Not>
         String not = phrase.substring(open + 1, close).trim();
 
         if (not.isEmpty())
-            throw new StcsParsingException("Not must contain a region: " + phrase);
+            throw new StcsParsingException("Not must contain a Region: " + phrase);
 
         // Get the Region for this operator.
         Region region = STC.parse(not);

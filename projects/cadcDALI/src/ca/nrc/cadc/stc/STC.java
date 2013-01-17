@@ -227,10 +227,11 @@ public class STC
     }
     
     /**
-     * Parse a phrase to a Region. Deprecated, use <code>parseRegion</code>,
-     * <code>parseSpectralInterval</code>, or <code>parseAstroCoordArea</code>.
-     *
-     * @deprecated 
+     * Parses a STC-S phrase to a Region.
+     * 
+     * @deprecated, use <code>parseAstroCoordArea</code>.
+     * This method will be changed to return an AstroCoordArea instead
+     * of a Region.
      */
     public static Region parse(String phrase)
         throws StcsParsingException
