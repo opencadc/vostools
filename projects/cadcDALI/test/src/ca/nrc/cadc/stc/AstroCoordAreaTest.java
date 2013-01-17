@@ -179,7 +179,7 @@ public class AstroCoordAreaTest
         {
             SpectralInterval interval = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
             AstroCoordArea area = new AstroCoordArea(null, interval);
-            String expected = "SpectralInterval 1000.5 2000.5 unit Hz";
+            String expected = "SpectralInterval 1000.5 2000.5 Hz";
             String actual = STC.format(area);
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
@@ -224,7 +224,7 @@ public class AstroCoordAreaTest
             Circle circle = new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0);
             SpectralInterval interval = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
             AstroCoordArea area = new AstroCoordArea(circle, interval);
-            String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 SpectralInterval 1000.5 2000.5 unit Hz";
+            String expected = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 SpectralInterval 1000.5 2000.5 Hz";
             String actual = STC.format(area);
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
@@ -274,7 +274,7 @@ public class AstroCoordAreaTest
         log.debug("testParseSpectralInterval");
         try
         {
-            String phrase = "SpectralInterval 1000.5 2000.5 unit Hz";
+            String phrase = "SpectralInterval 1000.5 2000.5 Hz";
             SpectralInterval expected = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
 
             AstroCoordArea area = STC.parseAstroCoordArea(phrase);
@@ -304,7 +304,7 @@ public class AstroCoordAreaTest
             Circle expectedCircle = new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0);
             SpectralInterval expectedInterval = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
 
-            String phrase = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 SpectralInterval 1000.5 2000.5 unit Hz";
+            String phrase = "Circle ICRS GEOCENTER SPHERICAL2 1.0 2.0 3.0 SpectralInterval 1000.5 2000.5 Hz";
             AstroCoordArea area = STC.parseAstroCoordArea(phrase);
             assertNotNull(area);
             assertNotNull("Region should not be null", area.getRegion());

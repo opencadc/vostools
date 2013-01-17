@@ -92,8 +92,8 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
         phrase = phrase.trim();
 
         String[] tokens = phrase.split("\\s+");
-        if (tokens.length != 5)
-            throw new StcsParsingException("Expected 5 words in " + phrase);
+        if (tokens.length != 4)
+            throw new StcsParsingException("Expected 4 words in " + phrase);
 
         if (!tokens[0].equalsIgnoreCase(SpectralInterval.NAME))
             throw new StcsParsingException("Expected SpectralInterval, was " + tokens[0]);
@@ -119,14 +119,10 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
                                            " to number because " + e.getMessage());
         }
 
-        if (!tokens[3].equalsIgnoreCase("unit"))
-            throw new StcsParsingException("Invalid word in phrase, expected unit, " +
-                                           " found " + tokens[4]);
+        if (!SpectralUnit.contains(tokens[3]))
+            throw new StcsParsingException("Not a valid SpectralUnit " + tokens[3]);
 
-        if (!SpectralUnit.contains(tokens[4]))
-            throw new StcsParsingException("Not a valid SpectralUnit " + tokens[4]);
-
-        SpectralUnit unit = SpectralUnit.valueOf(tokens[4]);
+        SpectralUnit unit = SpectralUnit.valueOf(tokens[3]);
         
         return new SpectralInterval(lolimit, hilimit, unit);
     }
@@ -146,7 +142,7 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
         sb.append(spectralInterval.getLoLimit());
         sb.append(" ");
         sb.append(spectralInterval.getHiLimit());
-        sb.append(" unit ");
+        sb.append(" ");
         sb.append(spectralInterval.getUnit().name());
         return sb.toString();
     }

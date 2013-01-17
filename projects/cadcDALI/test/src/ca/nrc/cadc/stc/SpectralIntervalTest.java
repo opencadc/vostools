@@ -79,7 +79,7 @@ public class SpectralIntervalTest
             SpectralInterval interval = new SpectralInterval(1000.5, 2000.5, SpectralUnit.Hz);
 
             String actual = STC.format(interval);
-            String expected = "SpectralInterval 1000.5 2000.5 unit Hz";
+            String expected = "SpectralInterval 1000.5 2000.5 Hz";
             log.debug("expected: " + expected);
             log.debug("  actual: " + actual);
             assertEquals(expected, actual);
@@ -204,7 +204,7 @@ public class SpectralIntervalTest
         log.debug("testParseMisspeltSpectralInterval");
         try
         {
-            String phrase = "SpatialInterval 1000.5 2000.5 unit Hz";
+            String phrase = "SpatialInterval 1000.5 2000.5 Hz";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
@@ -230,7 +230,7 @@ public class SpectralIntervalTest
         try
         {
             // invalid unit
-            String phrase = "SpectralInterval 1000.5 2000.5 unit lbs";
+            String phrase = "SpectralInterval 1000.5 2000.5 lbs";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
@@ -242,7 +242,7 @@ public class SpectralIntervalTest
             }
 
             // misspelt unit
-            phrase = "SpectralInterval 1000.5 2000.5 unit hz";
+            phrase = "SpectralInterval 1000.5 2000.5 hz";
             try
             {
                 SpectralInterval interval = STC.parseSpectralInterval(phrase);
@@ -267,7 +267,7 @@ public class SpectralIntervalTest
         log.debug("testParse");
         try
         {
-            String phrase = "SpectralInterval 1000.5 2000.5 unit Hz";
+            String phrase = "SpectralInterval 1000.5 2000.5 Hz";
             SpectralInterval interval = STC.parseSpectralInterval(phrase);
             String actual = STC.format(interval);
             log.debug("expected: " + phrase);
