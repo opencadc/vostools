@@ -128,7 +128,7 @@ public class BasicX509KeyManager implements X509KeyManager
         {
             log.debug("looking for certificate chain by delegating... found " + ret.length);
             for (int i=0; i<ret.length; i++)
-                log.debug("getCertificateChain: " + ret[i]);
+                log.debug("getCertificateChain: " + ret[i].getSubjectDN());
             return ret;
         }
         log.debug("looking for certificate chain by delegating... not found");
@@ -146,7 +146,7 @@ public class BasicX509KeyManager implements X509KeyManager
     public PrivateKey getPrivateKey(String alias)
     {
         PrivateKey pk = keyManager.getPrivateKey(alias);
-        log.debug("getPrivateKey for " + alias + ": " + pk);
+        log.debug("getPrivateKey for " + alias + ": " + (pk != null)); // true or false
         return pk;
     }
 

@@ -294,20 +294,20 @@ public class SSLUtil
     {
         BufferedReader rdr = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(certBuf)));
         String line = rdr.readLine();
-        StringBuffer base64 = new StringBuffer();
+        StringBuilder base64 = new StringBuilder();
         while (line != null)
         {
             if (line.startsWith("-----BEGIN RSA PRIVATE KEY-"))
             {
-                log.debug(line);
+                //log.debug(line);
                 line = rdr.readLine();
                 while (line != null && !line.startsWith("-----END RSA PRIVATE KEY-"))
                 {
-                    log.debug(line + " (" + line.length() + ")");
+                    //log.debug(line + " (" + line.length() + ")");
                     base64.append(line.trim());
                     line = rdr.readLine();
                 }
-                log.debug(line);
+                //log.debug(line);
                 line = null; // break from outer loop
             }
             else
@@ -315,11 +315,11 @@ public class SSLUtil
         }
         rdr.close();
         String encoded = base64.toString();
-        log.debug("RSA PRIVATE KEY: " + encoded);
-        log.debug("RSA private key: " + encoded.length() + " chars");
+        //log.debug("RSA PRIVATE KEY: " + encoded);
+        //log.debug("RSA private key: " + encoded.length() + " chars");
         // now: base64 -> byte[]
         byte[] ret = Base64.decode(encoded);
-        log.debug("RSA private key: " + ret.length + " bytes");
+        //log.debug("RSA private key: " + ret.length + " bytes");
 
         return ret;
     }
@@ -341,26 +341,26 @@ public class SSLUtil
         int byteSize = 0;
         while (line != null)
         {
-            StringBuffer base64 = new StringBuffer();
+            StringBuilder base64 = new StringBuilder();
             if (line.startsWith(X509CertificateChain.CERT_BEGIN))
             {
-                log.debug(line);
+                //log.debug(line);
                 line = rdr.readLine();
                 while (line != null && !line.startsWith(X509CertificateChain.CERT_END))
                 {
-                    log.debug(line + " (" + line.length() + ")");
+                    //log.debug(line + " (" + line.length() + ")");
                     base64.append(line.trim());
                     line = rdr.readLine();
                 }
                 if (line.startsWith(X509CertificateChain.CERT_END))
                 {
                     String encoded = base64.toString();
-                    log.debug("CERTIFICATE: " + encoded);
+                    //log.debug("CERTIFICATE: " + encoded);
                     byte[] tmp = Base64.decode(encoded);
                     byteSize += tmp.length;
                     certs.add(tmp);
                 }
-                log.debug(line);
+                //log.debug(line);
             }
             else
                 line = rdr.readLine();
@@ -374,7 +374,7 @@ public class SSLUtil
         {
             System.arraycopy(cert, 0, result, byteSize, cert.length);
             byteSize += cert.length;
-            log.debug("CERTIFICATE: " + result);
+            //log.debug("CERTIFICATE: " + result);
         }
         return result;
     }
@@ -410,7 +410,7 @@ public class SSLUtil
         while (istream.available() > 0)
         {
             Certificate cert = cf.generateCertificate(istream);
-            log.debug("found: " + cert);
+            //log.debug("found: " + cert);
             certs.add(cert);
         }
         istream.close();
@@ -701,7 +701,7 @@ public class SSLUtil
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateCrtKeySpec spec = parseKeySpec(key);
         PrivateKey pk = kf.generatePrivate(spec);
-        log.debug("Private Key" + pk.toString());
+        //log.debug("Private Key" + pk.toString());
 
         byte[] certificates = getCertificates(data);
         X509Certificate[] chain = readCertificateChain(certificates);

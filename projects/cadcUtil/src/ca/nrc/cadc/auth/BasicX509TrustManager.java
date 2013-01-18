@@ -100,7 +100,7 @@ public class BasicX509TrustManager implements X509TrustManager
     {
         if (xcs != null)
             for (int i=0; i<xcs.length; i++)
-                log.debug("checkClientTrusted: " + xcs[i] + "," + str);
+                log.debug("checkClientTrusted: " + xcs[i].getSubjectDN() + "," + str);
         delegate.checkClientTrusted(xcs, str);
         log.debug("delegate.checkClientTrusted: OK");
     }
@@ -109,7 +109,7 @@ public class BasicX509TrustManager implements X509TrustManager
     {
         if (xcs != null)
             for (int i=0; i<xcs.length; i++)
-                log.debug("checkServerTrusted: " + xcs[i] + "," + str);
+                log.debug("checkServerTrusted: " + xcs[i].getSubjectDN() + "," + str);
         if ( System.getProperty(TRUST_ALL_PROPERTY) != null )
         {
             log.debug(TRUST_ALL_PROPERTY + " is set, trusting all server certificates");
