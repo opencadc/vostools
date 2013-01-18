@@ -1500,7 +1500,11 @@ public class NodeDAO
             for (String sql : propagationSQL)
             {
                 log.debug(sql);
-                jdbc.update(sql);
+                int rowsUpdated = jdbc.update(sql);
+                
+                // each statement should update exactly one row
+                if (rowsUpdated != 1)
+                    throw new RuntimeException("node structure changed, aborting on transation: " + sql);
             }
 
             commitTransaction();
@@ -1729,8 +1733,7 @@ public class NodeDAO
         List<String> sql = new ArrayList<String>();
         Date now = new Date();
         
-        // update 1 adjusts the child node size and resets
-        // the delta to zero
+        // update 1 adjusts the child node size
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
@@ -1744,6 +1747,15 @@ public class NodeDAO
         }
         sb.append(" WHERE nodeID = ");
         sb.append(propagation.getChildID());
+        if (propagation.getParentID() == null)
+        {
+            sb.append(" AND parentID IS NULL");
+        }
+        else
+        {
+            sb.append(" AND parentID = ");
+            sb.append(propagation.getParentID());
+        }
         sql.add(sb.toString());
         
         // update 2 adjusts the parent delta
@@ -1772,6 +1784,15 @@ public class NodeDAO
         sb.append(" SET delta = 0");
         sb.append(" WHERE nodeID = ");
         sb.append(propagation.getChildID());
+        if (propagation.getParentID() == null)
+        {
+            sb.append(" AND parentID IS NULL");
+        }
+        else
+        {
+            sb.append(" AND parentID = ");
+            sb.append(propagation.getParentID());
+        }
         sql.add(sb.toString());
         
         return sql.toArray(new String[0]);
@@ -2746,14 +2767,23 @@ public class NodeDAO
             long childID;
             String childType;
             Long parentID;
+            Object parentObject;
+            Number parentNumber;
             NodeSizePropagation propagation = null;
             int col;
+            
             while (rs.next())
             {
                 col = 1;
                 childID = rs.getLong(col++);
                 childType = rs.getString(col++);
-                parentID = rs.getLong(col++);
+                parentID = null;
+                parentObject = rs.getObject(col++);
+                if (parentObject != null)
+                {
+                    parentNumber = (Number) parentObject;
+                    parentID = new Long(parentNumber.longValue());
+                }
                 propagation = new NodeSizePropagation(childID, childType, parentID);
                 propagations.add(propagation);
             }
