@@ -146,9 +146,6 @@ public class PolygonFormat extends RegionFormat implements Format<Polygon>
      */
     public String format(Polygon polygon)
     {
-        if (!(polygon instanceof Polygon))
-            throw new IllegalArgumentException("Expected Polygon, was " + polygon.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(polygon));
         sb.append(" ");

@@ -137,9 +137,6 @@ public class CircleFormat extends RegionFormat implements Format<Circle>
      */
     public String format(Circle circle)
     {
-        if (!(circle instanceof Circle))
-            throw new IllegalArgumentException("Expected Circle, was " + circle.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(circle));
         sb.append(" ");

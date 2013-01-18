@@ -143,7 +143,7 @@ public class SpectralIntervalFormat implements Format<SpectralInterval>
         sb.append(" ");
         sb.append(spectralInterval.getHiLimit());
         sb.append(" ");
-        sb.append(spectralInterval.getUnit().name());
+        sb.append(spectralInterval.getUnit().getValue());
         return sb.toString();
     }
 

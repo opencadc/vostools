@@ -124,9 +124,6 @@ public class UnionFormat extends RegionFormat implements Format<Union>
      */
     public String format(Union union)
     {
-        if (!(union instanceof Union))
-            throw new IllegalArgumentException("Expected Union, was " + union.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(union));
         sb.append(" ( ");

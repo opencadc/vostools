@@ -145,9 +145,6 @@ public class BoxFormat extends RegionFormat implements Format<Box>
      */
     public String format(Box box)
     {
-        if (!(box instanceof Box))
-            throw new IllegalArgumentException("Expected Box, was " + box.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(box));
         sb.append(" ");

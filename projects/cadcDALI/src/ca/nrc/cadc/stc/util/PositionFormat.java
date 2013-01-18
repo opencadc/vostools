@@ -130,9 +130,6 @@ public class PositionFormat extends RegionFormat implements Format<Position>
      */
     public String format(Position position)
     {
-        if (!(position instanceof Position))
-            throw new IllegalArgumentException("Expected Position, was " + position.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(position));
         sb.append(" ");

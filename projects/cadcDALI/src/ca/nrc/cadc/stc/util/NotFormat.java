@@ -113,9 +113,6 @@ public class NotFormat extends RegionFormat implements Format<Not>
      */
     public String format(Not not)
     {
-        if (!(not instanceof Not))
-            throw new IllegalArgumentException("Expected Not, was " + not.getClass().getName());
-
         StringBuilder sb = new StringBuilder();
         sb.append(formatRegion(not));
         sb.append(" ( ");

@@ -74,21 +74,60 @@ package ca.nrc.cadc.stc;
  */
 public enum SpectralUnit
 {
-    Hz, MHz, GHz, m, mm, um, nm, Angstrom, eV, keV, MeV;
+    Hz("Hz"),
+    MHz("MHz"),
+    GHz("GHz"),
+    m("m"),
+    mm("mm"),
+    um("um"),
+    nm("nm"),
+    Angstrom("Angstrom"),
+    eV("eV"),
+    keV("keV"),
+    MeV("MeV");
+
+    private String value;
+
+    private SpectralUnit(String value) { this.value = value; }
+
+    /**
+     * Get the SpectralUnit for the given value.
+     *
+     * @param s SpectralUnit value
+     * @return the SpectralUnit for the value.
+     */
+    public static SpectralUnit toValue(String s)
+    {
+        for (SpectralUnit v : values())
+        {
+            if (v.value.equals(s))
+            {
+                return v;
+            }
+        }
+        throw new IllegalArgumentException("invalid value: " + s);
+    }
+
+    /**
+     * Get the value of the enum.
+     *
+     * @return the enum value.
+     */
+    public String getValue() { return value; }
 
     /**
      * Check if the given value is an allowed value for SpectralUnit.
      *
-     * @param value the value to check.
+     * @param v the value to check.
      * @return true if the value is an allowed value for SpectralUnit,
      *         false otherwise.
      */
-    public static boolean contains(final String value)
+    public static boolean contains(final String v)
     {
         SpectralUnit[] values = SpectralUnit.values();
         for (int i = 0; i < values.length; i++)
         {
-            if (values[i].name().equals(value))
+            if (values[i].value.equals(v))
                 return true;
         }
         return false;
