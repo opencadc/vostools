@@ -93,22 +93,31 @@ $LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r-----" || echo
 $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
 echo " [OK]"
 
+#echo -n "test vchmod with multiple groups"
+set MULTIGROUP = "A B C"
+$CHMODCMD $CERT -R g+r $CONTAINER/aaa "$MULTIGROUP" ||  echo " [FAIL]" && exit -1
+echo -n " verify "
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+
 echo -n "make a sub-container public"
 $CHMODCMD $CERT o+r $CONTAINER/aaa/bbb ||  echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL1]" && exit -1
+$LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r-----" || echo " [FAIL2]" && exit -1
+$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL3]" && exit -1
+$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep "$MULTIGROUP" | grep -q "drw-r--r--" || echo " [FAIL4]" && exit -1
 echo " [OK]"
 
 echo -n "recursively make all directories public"
 $CHMODCMD $CERT -R o+r $CONTAINER ||  echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL]" && exit -1
+$LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL1]" && exit -1
+$LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r--r--" || echo " [FAIL2]" && exit -1
+$LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP1 | grep -q "drw-r--r--" || echo " [FAIL3]" && exit -1
+$LSCMD $CERT $CONTAINER/aaa | grep bbb | grep "$MULTIGROUP" | grep -q "drw-r--r--" || echo " [FAIL4]" && exit -1
 echo " [OK]"
 
 #test interupt
@@ -132,15 +141,16 @@ rm $logFile >& /dev/null
 $CHMODCMD $CERT -v -R g+r $TESTPATH $GROUP1 >& $logFile&
 #give vchmod command time to start
 set chmodPID = $!
-sleep 2 
+set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{print $NF}'`
+while ($jobURL == "")
+    echo "Sleep for 3s..."
+    sleep 3
+    set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{print $NF}'`
+end
+echo $jobURL
 kill -s INT $chmodPID 
 # give kill a chance to complete
 sleep 2 
-# find the job ID
-set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{for(i=1;i<NF;++i)if($i~/nodeprops/)print $i}'`
-#echo "$jobURL"
-set jobID = `echo $jobURL | awk -F '/' '{print $(NF-1)}'` 
-#echo "$jobID"
 #rm $logFile >& /dev/null
 #verify job has been aborted
 set phase = `$CHECKJOB $CERT $jobURL`

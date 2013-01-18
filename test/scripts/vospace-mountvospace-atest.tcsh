@@ -89,6 +89,7 @@ echo " [OK]"
 # a bug brings vofs down if the node is busy. To be removed when
 # the vofs bug is fixed.
 echo "[TODO] - pause to allow file to get uploaded first" 
+sleep 5
 
 echo -n "copy data node to local filesystem "
 cp $MCONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1

@@ -1,12 +1,13 @@
 #!/usr/bin/env python2.7
-
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
 import vos
 import time
-import optparse, os, sys, logging
+import os, sys, logging
+from optparse import OptionParser
 import signal
+from vos import vos, __version__
 
 def signal_handler(signum, frame):
     raise KeyboardInterrupt, "SIGINT signal handler"
@@ -14,18 +15,25 @@ def signal_handler(signum, frame):
 def main():
     signal.signal(signal.SIGINT, signal_handler)
     usage = """
-    vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.   Version: %s
-""" % (vos.__version__.version)
+    vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.
 
+Version: %s """ % (__version__.version)
 
-    parser = optparse.OptionParser(usage)
+    parser = OptionParser(usage)
     parser.add_option("-v", "--verbose", action="store_true")
     parser.add_option("-d", "--debug", action="store_true")
-    parser.add_option("--version", help="VOS Version %s" % (vos.__version__.version))
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
     parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
 
     (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vmv version %s \n\n" % (__version__.version)) 
+        sys.exit()
 
     if opt.verbose:
         logging.basicConfig(level=logging.INFO, format="vmv: %(message)s")

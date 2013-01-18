@@ -287,11 +287,17 @@ class Node:
 
     def chwgrp(self, group):
         """Set the groupwrite value for this node"""
+        if (group != None) and (group.count(CADC_GMS_PREFIX) > 3):
+            raise AttributeError("Exceeded max of 4 write groups: " + 
+                    group.replace(CADC_GMS_PREFIX, ""))
         self.groupwrite = group
         return self.changeProp('groupwrite', group)
 
     def chrgrp(self, group):
         """Set the groupread value for this node"""
+        if (group != None) and (group.count(CADC_GMS_PREFIX) > 3):
+            raise AttributeError("Exceeded max of 4 read groups: " + 
+                    group.replace(CADC_GMS_PREFIX, ""))
         self.groupread = group
         return self.changeProp('groupread', group)
 
@@ -299,6 +305,14 @@ class Node:
         logging.debug("Setting value of ispublic to %s" % (str(value)))
         return self.changeProp('ispublic', value)
 
+    def clearProps(self):
+        """Clear the property list
+        """
+        logging.debug("Clearing the property list")
+        properties = self.node.findall(Node.PROPERTIES)
+        for props in properties:
+            for prop in props.findall(Node.PROPERTY):
+                props.remove(prop)
 
     def changeProp(self, key, value):
         """Change the node property 'key' to 'value'.
@@ -338,6 +352,7 @@ class Node:
         ### There should be a '#' in there someplace...
         propertyNode.attrib["uri"] = "%s#%s" % (Node.IVOAURL, key)
         propertyNode.text = value
+        self.props[key] = value
         #logging.debug("After change node XML\n %s" %( self))
         return 1
 
@@ -442,6 +457,13 @@ class Node:
         """Check if target is a container Node"""
         #logging.debug(self.type)
         if self.type == "vos:ContainerNode":
+            return True
+        return False
+
+    def islink(self):
+        """Check if target is a link Node"""
+        #logging.debug(self.type)
+        if self.type == "vos:LinkNode":
             return True
         return False
 
@@ -1013,23 +1035,30 @@ class Client:
         try:
             phaseURL = jobURL + "/phase"
             sleepTime = 1
-            sleepCount = 0
             roller = ( '\\' ,'-','/','|','\\','-','/','|' )
             phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
+            # do not remove the line below. It is used for testing
+            logging.info("Job URL: " + jobURL + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
                 # poll the job. Sleeping time in between polls is doubling each time 
                 # until it gets to 32sec
+                totalSlept = 0
                 if(sleepTime <= 32):
                     sleepTime = 2 * sleepTime
-                slept = 0
-                while slept < sleepTime:
+                    slept = 0
                     if logging.getLogger('root').getEffectiveLevel() == logging.INFO : 
-                        sys.stdout.write("\r%s %s" % (phase, roller[sleepCount % len(roller)]))
-                        sys.stdout.flush()
-                        sleepCount += 1
-                    time.sleep(sleepTime*random.random()/30.0)
+                        while slept < sleepTime:
+                            sys.stdout.write("\r%s %s" % (phase, roller[totalSlept % len(roller)]))
+                            sys.stdout.flush()
+                            slept += 1
+                            totalSlept += 1
+                            time.sleep(1)
+                    else:
+                        time.sleep(sleepTime)
                 phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
-            sys.stdout.write("\n")
+                logging.debug("Async transfer Phase for url %s: %s " % (url,  phase))
+            if logging.getLogger('root').getEffectiveLevel() == logging.INFO : 
+                sys.stdout.write("Done\n")
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
@@ -1113,9 +1142,7 @@ class Client:
                 del(node.props[prop])
         for properties in node.node.findall(Node.PROPERTIES):
             node.node.remove(properties)
-        #logging.debug(str(node))
         properties = ET.Element(Node.PROPERTIES)
-        #logging.debug(node.props)
         for prop in node.props:
             property = ET.SubElement(properties, Node.PROPERTY, attrib={'readOnly': 'false', 'uri': "%s#%s" % (Node.IVOAURL, prop)})
             if node.props[prop] is None:
@@ -1125,7 +1152,6 @@ class Client:
             else:
                 property.text = node.props[prop]
         node.node.insert(0, properties)
-        #logging.debug(str(node))
         f = self.open(node.uri, mode=os.O_APPEND, size=len(str(node)))
         f.write(str(node))
         f.close()
@@ -1141,7 +1167,7 @@ class Client:
            properties are updated on the server. For recursive updates, node should
            only contain the properties to be changed in the node itself as well as
            all its children. """
-        logging.debug(str(node))
+        logging.debug("******************** %s *******" % str(node))
         ## Let's do this update using the async tansfer method
         URL = self.getNodeURL(node.uri)
         if recursive:

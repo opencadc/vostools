@@ -5,6 +5,7 @@ from vos import vos
 import optparse
 import logging
 import os, sys
+from vos import vos, __version__
 
 usage = """
   vls vos:voSpaceTarget
@@ -13,7 +14,9 @@ usage = """
 eg:  vls vos/jkavelaars
 
   Currently only work on CADC vospace server
-"""
+
+Version: %s """ % (__version__.version)
+
 
 
 def getTerminalSize():
@@ -55,9 +58,18 @@ parser.add_option("-v", "--verbose", action="store_true", help="print some diagn
 parser.add_option("-d", "--debug", action="store_true", help="print all diagnositics")
 parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 parser.add_option("--overwrite", help="Overwrite the existing certificate with a new one?", action="store_true")
+parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit()
 
 (opt, args) = parser.parse_args()
 
+
+if opt.version:
+    sys.stdout.write("vls version %s \n\n" % (__version__.version)) 
+    sys.exit()
 if opt.help:
     parser.print_help()
     sys.exit(0)
@@ -121,8 +133,8 @@ columns.extend(['readGroup', 'writeGroup', 'size', 'date'])
 
 formats = {'permisions': lambda value: "%-11s" % (value),
          'creator': lambda value: " %-20s" % (value),
-         'readGroup': lambda value: " %-15s" % (value.replace(vos.CADC_GMS_PREFIX, "")),
-         'writeGroup': lambda value: " %-15s" % (value.replace(vos.CADC_GMS_PREFIX, "")),
+         'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+         'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
          'size': sizeFormat,
          'date': dateFormat}
 
@@ -141,7 +153,6 @@ for node in args:
 
     if sortKey:
         infoList = sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
-
 
     for item in infoList:
         name_string = item[0]
