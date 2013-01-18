@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
-
 """copy files from / to vospace directly without using the FUSE layer"""
 
+from vos import vos, __version__
 usage = """
   vcp filename vos:rootNode/destination
 
@@ -15,11 +15,10 @@ usage = """
 
     vcp currently only works on the CADC VOSpace server.
 
-"""
+ Version: %s """ % (__version__.version)
 
 import time
 import errno
-
 
 
 nodeList = {}
@@ -34,6 +33,17 @@ def isdir(filename):
             return False
     else:
         return os.path.isdir(filename)
+
+def islink(filename):
+    logging.debug("Doing an islink on %s" %(filename))
+    if filename[0:4]=="vos:":
+        try:
+            nodeList[filename] = nodeList.get(filename, client.getNode(filename))
+            return nodeList[filename].islink()
+        except:
+            return False
+    else:
+        return os.path.islink(filename)
 
 def access(filename,mode):
     logging.debug("checking for access %s " %(filename))
@@ -109,8 +119,8 @@ def copy(source,dest,exclude=None,include=None):
         waitTime=1
         if not access(os.path.dirname(dest),os.F_OK):
             raise IOError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % ( os.path.dirname(dest)))
-        if not isdir(os.path.dirname(dest)):
-            raise IOError(errno.ENOTDIR, "vcp: %s is not a ContainerNode" % ( os.path.dirname(dest)))
+        if not isdir(os.path.dirname(dest)) and not islink(os.path.dirname(dest)):
+            raise IOError(errno.ENOTDIR, "vcp: %s is not a ContainerNode or LinkNode" % ( os.path.dirname(dest)))
 
         skip = False
         if exclude is not None:
@@ -145,12 +155,8 @@ def copy(source,dest,exclude=None,include=None):
         else:
             raise e
 
-
-
-def signal_handler(signal, frame):
-    Expcetion("Interupt")
-    
-
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
 
 
 if __name__=='__main__':
@@ -172,10 +178,20 @@ if __name__=='__main__':
     parser.add_option("-i","--interogate",action="store_true",help="Ask before overwriting files")
     parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
     parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+
 
     name=sys.argv[0]
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+
     (opt,args)=parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vcp version %s \n\n" % (__version__.version)) 
+        sys.exit()
 
     dest=args.pop()
 
@@ -193,7 +209,6 @@ if __name__=='__main__':
         logLevel=logging.DEBUG
         
     logging.basicConfig(level=logLevel,format=format)
-
 
 
     exitCode = 0
@@ -236,6 +251,9 @@ if __name__=='__main__':
     except ssl.SSLError as e:
         logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
         exitCode = getattr(e,'errno',-2)
+    except KeyboardInterrupt as ke:
+        logging.error("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
         logging.error(getattr(e,'strerror',getattr(e,'message',"FAILED")))
         exitCode = getattr(e,'errno',-1)
