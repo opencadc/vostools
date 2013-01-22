@@ -1793,6 +1793,12 @@ public class NodeDAOTest
             String basePath = "/" + HOME_CONTAINER + "/";
             NodeProperty np;
 
+            // test setup:
+            // del-test-dir/del-test-file1
+            //             /del-test-file2
+            //             /del-test-dir1
+            //             /del-test-dir1/del-test-file3
+            //             /del-test-dir2
 
             // Create a node with properties
             String cPath = basePath + getNodeName("del-test-dir");
@@ -1819,6 +1825,20 @@ public class NodeDAOTest
             // since this is an admin API delete, it should ignore busy state
             nodeDAO.setBusyState((DataNode) dNode2, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
 
+            String cPath1 = cPath + "/" + getNodeName("del-test-dir1");
+            ContainerNode cNode1 = getCommonContainerNode(cPath1);
+            cNode1.setParent(cNode);
+            nodeDAO.put(cNode1, owner);
+            cNode1 = (ContainerNode) nodeDAO.getPath(cPath1);
+            Assert.assertNotNull(cNode1);
+
+            String dPath3 = cPath1 + "/" + getNodeName("del-test-file3");
+            Node dNode3 = getCommonDataNode(dPath3);
+            dNode3.setParent(cNode1);
+            nodeDAO.put(dNode3, owner);
+            dNode3 = nodeDAO.getPath(dPath3);
+            Assert.assertNotNull(dNode3);
+
             String cPath2 = cPath + "/" + getNodeName("del-test-dir2");
             Node cNode2 = getCommonContainerNode(cPath2);
             cNode2.setParent(cNode);
@@ -1831,9 +1851,9 @@ public class NodeDAOTest
 
             nodeDAO.delete(cNode, 2, false);
 
-            // 4 nodes = 2 batches + 1 empty txn
-            Assert.assertEquals("batch start", numS+3, nodeDAO.numTxnStarted);
-            Assert.assertEquals("batch commit", numC+3, nodeDAO.numTxnCommitted);
+            // 4 nodes = 4 batches + 1 empty txn
+            Assert.assertEquals("batch start", numS+5, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC+5, nodeDAO.numTxnCommitted);
             
 
             Node notFound = nodeDAO.getPath(cPath);

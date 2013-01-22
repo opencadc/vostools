@@ -1249,7 +1249,11 @@ public class NodeDAO
 
     private int commitBatch(String name, int batchSize, int count, boolean dryrun)
     {
-        if (!dryrun && count >= batchSize)
+        return commitBatch(name, batchSize, count, dryrun, false);
+    }
+    private int commitBatch(String name, int batchSize, int count, boolean dryrun, boolean force)
+    {
+        if (!dryrun && (count >= batchSize || force))
         {
             commitTransaction();
             log.info(name + " batch committed: " + count);
@@ -1353,8 +1357,10 @@ public class NodeDAO
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
         List<Node> children = jdbc.query(sql, new Object[0], mapper);
         Object[] args = new Object[1];
+        boolean foundChildren = false;
         while (children.size() > 0)
         {
+            foundChildren = true;
             Node cur = null;
             for (Node child : children)
             {
@@ -1368,6 +1374,11 @@ public class NodeDAO
             children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
         }
+        
+        // always force commit before going back up to parent to avoid deadlocks with nodePropagation
+        if (foundChildren)
+            count = commitBatch(sql, batchSize, count, dryrun, true);
+        
         return count;
     }
 
