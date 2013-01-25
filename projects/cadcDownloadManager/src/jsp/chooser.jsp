@@ -172,15 +172,20 @@ String bodyFooter = skin + "bodyFooter";
         <i>wget</i> is not working
     </h3>
         <p>
-    	Please note that there are many versions of <i>wget</i> with a variety of 
-		options and syntax.  Please consult your local help pages before contacting 
-		us.&nbsp;   <code>wget --help</code> should reveal the arguments supported by 
-		your version of <i>wget</i>.  
+            The recommended usage above includes the <code>--content-disposition</code> option,
+            which is available in <i>wget</i> version 1.12 or later. This option improves the
+            likelhood that saved files will have the correct filenames when retrieved from services.
+        </p>
+        <p>
+            Please note that there are many versions of <i>wget</i> with a variety of
+            options and syntax.  Please consult your local help pages before contacting
+            us.&nbsp;   <code>wget --help</code> should reveal the arguments supported by
+            your version of <i>wget</i>.
 	</p>
 				
 	<p> 
-	    The <i>wget</i> command should be available on 
-	    most systems. If not, <i>wget</i> can be downloaded from gnu.org.
+	    The <i>wget</i> command should be available on most systems. If not, <i>wget</i>
+            can be downloaded from <a href="http://www.gnu.org/software/wget/">gnu.org</a>.
 	    Alternately, you can try one of the several other web download utilities
 	    such as: curl, HTTrack, leech (mozilla add-on), pavuk, lftp, etc.
 	</p>    
