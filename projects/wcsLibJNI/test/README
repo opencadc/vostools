@@ -2,7 +2,7 @@ To run the test code.
 
 Build the wcsLib library.
 
-cd wcsLibJNI/trunk/
+cd wcsLibJNI
 make
 
 Compile the C test code.

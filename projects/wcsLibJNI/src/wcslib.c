@@ -445,14 +445,15 @@ JNIEXPORT jint JNICALL Java_ca_nrc_cadc_wcs_WCSLib_wcsp2s
         }
     }
 
-    /* Set flag to indicate wcs has been initialized */
-    wcs->flag = 1;
+    /* Set flag to indicate the structure as been set and wcsset should be called */
+    wcs->flag = 0;
 
     /* Call native lib */
     if (!status)
     {
         if (status = wcsp2s(wcs, NCOORD, NELEM, PIXCRD, imgcrd, phi, theta, WORLD, stat))
         {
+        	fprintf(stderr, "ERROR %d from wcsset(): %s.\n", status, wcs_errmsg[status]);
             /* Add 12 to status to differentiate between initialization and runtime errors */
             status += 12;
         }
@@ -860,8 +861,8 @@ JNIEXPORT jint JNICALL Java_ca_nrc_cadc_wcs_WCSLib_wcss2p
         }
     }
 
-    /* Set flag to indicate wcs has been initialized */
-    wcs->flag = 1;
+    /* Set flag to indicate the structure as been set and wcsset should be called */
+    wcs->flag = 0;
 
     /* Call native lib */
     if (!status)
@@ -1243,8 +1244,8 @@ JNIEXPORT jint JNICALL Java_ca_nrc_cadc_wcs_WCSLib_wcssptr
         (*env)->ReleaseStringUTFChars(env, spectral_ctype, spctype);
     }
 
-    /* Set flag to indicate wcs has been initialized */
-    wcs->flag = 1;
+    /* Set flag to indicate the structure as been set and wcsset should be called */
+    wcs->flag = 0;
 
     /* Call native lib */
     if (!status)
