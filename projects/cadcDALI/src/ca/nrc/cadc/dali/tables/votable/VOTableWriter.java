@@ -93,7 +93,7 @@ public class VOTableWriter implements TableWriter<VOTable>
 {
     private static final Logger log = Logger.getLogger(VOTableWriter.class);
 
-    public static final String CONTENT_TYPE = "text/x-votable+xml";
+    public static final String CONTENT_TYPE = "application/x-votable+xml";
     
     // VOTable Version number.
     public static final String VOTABLE_VERSION  = "1.2";
