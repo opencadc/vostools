@@ -171,10 +171,12 @@ public enum NodeFault
 
     private Status status;
     private String message;
+    private boolean serviceFailure;
     
     private NodeFault(Status status)
     {
         this.status = status;
+        this.serviceFailure = false;
     }
 
     public Status getStatus()
@@ -195,6 +197,16 @@ public enum NodeFault
     public void setMessage(String message)
     {
         this.message = message;
+    }
+    
+    public boolean isServiceFailure()
+    {
+        return serviceFailure;
+    }
+    
+    public void setServiceFailure(boolean serviceFailure)
+    {
+        this.serviceFailure = serviceFailure;
     }
 
 }

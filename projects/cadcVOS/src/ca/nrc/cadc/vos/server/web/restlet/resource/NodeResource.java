@@ -225,7 +225,7 @@ public class NodeResource extends BaseResource implements PrivilegedAction<Repre
                 if (result.getNodeFault() != null)
                 {
                     message = getErrorMessage(result.getNodeFault());
-                    logInfo.setSuccess(false);
+                    logInfo.setSuccess(!result.getNodeFault().isServiceFailure());
                 }
                 
                 setStatus(result.getStatus());

@@ -306,20 +306,20 @@ public abstract class NodeAction
         {
             String faultMessage = "XML document exceeds " + e.getLimit() + " bytes";
             log.debug(faultMessage);
-            return handleException(NodeFault.RequestEntityTooLarge, faultMessage);
+            return handleException(NodeFault.RequestEntityTooLarge, faultMessage, false);
         }
         catch (FileNotFoundException e)
         {
             log.debug("Could not find node with path: " + vosURI.getPath());
             NodeFault nodeFault = handleException(e);
             String faultMessage = vosURI.toString();
-            return handleException(nodeFault, faultMessage);
+            return handleException(nodeFault, faultMessage, false);
         }
         catch (URISyntaxException e)
         {
             String faultMessage = "URI not well formed: " + vosURI;
             log.debug(faultMessage);
-            return handleException(NodeFault.InvalidURI, faultMessage);
+            return handleException(NodeFault.InvalidURI, faultMessage, false);
         }
         catch (AccessControlException e)
         {
@@ -329,37 +329,37 @@ public abstract class NodeAction
                 faultMessage = "Access Denied";
             }
             log.debug(faultMessage);
-            return handleException(NodeFault.PermissionDenied, faultMessage);
+            return handleException(NodeFault.PermissionDenied, faultMessage, false);
         }
         catch (NodeParsingException e)
         {
             String faultMessage = "Node XML not well formed: " + e.getMessage();
             log.debug(faultMessage);
-            return handleException(NodeFault.TypeNotSupported, faultMessage);
+            return handleException(NodeFault.TypeNotSupported, faultMessage, false);
         }
         catch (UnsupportedOperationException e)
         {
             String faultMessage = "Not supported: " + e.getMessage();
             log.debug(faultMessage);
-            return handleException(NodeFault.InvalidArgument, faultMessage);
+            return handleException(NodeFault.InvalidArgument, faultMessage, false);
         }
         catch (IllegalArgumentException e)
         {
             String faultMessage = "Bad input: " + e.getMessage();
             log.debug(faultMessage);
-            return handleException(NodeFault.InvalidArgument, faultMessage);
+            return handleException(NodeFault.InvalidArgument, faultMessage, false);
         }
         catch (LinkingException e)
         {
             String faultMessage = "Linking exception: " + e.getMessage();
             log.debug(faultMessage);
-            return handleException(NodeFault.UnreadableLinkTarget, faultMessage);
+            return handleException(NodeFault.UnreadableLinkTarget, faultMessage, false);
         }
         catch(IllegalStateException e)
         {
             String faultMessage = e.getMessage();
             log.debug(faultMessage);
-            return handleException(NodeFault.InternalFault, faultMessage);
+            return handleException(NodeFault.InternalFault, faultMessage, true);
         }
         catch (TransientException e)
         {
@@ -370,7 +370,7 @@ public abstract class NodeAction
         {
             String faultMessage = "Internal Error:" + t.getMessage();
             log.debug("BUG: " + faultMessage, t);
-            return handleException(NodeFault.InternalFault, faultMessage);
+            return handleException(NodeFault.InternalFault, faultMessage, true);
         }
     }
 
@@ -389,9 +389,10 @@ public abstract class NodeAction
      * @param message An optional message.
      * @return The new NodeActionResult.
      */
-    private NodeActionResult handleException(NodeFault nodeFault, String message)
+    private NodeActionResult handleException(NodeFault nodeFault, String message, boolean serviceFailure)
     {
         nodeFault.setMessage(message);
+        nodeFault.setServiceFailure(serviceFailure);
         return new NodeActionResult(nodeFault);
     }
 }
