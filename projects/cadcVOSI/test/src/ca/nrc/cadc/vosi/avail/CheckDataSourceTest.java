@@ -69,13 +69,15 @@
 
 package ca.nrc.cadc.vosi.avail;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.logging.Logger;
 import javax.sql.DataSource;
-
 import junit.framework.Assert;
-
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -88,6 +90,11 @@ import org.junit.Test;
  */
 public class CheckDataSourceTest
 {
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
+    }
+    
     /**
      * @throws java.lang.Exception
      */
@@ -185,6 +192,11 @@ public class CheckDataSourceTest
     private static class MockDS implements DataSource
     {
 
+        public Logger getParentLogger() throws SQLFeatureNotSupportedException
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+        
         public Connection getConnection() throws SQLException
         {
             throw new SQLException("Not supported yet.");

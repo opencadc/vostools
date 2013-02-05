@@ -94,6 +94,7 @@ import org.junit.Test;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.text.DateFormat;
 
 /**
  * @author zhangsa
@@ -108,6 +109,7 @@ public class AvailabilityTest
     }
 
     Map<String,String> schemaMap = new HashMap<String,String>();
+    DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
     
 
     /**
@@ -149,9 +151,9 @@ public class AvailabilityTest
         AvailabilityStatus status = null;
         try
         {
-            Date d1 = DateUtil.toDate("2009-04-12T11:22:33.444", DateUtil.IVOA_DATE_FORMAT); //yyyy-MM-dd'T'HH:mm:ss.SSS
-            Date d2 = DateUtil.toDate("2009-05-12T11:22:33.444", DateUtil.IVOA_DATE_FORMAT); //yyyy-MM-dd'T'HH:mm:ss.SSS
-            Date d3 = DateUtil.toDate("2009-06-12T11:22:33.444", DateUtil.IVOA_DATE_FORMAT); //yyyy-MM-dd'T'HH:mm:ss.SSS
+            Date d1 = df.parse("2009-04-12T11:22:33.444"); //yyyy-MM-dd'T'HH:mm:ss.SSS
+            Date d2 = df.parse("2009-05-12T11:22:33.444"); //yyyy-MM-dd'T'HH:mm:ss.SSS
+            Date d3 = df.parse("2009-06-12T11:22:33.444"); //yyyy-MM-dd'T'HH:mm:ss.SSS
             status = new AvailabilityStatus(true, d1, d2, d3, "noteA");
         }
         catch (ParseException e)
