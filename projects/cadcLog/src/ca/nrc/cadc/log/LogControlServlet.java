@@ -90,27 +90,29 @@ import ca.nrc.cadc.util.Log4jInit;
 
 
 /**
- *  Sets up log4j for whichever webapp contains this
- *  servlet.
- *   
- *  To make sure the logging level gets set before any
- *  logging gets done, set load-on-startup to a smaller
- *  whole number than is used for any other servlet
- *  in this webapp.  This assumes Tomcat 5.5 or later.
- *  
- *  For now get the level from a web.xml init-param.
- *  Eventually it would be nice to be able to change
- *  it while the program is running.
- *
- *  It should also be possible to use PropertyUtil in
- *  a static block to get the log level from a Java -D
- *  property set by tomcatEnv or from the WEB-INF/classes
- *  directory.
- *  
- *  The log level controls the logging level of those
- *  packages listed in an init-param.
- *  
- *  By default, log4j assigns the root logger to leve.DEBUG.
+ * Sets up log4j for whichever webapp contains this
+ * servlet. To make sure the logging level gets set before any
+ * logging gets done, set load-on-startup to a smaller
+ * whole number than is used for any other servlet
+ * in the webapp.
+ * </p><p>
+ * The initial level is set with an init-param named 
+ * <code>logLevel</code> and value equivalent to one of the
+ * log4j levels (upper case, eg INFO).
+ * </p><p>
+ * The initially configered packages are set with an init-param
+ * named <code>logLevelPackages</code> and value of whitespace-separated
+ * package names.
+ * </p><p>
+ * The current configuration can be retrieved with an HTTP GET. 
+ * </p><p>
+ * The configuration can be modified with an HTTP PIOST to this servlet. 
+ * The currently supported params are <code>level</code> (for example,
+ * level=DEBUG) and <code>package</code> (for example, package=ca.nrc.cadc.log).
+ * The level parameter is required. The package parameter is optional and 
+ * may specify a new package to configure
+ * or a change in level for an existing package; if no packages are specified, the
+ * level is changed for all previously configured packages.
  */
 public class LogControlServlet extends HttpServlet
 {
@@ -123,8 +125,8 @@ public class LogControlServlet extends HttpServlet
 	private static final String LOG_LEVEL_PARAM = "logLevel";
 	private static final String PACKAGES_PARAM  = "logLevelPackages";
 
-	private static Level level = null;
-	private static String[] packageNames;
+	private Level level = null;
+	private List<String> packages;
 
     /**
      *  Initialize the logging.  This method should only get
@@ -138,7 +140,7 @@ public class LogControlServlet extends HttpServlet
 	public void init( final ServletConfig config ) throws ServletException
     {
     	super.init( config );
-        packageNames = new String[0];
+        this.packages = new ArrayList<String>();
 
     	//  Determine the desired logging level.
     	String levelVal = config.getInitParameter( LOG_LEVEL_PARAM );
@@ -162,26 +164,26 @@ public class LogControlServlet extends HttpServlet
     	String webapp = config.getServletContext().getServletContextName();
     	if (webapp == null) webapp = "[?]";
     	    
-    	// Get the list of configured packages and
-    	// set the log level on each.
-        logger.setLevel(DEFAULT_LEVEL);
+        String thisPkg = LogControlServlet.class.getPackage().getName();
+        Log4jInit.setLevel(webapp, thisPkg, level);
+        packages.add(thisPkg);
+        logger.info("log level: " + thisPkg + " =  " + level);
         
         String packageParamValues = config.getInitParameter( PACKAGES_PARAM );
         if (packageParamValues != null)
         {
             StringTokenizer stringTokenizer = new StringTokenizer(packageParamValues, " \n\t\r", false);
-            List<String> tokens = new ArrayList<String>();
             while (stringTokenizer.hasMoreTokens())
             {
                 String pkg = stringTokenizer.nextToken();
                 if ( pkg.length() > 0 )
                 {
-                    Log4jInit.setLevel(webapp, pkg, level);  // 2011-05-31, -sz
+                    Log4jInit.setLevel(webapp, pkg, level);
                     logger.info("log level: " + pkg + " =  " + level);
-                    tokens.add(pkg);
+                    if (!packages.contains(pkg))
+                        packages.add(pkg);
                 }
             }
-            packageNames = tokens.toArray(new String[0]);
         }
 
         // these are here to help detect problems with logging setup
@@ -209,9 +211,12 @@ public class LogControlServlet extends HttpServlet
         response.setContentType("text/plain");
         PrintWriter writer = response.getWriter();
 
-        writer.println("Logging level " + level + " set on " + packageNames.length + " packages:");
-        for (String pkg : packageNames)
-        	writer.println(pkg);
+        //writer.println("Logging level " + level + " set on " + packageNames.length + " packages:");
+        for (String pkg : packages)
+        {
+            Logger log = Logger.getLogger(pkg);
+        	writer.println(pkg + " " + log.getLevel());
+        }
         
         writer.close();
 	}
@@ -259,13 +264,32 @@ public class LogControlServlet extends HttpServlet
                 writer.close();
             }
         }
-        // modify log level on current packages
-        for (String pkg : packageNames)
-            Log4jInit.setLevel(pkg, level);  // 2011-05-30, -sz
-
+        
+        String[] pkgs = request.getParameterValues("package");
+        if (pkgs != null)
+        {
+            String dnt = request.getParameter("notrack");
+            boolean track = (dnt == null);
+            for (String p : pkgs)
+            {
+                logger.info("setLevel: " + p + " -> " + level);
+                Log4jInit.setLevel(p, level);
+                if (!packages.contains(p) && track)
+                    packages.add(p);
+            }
+        }
+        else // all currently configured packages
+        {
+            for (String p : packages)
+            {
+                logger.info("setLevel: " + p + " -> " + level);
+                Log4jInit.setLevel(p, level);
+            }
+        }
+        
         // redirect the caller to the resulting settings
         response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-        String url = request.getRequestURL().toString();
+        String url = request.getRequestURI();
         response.setHeader("Location", url);
     }
 }

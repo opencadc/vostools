@@ -1,0 +1,91 @@
+#!/bin/bash
+
+## dynamically set the log level of a web service
+
+CURL=curl
+
+function usage() {
+    echo "usage cadcSetLog --get <URL>"
+    echo "      cadcLogSet --set <URL> <level> [<package> [notrack]]"
+    echo ""
+    echo "     --get : get current log config"
+    echo "     --set : set log config"
+    echo "     URL   : URL to the LogControl resource (e.g. http://localhost/srv/logControl)"
+    echo "     level : ERROR, WARN, INFO, DEBUG"
+    echo "   package : (optional) package name (default: all currently configured packages get the specified level)"
+    echo "   notrack : (optional) disable further tracking of this package"
+    echo ""
+    echo "Examples:"
+    echo ""
+    echo "1. increase log level of all configured packages to DEBUG:"
+    echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet DEBUG"
+    echo ""
+    echo "2. increase log level of a specific package to DEBUG (adds it to list of configured packages):"
+    echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet DEBUG my.package"
+    echo ""
+    echo "3. change log level of a specific package but not add it to list as in Example 1 and 2:"
+    echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet INFO some.other.package notrack"
+    echo ""
+    echo "4. enable the Profiler class:
+    echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet INFO ca.nrc.cadc.profiler notrack"
+    echo ""
+    echo "5. disable the Profiler class:
+    echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet ERROR ca.nrc.cadc.profiler notrack"
+}
+
+## command-line args
+ACTION=$1
+URL=$2
+LEVEL=$3
+PKG=$4
+DNT=$5
+
+if [ -z $ACTION ]; then
+    usage
+    exit 1
+fi
+
+if [ -z $URL ]; then
+    echo "error: missing URL"
+    usage
+    exit 1
+fi
+
+if [ $ACTION == "--get" ]; then
+    if [ ! -z $LEVEL ]; then
+        echo "error: extra arguments not usable by --get: $LEVEL $PKG"
+        usage
+        exit 1
+    fi
+elif [ $ACTION == "--set" ]; then
+    if [ -z $LEVEL ]; then
+        echo "error: missing level"
+        usage
+        exit 1
+    fi
+
+    CONTENT="level=$LEVEL"
+
+    if [ ! -z $PKG ]; then
+        CONTENT="${CONTENT}&package=${PKG}"
+        if [ ! -z $DNT ]; then
+            if [ $DNT == "notrack" ]; then
+                CONTENT="${CONTENT}&notrack=1"
+            fi
+        fi
+    fi
+else
+    usage
+    exit 1
+fi
+
+
+## end: command-line args
+
+if [ $ACTION == "--get" ]; then
+    $CURL $URL
+    exit $?
+elif [ $ACTION == "--set" ]; then
+    $CURL -d "${CONTENT}" $URL
+    exit $?
+fi
