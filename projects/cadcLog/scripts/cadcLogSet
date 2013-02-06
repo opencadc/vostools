@@ -2,7 +2,7 @@
 
 ## dynamically set the log level of a web service
 
-CURL=curl
+CURL="curl --netrc"
 
 function usage() {
     echo "usage cadcSetLog --get <URL>"
@@ -26,10 +26,10 @@ function usage() {
     echo "3. change log level of a specific package but not add it to list as in Example 1 and 2:"
     echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet INFO some.other.package notrack"
     echo ""
-    echo "4. enable the Profiler class:
+    echo "4. enable the Profiler class (recommend: notrack):"
     echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet INFO ca.nrc.cadc.profiler notrack"
     echo ""
-    echo "5. disable the Profiler class:
+    echo "5. disable the Profiler class (recommend: notrack):"
     echo "    cadcLogSet --set http://myServer/myApp/myLogControlServlet ERROR ca.nrc.cadc.profiler notrack"
 }
 
