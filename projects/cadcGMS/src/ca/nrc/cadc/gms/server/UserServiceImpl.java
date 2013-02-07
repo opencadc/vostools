@@ -78,6 +78,7 @@ import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 import ca.nrc.cadc.gms.server.persistence.UserPersistence;
+import ca.nrc.cadc.profiler.Profiler;
 
 /**
  * Default implementation for a UserService.
@@ -121,7 +122,9 @@ public class UserServiceImpl implements UserService
     public User getUser(final X500Principal userID, boolean withMembership) 
             throws InvalidMemberException, AuthorizationException
     {
+    	Profiler profiler = new Profiler(this.getClass());
         User user = getUserPersistence().getUser(userID, withMembership);
+        profiler.checkpoint("getUser persistance with membership: " + withMembership);
         if (user == null)
         {
             throw new InvalidMemberException(userID + " not found");
@@ -151,11 +154,10 @@ public class UserServiceImpl implements UserService
     public User getMember(final X500Principal memberUserID,
             final URI groupID) throws InvalidMemberException,
             InvalidGroupException, AuthorizationException
-    {
-        User user = getUser(memberUserID, false); // if user does not exist, InvalidMemberException is thrown. 
-        
+    { 
+        Profiler profiler = new Profiler(this.getClass());
         final Group group = getGroupPersistence().getGroup(groupID);
-
+        profiler.checkpoint("getMember - persistance");
         if (group == null)
         {
             throw new InvalidGroupException(String.format(
