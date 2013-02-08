@@ -107,6 +107,7 @@ import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.HexUtil;
@@ -164,6 +165,8 @@ public class NodeDAO
     private Calendar cal;
 
     private Map<Object,Subject> identityCache = new HashMap<Object,Subject>();
+    
+    private Profiler prof = new Profiler(NodeDAO.class);
 
     public static class NodeSchema
     {
@@ -358,10 +361,15 @@ public class NodeDAO
         try
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            prof.checkpoint("TransactionManager.getTransaction");
+            
             // execute query with NodePathExtractor
             Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
+            prof.checkpoint("NodePathStatementCreator");
+            
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            prof.checkpoint("commit.NodePathStatementCreator");
             
             // for non-LinkNode, 
             if ((ret != null) && !(ret.getUri().getPath().equals("/" + path)))
@@ -380,6 +388,7 @@ public class NodeDAO
             {
                 transactionManager.rollback(dirtyRead);
                 dirtyRead = null;
+                prof.checkpoint("rollback.NodePathStatementCreator");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
@@ -418,10 +427,14 @@ public class NodeDAO
         try
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            prof.checkpoint("TransactionManager.getTransaction");
+            
             List<NodeProperty> props = jdbc.query(sql, new NodePropertyMapper());
             node.getProperties().addAll(props);
+            prof.checkpoint("getProperties");
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            prof.checkpoint("commit.getProperties");
         }
         catch(Throwable t)
         {
@@ -430,6 +443,7 @@ public class NodeDAO
             {
                 transactionManager.rollback(dirtyRead);
                 dirtyRead = null;
+                prof.checkpoint("rollback.getProperties");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
@@ -468,11 +482,15 @@ public class NodeDAO
         try
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            prof.checkpoint("TransactionManager.getTransaction");
+            
             List<Node> nodes = jdbc.query(sql, new Object[] { name },
                 new NodeMapper(authority, parent.getUri().getPath()));
+            prof.checkpoint("getSelectChildNodeSQL");
             
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            prof.checkpoint("commit.getSelectChildNodeSQL");
 
             if (nodes.size() > 1)
                 throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
@@ -488,6 +506,7 @@ public class NodeDAO
             {
                 transactionManager.rollback(dirtyRead);
                 dirtyRead = null;
+                prof.checkpoint("rollback.getSelectChildNodeSQL");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
@@ -545,10 +564,15 @@ public class NodeDAO
         try
         {
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            prof.checkpoint("TransactionManager.getTransaction");
+            
             List<Node> nodes = jdbc.query(sql,  args,
                 new NodeMapper(authority, parent.getUri().getPath()));
+            prof.checkpoint("getSelectNodesByParentSQL");
+            
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            prof.checkpoint("commit.getSelectNodesByParentSQL");
 
             loadSubjects(nodes);
             addChildNodes(parent, nodes);
@@ -560,6 +584,7 @@ public class NodeDAO
             {
                 transactionManager.rollback(dirtyRead);
                 dirtyRead = null;
+                prof.checkpoint("rollback.getSelectNodesByParentSQL");
             }
             catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
             
@@ -617,7 +642,9 @@ public class NodeDAO
     private void loadSubjects(List<Node> nodes)
     {
         for (Node n : nodes)
+        {
             loadSubjects(n);
+        }
     }
     
     private void loadSubjects(Node node)
@@ -634,6 +661,7 @@ public class NodeDAO
         {
             log.debug("lookup subject for owner=" + nid.ownerObject);
             s = identManager.toSubject(nid.ownerObject);
+            prof.checkpoint("IdentityManager.toSubject");
             identityCache.put(nid.ownerObject, s);
         }
         else
@@ -681,11 +709,13 @@ public class NodeDAO
             node.appData = nodeID;
 
             startTransaction();
+            prof.checkpoint("start.NodePutStatementCreator");
             NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
             npsc.setValues(node, null);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
             nodeID.id = new Long(keyHolder.getKey().longValue());
+            prof.checkpoint("NodePutStatementCreator");
             
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
             while (propertyIterator.hasNext())
@@ -699,6 +729,7 @@ public class NodeDAO
                 {
                     PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, false);
                     jdbc.update(ppsc);
+                    prof.checkpoint("PropertyStatementCreator");
                 }
                 // else: already persisted by the NodePutStatementCreator above
                 // note: very important that the node owner (creator property) is excluded
@@ -706,6 +737,7 @@ public class NodeDAO
             }
 
             commitTransaction();
+            prof.checkpoint("commit.NodePutStatementCreator");
 
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
             if (node instanceof ContainerNode)
@@ -715,7 +747,11 @@ public class NodeDAO
         catch(Throwable t)
         {
             log.error("rollback for node: " + node.getUri().getPath(), t);
-            try { rollbackTransaction(); }
+            try 
+            { 
+                rollbackTransaction(); 
+                prof.checkpoint("rollback.NodePutStatementCreator");
+            }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (DBUtil.isTransientDBException(t))
@@ -760,10 +796,12 @@ public class NodeDAO
             else
             {
                 startTransaction();
+                prof.checkpoint("start.delete");
 
                 // lock the child
                 String sql = getUpdateLockSQL(node);
                 jdbc.update(sql);
+                prof.checkpoint("getUpdateLockSQL");
                 
                 if (node instanceof DataNode)
                 {
@@ -773,6 +811,7 @@ public class NodeDAO
                     // Note: if node size is null, the jdbc template
                     // will return zero.
                     Long nodeSize = jdbc.queryForLong(sql);
+                    prof.checkpoint("getSelectNodeSizeSQL");
 	                    
                     // delete the node only if it is not busy
                     deleteNode(node, true); 
@@ -781,6 +820,7 @@ public class NodeDAO
                     sql = this.getApplyNodeSizeSQL(node.getParent(), nodeSize, false);
                     log.debug(sql);
                     jdbc.update(sql);
+                    prof.checkpoint("getApplyNodeSizeSQL");
                 }
                 else if (node instanceof LinkNode)
                 {
@@ -791,6 +831,7 @@ public class NodeDAO
                 	throw new RuntimeException("BUG - unsupported node type: " + node.getClass());
 
                 commitTransaction();
+                prof.checkpoint("commit.delete");
             }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
@@ -798,7 +839,11 @@ public class NodeDAO
         {
             log.error("delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try { rollbackTransaction(); }
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.delete");
+                }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (t instanceof IllegalStateException)
@@ -826,11 +871,13 @@ public class NodeDAO
         String sql = getDeleteNodePropertiesSQL(node);
         log.debug(sql);
         jdbc.update(sql);
+        prof.checkpoint("getDeleteNodePropertiesSQL");
         
         // delete the node
         sql = getDeleteNodeSQL(node, notBusyOnly); // only delete if non-busy
         log.debug(sql);
         int count = jdbc.update(sql);
+        prof.checkpoint("getDeleteNodeSQL");
         if (count == 0)
             throw new IllegalStateException("node busy or path changed during delete: "+node.getUri());
     }
@@ -849,18 +896,25 @@ public class NodeDAO
         try
         {
             startTransaction();
+            prof.checkpoint("start.getSetBusyStateSQL");
             String sql = getSetBusyStateSQL(node, curState, newState);
             log.debug(sql);
             int num = jdbc.update(sql);
+            prof.checkpoint("getSetBusyStateSQL");
             if (num != 1)
                 throw new IllegalStateException("setBusyState " + curState + " -> " + newState + " failed: " + node.getUri());
             commitTransaction();
+            prof.checkpoint("commit.getSetBusyStateSQL");
         }
         catch (Throwable t)
         {
             log.error("Delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try { rollbackTransaction(); }
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.getSetBusyStateSQL");
+                }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (t instanceof IllegalStateException)
@@ -902,16 +956,19 @@ public class NodeDAO
         try
         {
             startTransaction();
+            prof.checkpoint("start.DataNodeUpdateStatementCreator");
             
             // update nodeSize, maybe contentLength and md5
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
                     getNodeID(node), meta.getContentLength(), meta.getMd5Sum());
             jdbc.update(dnup);
-
+            prof.checkpoint("DataNodeUpdateStatementCreator");
+            
             // last, update the busy state of the target node
             String trans = getSetBusyStateSQL(node, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
             log.debug(trans);
             int num = jdbc.update(trans);
+            prof.checkpoint("getSetBusyStateSQL");
             if (num != 1)
                 throw new IllegalStateException("updateFileMetadata requires a node with busyState=W: "+node.getUri());
 
@@ -929,12 +986,17 @@ public class NodeDAO
             doUpdateProperties(node, props);
            
             commitTransaction();
+            prof.checkpoint("commit.DataNodeUpdateStatementCreator");
         }
         catch (Throwable t)
         {
             log.error("updateNodeMetadata rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try { rollbackTransaction(); }
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.DataNodeUpdateStatementCreator");
+                }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (t instanceof IllegalStateException)
@@ -992,10 +1054,12 @@ public class NodeDAO
         try
         {
             startTransaction();
+            prof.checkpoint("start.updateProperties");
 
             Node ret = doUpdateProperties(node, properties);
 
             commitTransaction();
+            prof.checkpoint("commit.updateProperties");
 
             return ret;
         }
@@ -1003,7 +1067,11 @@ public class NodeDAO
         {
             log.error("Update rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
-                try { rollbackTransaction(); }
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.updateProperties");
+                }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (DBUtil.isTransientDBException(t))
@@ -1105,9 +1173,13 @@ public class NodeDAO
         NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, true);
         npsc.setValues(node, null);
         jdbc.update(npsc);
+        prof.checkpoint("NodePutStatementCreator");
 
         for (PropertyStatementCreator psc : updates)
+        {
             jdbc.update(psc);
+            prof.checkpoint("PropertyStatementCreator");
+        }
 
         return node;
     }
@@ -1149,10 +1221,12 @@ public class NodeDAO
         try
         {    
             startTransaction();
+            prof.checkpoint("start.move");
 
             // get the lock
             String sql = this.getUpdateLockSQL(src);
             jdbc.update(sql);
+            prof.checkpoint("getUpdateLockSQL");
             
             Long nodeSize = new Long(0);
             if (!(src instanceof LinkNode))
@@ -1162,6 +1236,7 @@ public class NodeDAO
                 
                 // Note: if nodeSize is null, jdbc template will return zero.
                 nodeSize = jdbc.queryForLong(sql);
+                prof.checkpoint("getSelectNodeSizeSQL");
             }
             
             // re-parent the node
@@ -1172,6 +1247,7 @@ public class NodeDAO
             NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
             putStatementCreator.setValues(src, null);
             int count = jdbc.update(putStatementCreator);
+            prof.checkpoint("NodePutStatementCreator");
             if (count == 0)
             {
                 // tried to move a busy data node
@@ -1195,19 +1271,26 @@ public class NodeDAO
 	            
                 log.debug(sql1);
                 jdbc.update(sql1);
+                prof.checkpoint("getApplyNodeSizeSQL");
                 log.debug(sql2);
                 jdbc.update(sql2);
+                prof.checkpoint("getApplyNodeSizeSQL");
             }
             
             // recursive chown removed since it is costly and nominally incorrect
             
             commitTransaction();
+            prof.checkpoint("commit.move");
         }
         catch (Throwable t)
         {
             log.error("move rollback for node: " + src.getUri().getPath(), t);
             if (transactionStatus != null)
-                try { rollbackTransaction(); }
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.move");
+                }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
             if (t instanceof IllegalStateException)

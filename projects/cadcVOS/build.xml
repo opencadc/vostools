@@ -169,8 +169,9 @@
     <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
     <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
     <property name="dev.uispec4j" value="${ext.dev}/uispec4j.jar" />
+    <property name="gson"               value="${ext.lib}/gson.jar" />
     <property name="testingJars"
-            value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${dev.uispec4j}"/>
+            value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}:${dev.uispec4j}:${gson}"/>
 
     <!-- Run the test suite -->
     <target name="test" depends="build,compile-test,create-tables">
