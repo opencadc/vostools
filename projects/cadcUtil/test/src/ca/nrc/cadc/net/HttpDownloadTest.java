@@ -69,11 +69,6 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.auth.RunnableAction;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.auth.SSOCookieCredential;
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -83,6 +78,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.security.AccessControlException;
+
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
@@ -93,6 +89,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.SSOCookieCredential;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  *
@@ -668,6 +670,7 @@ public class HttpDownloadTest
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
+            Assert.assertNotNull("content-md5 missing", dl.getContentMD5());
         }
         catch (Exception unexpected)
         {

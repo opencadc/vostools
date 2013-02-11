@@ -331,6 +331,13 @@ public class HttpDownload extends HttpTransfer
      * @return the content-length or -1 of unknown
      */
     public long getContentLength() { return contentLength; }
+    
+    /**
+     * Get the md5 sum of the download (the Content-MD5).
+     * 
+     * @return the content-md5 or null if unknown
+     */
+    public String getContentMD5() { return contentMD5; }
 
     /**
      * Get a reference to the result file. In some cases this is null until the
@@ -638,6 +645,7 @@ public class HttpDownload extends HttpTransfer
         log.debug("   original file: " + origFile);
         log.debug("     decomp file: " + decompFile);
         log.debug("  content length: " + contentLength);
+        log.debug("     content md5: " + contentMD5);
         log.debug("    content type: " + contentType);
         log.debug("content encoding: " + contentEncoding);
         log.debug("     decomp size: " + decompSize);
