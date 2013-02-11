@@ -1,0 +1,15 @@
+JAR files required for the OpenCADC cadcVOS project
+===================================================
+
+Name in build.xml            Versioned Name          Project URL
+-----------------            --------------          -----------
+jdom.jar                     jdom-1.1                http://www.jdom.org
+log4j.jar                    log4j-1.2.15            http://logging.apache.org
+org.restlet.jar              restlet-jee-2.0.2       http://www.restlet.org
+xerces.jar                   xerces-2_9_1            http://xerces.apache.org
+servlet-api.jar              apache-tomcat-5.5.20    http://tomcat.apache.org
+gson.jar                     gson-2.2.1              http://code.google.com/p/google-gson/
+cadcRegistryClient.jar                               http://code.google.com/p/opencadc
+cadcUtil.jar                                         http://code.google.com/p/opencadc
+cadcUWS.jar                                          http://code.google.com/p/opencadc
+cadcLog.jar                                          http://code.google.com/p/opencadc
