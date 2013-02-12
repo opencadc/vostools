@@ -78,7 +78,6 @@ import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
-import ca.nrc.cadc.profiler.Profiler;
 
 
 public class GroupServiceImpl implements GroupService
@@ -118,9 +117,7 @@ public class GroupServiceImpl implements GroupService
     public Group getGroup(final URI groupID)
             throws InvalidGroupException, AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         Group tmp = getGroupPersistence().getGroup(groupID);
-        profiler.checkpoint("getGroup - persistance");
         return tmp;
     }
 
@@ -134,9 +131,7 @@ public class GroupServiceImpl implements GroupService
     public Group putGroup(final Group group)
             throws InvalidGroupException, AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         Group temp = getGroupPersistence().putGroup(group); // returned group
-        profiler.checkpoint("putGroup - persistance");
         return temp;
     }
 
@@ -150,7 +145,6 @@ public class GroupServiceImpl implements GroupService
     public Group postGroup(final Group group)
             throws InvalidGroupException, AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         if (getGroup(group.getID()) == null)
         {
             throw new InvalidGroupException(
@@ -158,7 +152,6 @@ public class GroupServiceImpl implements GroupService
                             + " not found");
         }
         Group temp = getGroupPersistence().putGroup(group); // returned group
-        profiler.checkpoint("postGroup - persistance");
         return temp;
     }
 
@@ -171,9 +164,7 @@ public class GroupServiceImpl implements GroupService
     public void deleteGroup(final URI groupID)
             throws InvalidGroupException, AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         getGroupPersistence().deleteGroup(groupID);
-        profiler.checkpoint("deleteGroup - persistance");
     }
 
     /**
@@ -190,13 +181,10 @@ public class GroupServiceImpl implements GroupService
             throws InvalidGroupException, InvalidMemberException,
             AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
     	Group group = getGroupPersistence().getGroup(groupID);
-    	profiler.checkpoint("addUserToGroup - getGroup persistance");
     	
         group.getMembers().add(new UserImpl(memberID));
         Group tmp = getGroupPersistence().putGroup(group);
-        profiler.checkpoint("addUserToGroup - putGroup persistance");
         return tmp;
     }
     
@@ -214,13 +202,10 @@ public class GroupServiceImpl implements GroupService
             throws InvalidGroupException, InvalidMemberException,
             AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         Group group = getGroupPersistence().getGroup(groupID);
-        profiler.checkpoint("deleteUserFromGroup - getGroup persistance");
 
         group.getMembers().remove(new UserImpl(memberID));
         Group tmp = getGroupPersistence().putGroup(group);
-        profiler.checkpoint("deleteUserFromGroup - putGroup persistance");
         return tmp;
     }
 
@@ -242,9 +227,7 @@ public class GroupServiceImpl implements GroupService
     public Collection<Group> getGroups(Map<String, String> criteria) 
     throws InvalidGroupException, AuthorizationException
     {
-    	Profiler profiler = new Profiler(this.getClass());
         Collection<Group> tmp = getGroupPersistence().getGroups(criteria);
-        profiler.checkpoint("getGroups - persistance");
         return tmp;
     }
 

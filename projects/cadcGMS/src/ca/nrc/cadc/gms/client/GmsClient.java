@@ -105,6 +105,7 @@ import ca.nrc.cadc.gms.GroupsReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
+import ca.nrc.cadc.profiler.Profiler;
 import ca.nrc.cadc.reg.client.RegistryClient;
 
 /**
@@ -156,6 +157,7 @@ public class GmsClient
     {
         final StringBuilder resourcePath = new StringBuilder(64);
 
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/members/");
@@ -215,6 +217,10 @@ public class GmsClient
             logger.debug("Failed to get member", e);
             throw new IllegalArgumentException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("getMember.deprecated");
+        }
     }
 
     /**
@@ -241,6 +247,7 @@ public class GmsClient
             throws AccessControlException, IOException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/groups/");
@@ -288,6 +295,10 @@ public class GmsClient
             throw new RuntimeException("BUG: generated an illegal URL "
                     + msg);
         }
+        finally
+        {
+            profiler.checkpoint("isMember");
+        }
     }
 
     private URL getServiceURL(URI groupID)
@@ -327,7 +338,8 @@ public class GmsClient
     public Group getGroup(URI groupID) throws URISyntaxException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-
+        Profiler profiler = new Profiler(this.getClass());
+        
         try
         {
             resourcePath.append("/groups/");
@@ -385,6 +397,10 @@ public class GmsClient
             logger.debug("Failed to get group", e);
             throw new IllegalArgumentException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("getGroup");
+        }
     }
 
     /**
@@ -409,6 +425,7 @@ public class GmsClient
             throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         resourcePath.append("/groups");
 
         try
@@ -478,6 +495,10 @@ public class GmsClient
             logger.debug("Failed to get the created group", e);
             throw new IllegalStateException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("createGroup");
+        }
     }
 
     /**
@@ -496,6 +517,7 @@ public class GmsClient
             throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         resourcePath.append("/groups");
 
         try
@@ -566,6 +588,10 @@ public class GmsClient
             logger.debug("Failed to get the created group", e);
             throw new IllegalStateException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("updateGroup");
+        }
     }
 
     /**
@@ -584,6 +610,7 @@ public class GmsClient
             URISyntaxException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/groups/");
@@ -646,6 +673,10 @@ public class GmsClient
             logger.debug("Failed to delete group", e);
             throw new IllegalArgumentException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("deleteGroup");
+        }
     }
 
     /**
@@ -665,6 +696,7 @@ public class GmsClient
         throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/groups/");
@@ -724,6 +756,10 @@ public class GmsClient
             logger.debug("Failed to seet group", e);
             throw new IllegalStateException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("setGroup");
+        }
     }
 
     /**
@@ -765,6 +801,7 @@ public class GmsClient
     public User getGMSMembership(X500Principal userID, URL baseURL)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
 
         try
         {
@@ -821,6 +858,10 @@ public class GmsClient
             logger.debug("Failed to get group", e);
             throw new IllegalArgumentException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("getGmsMembership");
+        }
     }
 
     /**
@@ -841,6 +882,7 @@ public class GmsClient
     public boolean addMember(URI groupID, X500Principal memberID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/groups/");
@@ -901,6 +943,10 @@ public class GmsClient
             logger.debug("Failed to check membership", e);
             throw new IllegalArgumentException(message, e);
         }
+        finally
+        {
+            profiler.checkpoint("addMember");
+        }
     }
 
     /**
@@ -921,6 +967,7 @@ public class GmsClient
     public boolean removeMember(URI groupID, X500Principal memberID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             resourcePath.append("/groups/");
@@ -981,6 +1028,10 @@ public class GmsClient
                             + resourcePath.toString());
             logger.debug("Failed to check membership", e);
             throw new IllegalArgumentException(message, e);
+        }
+        finally
+        {
+            profiler.checkpoint("removeMember");
         }
     }
 
@@ -1161,6 +1212,7 @@ public class GmsClient
                     "Error encoding distinguished name query.", e);
         }
 
+        Profiler profiler = new Profiler(this.getClass());
         try
         {
             final URL resourceURL = new URL(baseURL
@@ -1220,6 +1272,10 @@ public class GmsClient
                             + resourcePath);
             logger.debug("Failed to get group", e);
             throw new IllegalArgumentException(message, e);
+        }
+        finally
+        {
+            profiler.checkpoint("getGroups");
         }
     }
 
