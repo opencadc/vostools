@@ -361,8 +361,8 @@ public class JobDAO
                     ret.setOwnerID(identManager.toOwnerString(s));
                     ret.ownerSubject = s; // for later authorization checks
                     ret.appData = null;
+                    prof.checkpoint("IdentityManager.toSubject");
                 }
-                prof.checkpoint("IdentityManager.toSubject");
                 return ret;
             }
             
