@@ -61,6 +61,11 @@ public class CookiePrincipal implements Principal, Serializable
         this.token = token;
     }
 
+    @Override
+    public String toString()
+    {
+        return getName();
+    }
 
     /**
      * Returns the name of this principal.
