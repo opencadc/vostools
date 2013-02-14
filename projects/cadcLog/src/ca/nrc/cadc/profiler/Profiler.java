@@ -101,7 +101,7 @@ public class Profiler
     protected String op;
     
     @Expose
-    protected long dt;
+    protected long time;
     
     public Profiler(Class caller)
     {
@@ -134,7 +134,7 @@ public class Profiler
         long nt = System.nanoTime();
         this.op = op;
         
-        this.dt = (nt - nanos)/1000000L;
+        this.time = (nt - nanos)/1000000L;
         
         if (log.isInfoEnabled())
         {
@@ -142,7 +142,7 @@ public class Profiler
             log.info(gson.toJson(this, this.getClass()));
         }
 
-        this.dt = 0;
+        this.time = 0;
         this.op = null;
         this.nanos = nt;
     }
