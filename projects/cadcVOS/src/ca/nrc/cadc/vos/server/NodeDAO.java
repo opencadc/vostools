@@ -1260,9 +1260,20 @@ public class NodeDAO
                 String sql1 = getApplyNodeSizeSQL(srcParent, nodeSize, false);
                 String sql2 = getApplyNodeSizeSQL(dest, nodeSize, true);
 	            
-                // these operations should happen in nodeID order for consistency
-                // to avoid deadlocks
-                if (getNodeID(src) > getNodeID(dest))
+                // these operations should happen in either child-parent or nodeID order 
+                // for consistency to avoid deadlocks
+                if ( src.getParent() != null && src.getParent().equals(dest) )
+                {
+                    // OK: sql1 is child and sql2 is parent
+                }
+                else if ( dest.getParent() != null && dest.getParent().equals(src) )
+                {
+                    // sql1 is parent and sql2 is child: swap
+                    String swap = sql1;
+                    sql1 = sql2;
+                    sql2 = swap;
+                }
+                else if (getNodeID(src) > getNodeID(dest))
                 {
                     String swap = sql1;
                     sql1 = sql2;
