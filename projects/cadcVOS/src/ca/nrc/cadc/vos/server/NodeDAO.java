@@ -835,6 +835,18 @@ public class NodeDAO
             }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
+        catch(IllegalStateException ex)
+        {
+            log.debug(ex.toString());
+            if (transactionStatus != null)
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.delete");
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
+        }
         catch (Throwable t)
         {
             log.error("delete rollback for node: " + node.getUri().getPath(), t);
@@ -846,9 +858,7 @@ public class NodeDAO
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof IllegalStateException)
-                throw (IllegalStateException) t;
-            else if (DBUtil.isTransientDBException(t))
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to delete " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
@@ -906,6 +916,18 @@ public class NodeDAO
             commitTransaction();
             prof.checkpoint("commit.getSetBusyStateSQL");
         }
+        catch(IllegalStateException ex)
+        {
+            log.debug(ex.toString());
+            if (transactionStatus != null)
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.getSetBusyStateSQL");
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
+        }
         catch (Throwable t)
         {
             log.error("Delete rollback for node: " + node.getUri().getPath(), t);
@@ -917,9 +939,7 @@ public class NodeDAO
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof IllegalStateException)
-                throw (IllegalStateException) t;
-            else if (DBUtil.isTransientDBException(t))
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
@@ -988,6 +1008,18 @@ public class NodeDAO
             commitTransaction();
             prof.checkpoint("commit.DataNodeUpdateStatementCreator");
         }
+        catch(IllegalStateException ex)
+        {
+            log.debug(ex.toString());
+            if (transactionStatus != null)
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.DataNodeUpdateStatementCreator");
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
+        }
         catch (Throwable t)
         {
             log.error("updateNodeMetadata rollback for node: " + node.getUri().getPath(), t);
@@ -999,9 +1031,7 @@ public class NodeDAO
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             
-            if (t instanceof IllegalStateException)
-                throw (IllegalStateException) t;
-            else if (DBUtil.isTransientDBException(t))
+            if (DBUtil.isTransientDBException(t))
                 throw new TransientException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
             else
                 throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
@@ -1292,6 +1322,18 @@ public class NodeDAO
             
             commitTransaction();
             prof.checkpoint("commit.move");
+        }
+        catch(IllegalStateException ex)
+        {
+            log.debug(ex.toString());
+            if (transactionStatus != null)
+                try 
+                { 
+                    rollbackTransaction(); 
+                    prof.checkpoint("rollback.move");
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
         }
         catch (Throwable t)
         {
