@@ -1292,18 +1292,18 @@ public class NodeDAO
 	            
                 // these operations should happen in either child-parent or nodeID order 
                 // for consistency to avoid deadlocks
-                if ( src.getParent() != null && src.getParent().equals(dest) )
+                if ( srcParent.getParent() != null && src.getParent().equals(dest) )
                 {
                     // OK: sql1 is child and sql2 is parent
                 }
-                else if ( dest.getParent() != null && dest.getParent().equals(src) )
+                else if ( dest.getParent() != null && dest.getParent().equals(srcParent) )
                 {
                     // sql1 is parent and sql2 is child: swap
                     String swap = sql1;
                     sql1 = sql2;
                     sql2 = swap;
                 }
-                else if (getNodeID(src) > getNodeID(dest))
+                else if (getNodeID(srcParent) > getNodeID(dest))
                 {
                     String swap = sql1;
                     sql1 = sql2;
