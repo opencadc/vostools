@@ -652,6 +652,7 @@ public class JobDAO
             }
 
             startTransaction();
+            prof.checkpoint("start.JobPutStatementCreator");
             
             JobPutStatementCreator npsc = new JobPutStatementCreator(update);
             npsc.setValues(job);
