@@ -1,0 +1,664 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<meta name="generator" content="JsDoc Toolkit" />
+		
+		<title>JsDoc Reference - voview#makeFilter-Filter</title>
+
+		<style type="text/css">
+			/* default.css */
+body
+{
+	font: 12px "Lucida Grande", Tahoma, Arial, Helvetica, sans-serif;
+	width: 800px;
+}
+
+.header
+{
+	clear: both;
+	background-color: #ccc;
+	padding: 8px;
+}
+
+h1
+{
+	font-size: 150%;
+	font-weight: bold;
+	padding: 0;
+	margin: 1em 0 0 .3em;
+}
+
+hr
+{
+	border: none 0;
+	border-top: 1px solid #7F8FB1;
+	height: 1px;
+}
+
+pre.code
+{
+	display: block;
+	padding: 8px;
+	border: 1px dashed #ccc;
+}
+
+#index
+{
+	margin-top: 24px;
+	float: left;
+	width: 160px;
+	position: absolute;
+	left: 8px;
+	background-color: #F3F3F3;
+	padding: 8px;
+}
+
+#content
+{
+	margin-left: 190px;
+	width: 600px;
+}
+
+.classList
+{
+	list-style-type: none;
+	padding: 0;
+	margin: 0 0 0 8px;
+	font-family: arial, sans-serif;
+	font-size: 1em;
+	overflow: auto;
+}
+
+.classList li
+{
+	padding: 0;
+	margin: 0 0 8px 0;
+}
+
+.summaryTable { width: 100%; }
+
+h1.classTitle
+{
+	font-size:170%;
+	line-height:130%;
+}
+
+h2 { font-size: 110%; }
+caption, div.sectionTitle
+{
+	background-color: #7F8FB1;
+	color: #fff;
+	font-size:130%;
+	text-align: left;
+	padding: 2px 6px 2px 6px;
+	border: 1px #7F8FB1 solid;
+}
+
+div.sectionTitle { margin-bottom: 8px; }
+.summaryTable thead { display: none; }
+
+.summaryTable td
+{
+	vertical-align: top;
+	padding: 4px;
+	border-bottom: 1px #7F8FB1 solid;
+	border-right: 1px #7F8FB1 solid;
+}
+
+/*col#summaryAttributes {}*/
+.summaryTable td.attributes
+{
+	border-left: 1px #7F8FB1 solid;
+	width: 140px;
+	text-align: right;
+}
+
+td.attributes, .fixedFont
+{
+	line-height: 15px;
+	color: #002EBE;
+	font-family: "Courier New",Courier,monospace;
+	font-size: 13px;
+}
+
+.summaryTable td.nameDescription
+{
+	text-align: left;
+	font-size: 13px;
+	line-height: 15px;
+}
+
+.summaryTable td.nameDescription, .description
+{
+	line-height: 15px;
+	padding: 4px;
+	padding-left: 4px;
+}
+
+.summaryTable { margin-bottom: 8px; }
+
+ul.inheritsList
+{
+	list-style: square;
+	margin-left: 20px;
+	padding-left: 0;
+}
+
+.detailList {
+	margin-left: 20px; 
+	line-height: 15px;
+}
+.detailList dt { margin-left: 20px; }
+
+.detailList .heading
+{
+	font-weight: bold;
+	padding-bottom: 6px;
+	margin-left: 0;
+}
+
+.light, td.attributes, .light a:link, .light a:visited
+{
+	color: #777;
+	font-style: italic;
+}
+
+.fineprint
+{
+	text-align: right;
+	font-size: 10px;
+}
+		</style>
+	</head>
+
+	<body>
+<!-- ============================== header ================================= -->	
+		<!-- begin static/header.html -->
+		<div id="header">
+</div>
+		<!-- end static/header.html -->
+
+<!-- ============================== classes index ============================ -->
+		<div id="index">
+			<!-- begin publish.classesIndex -->
+			<div align="center"><a href="../index.html">Class Index</a>
+| <a href="../files.html">File Index</a></div>
+<hr />
+<h2>Classes</h2>
+<ul class="classList">
+	
+	<li><i><a href="../symbols/_global_.html">_global_</a></i></li>
+	
+	<li><a href="../symbols/voview.html">voview</a></li>
+	
+	<li><a href="../symbols/voview%23makeFilter-Filter.html">voview#makeFilter-Filter</a></li>
+	
+	<li><a href="../symbols/voview%23makeGetXml-GetXml.html">voview#makeGetXml-GetXml</a></li>
+	
+	<li><a href="../symbols/voview%23makeRenderer-Renderer.html">voview#makeRenderer-Renderer</a></li>
+	
+</ul>
+<hr />
+			<!-- end publish.classesIndex -->
+		</div>
+		
+		<div id="content">
+<!-- ============================== class title ============================ -->
+			<h1 class="classTitle">
+				
+				Class voview#makeFilter-Filter
+			</h1>
+
+<!-- ============================== class summary ========================== -->			
+			<p class="description">
+				
+				
+			
+				Object for doing sorting, filtering and paging of a VOTABLE.
+				
+				
+					<br /><i>Defined in: </i> <a href="../symbols/src/C__Users_dhinshaw_workspace_voview_vao_src_javascript_voview_pkg.js.html">voview_pkg.js</a>.
+				
+			</p>
+
+<!-- ============================== constructor summary ==================== -->			
+			
+			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class voview#makeFilter-Filter.">
+				<caption>Class Summary</caption>
+				<thead>
+					<tr>
+						<th scope="col">Constructor Attributes</th>
+						<th scope="col">Constructor Name and Description</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="attributes">&lt;inner&gt; &nbsp;</td>
+						<td class="nameDescription" >
+							<div class="fixedFont">
+								<b><a href="../symbols/voview%23makeFilter-Filter.html#constructor">voview#makeFilter-Filter</a></b>(_votableDOM, filterCallback)
+							</div>
+							<div class="description"></div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			
+
+<!-- ============================== properties summary ===================== -->
+			
+
+<!-- ============================== methods summary ======================== -->
+			
+				
+				
+				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class voview#makeFilter-Filter.">
+					<caption>Method Summary</caption>
+					<thead>
+						<tr>
+							<th scope="col">Method Attributes</th>
+							<th scope="col">Method Name and Description</th>
+						</tr>
+					</thead>
+					<tbody>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#clearColumnFilters">clearColumnFilters</a></b>()
+								</div>
+								<div class="description">Clear any column value filters currently set on the VOTABLE.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#doFilter">doFilter</a></b>()
+								</div>
+								<div class="description">Produces a single page's worth of VOTABLE data.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#setColumnFilters">setColumnFilters</a></b>(filterKeys)
+								</div>
+								<div class="description">Set column value filters on the VOTABLE.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#setInputTable">setInputTable</a></b>()
+								</div>
+								<div class="description">Set the VO table used as input to the filter.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#setRowRange">setRowRange</a></b>()
+								</div>
+								<div class="description">Set range of rows to be extracted from the VOTABLE.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#setSelectRows">setSelectRows</a></b>()
+								</div>
+								<div class="description">Set the criteria which determines which rows will be selected whenthe "select all" button is activated.</div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/voview%23makeFilter-Filter.html#setSortColumns">setSortColumns</a></b>(sortKeys)
+								</div>
+								<div class="description">Set the columns to use for sorting the table, and the sortingdirection for each column.</div>
+							</td>
+						</tr>
+					
+					</tbody>
+				</table>
+				
+				
+				
+			
+<!-- ============================== events summary ======================== -->
+			
+
+<!-- ============================== constructor details ==================== -->		
+			
+			<div class="details"><a name="constructor"> </a>
+				<div class="sectionTitle">
+					Class Detail
+				</div>
+				
+				<div class="fixedFont">&lt;inner&gt; 
+						<b>voview#makeFilter-Filter</b>(_votableDOM, filterCallback)
+				</div>
+				
+				<div class="description">
+					
+					
+				</div>
+				
+				
+				
+				
+					
+						<dl class="detailList">
+						<dt class="heading">Parameters:</dt>
+						
+							<dt>
+								 <b>_votableDOM</b>
+								
+							</dt>
+								<dd></dd>
+						
+							<dt>
+								 <b>filterCallback</b>
+								
+							</dt>
+								<dd></dd>
+						
+						</dl>
+					
+					
+					
+					
+					
+					
+					
+						<dl class="detailList">
+						<dt class="heading">See:</dt>
+						
+							<dd><a href="../symbols/voview.html#makeFilter">voview#makeFilter</a></dd>
+						
+						</dl>
+					
+
+			</div>
+			
+
+<!-- ============================== field details ========================== -->		
+			
+
+<!-- ============================== method details ========================= -->		
+			
+				<div class="sectionTitle">
+					Method Detail
+				</div>
+				
+					<a name="clearColumnFilters"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>clearColumnFilters</b>()
+					
+					</div>
+					<div class="description">
+						Clear any column value filters currently set on the VOTABLE.
+						
+						
+					</div>
+					
+					
+					
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="doFilter"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>doFilter</b>()
+					
+					</div>
+					<div class="description">
+						Produces a single page's worth of VOTABLE data. After filtering iscomplete, the filterCallback function is called with the results.
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{function}</span> <b>filterParams.filterCallback</b>
+									
+								</dt>
+								<dd>Function to call when           the result of the filtering is completed. The one argument           to this function is an XML DOM object of the filtered           VOTABLE. If omitted then use function specified in           constructor.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="setColumnFilters"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>setColumnFilters</b>(filterKeys)
+					
+					</div>
+					<div class="description">
+						Set column value filters on the VOTABLE. Any filters all ready set oncolumns not specified in the filterKeys are retained.
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{setFilterParams.filterKeys[]}</span> <b>filterKeys</b>
+									
+								</dt>
+								<dd>An array of type           columnFilterKey.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="setInputTable"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>setInputTable</b>()
+					
+					</div>
+					<div class="description">
+						Set the VO table used as input to the filter. Once in a table isspecified, flags are set so that the table will be reprocessed andfiltered when the doFilter method is called.
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{XML DOM Object}</span> <b>setInputParams.tableDOM</b>
+									
+								</dt>
+								<dd>The XML Dom object           for the input VOTABLE.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="setRowRange"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>setRowRange</b>()
+					
+					</div>
+					<div class="description">
+						Set range of rows to be extracted from the VOTABLE.
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{integer}</span> <b>setRangeParam.firstRow</b>
+									
+								</dt>
+								<dd>The first row of the range.</dd>
+							
+								<dt>
+									<span class="light fixedFont">{integer}</span> <b>setRangeParam.lastRow</b>
+									
+								</dt>
+								<dd>The last row of the range.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="setSelectRows"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>setSelectRows</b>()
+					
+					</div>
+					<div class="description">
+						Set the criteria which determines which rows will be selected whenthe "select all" button is activated. **ONLY string argument iscurrently implemented**
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{string|function}</span> <b>setSelectParams.criteria</b>
+									
+								</dt>
+								<dd>If a string, use it           to match against the contents of the VOTABLE row. The           contents of the VOTABLE XML row will be searched and the           row will be selected if it contains the input string. If a           function, then a function which will be called for each           row in the XML VOTABLE, with an XML DOM object of the row           as its only argument. The function should return a boolean           indicating whether the row should be selected or not.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="setSortColumns"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>setSortColumns</b>(sortKeys)
+					
+					</div>
+					<div class="description">
+						Set the columns to use for sorting the table, and the sortingdirection for each column.
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<span class="light fixedFont">{setSortParams.sortKeys[]}</span> <b>sortKeys</b>
+									
+								</dt>
+								<dd>An array of type           sortColumnKey. The first key in the array has the highest           precedence.</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					
+				
+			
+			
+<!-- ============================== event details ========================= -->		
+			
+			
+			<hr />
+		</div>
+
+		
+<!-- ============================== footer ================================= -->
+		<div class="fineprint" style="clear:both">
+			
+			Documentation generated by <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.3.2 on Tue Aug 02 2011 15:10:33 GMT-0400 (EDT)
+		</div>
+	</body>
+</html>

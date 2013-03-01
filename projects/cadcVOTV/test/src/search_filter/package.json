@@ -1,0 +1,18 @@
+{
+  "scripts":
+  [
+    "../../../www/javascript/jquery-1.8.3.min.js",
+    "../../../www/javascript/jquery.event.drag-2.0.min.js",
+    "../../../www/javascript/jquery-ui-1.8.16.custom.min.js",
+    "../../../www/javascript/cadc.votable.js",
+    "../../../www/javascript/cadc.votable-reader.js",
+    "../../../www/javascript/cadc.votv.js",
+    "../../../www/javascript/slick.core.js",
+    "../../../www/javascript/slick.columnpicker.js",
+    "../../../www/javascript/slick.dataview.js",
+    "../../../www/javascript/slick.formatters.js",
+    "../../../www/javascript/slick.grid.js",
+    "../../../www/javascript/slick.pager.js",
+    "../../../www/javascript/slick.rowselectionmodel.js"
+  ]
+}

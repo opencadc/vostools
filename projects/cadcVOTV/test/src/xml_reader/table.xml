@@ -1,0 +1,42 @@
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<VOTABLE xmlns=\"http://www.ivoa.net/xml/VOTable/v1.2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"1.2\">
+  <RESOURCE>
+    <TABLE>
+      <FIELD name=\"Job ID\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"User\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"Started\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"Status\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"Command\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"VM Type\" datatype=\"char\" arraysize=\"*\" />
+      <FIELD name=\"CPUs\" datatype=\"int\" />
+      <FIELD name=\"Memory\" datatype=\"long\" />
+      <FIELD name=\"Job Starts\" datatype=\"int\" />
+      <DATA>
+        <TABLEDATA>
+          <TR>
+            <TD>735.0</TD>
+            <TD>jenkinsd</TD>
+            <TD />
+            <TD>Idle</TD>
+            <TD>/bin/sleep</TD>
+            <TD>Tomcat</TD>
+            <TD>1</TD>
+            <TD>3072</TD>
+            <TD>0</TD>
+          </TR>
+          <TR>
+            <TD>734.0</TD>
+            <TD>jenkinsd</TD>
+            <TD />
+            <TD>Idle</TD>
+            <TD>/bin/sleep</TD>
+            <TD>Tomcat</TD>
+            <TD>1</TD>
+            <TD>3072</TD>
+            <TD>0</TD>
+          </TR>
+        </TABLEDATA>
+      </DATA>
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>

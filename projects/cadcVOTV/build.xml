@@ -1,0 +1,93 @@
+<!--
+This build file constructs JavaScript packages for using the VOView classes, 
+and installs them and other needed files on a Web server.  This includes a 
+Perl script for running a proxy, which is needed for VOTABLE files that are 
+not local to the server.  If you will only be accessing tables local to the 
+server, you can set the PROXY_URL filter token value to "".
+-->
+<project name="VOView" default="install" basedir=".">
+  <description>Canadian Astronomy Data Center Virtual Observatory Table Viewer 1.0</description>
+
+  <property name="proj_root" value="."/>
+
+  <!-- Destination of the install -->
+  <property name="dest_root" value="${proj_root}/www"/>
+
+  <property name="dest_html" value="${dest_root}"/>
+  <property name="dest_js" value="${dest_root}/javascript"/>
+  <property name="dest_img" value="${dest_root}/images"/>
+  <property name="dest_css" value="${dest_root}/css"/>
+  <property name="dest_test" value="${dest_root}/test" />
+
+  <!-- In general the user should not modify values below here -->
+  <property name="proj_version" value="1.0"/>
+  <property name="srcdir" value="./src" />
+  <property name="jsdir" value="${srcdir}/javascript"/>
+  <property name="htmldir" value="${srcdir}/html"/>
+  <property name="imgdir" value="${srcdir}/images"/>
+  <property name="cssdir" value="${srcdir}/css"/>
+  <property name="testdir" value="./test"/>
+
+  <target name="install" depends="clean">
+    <copy todir="${dest_js}" filtering="true">
+      <fileset dir="${jsdir}">
+        <include name="slick*.js"/>
+        <include name="cadc*.js"/>
+        <include name="jquery*.js" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dest_html}">
+      <fileset dir="${htmldir}" includes="*"/>
+    </copy>
+
+    <copy todir="${dest_img}">
+      <fileset dir="${imgdir}" includes="**/*"/>
+    </copy>
+
+    <copy todir="${dest_css}">
+      <fileset dir="${cssdir}" includes="*"/>
+    </copy>
+
+    <copy todir="${dest_test}">
+      <fileset dir="${testdir}" includes="**/**"/>
+    </copy>
+
+    <tstamp/>
+
+    <touch file="${proj_root}/LASTINSTALL.${DSTAMP}_${TSTAMP}_v${proj_version}"/>
+  </target>
+
+  <target name="test" depends="install" description="Runs QUnit Tests using PhantomJS">
+      
+    <!-- QUnit Javascript Unit Tests -->
+    <echo message="Executing QUnit Javascript Unit Tests..."/>
+    
+    <echo message="CADC VOTV Search Filter tests"/>
+    <apply executable="${testdir}/phantomjs" failonerror="true">
+      <arg value="${testdir}/qunit-runner.js" />
+      <arg line="--qunit ${testdir}/qunit-1.10.0.js --package ${testdir}/src/search_filter/package.json --tests ${testdir}/src/search_filter/cadc.votv.search-filter.js --junit ${testdir}/src/search_filter/qunit-results.xml" />
+      <fileset dir="${testdir}/src/search_filter">
+        <include name="cadc.votv.search-filter.js" />
+        <exclude name="package.json" />
+      </fileset>
+      <srcfile/>
+    </apply>
+      
+    <echo message="votable reader tests"/>
+    <apply executable="${testdir}/phantomjs" failonerror="true">
+      <arg value="${testdir}/qunit-runner.js" />
+      <arg line="--qunit ${testdir}/qunit-1.10.0.js --package ${testdir}/src/xml_reader/package.json --tests ${testdir}/src/xml_reader/cadc.votable.xml-reader.js --junit ${testdir}/src/xml_reader/qunit-results.xml" />
+      <fileset dir="${testdir}/src/xml_reader">
+        <include name="cadc.votable.xml-reader.js" />
+        <exclude name="package.json" />
+      </fileset>
+      <srcfile/>
+    </apply>
+      
+  </target>
+
+  <target name="clean">
+    <delete dir="${dest_root}"/>
+  </target>
+</project>

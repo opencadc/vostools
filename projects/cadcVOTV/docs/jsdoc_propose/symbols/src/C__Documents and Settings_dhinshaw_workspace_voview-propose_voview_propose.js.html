@@ -1,0 +1,426 @@
+<html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"> <style>
+	.KEYW {color: #933;}
+	.COMM {color: #bbb; font-style: italic;}
+	.NUMB {color: #393;}
+	.STRN {color: #393;}
+	.REGX {color: #339;}
+	.line {border-right: 1px dotted #666; color: #666; font-style: normal;}
+	</style></head><body><pre><span class='line'>  1</span> <span class="COMM">/**
+<span class='line'>  2</span>  * @author dhinshaw
+<span class='line'>  3</span>  */</span><span class="WHIT">
+<span class='line'>  4</span> 
+<span class='line'>  5</span> </span><span class="COMM">/**
+<span class='line'>  6</span>  * Creates a new voview object for displaying a VOTABLE.
+<span class='line'>  7</span>  * 
+<span class='line'>  8</span>  * @name voview
+<span class='line'>  9</span>  * @constructor
+<span class='line'> 10</span>  * 
+<span class='line'> 11</span>  * @param {Object} input Parameters to be passed to the votable object. One of
+<span class='line'> 12</span>  *            the properties: tree, string, url, form must be specified.
+<span class='line'> 13</span>  * @param {XML DOM Object} [input.tree] XML DOM Object of a VOTABLE.
+<span class='line'> 14</span>  * @param {string} [input.string] String containing VOTABLE.
+<span class='line'> 15</span>  * @param {string} [input.url] URL pointing to a VOTABLE.
+<span class='line'> 16</span>  * @param {string} [input.form] Name of a form used for specifying the VOTABLE.
+<span class='line'> 17</span>  * @param {HTML DOM Element} [input.searchparam] Name of input element in the
+<span class='line'> 18</span>  *            form containing the VOTABLE. Required if input.form is specified.
+<span class='line'> 19</span>  * 
+<span class='line'> 20</span>  * @param {string} xsltdir Directory on the server to look for XSLT files.
+<span class='line'> 21</span>  * 
+<span class='line'> 22</span>  * @param {string} objectName The name of the global variable pointing to this
+<span class='line'> 23</span>  *            instance of the voview class. This will be used for referencing
+<span class='line'> 24</span>  *            the proper JavaScript calls when rendering the HTML table.
+<span class='line'> 25</span>  * 
+<span class='line'> 26</span>  * @param {string} widgetIDprefix Prefix for the HTML attribute IDs where the
+<span class='line'> 27</span>  *            various sub-widgets of the HTML table display will be placed. For
+<span class='line'> 28</span>  *            example, when displaying the main table containing the data, the
+<span class='line'> 29</span>  *            HTML element with an ID of {prefix}.table would be searched for,
+<span class='line'> 30</span>  *            and the table placed at this location in the HTML document. See
+<span class='line'> 31</span>  *            the documentation on voview.renderer.render for the list of
+<span class='line'> 32</span>  *            sub-widgets.
+<span class='line'> 33</span>  */</span><span class="WHIT">
+<span class='line'> 34</span> 
+<span class='line'> 35</span> </span><span class="COMM">/**
+<span class='line'> 36</span>  * Find the index number for a column in the VOTABLE, based on the column (i.e.
+<span class='line'> 37</span>  * FIELD) name.
+<span class='line'> 38</span>  * 
+<span class='line'> 39</span>  * @name findColumnByName
+<span class='line'> 40</span>  * @function
+<span class='line'> 41</span>  * @memberOf voview.prototype
+<span class='line'> 42</span>  * 
+<span class='line'> 43</span>  * @param {Regex} name A regular expression to match against the column name.
+<span class='line'> 44</span>  * 
+<span class='line'> 45</span>  * @returns {integer} Number corresponding to the position of the column in the
+<span class='line'> 46</span>  *          original VOTABLE.
+<span class='line'> 47</span>  */</span><span class="WHIT">
+<span class='line'> 48</span> 
+<span class='line'> 49</span> </span><span class="COMM">/**
+<span class='line'> 50</span>  * Find the index number for a column in the VOTABLE, based on the column (i.e.
+<span class='line'> 51</span>  * FIELD) UCD.
+<span class='line'> 52</span>  * 
+<span class='line'> 53</span>  * @name findColumnByUCD
+<span class='line'> 54</span>  * @function
+<span class='line'> 55</span>  * @memberOf voview.prototype
+<span class='line'> 56</span>  * 
+<span class='line'> 57</span>  * @param {Regex} ucd A regular expression to match against the column UCD.
+<span class='line'> 58</span>  * 
+<span class='line'> 59</span>  * @returns {integer} Number corresponding to the position of the column in the
+<span class='line'> 60</span>  *          original VOTABLE.
+<span class='line'> 61</span>  */</span><span class="WHIT">
+<span class='line'> 62</span> 
+<span class='line'> 63</span> </span><span class="COMM">/**
+<span class='line'> 64</span>  * Find the indexes of the rows in the original VOTABLE which match the
+<span class='line'> 65</span>  * selection criteria.
+<span class='line'> 66</span>  * 
+<span class='line'> 67</span>  * @name findRows
+<span class='line'> 68</span>  * @function
+<span class='line'> 69</span>  * @memberOf voview.prototype
+<span class='line'> 70</span>  * 
+<span class='line'> 71</span>  * @param {string|function} selectCriteria If a string, use it to match against
+<span class='line'> 72</span>  *            the contents of the VOTABLE row. The contents of the VOTABLE XML
+<span class='line'> 73</span>  *            row will be searched and the row will be selected if it contains
+<span class='line'> 74</span>  *            the input string. If a function, then a function which will be
+<span class='line'> 75</span>  *            called for each row in the XML VOTABLE, with an XML DOM object of
+<span class='line'> 76</span>  *            the row as its only argument. The function should return a boolean
+<span class='line'> 77</span>  *            indicating whether the row should be selected or not.
+<span class='line'> 78</span>  * 
+<span class='line'> 79</span>  * @returns {integer[]} An array of indexes which correspond to the positions of
+<span class='line'> 80</span>  *          the rows in the original VOTABLE.
+<span class='line'> 81</span>  */</span><span class="WHIT">
+<span class='line'> 82</span> 
+<span class='line'> 83</span> </span><span class="COMM">/**
+<span class='line'> 84</span>  * Return XML DOM objects for the specified VOTABLE rows.
+<span class='line'> 85</span>  * 
+<span class='line'> 86</span>  * @name getRowNodes
+<span class='line'> 87</span>  * @function
+<span class='line'> 88</span>  * @memberOf voview.prototype
+<span class='line'> 89</span>  * 
+<span class='line'> 90</span>  * @param {integer[]} rows An array of indexes which correspond to the positions
+<span class='line'> 91</span>  *            of the rows in the original VOTABLE.
+<span class='line'> 92</span>  * 
+<span class='line'> 93</span>  * @returns {XML DOM Object[]} An array of XML DOM objects, each of which
+<span class='line'> 94</span>  *          corresponds to a row of the original VOTABLE.
+<span class='line'> 95</span>  */</span><span class="WHIT">
+<span class='line'> 96</span> 
+<span class='line'> 97</span> </span><span class="COMM">// *******************************************************************************</span><span class="WHIT">
+<span class='line'> 98</span> </span><span class="COMM">/**
+<span class='line'> 99</span>  * Takes an XML VOTABLE, and renders it as a single page HTML table.
+<span class='line'>100</span>  * 
+<span class='line'>101</span>  * @name renderer
+<span class='line'>102</span>  * @constructor
+<span class='line'>103</span>  * @memberOf voview
+<span class='line'>104</span>  * 
+<span class='line'>105</span>  * @param {voview.filter} filter The filter object to be used with the renderer.
+<span class='line'>106</span>  */</span><span class="WHIT">
+<span class='line'>107</span> 
+<span class='line'>108</span> </span><span class="COMM">/**
+<span class='line'>109</span>  * Generate the HTML for the entire VOView display, or for some part
+<span class='line'>110</span>  * (sub-widget) of the display.
+<span class='line'>111</span>  * 
+<span class='line'>112</span>  * @name render
+<span class='line'>113</span>  * @function
+<span class='line'>114</span>  * @memberOf voview.renderer.prototype
+<span class='line'>115</span>  * 
+<span class='line'>116</span>  * @param {string} subwidget The part of the VOView display to generate. If
+<span class='line'>117</span>  *            undefined or set to "all", the entire VOView display is generated.
+<span class='line'>118</span>  *            Available sub-widget arguments are: "title", "paging",
+<span class='line'>119</span>  *            "rowSelection", "table", "columnArranging" and "Parameters".
+<span class='line'>120</span>  * 
+<span class='line'>121</span>  * @returns {HTML DOM Object} The DOM document fragment for the sub-widget.
+<span class='line'>122</span>  */</span><span class="WHIT">
+<span class='line'>123</span> 
+<span class='line'>124</span> </span><span class="COMM">/**
+<span class='line'>125</span>  * Set the title of the table display. If not set, VOView tries to determine a
+<span class='line'>126</span>  * suitable title on its own.
+<span class='line'>127</span>  * 
+<span class='line'>128</span>  * @name setTitle
+<span class='line'>129</span>  * @function
+<span class='line'>130</span>  * @memberOf voview.renderer.prototype
+<span class='line'>131</span>  * 
+<span class='line'>132</span>  * @param {string} [titletext] Text for the title.
+<span class='line'>133</span>  */</span><span class="WHIT">
+<span class='line'>134</span> 
+<span class='line'>135</span> </span><span class="COMM">/**
+<span class='line'>136</span>  * Set a function to call when ever the table display is updated.
+<span class='line'>137</span>  * 
+<span class='line'>138</span>  * @name setUpdateCallBack
+<span class='line'>139</span>  * @function
+<span class='line'>140</span>  * @memberOf voview.renderer.prototype
+<span class='line'>141</span>  * 
+<span class='line'>142</span>  * @param {function} update Function to be called when the display is updated.
+<span class='line'>143</span>  *            The function is called with no arguments.
+<span class='line'>144</span>  */</span><span class="WHIT">
+<span class='line'>145</span> 
+<span class='line'>146</span> </span><span class="COMM">/**
+<span class='line'>147</span>  * Set rows which are selected, i.e. they are shown as selected when the table
+<span class='line'>148</span>  * is initially displayed.
+<span class='line'>149</span>  * 
+<span class='line'>150</span>  * @name setSelectedRows
+<span class='line'>151</span>  * @function
+<span class='line'>152</span>  * @memberOf voview.renderer.prototype
+<span class='line'>153</span>  * 
+<span class='line'>154</span>  * @param {integers[]|function} rows If an array of integers, contains a list of
+<span class='line'>155</span>  *            row numbers. The numbers correspond to the row numbers of the
+<span class='line'>156</span>  *            original VOTABLE. If a function, then a function which will be
+<span class='line'>157</span>  *            called for each row in the XML VOTABLE, with an XML DOM object of
+<span class='line'>158</span>  *            the row as its only argument. The function should return a boolean
+<span class='line'>159</span>  *            indicating whether the row should be selected or not.
+<span class='line'>160</span>  */</span><span class="WHIT">
+<span class='line'>161</span> 
+<span class='line'>162</span> </span><span class="COMM">/**
+<span class='line'>163</span>  * Return an array listing the rows of the table currently selected.
+<span class='line'>164</span>  * 
+<span class='line'>165</span>  * @name getSelectedRows
+<span class='line'>166</span>  * @function
+<span class='line'>167</span>  * @memberOf voview.renderer.prototype
+<span class='line'>168</span>  * 
+<span class='line'>169</span>  * @returns {integers[]} rows An array of integers containing a list of selected
+<span class='line'>170</span>  *          row numbers. The numbers correspond to the row numbers of the
+<span class='line'>171</span>  *          original VOTABLE.
+<span class='line'>172</span>  */</span><span class="WHIT">
+<span class='line'>173</span> 
+<span class='line'>174</span> </span><span class="COMM">/**
+<span class='line'>175</span>  * Set functions to be called when a row is either selected or unselected.
+<span class='line'>176</span>  * 
+<span class='line'>177</span>  * @name setSelectCallBack
+<span class='line'>178</span>  * @function
+<span class='line'>179</span>  * @memberOf voview.renderer.prototype
+<span class='line'>180</span>  * 
+<span class='line'>181</span>  * @param {function} add Function to be called when a row is selected. The
+<span class='line'>182</span>  *            function is called with HTML DOM object for the row as its
+<span class='line'>183</span>  *            argument.
+<span class='line'>184</span>  * @param {function} del Function to be called when a row is unselected. The
+<span class='line'>185</span>  *            function is called with HTML DOM object for the row as its
+<span class='line'>186</span>  *            argument.
+<span class='line'>187</span>  */</span><span class="WHIT">
+<span class='line'>188</span> 
+<span class='line'>189</span> </span><span class="COMM">/**
+<span class='line'>190</span>  * Display an additional column in the HTML table at the designated location.
+<span class='line'>191</span>  * This column can be filled in by the application user.
+<span class='line'>192</span>  * 
+<span class='line'>193</span>  * @name addColumn
+<span class='line'>194</span>  * @function
+<span class='line'>195</span>  * @memberOf voview.renderer.prototype
+<span class='line'>196</span>  * 
+<span class='line'>197</span>  * @param {integer} position Integer specifying the position of the column in
+<span class='line'>198</span>  *            the HTML table. A value of 0 indicates a column at the beginning
+<span class='line'>199</span>  *            of the table, a value of -1 indicates a column at the end of the
+<span class='line'>200</span>  *            table.
+<span class='line'>201</span>  * @param {function} formatter A function to be called to set the value to be
+<span class='line'>202</span>  *            placed in the cells of the column. The function is called once for
+<span class='line'>203</span>  *            each row of the HTML table. The function is called with two
+<span class='line'>204</span>  *            arguments. The first argument is the HTML DOM object for the row,
+<span class='line'>205</span>  *            and the second argument is the HTML DOM object for the entire
+<span class='line'>206</span>  *            table.
+<span class='line'>207</span>  */</span><span class="WHIT">
+<span class='line'>208</span> 
+<span class='line'>209</span> </span><span class="COMM">/**
+<span class='line'>210</span>  * This activates VOView functionality for tracking and manipulating row
+<span class='line'>211</span>  * selection. It displays a column at the beginning of the table with checkboxes
+<span class='line'>212</span>  * for selecting rows.
+<span class='line'>213</span>  * 
+<span class='line'>214</span>  * @name setEnableRowSelection
+<span class='line'>215</span>  * @function
+<span class='line'>216</span>  * @memberOf voview.renderer.prototype
+<span class='line'>217</span>  * 
+<span class='line'>218</span>  * @param {boolean} display If true, enable row selection.
+<span class='line'>219</span>  */</span><span class="WHIT">
+<span class='line'>220</span> 
+<span class='line'>221</span> </span><span class="COMM">/**
+<span class='line'>222</span>  * Add additional formatting to a column. A function can be called when
+<span class='line'>223</span>  * formatting the column, which can be used for formatting other parts of the
+<span class='line'>224</span>  * row as well.
+<span class='line'>225</span>  * 
+<span class='line'>226</span>  * @name formatColumn
+<span class='line'>227</span>  * @function
+<span class='line'>228</span>  * @memberOf voview.renderer.prototype
+<span class='line'>229</span>  * 
+<span class='line'>230</span>  * @param {string|integer|Regex} column Column to be formatted. This can be
+<span class='line'>231</span>  *            specified either as: 1) an integer (the column number in the
+<span class='line'>232</span>  *            original order); 2) a string matching a substring in the column
+<span class='line'>233</span>  *            name; 3) a regular expression matching the column name.
+<span class='line'>234</span>  * 
+<span class='line'>235</span>  * @param {string|function} format The formatting information for the column.
+<span class='line'>236</span>  *            This can be either: 1) a string, in which case it will replace the
+<span class='line'>237</span>  *            current value of each of the cells of the column. If the string
+<span class='line'>238</span>  *            contains "@@", it will be replaced by the current cell value; 2) a
+<span class='line'>239</span>  *            function, in which case the function will be called for each row
+<span class='line'>240</span>  *            in the column. The function is called with two arguments. The
+<span class='line'>241</span>  *            first argument is the HTML DOM object for the cell, and the second
+<span class='line'>242</span>  *            argument is the HTML DOM object for the entire row.
+<span class='line'>243</span>  */</span><span class="WHIT">
+<span class='line'>244</span> 
+<span class='line'>245</span> </span><span class="COMM">/**
+<span class='line'>246</span>  * Set the order and number of columns to display.
+<span class='line'>247</span>  * 
+<span class='line'>248</span>  * @name setDisplayedColumns
+<span class='line'>249</span>  * @function
+<span class='line'>250</span>  * @memberOf voview.renderer.prototype
+<span class='line'>251</span>  * 
+<span class='line'>252</span>  * @param {integer[]|string[]|integer} columnorder If an array, contains a list
+<span class='line'>253</span>  *            of columns in the order in which they are to appear. If an integer
+<span class='line'>254</span>  *            array, the numbers correspond to the original order of the columns
+<span class='line'>255</span>  *            in the VOTABLE. If a string array, the strings must correspond to
+<span class='line'>256</span>  *            column names. If a scalar integer, then this value sets the
+<span class='line'>257</span>  *            maximum number of columns to initially display in the HTML table.
+<span class='line'>258</span>  */</span><span class="WHIT">
+<span class='line'>259</span> 
+<span class='line'>260</span> </span><span class="COMM">// *******************************************************************************</span><span class="WHIT">
+<span class='line'>261</span> </span><span class="COMM">/**
+<span class='line'>262</span>  * Takes an XML VOTABLE, and creates an object for doing sorting, filtering and
+<span class='line'>263</span>  * paging.
+<span class='line'>264</span>  * 
+<span class='line'>265</span>  * @name filter
+<span class='line'>266</span>  * @constructor
+<span class='line'>267</span>  * @memberOf voview
+<span class='line'>268</span>  */</span><span class="WHIT">
+<span class='line'>269</span> 
+<span class='line'>270</span> </span><span class="COMM">/**
+<span class='line'>271</span>  * Produces a single page's worth of VOTABLE data.
+<span class='line'>272</span>  * 
+<span class='line'>273</span>  * @name doFilter
+<span class='line'>274</span>  * @function
+<span class='line'>275</span>  * @memberOf voview.filter.prototype
+<span class='line'>276</span>  * 
+<span class='line'>277</span>  * @returns {XML DOM Object} A filtered range of the VOTABLE data.
+<span class='line'>278</span>  */</span><span class="WHIT">
+<span class='line'>279</span> 
+<span class='line'>280</span> </span><span class="COMM">/**
+<span class='line'>281</span>  * Set range of rows to be extracted from the VOTABLE.
+<span class='line'>282</span>  * 
+<span class='line'>283</span>  * @name setRowRange
+<span class='line'>284</span>  * @function
+<span class='line'>285</span>  * @memberOf voview.filter.prototype
+<span class='line'>286</span>  * 
+<span class='line'>287</span>  * @param {integer} firstRow The first row of the range.
+<span class='line'>288</span>  * 
+<span class='line'>289</span>  * @param {integer} lastRow The last row of the range.
+<span class='line'>290</span>  */</span><span class="WHIT">
+<span class='line'>291</span> 
+<span class='line'>292</span> </span><span class="COMM">/**
+<span class='line'>293</span>  * Set the columns to use for sorting the table, and the sorting direction for
+<span class='line'>294</span>  * each column.
+<span class='line'>295</span>  * 
+<span class='line'>296</span>  * @name setSortColumns
+<span class='line'>297</span>  * @function
+<span class='line'>298</span>  * @memberOf voview.filter.prototype
+<span class='line'>299</span>  * 
+<span class='line'>300</span>  * @param {sortColumnKey[]} sortKeys An array of type sortColumnKey. The first
+<span class='line'>301</span>  *            key in the array has the highest precedence.
+<span class='line'>302</span>  */</span><span class="WHIT">
+<span class='line'>303</span> 
+<span class='line'>304</span> </span><span class="COMM">/**
+<span class='line'>305</span>  * Set the criteria which determines which rows will be selected when the
+<span class='line'>306</span>  * "select all" button is activated.
+<span class='line'>307</span>  * 
+<span class='line'>308</span>  * @name setSelectRows
+<span class='line'>309</span>  * @function
+<span class='line'>310</span>  * @memberOf voview.filter.prototype
+<span class='line'>311</span>  * 
+<span class='line'>312</span>  * @param {string|function} selectCriteria If a string, use it to match against
+<span class='line'>313</span>  *            the contents of the VOTABLE row. The contents of the VOTABLE XML
+<span class='line'>314</span>  *            row will be searched and the row will be selected if it contains
+<span class='line'>315</span>  *            the input string. If a function, then a function which will be
+<span class='line'>316</span>  *            called for each row in the XML VOTABLE, with an XML DOM object of
+<span class='line'>317</span>  *            the row as its only argument. The function should return a boolean
+<span class='line'>318</span>  *            indicating whether the row should be selected or not.
+<span class='line'>319</span>  */</span><span class="WHIT">
+<span class='line'>320</span> 
+<span class='line'>321</span> </span><span class="COMM">/**
+<span class='line'>322</span>  * Clear any column value filters currently set on the VOTABLE.
+<span class='line'>323</span>  * 
+<span class='line'>324</span>  * @name clearColumnFilters
+<span class='line'>325</span>  * @function
+<span class='line'>326</span>  * @memberOf voview.filter.prototype
+<span class='line'>327</span>  */</span><span class="WHIT">
+<span class='line'>328</span> 
+<span class='line'>329</span> </span><span class="COMM">/**
+<span class='line'>330</span>  * Set column value filters on the VOTABLE. Any filters all ready set on columns
+<span class='line'>331</span>  * not specified in the filterKeys are retained.
+<span class='line'>332</span>  * 
+<span class='line'>333</span>  * @name setColumnFilters
+<span class='line'>334</span>  * @function
+<span class='line'>335</span>  * @memberOf voview.filter.prototype
+<span class='line'>336</span>  * 
+<span class='line'>337</span>  * @param {columnFilterKey[]} filterKey An array of type columnFilterKey.
+<span class='line'>338</span>  */</span><span class="WHIT">
+<span class='line'>339</span> 
+<span class='line'>340</span> </span><span class="COMM">/**
+<span class='line'>341</span>  * Get the total number of rows in the original VOTABLE.
+<span class='line'>342</span>  * 
+<span class='line'>343</span>  * @name getTotalRows
+<span class='line'>344</span>  * @function
+<span class='line'>345</span>  * @memberOf voview.filter.prototype
+<span class='line'>346</span>  * 
+<span class='line'>347</span>  * @returns {integer} The total number of rows in the original VOTABLE.
+<span class='line'>348</span>  */</span><span class="WHIT">
+<span class='line'>349</span> 
+<span class='line'>350</span> </span><span class="COMM">// *******************************************************************************</span><span class="WHIT">
+<span class='line'>351</span> </span><span class="COMM">/**
+<span class='line'>352</span>  * An object for specify the data needed for sorting the table by a column
+<span class='line'>353</span>  * value.
+<span class='line'>354</span>  * 
+<span class='line'>355</span>  * @name sortColumnKey
+<span class='line'>356</span>  * @constructor
+<span class='line'>357</span>  * @memberOf voview
+<span class='line'>358</span>  */</span><span class="WHIT">
+<span class='line'>359</span> 
+<span class='line'>360</span> </span><span class="COMM">/**
+<span class='line'>361</span>  * The column to use for sorting the table. If a string, specifies the name of
+<span class='line'>362</span>  * the column. If an integer, the number corresponds to the column in the
+<span class='line'>363</span>  * original order of the columns in the VOTABLE.
+<span class='line'>364</span>  * 
+<span class='line'>365</span>  * @name column
+<span class='line'>366</span>  * @field
+<span class='line'>367</span>  * @memberOf voview.sortColumnKey.prototype
+<span class='line'>368</span>  * @type {string|integer}
+<span class='line'>369</span>  */</span><span class="WHIT">
+<span class='line'>370</span> 
+<span class='line'>371</span> </span><span class="COMM">/**
+<span class='line'>372</span>  * Sort direction. Either "ascending" or "descending".
+<span class='line'>373</span>  * 
+<span class='line'>374</span>  * @name direction
+<span class='line'>375</span>  * @field
+<span class='line'>376</span>  * @memberOf voview.sortColumnKey.prototype
+<span class='line'>377</span>  * @type {string}
+<span class='line'>378</span>  */</span><span class="WHIT">
+<span class='line'>379</span> 
+<span class='line'>380</span> </span><span class="COMM">// *******************************************************************************</span><span class="WHIT">
+<span class='line'>381</span> </span><span class="COMM">/**
+<span class='line'>382</span>  * An object for specifying the data needed for filtering the table by the
+<span class='line'>383</span>  * values in a column.
+<span class='line'>384</span>  * 
+<span class='line'>385</span>  * @name columnFilterKey
+<span class='line'>386</span>  * @constructor
+<span class='line'>387</span>  * @memberOf voview
+<span class='line'>388</span>  */</span><span class="WHIT">
+<span class='line'>389</span> 
+<span class='line'>390</span> </span><span class="COMM">/**
+<span class='line'>391</span>  * The column to use for filtering the table. If a string, specifies the name of
+<span class='line'>392</span>  * the column. If an integer, the number corresponds to the column in the
+<span class='line'>393</span>  * original order of the columns in the VOTABLE.
+<span class='line'>394</span>  * 
+<span class='line'>395</span>  * @name column
+<span class='line'>396</span>  * @field
+<span class='line'>397</span>  * @memberOf voview.columnFilterKey.prototype
+<span class='line'>398</span>  * @type {string|integer}
+<span class='line'>399</span>  */</span><span class="WHIT">
+<span class='line'>400</span> 
+<span class='line'>401</span> </span><span class="COMM">/**
+<span class='line'>402</span>  * The filtering expression to be applied to the column.
+<span class='line'>403</span>  * 
+<span class='line'>404</span>  * @name expression
+<span class='line'>405</span>  * @field
+<span class='line'>406</span>  * @memberOf voview.columnFilterKey.prototype
+<span class='line'>407</span>  * @type {string}
+<span class='line'>408</span>  */</span><span class="WHIT">
+<span class='line'>409</span> 
+<span class='line'>410</span> </span><span class="COMM">// ************************************************************************************</span><span class="WHIT">
+<span class='line'>411</span> </span><span class="COMM">/**
+<span class='line'>412</span>  * A container class for storing state information of a voview object that is
+<span class='line'>413</span>  * needed by both the filter and renderer objects.
+<span class='line'>414</span>  * 
+<span class='line'>415</span>  * @constructor
+<span class='line'>416</span>  * @memberOf voview
+<span class='line'>417</span>  */</span><span class="WHIT">
+<span class='line'>418</span> 
+<span class='line'>419</span> </span></pre></body></html>
