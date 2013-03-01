@@ -17,7 +17,6 @@ server, you can set the PROXY_URL filter token value to "".
   <property name="dest_js" value="${dest_root}/javascript"/>
   <property name="dest_img" value="${dest_root}/images"/>
   <property name="dest_css" value="${dest_root}/css"/>
-  <property name="dest_test" value="${dest_root}/test" />
 
   <!-- In general the user should not modify values below here -->
   <property name="proj_version" value="1.0"/>
@@ -47,10 +46,6 @@ server, you can set the PROXY_URL filter token value to "".
 
     <copy todir="${dest_css}">
       <fileset dir="${cssdir}" includes="*"/>
-    </copy>
-
-    <copy todir="${dest_test}">
-      <fileset dir="${testdir}" includes="**/**"/>
     </copy>
 
     <tstamp/>
