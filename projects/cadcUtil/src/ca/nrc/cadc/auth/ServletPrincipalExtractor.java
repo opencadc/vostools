@@ -35,15 +35,14 @@ package ca.nrc.cadc.auth;
 
 import ca.nrc.cadc.util.ArrayUtil;
 import ca.nrc.cadc.util.StringUtil;
-
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -51,6 +50,8 @@ import java.util.Set;
  */
 public class ServletPrincipalExtractor implements PrincipalExtractor
 {
+    private static final Logger log = Logger.getLogger(ServletPrincipalExtractor.class);
+    
     public static final String CERT_REQUEST_ATTRIBUTE = "javax.servlet.request.X509Certificate";
     private final HttpServletRequest request;
 
@@ -116,15 +117,27 @@ public class ServletPrincipalExtractor implements PrincipalExtractor
      */
     protected void addCookiePrincipal(Set<Principal> principals)
     {
-        Cookie cookie = getCookie();
-        if (cookie == null)
+        Cookie[] cookies = getRequest().getCookies();
+        if (cookies == null || ArrayUtil.isEmpty(cookies))
             return;
-
-        SSOCookieManager ssoCookieManager = new SSOCookieManager(cookie.getValue());
-        CookiePrincipal cp = new CookiePrincipal(
-            ssoCookieManager.getUsername(), ssoCookieManager.getToken());
-        cp.setSessionID(ssoCookieManager.getSessionID());
-        principals.add(cp);
+        
+        for (Cookie cookie : cookies)
+        {
+            SSOCookieManager ssoCookieManager = new SSOCookieManager();
+            if (SSOCookieManager.DEFAULT_SSO_COOKIE_NAME.equals(cookie.getName()))
+            {
+                try
+                {
+                    CookiePrincipal cp = ssoCookieManager.createPrincipal(cookie);
+                    principals.add(cp);
+                    return; // only pick up one SSO cookie
+                }
+                catch(Exception oops)
+                {
+                    log.error("failed to create CookiePrincipal: " + cookie.getValue(), oops);
+                }
+            }
+        }
     }
 
     /**

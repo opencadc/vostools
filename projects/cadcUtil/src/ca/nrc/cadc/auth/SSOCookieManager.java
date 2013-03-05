@@ -35,6 +35,7 @@ package ca.nrc.cadc.auth;
 
 import ca.nrc.cadc.util.ArrayUtil;
 import ca.nrc.cadc.util.StringUtil;
+import javax.servlet.http.Cookie;
 
 /**
  * Manage authentication cookies.
@@ -43,15 +44,11 @@ public class SSOCookieManager
 {
     public final static String DEFAULT_SSO_COOKIE_NAME = "CADC_SSO";
 
-    private String username;
-    private char[] token;
-    private long sessionID;
+    public SSOCookieManager() { }
 
-
-    private SSOCookieManager() { }
-
-    public SSOCookieManager(final String value)
+    public CookiePrincipal createPrincipal(final Cookie cookie)
     {
+        String value = cookie.getValue();
         final String[] items = value.split("\\|");
         final StringBuilder usernameBuilder = new StringBuilder();
         final StringBuilder tokenBuilder = new StringBuilder();
@@ -73,67 +70,11 @@ public class SSOCookieManager
             }
         }
 
-        this.username = usernameBuilder.toString();
-        this.token = tokenBuilder.toString().toCharArray();
-        this.sessionID = Long.parseLong(sessionIDBuilder.toString());
-    }
-
-
-    /**
-     * Obtain the username from this manager's cookie.
-     *
-     * @return String username, or null if none found.
-     */
-    public String getUsername()
-    {
-        return username;
-    }
-
-    protected void setUsername(final String uname)
-    {
-        this.username = uname;
-    }
-
-    /**
-     * Obtain the unique session ID.
-     *
-     * @return long Session ID.
-     */
-    public long getSessionID()
-    {
-        return sessionID;
-    }
-
-    protected void setSessionID(final long sID)
-    {
-        this.sessionID = sID;
-    }
-
-    /**
-     * Obtain the unique token from the Cookie.
-     *
-     * @return The unqiue token.  Could be null if something wrong with the
-     *         state of the cookie.
-     */
-    public char[] getToken()
-    {
-        return token;
-    }
-
-    protected void setToken(final char[] tok)
-    {
-        this.token = tok;
-    }
-
-    /**
-     * Obtain whether this has any cookie data.
-     *
-     * @return True if has data, false otherwise.
-     */
-    public boolean hasData()
-    {
-        return StringUtil.hasText(getUsername())
-               && !ArrayUtil.isEmpty(getToken())
-               && (getSessionID() > 0);
+        String username = usernameBuilder.toString();
+        char[] token = tokenBuilder.toString().toCharArray();
+        long sessionID = Long.parseLong(sessionIDBuilder.toString());
+        CookiePrincipal ret = new CookiePrincipal(username, token);
+        ret.setSessionID(sessionID);
+        return ret;
     }
 }

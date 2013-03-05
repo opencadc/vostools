@@ -36,6 +36,7 @@ package ca.nrc.cadc.auth;
 
 
 import java.util.Arrays;
+import javax.servlet.http.Cookie;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -48,26 +49,14 @@ public class SSOCookieManagerTest
     @Test
     public void parseCookieValue() throws Exception
     {
-        setTestSubject(new SSOCookieManager(
-                "username=TESTUSER|sessionID=88|token=AAABBB"));
+        Cookie ck = new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME, "username=TESTUSER|sessionID=88|token=AAABBB");
+        
+        SSOCookieManager cm = new SSOCookieManager();
+        
+        CookiePrincipal cp = cm.createPrincipal(ck);
 
-        assertEquals("Username should be TESTUSER", "TESTUSER",
-                     getTestSubject().getUsername());
-        assertTrue("Token should be AAABBB",
-                   Arrays.equals("AAABBB".toCharArray(),
-                                 getTestSubject().getToken()));
-        assertEquals("Session ID should be 88.", 88l,
-                     getTestSubject().getSessionID());
-    }
-
-
-    public SSOCookieManager getTestSubject()
-    {
-        return testSubject;
-    }
-
-    public void setTestSubject(final SSOCookieManager testSubject)
-    {
-        this.testSubject = testSubject;
+        assertEquals("Username should be TESTUSER", "TESTUSER", cp.getUsername());
+        assertTrue("Token should be AAABBB", Arrays.equals("AAABBB".toCharArray(), cp.getToken()));
+        assertEquals("Session ID should be 88.", 88l, cp.getSessionID());
     }
 }
