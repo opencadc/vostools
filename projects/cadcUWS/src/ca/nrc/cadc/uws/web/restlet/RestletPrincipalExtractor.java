@@ -38,17 +38,16 @@ import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.PrincipalExtractor;
 import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.auth.X509CertificateChain;
-
 import ca.nrc.cadc.util.StringUtil;
-import org.restlet.Request;
-import org.restlet.data.Cookie;
-
 import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.log4j.Logger;
+import org.restlet.Request;
+import org.restlet.data.Cookie;
+import org.restlet.util.Series;
 
 
 /**
@@ -56,6 +55,8 @@ import java.util.Set;
  */
 public class RestletPrincipalExtractor implements PrincipalExtractor
 {
+    private static final Logger log = Logger.getLogger(RestletPrincipalExtractor.class);
+    
     private final Request request;
     private X509CertificateChain chain;
 
@@ -118,16 +119,29 @@ public class RestletPrincipalExtractor implements PrincipalExtractor
      */
     protected void addCookiePrincipal(Set<Principal> principals)
     {
-        final Cookie cookie = getCookie();
-
-        if (cookie != null)
+        Series<Cookie> cookies = getRequest().getCookies();
+        if (cookies == null || cookies.isEmpty())
+            return;
+        
+        for (Cookie cookie : cookies)
         {
-            SSOCookieManager ssoCookieManager = new SSOCookieManager(cookie.getValue());
-            CookiePrincipal cp = new CookiePrincipal(
-                ssoCookieManager.getUsername(), ssoCookieManager.getToken());
-            cp.setSessionID(ssoCookieManager.getSessionID());
-            principals.add(cp);
+            SSOCookieManager ssoCookieManager = new SSOCookieManager();
+            if (SSOCookieManager.DEFAULT_SSO_COOKIE_NAME.equals(cookie.getName()))
+            {
+                try
+                {
+                    javax.servlet.http.Cookie tmp = new javax.servlet.http.Cookie(cookie.getName(), cookie.getValue());
+                    CookiePrincipal cp = ssoCookieManager.createPrincipal(tmp);
+                    principals.add(cp);
+                    return; // only pick up one SSO cookie
+                }
+                catch(Exception oops)
+                {
+                    log.error("failed to create CookiePrincipal: " + cookie.getValue(), oops);
+                }
+            }
         }
+        
     }
 
     /**
