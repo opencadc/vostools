@@ -126,26 +126,26 @@ public class TransferWriter
      */
     private Element buildRoot(Transfer transfer)
     {
-        Element root = new Element("transfer", VOS.NS);
-        root.addNamespaceDeclaration(VOS.NS);
+        Element root = new Element("transfer", TransferReader.VOS_NS);
+        root.addNamespaceDeclaration(TransferReader.VOS_NS);
 
         Element e = null;
 
-        e = new Element("target", VOS.NS);
+        e = new Element("target", TransferReader.VOS_NS);
         e.addContent(transfer.getTarget().getURIObject().toASCIIString());
         root.addContent(e);
 
-        e = new Element("direction", VOS.NS);
+        e = new Element("direction", TransferReader.VOS_NS);
         e.addContent(transfer.getDirection().getValue());
         root.addContent(e);
 
-        e = new Element("view", VOS.NS);
+        e = new Element("view", TransferReader.VOS_NS);
         if (transfer.getView() != null)
         {
             e.setAttribute("uri", transfer.getView().getURI().toString());
             for (View.Parameter param : transfer.getView().getParameters())
             {
-                Element pm = new Element("param", VOS.NS);
+                Element pm = new Element("param", TransferReader.VOS_NS);
                 pm.setAttribute("uri", param.getUri().toString());
                 pm.setText(param.getValue());
                 e.addContent(pm);
@@ -157,11 +157,11 @@ public class TransferWriter
         {
             for (Protocol protocol : transfer.getProtocols())
             {
-                Element pr = new Element("protocol", VOS.NS);
+                Element pr = new Element("protocol", TransferReader.VOS_NS);
                 pr.setAttribute("uri", protocol.getUri());
                 if (protocol.getEndpoint() != null)
                 {
-                    Element ep = new Element("endpoint", VOS.NS);
+                    Element ep = new Element("endpoint", TransferReader.VOS_NS);
                     ep.addContent(protocol.getEndpoint());
                     pr.addContent(ep);
                 }
@@ -169,7 +169,7 @@ public class TransferWriter
             }
         }
             
-        e = new Element("keepBytes", VOS.NS);
+        e = new Element("keepBytes", TransferReader.VOS_NS);
         e.addContent(new Boolean(transfer.isKeepBytes()).toString());
         root.addContent(e);
 

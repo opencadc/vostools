@@ -88,6 +88,7 @@ import org.jdom.JDOMException;
 
 import ca.nrc.cadc.vos.View.Parameter;
 import ca.nrc.cadc.xml.XmlUtil;
+import org.jdom.Namespace;
 
 /**
  * Constructs a Transfer from an XML source. This class is not thread safe but it is
@@ -98,8 +99,9 @@ import ca.nrc.cadc.xml.XmlUtil;
  */
 public class TransferReader
 {
-    private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
-    private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
+    public static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    public static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
+    static Namespace VOS_NS = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
 
     private static Logger log = Logger.getLogger(TransferReader.class);
 
@@ -173,17 +175,17 @@ public class TransferReader
 
         Direction direction = parseDirection(root);
         // String serviceUrl; // not in XML yet
-        VOSURI target = new VOSURI(root.getChildText("target", VOS.NS));
+        VOSURI target = new VOSURI(root.getChildText("target", VOS_NS));
 
         // TODO: get view nodes and uri attribute
         View view = null;
         Parameter param = null;
-        List views = root.getChildren("view", VOS.NS);
+        List views = root.getChildren("view", VOS_NS);
         if (views != null && views.size() > 0)
         {
             Element v = (Element) views.get(0);
             view = new View(new URI(v.getAttributeValue("uri")));
-            List params = v.getChildren("param", VOS.NS);
+            List params = v.getChildren("param", VOS_NS);
             if (params != null)
             {
                 for (Object o : params)
@@ -195,7 +197,7 @@ public class TransferReader
             }
         }
         List<Protocol> protocols = parseProtocols(root);
-        String keepBytesStr = root.getChildText("keepBytes", VOS.NS);
+        String keepBytesStr = root.getChildText("keepBytes", VOS_NS);
 
         
         if (keepBytesStr != null)
@@ -210,7 +212,7 @@ public class TransferReader
     private Direction parseDirection(Element root)
     {
         Direction rtn = null;
-        String strDirection = root.getChildText("direction", VOS.NS);
+        String strDirection = root.getChildText("direction", VOS_NS);
         
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
@@ -231,8 +233,8 @@ public class TransferReader
     private List<Protocol> parseProtocols(Element root)
     {
         List<Protocol> rtn = null;
-        //Element e = root.getChild("protocols", VOS.NS);
-        List prots = root.getChildren("protocol", VOS.NS);
+        //Element e = root.getChild("protocols", NS);
+        List prots = root.getChildren("protocol", VOS_NS);
         if (prots != null && prots.size() > 0)
         {
             rtn = new ArrayList<Protocol>(prots.size());
@@ -240,7 +242,7 @@ public class TransferReader
             {
                 Element eProtocol = (Element) obj;
                 String uri = eProtocol.getAttributeValue("uri");
-                String endpoint = eProtocol.getChildText("endpoint", VOS.NS);
+                String endpoint = eProtocol.getChildText("endpoint", VOS_NS);
                 rtn.add(new Protocol(uri, endpoint, null));
             }
         }

@@ -105,7 +105,7 @@ public class TestUtil
      */
     public static File getTestFile()
     {
-        String strUrl = XmlUtil.getResourceUrlString(VOS.XSD_FILE_NAME, VOS.class);
+        String strUrl = XmlUtil.getResourceUrlString(TransferReader.VOSPACE_SCHEMA_RESOURCE, TransferReader.class);
         strUrl = strUrl.substring(5);
         log.debug("test file URL: " + strUrl);
         File testFile = new File(strUrl);

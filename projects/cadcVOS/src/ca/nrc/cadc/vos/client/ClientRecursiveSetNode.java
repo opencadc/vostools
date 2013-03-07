@@ -94,6 +94,7 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
 
@@ -217,8 +218,8 @@ public class ClientRecursiveSetNode implements Runnable
             {
                 Map<String, String> extreaSchemas = new HashMap<String, String>();
                 String xsdFile = XmlUtil.getResourceUrlString(
-                        VOS.XSD_FILE_NAME, ClientRecursiveSetNode.class);
-                extreaSchemas.put(VOS.XSD_KEY, xsdFile);
+                        TransferReader.VOSPACE_SCHEMA_RESOURCE, ClientRecursiveSetNode.class);
+                extreaSchemas.put(TransferReader.VOSPACE_SCHEMA_URL, xsdFile);
                 jobReader = new JobReader(extreaSchemas);
             }
             else
