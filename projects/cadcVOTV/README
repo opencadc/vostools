@@ -12,12 +12,6 @@ Package Location
 The main code for the cadcVOTV is located in the src/javascript/cadc.votv.js file,
 but all of its dependent files are located in src/javascript as well.
 
-Build Purpose and Procedure
-
-The purpose of the build procedure is to install the library, including 
-needed ancillary files, on a Web server.  The build procedure uses ant, and 
-the build.xml file is located in the top-level directory of the distribution.
-
 Examples
 
 TODO  

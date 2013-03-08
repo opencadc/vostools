@@ -196,7 +196,8 @@ cadc.vot.Viewer.prototype.sort = function()
 {
   if (sortcol)
   {
-    this.getGrid().setSortColumn(sortcol, (sortAsc && (sortAsc == 1)));
+    this.getGrid().setSortColumn(sanitizeString(sortcol),
+                                 (sortAsc || (sortAsc == 1)));
   }
 };
 
