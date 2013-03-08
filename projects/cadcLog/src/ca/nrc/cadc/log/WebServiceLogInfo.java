@@ -206,23 +206,30 @@ public abstract class WebServiceLogInfo
     
     protected String getUser(Subject subject)
     {
-        if (subject != null)
+        try
         {
-            final Set<Principal> principals = subject.getPrincipals();
-            if (!principals.isEmpty())
+            if (subject != null)
             {
-                Principal userPrincipal = null;
-                Iterator<Principal> i = principals.iterator();
-                while (i.hasNext())
+                final Set<Principal> principals = subject.getPrincipals();
+                if (!principals.isEmpty())
                 {
-                    Principal nextPrincipal = i.next();
-                    if (!(userPrincipal instanceof HttpPrincipal))
+                    Principal userPrincipal = null;
+                    Iterator<Principal> i = principals.iterator();
+                    while (i.hasNext())
                     {
-                        userPrincipal = nextPrincipal;
+                        Principal nextPrincipal = i.next();
+                        if (!(userPrincipal instanceof HttpPrincipal))
+                        {
+                            userPrincipal = nextPrincipal;
+                        }
                     }
+                    return userPrincipal.getName();
                 }
-                return userPrincipal.getName();
             }
+        }
+        catch (Throwable t)
+        {
+            // ignore - can't throw exceptions here
         }
         
         return ANONYMOUS_USER;
