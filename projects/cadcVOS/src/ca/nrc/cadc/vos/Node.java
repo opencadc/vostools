@@ -107,6 +107,9 @@ public abstract class Node implements Comparable<Object>
 
     // Flag indicating if the node is public
     protected boolean isPublic;
+    
+    // Flag indicating if the node is locked
+    protected boolean isLocked;
 
     // True if marked for deletion
     //protected boolean markedForDeletion;
@@ -293,6 +296,20 @@ public abstract class Node implements Comparable<Object>
     public boolean isPublic()
     {
         String val = getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC);
+        return "true".equals(val);
+    }
+    
+    /**
+     * Convenience method. This just calls
+     * <pre>
+     * Node.getPropertyValue(VOS.PROPERTY_URI_ISLOCKED)
+     * </pre>
+     *
+     * @return true if the property is set to true, otherwise false
+     */
+    public boolean isLocked()
+    {
+        String val = getPropertyValue(VOS.PROPERTY_URI_ISLOCKED);
         return "true".equals(val);
     }
 

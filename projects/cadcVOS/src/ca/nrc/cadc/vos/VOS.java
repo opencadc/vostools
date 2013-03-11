@@ -69,9 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import org.jdom.Namespace;
-
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * Holder of commonly used constants.
@@ -252,6 +249,9 @@ public class VOS
     
     // Flag indicating if the Node is public (true/false)
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
+    
+    // Flag indicating if the Node locked (true/false)
+    public static final String PROPERTY_URI_ISLOCKED = "ivo://ivoa.net/vospace/core#islocked";
     
     // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
     public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";

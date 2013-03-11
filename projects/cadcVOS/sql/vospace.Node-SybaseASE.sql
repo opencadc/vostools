@@ -86,6 +86,7 @@ CREATE TABLE Node (
    groupRead         VARCHAR(256)      NULL,
    groupWrite        VARCHAR(256)      NULL,
    isPublic          BIT               NOT NULL,
+   isLocked          BIT               NOT NULL,
    
    contentType       VARCHAR(100)      NULL,
    contentEncoding   VARCHAR(50)       NULL,

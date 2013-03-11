@@ -130,6 +130,7 @@ public class NodeMapper implements RowMapper
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
         boolean isPublic = rs.getBoolean("isPublic");
+        boolean isLocked = rs.getBoolean("isLocked");
 
         Object ownerObject = rs.getObject("ownerID");
         String contentType = rs.getString("contentType");
@@ -244,6 +245,7 @@ public class NodeMapper implements RowMapper
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
         }
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, isLocked ? "true" : "false"));
         
         // set the read-only flag on the properties
         for (String propertyURI : VOS.READ_ONLY_PROPERTIES)

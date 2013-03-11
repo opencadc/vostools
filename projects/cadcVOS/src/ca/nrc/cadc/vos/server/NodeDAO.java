@@ -204,6 +204,7 @@ public class NodeDAO
         "type",
         "busyState",
         "isPublic",
+        "isLocked",
         "ownerID",
         "creatorID",
         "groupRead",
@@ -2125,6 +2126,7 @@ public class NodeDAO
             Set<String> core = new TreeSet<String>(new CaseInsensitiveStringComparator());
 
             core.add(VOS.PROPERTY_URI_ISPUBLIC);
+            core.add(VOS.PROPERTY_URI_ISLOCKED);
 
             // note: very important that the node owner (creator property) is here
             core.add(VOS.PROPERTY_URI_CREATOR);
@@ -2406,6 +2408,11 @@ public class NodeDAO
             ps.setBoolean(col++, node.isPublic());
             setPropertyValue(node, VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic()), false);
             sb.append(node.isPublic());
+            sb.append(",");
+            
+            ps.setBoolean(col++, node.isLocked());
+            setPropertyValue(node, VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(node.isLocked()), false);
+            sb.append(node.isLocked());
             sb.append(",");
 
             String pval;
@@ -2733,6 +2740,7 @@ public class NodeDAO
             String type = rs.getString(col++);
             String busyString = getString(rs, col++);
             boolean isPublic = rs.getBoolean(col++);
+            boolean isLocked = rs.getBoolean(col++);
 
             Object ownerObject = rs.getObject(col++);
             String owner = null;
@@ -2875,6 +2883,7 @@ public class NodeDAO
 	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
 	            }
 	            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
+	            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(isLocked)));
 	
 	            // set the read-only flag on the properties
 	            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
