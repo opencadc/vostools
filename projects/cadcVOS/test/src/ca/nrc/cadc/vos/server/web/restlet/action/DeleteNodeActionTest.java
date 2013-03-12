@@ -76,7 +76,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOSURI;
 
 
 public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
@@ -111,6 +110,7 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
         expect(mockVOS.getParentURI()).andReturn(mockParentVOS).once();
         expect(mockParentVOS.isRoot()).andReturn(false).once();
         expect(getMockNodeS().getParent()).andReturn(mockParentNode).once();
+        expect(getMockNodeS().isLocked()).andReturn(false).once();
         //
         //expect(mockParentNode.getUri()).andReturn(mockParentVOS).anyTimes();
         //expect(mockParentVOS.getURIObject()).andStubReturn(new URI("vos://something")).anyTimes();

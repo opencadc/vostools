@@ -79,6 +79,7 @@ import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
@@ -124,11 +125,8 @@ public class DeleteNodeAction extends NodeAction
                 throw new AccessControlException("Write permission denied on " + parentURI);
             }
             
-            if (target instanceof ContainerNode)
-            {
-                // check the permissions on the children
-                checkDeletePermission((ContainerNode) target);
-            }
+            // check delete permissions and locks on target node and children
+            checkDeletePermission(target);
             
             return target;
 
@@ -187,27 +185,34 @@ public class DeleteNodeAction extends NodeAction
      * @param container
      * @throws AccessControlException
      * @throws FileNotFoundException
+     * @throws NodeLockedException
      */
-    private void checkDeletePermission(ContainerNode container)
-        throws AccessControlException, NodeNotFoundException, TransientException
+    private void checkDeletePermission(Node node)
+        throws AccessControlException, NodeNotFoundException,
+            TransientException, NodeLockedException
     {
+        // check if the node is locked
+        if (node.isLocked())
+            throw new NodeLockedException(node.getUri().toString());
         
-        nodePersistence.getChildren(container);
-        if (container.getNodes().size() > 0)
+        if (node instanceof ContainerNode)
         {
-            log.debug("Checking delete privilege on: " +
-                    container.getUri().getURIObject().toASCIIString());
-            voSpaceAuthorizer.getWritePermission(container);
-            for (Node child : container.getNodes())
+            ContainerNode container = (ContainerNode) node;
+            
+            nodePersistence.getChildren(container);
+            if (container.getNodes().size() > 0)
             {
-                if (child instanceof ContainerNode)
+                log.debug("Checking delete privilege on: " +
+                        container.getUri().getURIObject().toString());
+                voSpaceAuthorizer.getWritePermission(container);
+                for (Node child : container.getNodes())
                 {
-                    checkDeletePermission((ContainerNode) child);
+                    checkDeletePermission(child);
                 }
             }
+            // clear the children for garbage collection
+            container.setNodes(new ArrayList<Node>());
         }
-        // clear the children for garbage collection
-        container.setNodes(new ArrayList<Node>());
     }
 
 }

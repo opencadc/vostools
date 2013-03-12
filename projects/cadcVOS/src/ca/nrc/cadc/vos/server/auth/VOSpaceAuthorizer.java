@@ -100,6 +100,7 @@ import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -258,9 +259,11 @@ public class VOSpaceAuthorizer implements Authorizer
      *                  a Group, or User.
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
+     * @throws NodeLockedException    If the node is locked
      */
     public Object getWritePermission(URI uri)
-            throws AccessControlException, FileNotFoundException, TransientException
+        throws AccessControlException, FileNotFoundException,
+            TransientException, NodeLockedException
     {
         initState();
         if (!writable)
@@ -288,9 +291,10 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node      The Node to check.
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have write permission
+     * @throws NodeLockedException    If the node is locked
      */
     public Object getWritePermission(Node node)
-            throws AccessControlException
+        throws AccessControlException, NodeLockedException
     {
         initState();
         if (!writable)
@@ -303,9 +307,12 @@ public class VOSpaceAuthorizer implements Authorizer
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
-        LinkedList<Node> nodes = Node.getNodeList(node);
+        // check if the node is locked
+        if (node.isLocked())
+            throw new NodeLockedException(node.getUri().toString());
         
         // check for root ownership
+        LinkedList<Node> nodes = Node.getNodeList(node);
         Node rootNode = nodes.getLast();
         if (isOwner(rootNode, subject))
         {

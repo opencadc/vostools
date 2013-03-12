@@ -162,7 +162,14 @@ public enum NodeFault
     (
         new Status(503,
                    "ServiceBusy",
-                   "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
+                   "A HTTP 503 status code with a NodeNotFound fault in the body is thrown if the service is too busy to handle the request.",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    NodeLocked
+    (
+        new Status(503,
+                   "NodeLocked",
+                   "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
     );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),

@@ -83,6 +83,7 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -320,6 +321,12 @@ public abstract class NodeAction
             String faultMessage = "URI not well formed: " + vosURI;
             log.debug(faultMessage);
             return handleException(NodeFault.InvalidURI, faultMessage, false);
+        }
+        catch (NodeLockedException e)
+        {
+            String faultMessage = "Node Locked: " + e.getMessage();
+            log.debug(faultMessage);
+            return handleException(NodeFault.NodeLocked, faultMessage, false);
         }
         catch (AccessControlException e)
         {

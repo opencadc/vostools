@@ -77,10 +77,13 @@ import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
+import junit.framework.Assert;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
@@ -127,6 +130,45 @@ public class VOSpaceAuthorizerTest
         verify(np);
     }
     
+    @Test
+    public void testNodeLocked() throws Exception
+    {
+        VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
+        ContainerNode node = new ContainerNode(vos);
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.TRUE.toString()));
+
+        NodePersistence np = createMock(NodePersistence.class);
+        expect(np.get(vos, false)).andReturn(node).once();
+        replay(np);
+        
+        VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(np);
+        
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new X500Principal(NODE_OWNER));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
+        
+        WritePermissionAction action = new WritePermissionAction(voSpaceAuthorizer, vos.getURIObject());
+        try
+        {
+            Subject.doAs(subject, action);
+            Assert.fail("Should have received NodeLockedException");
+        }
+        catch (Exception e)
+        {
+            if (!(e instanceof NodeLockedException))
+            {
+                Assert.fail("Should have received NodeLockedException");
+            }
+        }
+        
+        verify(np);
+    }
+    
     private class ReadPermissionAction implements PrivilegedExceptionAction<Object>
     {
         private VOSpaceAuthorizer authorizer;
@@ -141,6 +183,24 @@ public class VOSpaceAuthorizerTest
         public Object run() throws Exception
         {
             return authorizer.getReadPermission(uri);
+        }
+        
+    }
+    
+    private class WritePermissionAction implements PrivilegedExceptionAction<Object>
+    {
+        private VOSpaceAuthorizer authorizer;
+        private URI uri;
+        
+        WritePermissionAction(VOSpaceAuthorizer authorizer, URI uri)
+        {
+            this.authorizer = authorizer;
+            this.uri = uri;
+        }
+
+        public Object run() throws Exception
+        {
+            return authorizer.getWritePermission(uri);
         }
         
     }

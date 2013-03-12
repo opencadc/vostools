@@ -116,9 +116,10 @@ public class CreateNodeAction extends NodeAction
             VOSURI parentURI = vosURI.getParentURI();
             Node node = (Node) nodePersistence.get(parentURI);
             voSpaceAuthorizer.getWritePermission(node);
+            
             return node;
         }
-        catch(NodeNotFoundException ex)
+        catch (NodeNotFoundException ex)
         {
             // parent does not exist: FAIL
             throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
