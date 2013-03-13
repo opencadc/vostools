@@ -13,11 +13,11 @@ else
 endif
 echo "###################"
 
-set CHMODCMD = "python $CADC_ROOT/vchmod"
-set MKDIRCMD = "python $CADC_ROOT/vmkdir"
-set LSCMD = "python $CADC_ROOT/vls -l"
-set CPCMD = "python $CADC_ROOT/vcp"
-set RMDIRCMD = "python $CADC_ROOT/vrmdir"
+set CHMODCMD = "python $CADC_ROOT/scripts/vchmod"
+set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
+set LSCMD = "python $CADC_ROOT/scripts/vls -l"
+set CPCMD = "python $CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
 
 set CERT =  "--cert=$A/test-certificates/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$A/test-certificates/x509_CADCAuthtest1.pem"

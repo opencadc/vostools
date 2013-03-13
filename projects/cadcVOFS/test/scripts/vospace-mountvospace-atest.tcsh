@@ -14,12 +14,12 @@ else
 endif
 echo "###################"
 ## we cannot feasibly test the --xsv option, but it is here to fiddle with in development
-set LSCMD = "python $CADC_ROOT/vls"
-set MOUNTCMD = "python $CADC_ROOT/mountvofs"
-set MKDIRCMD = "python $CADC_ROOT/vmkdir"
-set RMCMD = "python $CADC_ROOT/vrm"
-set CPCMD = "python $CADC_ROOT/vcp"
-set RMDIRCMD = "python $CADC_ROOT/vrmdir"
+set LSCMD = "python $CADC_ROOT/scripts/vls"
+set MOUNTCMD = "python $CADC_ROOT/scripts/mountvofs"
+set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
+set RMCMD = "python $CADC_ROOT/scripts/vrm"
+set CPCMD = "python $CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 

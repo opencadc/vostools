@@ -13,12 +13,12 @@ else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 echo "###################"
-set LSCMD = "python $CADC_ROOT/vls -l"
-set MKDIRCMD = "python $CADC_ROOT/vmkdir"
-set RMCMD = "python $CADC_ROOT/vrm"
-set CPCMD = "python $CADC_ROOT/vcp"
-set RMDIRCMD = "python $CADC_ROOT/vrmdir"
-set CHMODCMD = "python $CADC_ROOT/vchmod"
+set LSCMD = "python $CADC_ROOT/scripts/vls -l"
+set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
+set RMCMD = "python $CADC_ROOT/scripts/vrm"
+set CPCMD = "python $CADC_ROOT/scripts/vcp"
+set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
+set CHMODCMD = "python $CADC_ROOT/scripts/vchmod"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
