@@ -114,15 +114,15 @@ $CPCMD $CERT $CONTAINER/e3link/somefile /tmp  >& /dev/null && echo " [FAIL]" && 
 echo " [OK]"
 
 echo -n "copy file to target through link"
-$CPCMD $CERT something.png $CONTAINER/clink/something2.png || echo " [FAIL]" && exit -1
+$CPCMD  $CERT something.png $CONTAINER/clink/something2.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Get the file through the link"
-$CPCMD $CERT $CONTAINER/clink/something2.png /tmp || echo " [FAIL]" && exit -1
+$CPCMD  $CERT $CONTAINER/clink/something2.png /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Get the file through the target"
-$CPCMD $CERT $CONTAINER/target/something2.png /tmp || echo " [FAIL]" && exit -1
+$CPCMD   $CERT $CONTAINER/target/something2.png /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo

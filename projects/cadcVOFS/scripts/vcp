@@ -23,12 +23,17 @@ import errno
 
 nodeList = {}
 
+def getNode(filename, limit=0):
+    """Get node, from cache if possible"""
+    if filename not in nodeList:
+        nodeList[filename] = client.getNode(filename, limit=limit)
+    return nodeList[filename]
+
 def isdir(filename):
     logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
-            nodeList[filename] = nodeList.get(filename, client.getNode(filename))
-            return nodeList[filename].isdir()
+            return getNode(filename).isdir()
         except:
             return False
     else:
@@ -38,8 +43,7 @@ def islink(filename):
     logging.debug("Doing an islink on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
-            nodeList[filename] = nodeList.get(filename, client.getNode(filename))
-            return nodeList[filename].islink()
+            return getNode(filename).islink()
         except:
             return False
     else:
@@ -49,21 +53,28 @@ def access(filename,mode):
     logging.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
         try:
-            nodeList[filename] = nodeList.get(filename,client.getNode(filename))
+            node = getNode(filename)
             return True
         except:
             return False
     else:
         return os.access(filename,mode)
 
-def listdir(filename):
+def listdir(dirname):
     logging.debug("getting a dirlist %s " %(filename))
-    if filename[0:4]=="vos:":
-        dirlist = client.listdir(filename)
-        logging.debug(str(dirlist))
-        return dirlist
+    if dirname[0:4]=="vos:":
+        """Walk through the directory structure a al os.walk"""
+        names = []
+        node = getNode(dirname, limit=500)
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            node = getNode(uri, limit=500)
+        for thisNode in node.getNodeList():
+            nodeList[os.path.join(dirname,thisNode.name)] = thisNode
+            names.append(thisNode.name)
+        return names
     else:
-        return os.listdir(filename)
+        return os.listdir(dirname)
 
 def mkdir(filename):
     logging.debug("Making directory %s " % ( filename))
@@ -77,7 +88,7 @@ def mkdir(filename):
 def getMD5(filename):
     logging.debug("getting the MD5")
     if filename[0:4]=='vos:':
-        md5=client.getNode(filename).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+        md5 = getNode(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
     else:
         import hashlib
         md5=hashlib.md5()
