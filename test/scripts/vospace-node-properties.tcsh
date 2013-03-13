@@ -14,11 +14,11 @@ endif
 echo "###################"
 
 
-set LSCMD = "python $CADC_ROOT/vls -l"
-set MKDIRCMD = "python $CADC_ROOT/vmkdir"
-set RMDIRCMD = "python $CADC_ROOT/vrmdir"
-set CHMODCMD = "python $CADC_ROOT/vchmod"
-set CHECKJOB = "python $CADC_ROOT/checkJobPhase"
+set LSCMD = "python $CADC_ROOT/scripts/vls -l"
+set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
+set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
+set CHMODCMD = "python $CADC_ROOT/scripts/vchmod"
+set CHECKJOB = "python $CADC_ROOT/scripts/checkJobPhase"
 
 
 set CERT =  "--cert=$A/test-certificates/x509_CADCRegtest1.pem"
