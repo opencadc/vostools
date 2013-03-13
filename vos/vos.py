@@ -5,15 +5,30 @@
 
 """
 
+import errno
+import hashlib
+import html2text
+import httplib
 import logging
+import math
+import mimetypes
+import os
+import random
+import re
+import ssl
+import stat
+import string
+import sys
 import time
 import threading
-import sys
-import os
-import errno
+import urllib
+import urllib2
 import xml.etree.ElementTree as ET
-import re
+
+
 from __version__ import version
+
+
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
 
@@ -34,7 +49,6 @@ class urlparse:
     There is a difference between the 2.5 and 2.7 version of the urlparse.urlparse command, so here I roll my own..."""
 
     def __init__(self, url):
-        import re
 
         m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?.*)?", url)
         if not m.group:
@@ -88,12 +102,13 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         certFilename -- the name of the certificate pem file.
         """
+        logging.debug("parsing url: %s" %(url))
         parts = urlparse(url)
+        logging.debug("Got: %s " % ( str(parts)))
         ports = {"http": 80, "https": 443}
         certfile = self.certfile
         #logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
 
-        import httplib, ssl
         try:
             if parts.scheme=="https":
                 connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=60)
@@ -109,6 +124,7 @@ class Connection:
 
         ## Try to open this connection. 
         timestart = time.time()
+        logging.debug("Opennign the connection")
         while True:
             try:
                 connection.connect()
@@ -179,7 +195,6 @@ class Node:
         self.type = self.node.get(Node.TYPE)
         if self.type == None:
             logging.debug("Node type unknown, no node created")
-            import xml.etree.ElementTree as ET
             logging.debug(ET.dump(self.node))
             return None
         if self.type == "vos:LinkNode":
@@ -206,7 +221,6 @@ class Node:
 
 
     def __str__(self):
-        import xml.etree.ElementTree as ET
         class dummy:
             pass
         data = []
@@ -221,11 +235,6 @@ class Node:
         These attributes are determind from the node on VOSpace.
         """
         ## Get the flags for file mode settings.
-        from stat import S_IFDIR, S_IFREG
-        from stat import S_IRUSR, S_IRGRP, S_IROTH
-        from stat import S_IWUSR, S_IWGRP, S_IWOTH
-        from stat import S_IXUSR, S_IXGRP, S_IXOTH
-        from os import getgid, getuid
 
         self.attr = {}
         node = self
@@ -246,35 +255,35 @@ class Node:
         ## set the MODE by orring together all flags from stat
         st_mode = 0
         if node.type == 'vos:ContainerNode':
-            st_mode |= S_IFDIR
+            st_mode |= stat.S_IFDIR
             self.attr['st_nlink'] = len(node.getNodeList()) + 2
         else:
             self.attr['st_nlink'] = 1
-            st_mode |= S_IFREG
+            st_mode |= stat.S_IFREG
 
         ## Set the OWNER permissions
         ## All files are read/write/execute by owner...
-        st_mode |= S_IRUSR | S_IWUSR | S_IXUSR
+        st_mode |= stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
 
         ## Set the GROUP permissions
         if node.props.get('groupwrite', "NONE") != "NONE":
-            st_mode |= S_IWGRP
+            st_mode |= stat.S_IWGRP
         if node.props.get('groupread', "NONE") != "NONE":
-            st_mode |= S_IRGRP
-            st_mode |= S_IXGRP
+            st_mode |= stat.S_IRGRP
+            st_mode |= stat.S_IXGRP
 
         ## Set the OTHER permissions
         if node.props.get('ispublic', 'false') == 'true':
             ## If you can read the file then you can execute too.
             ## Public does NOT mean writeable.  EVER
-            st_mode |= S_IROTH | S_IXOTH
+            st_mode |= stat.S_IROTH | stat.S_IXOTH
 
         self.attr['st_mode'] = attr.get('st_mode', st_mode)
 
         ## We set the owner and group bits to be those of the currently running process.  
         ## This is a hack since we don't have an easy way to figure these out.  TBD!
-        self.attr['st_uid'] = attr.get('st_uid', getuid())
-        self.attr['st_gid'] = attr.get('st_uid', getgid())
+        self.attr['st_uid'] = attr.get('st_uid', os.getuid())
+        self.attr['st_gid'] = attr.get('st_uid', os.getgid())
         self.attr['st_size'] = attr.get('st_size', int(node.props.get('length', 0)))
 
     def setxattr(self, attrs={}):
@@ -321,7 +330,6 @@ class Node:
 
         This function should be split into 'set' and 'delete'
         """
-        import urllib
         #logging.debug("Before change node XML\n %s" % ( self))
         changed = 0
         found = False
@@ -366,27 +374,21 @@ class Node:
         readable and we can set turn off group read/write permissions,
         that's all. """
 
-        import urllib
-
-        from stat import S_IFDIR, S_IFREG
-        from stat import S_IRUSR, S_IRGRP, S_IROTH
-        from stat import S_IWUSR, S_IWGRP, S_IWOTH
-        from stat import S_IXUSR, S_IXGRP, S_IXOTH
         changed = 0
 
         #logging.debug("Changing mode to %d" % ( mode))
-        if  mode & (S_IROTH) :
+        if  mode & (stat.S_IROTH) :
             changed += self.setPublic('true')
         else:
             changed += self.setPublic('false')
 
-        if  mode & (S_IRGRP):
+        if  mode & (stat.S_IRGRP):
 
             changed += self.chrgrp(self.groupread)
         else:
             changed += self.chrgrp('')
 
-        if  mode & S_IWGRP :
+        if  mode & stat.S_IWGRP :
            changed += self.chwgrp(self.groupwrite)
         else:
            changed += self.chwgrp('')
@@ -402,7 +404,6 @@ class Node:
         properties -- a dictionary of the node properties, all assumed to be single words from the IVOA list
         """
 
-        import xml.etree.ElementTree as ET
 
         ### Build the root node called 'node'
         node = ET.Element("node")
@@ -413,7 +414,6 @@ class Node:
 
         ### create a properties section
         if not properties.has_key('type'):
-            import mimetypes
             properties['type'] = mimetypes.guess_type(uri)[0]
             #logging.debug("set type to %s" % (properties['type']))
         propertiesNode = ET.SubElement(node, Node.PROPERTIES)
@@ -462,14 +462,13 @@ class Node:
 
     def islink(self):
         """Check if target is a link Node"""
-        #logging.debug(self.type)
+        logging.debug(self.type)
         if self.type == "vos:LinkNode":
             return True
         return False
 
     def getInfo(self):
         """Organize some information about a node and return as dictionary"""
-        import re, time, string, math, urllib
         date = time.mktime(time.strptime(self.props['date'][0:-4], '%Y-%m-%dT%H:%M:%S'))
         #if date.tm_year==time.localtime().tm_year:
         #    dateString=time.strftime('%d %b %H:%S',date)
@@ -537,7 +536,6 @@ class Node:
 
     def getPropName(self, prop):
         """parse the property uri and get the name of the property"""
-        import urllib
         (url, propName) = urllib.splittag(prop.get('uri'))
         return propName
 
@@ -593,7 +591,6 @@ class VOFile:
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
-        import ssl
         #logging.debug("inside the close")
         if self.closed:
             return
@@ -602,7 +599,6 @@ class VOFile:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
             self.resp = self.httpCon.getresponse()
-            import time
             time.sleep(0.1)
             logging.debug("closing connection for %s" % (self.url))
             self.httpCon.close()
@@ -627,10 +623,9 @@ class VOFile:
         logging.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
             logging.debug("Got status code: %s for %s" % (self.resp.status, self.url))
-            from html2text import html2text
             msg = self.resp.read()
             if msg is not None:
-                msg = html2text(msg, self.url).strip()
+                msg = html2text.html2text(msg, self.url).strip()
             logging.debug("Error message: %s" % (msg))
             if self.resp.status in errnos.keys():
                 if msg is None or len(msg) == 0:
@@ -644,10 +639,12 @@ class VOFile:
 
     def open(self, URL, method="GET", bytes=None):
         """Open a connection to the given URL"""
-        import ssl, httplib, sys, mimetypes
         logging.debug("Opening %s (%s)" % (URL, method))
         self.url = URL
+        logging.debug("Established connection")
         self.httpCon = self.connector.getConnection(URL)
+        logging.debug("Established connection")
+
         #self.httpCon.set_debuglevel(2)
         self.closed = False
         #logging.debug("putting request")
@@ -673,7 +670,6 @@ class VOFile:
         if method in ["PUT", "POST", "DELETE"]:
             contentType = "text/xml"
             if method == "PUT":
-                import urllib, os
                 ext = os.path.splitext(urllib.splitquery(URL)[0])[1]
                 logging.debug("Got extension %s" % (ext))
                 if ext in [ '.fz', '.fits', 'fit']:
@@ -736,7 +732,12 @@ class VOFile:
         elif self.resp.status in VOFile.retryCodes:
             ## try again in Retry-After seconds or fail
             logging.error("Got %d: server busy on %s" % (self.resp.status, self.url))
-            logging.error("Message:  %s" % (self.resp.read()))
+            msg = self.resp.read()
+            if msg is not None:
+                msg = html2text.html2text(msg, self.url).strip()
+ 	    else:
+	        msg = "No Message Sent"
+            logging.error("Message:  %s" % (msg))
             try:
 	        ### see if there is a Retry-After in the head...
                 ras = int(self.resp.getheader("Retry-After", 5))
@@ -810,7 +811,6 @@ class Client:
 
     def copy(self, src, dest, sendMD5=False):
         """copy to/from vospace"""
-        import os, hashlib
 
         checkSource = False
         if src[0:4] == "vos:":
@@ -861,7 +861,6 @@ class Client:
 
     def fixURI(self, uri):
         """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
-        from errno import EINVAL
         parts = urlparse(uri)
         #TODO implement support for local files (parts.scheme=None and self.rootNode=None
         if parts.scheme is None:
@@ -870,8 +869,6 @@ class Client:
         if parts.scheme != "vos":
             # Just past this back, I don't know how to fix...
             return uri
-            #raise IOError(errno.EINVAL,"Invalid vospace URI",uri)
-        import re
         ## Check that path name compiles with the standard
         filename = os.path.basename(parts.path)
         #logging.debug("Checking file name: %s" %( filename))
@@ -923,7 +920,6 @@ class Client:
 
     def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None):
         """Split apart the node string into parts and return the correct URL for this node"""
-        import urllib
 
         uri = self.fixURI(uri)
         if method == 'GET' and view == 'data':
@@ -1014,13 +1010,11 @@ class Client:
         P = F.find(Node.PROTOCOL)
         logging.debug("Transfer protocol: %s" % (str(P)))
         if P is None:
-            self.getTransferError(transURL, uri)
-            raise OSError(errno.EBUSY)
+            return self.getTransferError(transURL, uri)
         return P.findtext(Node.ENDPOINT)
 
     def getTransferError(self, url, uri):
         """Follow a transfer URL to the Error message"""
-        import errno, random
         errorCodes = { 'NodeNotFound': errno.ENOENT,
                        'PermissionDenied': errno.EACCES,
                        'OperationNotSupported': errno.EOPNOTSUPP,
@@ -1077,14 +1071,20 @@ class Client:
         con = VOFile(errorURL, self.conn, method="GET")
         errorMessage = con.read()
         logging.debug("Got transfer error %s on URI %s" % (errorMessage, uri))
+        target = re.search("Unsupported link target:(?P<target> .*)$", errorMessage)
+        if target is not None:
+            return target.group('target').strip()
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None):
         """Connect to the uri as a VOFile object"""
 
-    ### sometimes this is called with mode from ['w', 'r']
+        ### sometimes this is called with mode from ['w', 'r']
         ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
+
+        logging.debug("URI: %s" % ( uri))
+
         if type(mode) == str:
             mode = os.O_RDONLY
 
@@ -1105,7 +1105,7 @@ class Client:
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
             URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI)
-        logging.debug(URL)
+        logging.debug("URL: %s" %(URL))
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
@@ -1115,16 +1115,16 @@ class Client:
                 target = node.node.findtext(Node.TARGET)
                 logging.debug(target)
                 if target is None:
+                    logging.debug("Why is target None?")
                     ### hmm. well, that shouldn't have happened.
                     return None
-                import re
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
+                    logging.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
                     return self.open(target, mode, view, head, URL, limit, nextURI, size)
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
                     logging.debug("Opening %s with urllib2" % (target))
-                    import urllib2
                     return urllib2.urlopen(target)
         else:
             return VOFile(URL, self.conn, method=method, size=size)
