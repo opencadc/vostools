@@ -495,11 +495,13 @@ class Node:
         readGroup = self.props.get('groupread', 'NONE')
         if readGroup != 'NONE':
             perm[4] = 'r'
+        isLocked = self.props.get('islocked', "false")            
         #logging.debug("%s: %s" %( self.name,self.props))
         return {"permisions": string.join(perm, ''),
                 "creator": creator,
                 "readGroup": readGroup,
                 "writeGroup": writeGroup,
+                "isLocked": isLocked,
                 "size": float(self.props.get('length', 0)),
                 "date": date,
                 "target": self.target}
@@ -795,7 +797,7 @@ class Client:
         if certFile is not None and not os.access(certFile, os.F_OK):
             ### can't get this certfile
             logging.debug("Failed to access certfile %s " % (certFile))
-            logging.debug("Using anonymous mode, try getCert if you want to use authenitcation")
+            logging.debug("Using anonymous mode, try getCert if you want to use authentication")
             certFile = None
         if certFile is None:
             self.protocol = "http"
