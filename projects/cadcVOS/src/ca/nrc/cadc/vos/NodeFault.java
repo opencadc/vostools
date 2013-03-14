@@ -167,7 +167,7 @@ public enum NodeFault
     ),
     NodeLocked
     (
-        new Status(503,
+        new Status(423,
                    "NodeLocked",
                    "A HTTP 423 status code with a NodeLocked fault in the body is thrown if the requested node is locked for writing or deleting.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
