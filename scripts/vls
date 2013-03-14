@@ -100,7 +100,7 @@ logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 try:
     client = vos.Client(certFile=opt.certfile)
 except Exception as e:
-    logging.error("Conneciton failed:  %s" % (str(e)))
+    logging.error("Connection failed:  %s" % (str(e)))
     sys.exit(-1)
 
 def sizeFormat(size):
@@ -129,19 +129,20 @@ def dateFormat(Epoch):
 columns = ['permisions']
 if opt.long:
     columns.extend(['creator'])
-columns.extend(['readGroup', 'writeGroup', 'size', 'date'])
+columns.extend(['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
 formats = {'permisions': lambda value: "%-11s" % (value),
          'creator': lambda value: " %-20s" % (value),
          'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
          'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+	 'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value=="true"],
          'size': sizeFormat,
          'date': dateFormat}
 
 for node in args:
 
     if node[0:4] != "vos:":
-        parser.error("Improper vospace spefication: %s " % (node))
+        parser.error("Improper vospace specification: %s " % (node))
     try:
         infoList = client.getInfoList(node)
     except IOError as e:
