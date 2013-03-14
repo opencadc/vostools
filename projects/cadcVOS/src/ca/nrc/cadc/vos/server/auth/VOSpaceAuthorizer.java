@@ -136,6 +136,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean readable = true;
     private boolean writable  = true;
     private boolean allowPartialPaths = false;
+    private boolean disregardLocks = false;
 
     private SSLSocketFactory socketFactory;
     private int subjectHashCode;
@@ -308,8 +309,9 @@ public class VOSpaceAuthorizer implements Authorizer
         Subject subject = Subject.getSubject(acContext);
         
         // check if the node is locked
-        if (node.isLocked())
-            throw new NodeLockedException(node.getUri().toString());
+	if (!disregardLocks)
+            if (node.isLocked())
+                throw new NodeLockedException(node.getUri().toString());
         
         // check for root ownership
         LinkedList<Node> nodes = Node.getNodeList(node);
@@ -717,6 +719,11 @@ public class VOSpaceAuthorizer implements Authorizer
             }
         }
         return false;
+    }
+
+    public void setDisregardLocks(boolean disregardLocks)
+    {
+        this.disregardLocks = disregardLocks;
     }
 
     /**

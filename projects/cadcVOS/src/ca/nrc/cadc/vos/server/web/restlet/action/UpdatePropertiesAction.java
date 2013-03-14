@@ -108,6 +108,8 @@ public class UpdatePropertiesAction extends NodeAction
     public Node doAuthorizationCheck()
         throws AccessControlException, FileNotFoundException, TransientException
     {
+        // locks don't apply to property updates
+        voSpaceAuthorizer.setDisregardLocks(true);
         Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURIObject());
         return node;
     }
