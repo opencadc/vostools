@@ -152,6 +152,7 @@ public class Main implements Runnable
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
     public static final String ARG_CONTENT_MD5 = "content-md5";
     public static final String ARG_RECURSIVE = "recursive";
+    public static final String ARG_LOCK = "lock";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -534,6 +535,7 @@ public class Main implements Runnable
 
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
+            msg("is locked: " + safePropertyRef(n, VOS.PROPERTY_URI_ISLOCKED));
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
             msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
@@ -1512,6 +1514,26 @@ public class Main implements Runnable
             }
         }
 
+        // support --lock and --lock=true; everything else sets it to false
+        boolean isLockSet = argMap.isSet(ARG_LOCK);
+        boolean isLockValue = true;
+        if (isLockSet)
+        {
+            String s = argMap.getValue(ARG_LOCK);
+            if (s != null  && s.trim().length() > 0 && !s.trim().equalsIgnoreCase("true"))
+            {
+                if (s.equalsIgnoreCase("false"))
+                {
+                    isLockValue = false;
+                }
+                else
+                {
+                    isLockSet = false;
+                    log.info("--lock value not recognized: " + s.trim() + ".  Ignoring.");
+                }
+            }
+        }
+
         this.recursiveMode = argMap.isSet(ARG_RECURSIVE);
 
         if (contentType != null)
@@ -1526,6 +1548,8 @@ public class Main implements Runnable
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
         if (groupWrite != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+        if (isLockSet)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, Boolean.toString(isLockValue)));
         if (isPublicSet)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublicValue)));
     }
@@ -1582,6 +1606,7 @@ public class Main implements Runnable
             "    [--content-encoding=<encoding of source>]                                                     ",
             "    [--group-read=<group URIs (in double quotes, space separated, 4 maximum)>]                    ",
             "    [--group-write=<group URIs (in double quotes, space separated, 4 maximum)>]                   ",
+            "    [--lock]                                                                                      ",
             "    [--public]                                                                                    ",
             "    [--prop=<properties file>]                                                                    ",
             "    [--recursive]                                                                                 ",
