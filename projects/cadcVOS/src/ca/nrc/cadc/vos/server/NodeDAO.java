@@ -1835,6 +1835,14 @@ public class NodeDAO
 
     protected String getSetBusyStateSQL(DataNode node, NodeBusyState curState, NodeBusyState newState)
     {
+        // set the contentLength and contentMD5 to null if moving from
+        //   NodeBusyState.notBusy --> NodeBusyState.busyWithWrite
+        boolean nullifyMetadata = false;
+        if (curState.equals(NodeBusyState.notBusy) && newState.equals(NodeBusyState.busyWithWrite))
+        {
+            nullifyMetadata = true;
+        }
+        
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
@@ -1844,9 +1852,14 @@ public class NodeDAO
         // always tweak the date
         Date now = new Date();
         setPropertyValue(node, VOS.PROPERTY_URI_DATE, dateFormat.format(now), true);
-        Timestamp ts = new Timestamp(now.getTime());
         sb.append(dateFormat.format(now));
         sb.append("'");
+        
+        if (nullifyMetadata)
+        {
+            sb.append(", contentLength=NULL, contentMD5=NULL");
+        }
+        
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
         sb.append(" AND busyState='");
