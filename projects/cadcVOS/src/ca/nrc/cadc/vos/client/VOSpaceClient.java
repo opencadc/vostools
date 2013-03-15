@@ -99,6 +99,7 @@ import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -506,6 +507,9 @@ public class VOSpaceClient
                  * the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body. 
                  */
                 throw new IllegalArgumentException(responseMessage);
+            case 423:
+                // The service SHALL throw a HTTP 423 status code if the node is locked
+                throw new NodeLockedException(responseMessage);
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
                 throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");

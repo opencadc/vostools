@@ -108,6 +108,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.Protocol;
@@ -350,6 +351,12 @@ public class Main implements Runnable
             this.client.deleteNode(this.target.getPath());
             log.info("deleted: " + this.target);
         }
+        catch(NodeLockedException nlex)
+        {
+            msg("failed to delete: " + target);
+            msg("          reason: " + nlex.getMessage());    	
+            System.exit(NET_STATUS);
+        }
         catch(Throwable t)
         {
             msg("failed to delete: " + target);
@@ -419,13 +426,12 @@ public class Main implements Runnable
             if (Direction.pushToVoSpace.equals(transferDirection))
             {
                 moveToVOSpace();
-
             }
             else if (Direction.pullFromVoSpace.equals(transferDirection))
             {
                 moveFromVOSpace();
                 // TODO: cofirm copy worked by checking MD5, length
-                // TODO: delete src file from VOSpace
+                // TODO: delete src file from VOSpace, see TODO below
             }
             else //if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
             {
@@ -437,6 +443,18 @@ public class Main implements Runnable
             log.error("BUG", ex);
             System.exit(NET_STATUS);
         }
+        /* TODO: Add this catch when we add delete src file from VOSpace for
+         *       Direction.pullFromVOSpace (see TODO above)
+        catch(NodeLockedException nlex)
+        {
+            if (destination == null)
+                msg("alinga-- failed to move: " + source + " -> " + transferDirection.getValue());
+            else
+                msg("alinga-- failed to move: " + source + " -> " + destination);
+            msg("          reason: " + nlex.getMessage());    	
+            System.exit(NET_STATUS);
+        }
+        */
         catch(Throwable t)
         {
             if (t instanceof IllegalArgumentException)
