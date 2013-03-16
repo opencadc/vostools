@@ -25,7 +25,7 @@ nodeList = {}
 
 def getNode(filename, limit=0):
     """Get node, from cache if possible"""
-    if filename not in nodeList:
+    if filename not in nodeList or ( limit > 0 and len(nodeList[filename].getNodeList()) == 0 ) :
         nodeList[filename] = client.getNode(filename, limit=limit)
     return nodeList[filename]
 
@@ -61,14 +61,16 @@ def access(filename,mode):
         return os.access(filename,mode)
 
 def listdir(dirname):
-    logging.debug("getting a dirlist %s " %(filename))
+    logging.debug("getting a dirlist %s " %(dirname))
     if dirname[0:4]=="vos:":
         """Walk through the directory structure a al os.walk"""
         names = []
         node = getNode(dirname, limit=500)
+	logging.debug("Node: {}".format(node.name))
         while node.type == "vos:LinkNode":
             uri = node.target
             node = getNode(uri, limit=500)
+        logging.debug("Nodes: {}".format(node.getNodeList()))
         for thisNode in node.getNodeList():
             nodeList[os.path.join(dirname,thisNode.name)] = thisNode
             names.append(thisNode.name)
