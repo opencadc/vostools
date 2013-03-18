@@ -25,7 +25,7 @@ nodeList = {}
 
 def getNode(filename, limit=0):
     """Get node, from cache if possible"""
-    if filename not in nodeList or ( (limit is None or limit > 0 ) and len(nodeList[filename].getNodeList()) == 0 ) :
+    if filename not in nodeList or ( (limit is None or limit > 0 ) and len(nodeList[filename].getNodeList()) == 0 and nodeList[filename].isdir() ) :
         nodeList[filename] = client.getNode(filename, limit=limit)
     return nodeList[filename]
 
@@ -33,7 +33,7 @@ def isdir(filename):
     logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
-            return getNode(filename).isdir()
+            return getNode(filename, limit=None).isdir()
         except:
             return False
     else:
@@ -53,7 +53,7 @@ def access(filename,mode):
     logging.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
         try:
-            node = getNode(filename)
+            node = getNode(filename, limit=None)
             return True
         except:
             return False
@@ -66,11 +66,9 @@ def listdir(dirname):
     if dirname[0:4]=="vos:":
         names = []
         node = getNode(dirname, limit=None)
-	logging.debug("Node: %s" %( str(node.name)))
         while node.type == "vos:LinkNode":
             uri = node.target
             node = getNode(uri, limit=None)
-        logging.debug("Nodes: %s" % (str(node.getNodeList())))
         for thisNode in node.getNodeList():
             nodeList[os.path.join(dirname,thisNode.name)] = thisNode
             names.append(thisNode.name)
@@ -81,10 +79,8 @@ def listdir(dirname):
 def mkdir(filename):
     logging.debug("Making directory %s " % ( filename))
     if filename[0:4]=='vos:':
-        logging.debug("In VOSpace")
         return client.mkdir(filename)
     else:
-        logging.debug("On the filesystem")
         return os.mkdir(filename)
 
 def getMD5(filename):
@@ -101,7 +97,6 @@ def getMD5(filename):
                 break
             md5.update(buff)
         md5=md5.hexdigest()
-    logging.debug("%s md5: %s" % (filename, md5))
     return md5
 
 
