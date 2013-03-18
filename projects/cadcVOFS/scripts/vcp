@@ -61,16 +61,16 @@ def access(filename,mode):
         return os.access(filename,mode)
 
 def listdir(dirname):
+    """Walk through the directory structure a al os.walk"""
     logging.debug("getting a dirlist %s " %(dirname))
     if dirname[0:4]=="vos:":
-        """Walk through the directory structure a al os.walk"""
         names = []
         node = getNode(dirname, limit=500)
-	logging.debug("Node: {}".format(node.name))
+	logging.debug("Node: %s" %( str(node.name)))
         while node.type == "vos:LinkNode":
             uri = node.target
             node = getNode(uri, limit=500)
-        logging.debug("Nodes: {}".format(node.getNodeList()))
+        logging.debug("Nodes: %s" % (str(node.getNodeList())))
         for thisNode in node.getNodeList():
             nodeList[os.path.join(dirname,thisNode.name)] = thisNode
             names.append(thisNode.name)
@@ -268,7 +268,8 @@ if __name__=='__main__':
         logging.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
-        logging.error(getattr(e,'strerror',getattr(e,'message',"FAILED")))
+        message = str(e)
+        logging.error(message)
         exitCode = getattr(e,'errno',-1)
 
     sys.exit(exitCode)
