@@ -1,28 +1,44 @@
-#!python
+#!/usr/bin/env python2.7
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
 import vos
 import time
-import optparse, os, sys, logging
+import os, sys, logging
+from optparse import OptionParser
+from vos import vos, __version__
 
 usage="""
-	vrm vos:/root/node   -- deletes a data node
-"""
+        vrm vos:/root/node   -- deletes a data node
+
+Version: %s """ % (__version__.version)
 
 
-parser=optparse.OptionParser(usage)
+
+parser=OptionParser(usage)
 parser.add_option("-v","--verbose",action="store_true")
 parser.add_option("-d","--debug",action="store_true")
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
 
+if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+        
 (opt,args)=parser.parse_args()
+
+if opt.version:
+        sys.stdout.write("vrm version %s \n\n" % (__version__.version)) 
+        sys.exit()
+
 
 
 if opt.verbose:
     logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
-if opt.debug:
+elif opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="vcp:%(module)s.%(funcName)s %(message)s")
 
 
 try:
@@ -33,7 +49,7 @@ except Exception as e:
 
 for arg in args:
     if arg[0:4]!="vos:":
-       logging.error("%s is not a valid VOSpace handle" % (arg))
+        logging.error("%s is not a valid VOSpace handle" % (arg))
     try:
         if client.isfile(arg):
             logging.info("deleting %s" %(arg))
@@ -42,6 +58,7 @@ for arg in args:
             logging.error("%s is a directory" % (arg))
         else:
             logging.error("%s file not found" % (arg))
+            sys.exit(-1)
     except Exception as e:
         logging.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),e.errno))
         sys.exit(e.errno)

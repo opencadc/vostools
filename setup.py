@@ -1,38 +1,19 @@
-#!/usr/bin/env python
+# Use "distribute"
+from setuptools import setup, find_packages
+import sys
+
 
 from vos.__version__ import version
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    try:
-        from ez_setup import use_setuptools
-        use_setuptools()
-        from setuptools import setup, find_packages
-    except ImportError :
-        from distutils.core import setup
-
-from distutils.core import Command
-
-
-class PyTest(Command):
-    user_options = []
-    def initialize_options(self):
-        pass
-    def finalize_options(self):
-        pass
-    def run(self):
-        import sys,subprocess
-        errno = subprocess.call([sys.executable, 'runtests.py'])
-        raise SystemExit(errno)
 
 setup(name="vos",
       version=version,
       url="https://github.com/ijiraq/cadcVOFS",
-      description="CADC VOSpace Filesystem",
+      description="Tools for interacting with CADC VOSpace.",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       packages=['vos'],
-      scripts=['getCert','vsync','vmv','vcp','vrm','vls','vmkdir','mountvofs','vrmdir', 'vln', 'vcat' ],
+      install_requires=['distribute'],
+      scripts=['scripts/getCert','scripts/vsync','scripts/vmv','scripts/vcp','scripts/vrm','scripts/vls','scripts/vmkdir','scripts/mountvofs','scripts/vrmdir', 'scripts/vln', 'scripts/vcat', 'scripts/vtag', 'scripts/vchmod', 'scripts/checkJobPhase' ],
       classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -43,5 +24,4 @@ setup(name="vos",
         'Operating System :: POSIX',
         'Programming Language :: Python',
         ],    
-      cmdclass = {'test': PyTest}
 )

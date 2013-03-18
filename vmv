@@ -1,37 +1,78 @@
-#!python
+#!/usr/bin/env python2.7
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
 import vos
 import time
-import optparse, os, sys, logging
+import os, sys, logging
+from optparse import OptionParser
+import signal
+from vos import vos, __version__
 
-usage="""
-	vrm vos:/root/node   -- deletes a data node
-"""
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+def main():
+    signal.signal(signal.SIGINT, signal_handler)
+    usage = """
+    vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.
+
+Version: %s """ % (__version__.version)
+
+    parser = OptionParser(usage)
+    parser.add_option("-v", "--verbose", action="store_true")
+    parser.add_option("-d", "--debug", action="store_true")
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+    parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+
+    (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vmv version %s \n\n" % (__version__.version)) 
+        sys.exit()
+
+    if opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="vmv: %(message)s")
+    elif opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="vmv: %(module)s.%(funcName)s %(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="vmv: %(message)s")
 
 
-parser=optparse.OptionParser(usage)
-parser.add_option("-v","--verbose",action="store_true")
-parser.add_option("-d","--debug",action="store_true")
-parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-
-(opt,args)=parser.parse_args()
+    if len(args) != 2:
+        parser.error("You must supply a source and desitination")
 
 
-if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
-if opt.debug:
-    logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
+
+    try:
+        client = vos.Client(certFile=opt.certfile)
+    except Exception as e:
+        logging.error("Conneciton failed:  %s" % (str(e)))
+        sys.exit(e.errno)
+
+    source = args[0]
+    dest = args[1]
+
+    try:
+        client.move(source, dest)
+    except KeyboardInterrupt:
+        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(-1)
+    except Exception as e:
+        logging.error(str(e))
+        sys.exit(-1)
 
 
-try:
-    client=vos.Client(certFile=opt.certfile)
-except Exception as e:
-    logging.error("Conneciton failed:  %s" %  (str(e)))
-    sys.exit(e.errno)
 
-source=args[0]
-dest = args[1]
+if __name__ == '__main__':
 
-client.move(source,dest)
+    try:
+        main()
+    except:
+        import traceback
+        logging.debug(sys.exc_info())
+        sys.exit(-1)

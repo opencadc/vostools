@@ -1,0 +1,107 @@
+#!/usr/bin/env python2.7
+"""set/read/(list) a property(ies) if a node.
+
+The tag system is meant to allow tags, in addition to the standard
+nodode properties. """
+
+
+import time
+import errno
+
+from vos import vos, __version__
+
+usage = """
+  vtag [options] node [key [value] [key [value] ...]]
+     
+      Version: %s """ % (__version__.version)
+
+
+def signal_handler(signal, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+
+
+if __name__ == '__main__':
+
+    import optparse
+    import logging, sys
+    import vos, errno, os
+    ## handle interupts nicely
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+
+    parser = optparse.OptionParser(usage)
+
+    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
+    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
+    parser.add_option('--list', '-l', action="store_true", help='list node properties')
+    parser.add_option("--certfile",
+                        help="location of your CADC security certificate file",
+                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("-R", "--recursive", action='store_const', const=True,
+                        help="Recursive set read/write properties")
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+    (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vtag version %s \n\n" % (__version__.version)) 
+        sys.exit(0)
+    
+    if opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")
+
+    key_value = args[1:]
+    if len(key_value) % 2 != 0 and len(key_value) > 1:
+        parser.print_help()
+        sys.stderr.write("\n\nRequire either just one key to look-up or a set of  key/value pairs\n\n")
+        sys.exit(-1)
+
+
+    logLevel = logging.INFO
+    logging.basicConfig(level=logLevel,
+                        format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
+
+
+    returnCode = 0
+    while True:
+
+        try:
+            client = vos.Client(certFile=opt.certfile)
+            node = client.getNode(args[0])
+            if opt.list:
+                sys.stdout.write("%s:\n" % (args[0]))
+                for prop in node.props:
+                    sys.stdout.write("\t%s = %s\n" % (prop, node.props[prop]))
+                sys.exit()
+            if len(key_value) == 0:
+                for key in node.props:
+                    if key not in ['date', 'MD5', 'type', 'length', 'ispublic',
+                                   'quota', 'creator', 'groupread', 'groupwrite']:
+                        logging.info("delete %s(%s)" % (key, node.props[key]))
+                        node.changeProp(key, None)
+            elif len(key_value) == 1:
+                logging.info("delete %s(%s)" % (key_value[0], node.props[key_value[0]]))
+                node.changeProp(key_value[0], None)
+            else:
+                for i in range(0, len(key_value), 2):
+                    if node.changeProp(key_value[i], key_value[i+1]) != 1:
+                        #must be a new property
+                        node.props[key_value[i]] = key_value[i+1]
+            logging.debug("Calling AddPROPS with " + str(node))
+            client.addProps(node)
+            break
+        except KeyboardInterrupt:
+            sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+            sys.exit(-1)
+        except Exception as e:
+            sys.stderr.write(str(e))
+            sys.exit(-1)
+    sys.exit(returnCode)
