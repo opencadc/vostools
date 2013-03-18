@@ -8,7 +8,7 @@ from vos.__version__ import version
 setup(name="vos",
       version=version,
       url="https://github.com/ijiraq/cadcVOFS",
-      description="Tools for interacting with CADC VOSpace."
+      description="Tools for interacting with CADC VOSpace.",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       packages=['vos'],
