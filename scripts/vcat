@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python2.7
 """cat files from vospace directly """
 
 
@@ -7,25 +7,44 @@ if __name__=='__main__':
     from optparse import OptionParser
     import logging, sys
     import vos, errno, os
+    from vos import vos, __version__
     ## handle interupts nicely
-    
-    parser=OptionParser()
+    usage = """
+    vcat filename
+
+    displays the content of a file
+
+    Version: %s """ % (__version__.version)
+
+    parser=OptionParser(usage)
     parser.add_option("-v","--verbose",action="store_true")
     parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
 
     name=sys.argv[0]
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+
     (opt,args)=parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vcat version %s \n\n" % (__version__.version)) 
+        sys.exit()
 
     if opt.verbose:
         logLevel=logging.INFO
+        format="%(asctime)s - %(message)s"
     elif opt.debug:
         logLevel=logging.DEBUG
+        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
     else:
         logLevel=logging.ERROR
-        
-    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+        format="%(asctime)s - %(message)s"
+
+    logging.basicConfig(level=logLevel,format=format)
 
     
     try:
@@ -54,11 +73,11 @@ if __name__=='__main__':
     except ssl.SSLError as e:
         logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
         sys.exit(-2)
-    except Exception as e:
-        logging.error(str(type(e)))
-        logging.error(str(e))
-        logging.error("Failed while copying %s" %(source))
-        sys.exit(-1)
+    except OSError as e:
+        #logging.error(str(type(e)))
+        #logging.error(str(e))
+        logging.error("ERROR: %s" %(e.strerror))
+        sys.exit(-e.errno)
 
 
     sys.exit(0)

@@ -1,4 +1,5 @@
-#!python
+#!/usr/bin/env python2.7
+
 def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
             certQuery="/cred/proxyCert?daysValid=",daysValid=2):
     """Access the cadc certificate server"""
@@ -6,7 +7,7 @@ def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
     import os
 
     if certfile is None:
-	certfile=os.path.join(os.getenv("HOME","/tmp"),".ssl/cadcproxy.pem")
+        certfile=os.path.join(os.getenv("HOME","/tmp"),".ssl/cadcproxy.pem")
 
     dirname=os.path.dirname(certfile)
     try:
@@ -96,9 +97,9 @@ if __name__=='__main__':
     while retry:
         try:
             getCert(daysValid=opt.daysValid,certfile=opt.dest)
-	    retry=False
+            retry=False
         except urllib2.HTTPError as e:
-	    sys.stderr.write(str(e)+"\n")
-	    if "basic auth failed" not in str(e):
-	       sys.exit(1)
+            sys.stderr.write(str(e)+"\n")
+            if "basic auth failed" not in str(e):
+               sys.exit(1)
     sys.exit(0)
