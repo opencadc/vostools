@@ -25,7 +25,7 @@ nodeList = {}
 
 def getNode(filename, limit=0):
     """Get node, from cache if possible"""
-    if filename not in nodeList or ( limit > 0 and len(nodeList[filename].getNodeList()) == 0 ) :
+    if filename not in nodeList or ( (limit is None or limit > 0 ) and len(nodeList[filename].getNodeList()) == 0 ) :
         nodeList[filename] = client.getNode(filename, limit=limit)
     return nodeList[filename]
 
@@ -65,11 +65,11 @@ def listdir(dirname):
     logging.debug("getting a dirlist %s " %(dirname))
     if dirname[0:4]=="vos:":
         names = []
-        node = getNode(dirname, limit=500)
+        node = getNode(dirname, limit=None)
 	logging.debug("Node: %s" %( str(node.name)))
         while node.type == "vos:LinkNode":
             uri = node.target
-            node = getNode(uri, limit=500)
+            node = getNode(uri, limit=None)
         logging.debug("Nodes: %s" % (str(node.getNodeList())))
         for thisNode in node.getNodeList():
             nodeList[os.path.join(dirname,thisNode.name)] = thisNode
@@ -153,7 +153,7 @@ def copy(source,dest,exclude=None,include=None):
             logging.info("%s -> %s " % ( source, dest))
         while not skip:
             try:
-                client.copy(source,dest,sendMD5=True)
+                client.copy(source,dest,sendMD5=True,nodeList=nodeList)
                 break
             except Exception as e:
                 if getattr(e,'errno',-1) == 104:

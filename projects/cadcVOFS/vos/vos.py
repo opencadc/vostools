@@ -811,12 +811,14 @@ class Client:
         self.archive = archive
         return
 
-    def copy(self, src, dest, sendMD5=False):
+    def copy(self, src, dest, sendMD5=False, nodeList=None):
         """copy to/from vospace"""
 
         checkSource = False
         if src[0:4] == "vos:":
-            srcNode = self.getNode(src)
+            if nodeList and src not in nodeList:
+                nodeList[src] = self.getNode(src)
+            srcNode = nodeList[src]
             srcSize = srcNode.attr['st_size']
             srcMD5 = srcNode.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
             fin = self.open(src, os.O_RDONLY, view='data')
@@ -892,8 +894,9 @@ class Client:
         uri   -- a voSpace node in the format vos:/vospaceName/nodeName
         limit -- load children nodes in batches of limit
         """
+        logging.debug("Limit: %s " % ( str(limit)))
         #logging.debug("Getting node %s" % ( uri))
-        xmlObj = self.open(uri, os.O_RDONLY, limit=0)
+        xmlObj = self.open(uri, os.O_RDONLY, limit=limit)
         dom = ET.parse(xmlObj)
         #logging.debug("%s" %( str(dom)))
         node = Node(dom.getroot())
@@ -901,22 +904,28 @@ class Client:
         # this would be better deferred until the children are actually needed, however that would require
         # access to a connection when the children are accessed, and thats not easy.
         # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY CAN SET LIMIT=0 IN THE CALL
-        if node.isdir() and limit > 0:
+        if node.isdir() and limit is None or limit > 0:
             node._nodeList = []
-            #logging.debug("Loading children")
             nextURI = None
             again = True
+            for nodesNode in dom.findall(Node.NODES):
+                children = nodesNode.findall(Node.NODE)
+                again = len(children) > 100
+                for child in children:
+                    nextURI =  node.addChild(child).uri
             while again:
                 again = False
                 getChildrenXMLDoc = self.open(uri, os.O_RDONLY, nextURI=nextURI)
                 getChildrenDOM = ET.parse(getChildrenXMLDoc)
                 for nodesNode in getChildrenDOM.findall(Node.NODES):
-                    for child in nodesNode.findall(Node.NODE):
+                    children = nodesNode.findall(Node.NODE)
+                    # only do again in we just added a new URI (uri!=nextURI) and 
+                    # length of children is long enough that we can expect more..
+                    again = len(children) > 100
+                    for child in children:
                         if child.get('uri') != nextURI:
                             childNode = node.addChild(child)
                             nextURI = childNode.uri
-                            #logging.debug("added child %s" % childNode.uri)
-                            again = True
         return(node)
 
 
@@ -927,7 +936,6 @@ class Client:
         if method == 'GET' and view == 'data':
             logging.debug("Using _get ")
             return self._get(uri)
-
 
         if method in ('PUT'):
             logging.debug("Using _put")
@@ -950,6 +958,8 @@ class Client:
         data = ""
         if len(fields) > 0 :
                data = "?" + urllib.urlencode(fields)
+        logging.debug("data: %s" % ( data) ) 
+	logging.debug("Fields: %s" % ( str(fields)))
         URL = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
         #logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
