@@ -2,8 +2,8 @@
 
 echo
 echo "*** start all tests ***"
-echo "vospace-mountvospace-atest.tcsh"
-vospace-mountvospace-atest.tcsh || echo "FAIL vospace-mountvospace-atest.tcsh" && exit -1 
+#echo "vospace-mountvospace-atest.tcsh"
+#vospace-mountvospace-atest.tcsh || echo "FAIL vospace-mountvospace-atest.tcsh" && exit -1 
 echo "vospace-client-atest.tcsh"
 vospace-client-atest.tcsh || echo "FAIL vospace-client-atest.tcsh" && exit -1
 echo "vospace-move-atest.tcsh"

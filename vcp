@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 
 """copy files from / to vospace directly without using the FUSE layer"""
 
