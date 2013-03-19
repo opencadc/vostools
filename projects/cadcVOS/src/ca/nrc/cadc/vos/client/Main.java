@@ -353,8 +353,7 @@ public class Main implements Runnable
         }
         catch(NodeLockedException nlex)
         {
-            msg("failed to delete: " + target);
-            msg("          reason: " + nlex.getMessage());    	
+            msg("node locked: " + target);	
             System.exit(NET_STATUS);
         }
         catch(Throwable t)
