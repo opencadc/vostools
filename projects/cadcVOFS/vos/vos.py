@@ -33,7 +33,7 @@ from __version__ import version
 # around the IO loop small
 
 BUFSIZE = 8388608
-#BUFSIZE=8192
+
 
 # consts for dealing with transient errors
 MAX_RETRY_DELAY = 128; # maximum delay between retries
@@ -273,6 +273,7 @@ class Node:
         self.attr['st_uid'] = attr.get('st_uid', os.getuid())
         self.attr['st_gid'] = attr.get('st_uid', os.getgid())
         self.attr['st_size'] = attr.get('st_size', int(node.props.get('length', 0)))
+        self.attr['st_blocks'] = self.attr['st_size']/512
 
     def setxattr(self, attrs={}):
         """Initialize the attributes using the properties sent with the node"""
@@ -773,6 +774,7 @@ class Client:
 
     VOTransfer = '/vospace/synctrans'
     VOProperties = '/vospace/nodeprops'
+    DWS = '/data/pub/'
 
     ### reservered vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length", "creator", "date",
@@ -780,8 +782,17 @@ class Client:
 
 
     def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
-                 rootNode=None, conn=None, archive='vospace'):
-        """This could/should be expanded to set various defaults"""
+                 rootNode=None, conn=None, archive='vospace', cadc_short_cut=False):
+        """This could/should be expanded to set various defaults
+
+        certFile: CADC proxy certficate location.
+        rootNode: the base of the VOSpace for uri references.
+        conn: a connection pool object for this Client
+        archive: the name of the archive to associated with GET requests
+        cadc_short_cut: if True then just assumed data web service urls
+        
+        
+        """
         if certFile is not None and not os.access(certFile, os.F_OK):
             ### can't get this certfile
             #logging.debug("Failed to access certfile %s " % (certFile))
@@ -797,16 +808,16 @@ class Client:
         self.VOSpaceServer = "cadc.nrc.ca!vospace"
         self.rootNode = rootNode
         self.archive = archive
+        self.nodeCache={}
+        self.cadc_short_cut = cadc_short_cut
         return
 
-    def copy(self, src, dest, sendMD5=False, nodeList=None):
+    def copy(self, src, dest, sendMD5=False):
         """copy to/from vospace"""
 
         checkSource = False
         if src[0:4] == "vos:":
-            if nodeList and src not in nodeList:
-                nodeList[src] = self.getNode(src)
-            srcNode = nodeList[src]
+            srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
             srcMD5 = srcNode.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
             fin = self.open(src, os.O_RDONLY, view='data')
@@ -838,7 +849,7 @@ class Client:
                 ### this is a hack .. we should check the data integraty of links too... just not sure how
                 checkMD5 = md5.hexdigest()
         else:
-            checkMD5 = self.getNode(dest).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            checkMD5 = self.getNode(dest, force=True).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
 
         if sendMD5:
             if checkMD5 != md5.hexdigest():
@@ -876,7 +887,7 @@ class Client:
         return "%s://%s/%s" % (parts.scheme, host, path)
 
 
-    def getNode(self, uri, limit=0):
+    def getNode(self, uri, limit=0, force=False):
         """connect to VOSpace and download the definition of vospace node
 
         uri   -- a voSpace node in the format vos:/vospaceName/nodeName
@@ -884,48 +895,39 @@ class Client:
         """
         #logging.debug("Limit: %s " % ( str(limit)))
         #logging.debug("Getting node %s" % ( uri))
-        xmlObj = self.open(uri, os.O_RDONLY, limit=limit)
-        dom = ET.parse(xmlObj)
-        #logging.debug("%s" %( str(dom)))
-        node = Node(dom.getroot())
-        # If this is a container node and the nodlist has not already been set, try to load the children.
-        # this would be better deferred until the children are actually needed, however that would require
-        # access to a connection when the children are accessed, and thats not easy.
-        # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY CAN SET LIMIT=0 IN THE CALL
-        if node.isdir() and limit is None or limit > 0:
-            node._nodeList = []
-            nextURI = None
-            again = True
-            for nodesNode in dom.findall(Node.NODES):
-                children = nodesNode.findall(Node.NODE)
-                again = len(children) > 100
-                for child in children:
-                    nextURI =  node.addChild(child).uri
-            while again:
-                again = False
-                getChildrenXMLDoc = self.open(uri, os.O_RDONLY, nextURI=nextURI)
-                getChildrenDOM = ET.parse(getChildrenXMLDoc)
-                for nodesNode in getChildrenDOM.findall(Node.NODES):
-                    children = nodesNode.findall(Node.NODE)
-                    # only do again in we just added a new URI (uri!=nextURI) and 
-                    # length of children is long enough that we can expect more..
-                    again = len(children) > 100
-                    for child in children:
-                        if child.get('uri') != nextURI:
-                            childNode = node.addChild(child)
-                            nextURI = childNode.uri
-        return(node)
+        uri = self.fixURI(uri)
+        if force or uri not in self.nodeCache:
+            xml_file = self.open(uri, os.O_RDONLY, limit=limit)
+            dom = ET.parse(xml_file)
+            node = Node(dom.getroot())
+            # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
+            # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
+            # on the firt call was less than 500, we likely got them
+            # all during the init
+            if limit != 0 and node.isdir() and len(node.getNodeList()) > 500 :
+                nextURI = None
+                while nextURI != node.getNodeList()[-1].uri:
+                    nextURI = node.getNodeList()[-1].uri
+                    xml_file = self.open(uri, os.O_RDONLY, nextURI=nextURI)
+                    next_page = Node(ET.parse(xml_file).getroot())
+                    if len(next_page.getNodeList()) > 0 and nextURI == next_page.getNodeList()[0].uri:
+                        next_page.getNodeList().pop(0)
+                    node.getNodeList().extend(next_page.getNodeList())
+                    nextURI = node.getNodeList()[-1].uri
+            self.nodeCache[uri] = node            
+            for node in self.nodeCache[uri].getNodeList():
+                self.nodeCache[node.uri]=node
+        return self.nodeCache[uri]
 
 
     def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None):
         """Split apart the node string into parts and return the correct URL for this node"""
 
         uri = self.fixURI(uri)
-        if method == 'GET' and view == 'data':
-            # logging.debug("Using _get ")
+        if not self.cadc_short_cut and method == 'GET' and view == 'data':
             return self._get(uri)
 
-        if method in ('PUT'):
+        if not self.cadc_short_cut and method in ('PUT'):
             # logging.debug("Using _put")
             return self._put(uri)
 
@@ -934,6 +936,11 @@ class Client:
         server = Client.VOServers.get(parts.netloc)
         #logging.debug("Node URI: %s" %( uri))
 
+        if (method == 'GET' and view == 'data') or method == "PUT" :
+            ## only get here if cadc_short_cut == True
+            URL = "%s://%s/%s/%s/%s" % ( self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
+            logging.debug("Sending short cuturl: %s" %( URL))
+            return URL
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
@@ -1224,8 +1231,8 @@ class Client:
         """Walk through the directory structure a al os.walk"""
         #logging.debug("getting a listing of %s " % ( uri))
         names = []
+        logging.debug(str(uri))
         node = self.getNode(uri, limit=None)
-        # logging.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
             # logging.debug(uri)
