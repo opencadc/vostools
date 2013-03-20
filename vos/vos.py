@@ -33,7 +33,7 @@ from __version__ import version
 # around the IO loop small
 
 BUFSIZE = 8388608
-#BUFSIZE=8192
+
 
 # consts for dealing with transient errors
 MAX_RETRY_DELAY = 128; # maximum delay between retries
