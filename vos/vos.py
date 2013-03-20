@@ -273,6 +273,7 @@ class Node:
         self.attr['st_uid'] = attr.get('st_uid', os.getuid())
         self.attr['st_gid'] = attr.get('st_uid', os.getgid())
         self.attr['st_size'] = attr.get('st_size', int(node.props.get('length', 0)))
+        self.attr['st_blocks'] = self.attr['st_size']/512
 
     def setxattr(self, attrs={}):
         """Initialize the attributes using the properties sent with the node"""
