@@ -24,7 +24,10 @@ set LNCMD = "python $CADC_ROOT/scripts/vln"
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
+set SUCCESS = "false"
+set LIST_ARGS = "--list"
 set LOCK_ARGS = "islocked true"
+set UNLOCK_ARGS = "islocked false"
 
 echo "vls command: " $LSCMD $CERT
 echo
@@ -59,31 +62,118 @@ echo
 echo "** test container: ${CONTAINER}"
 echo
 
-echo -n "lock vospace container "
+echo -n "create container "
+$MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "list container properties "
+$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+
+echo -n "lock container "
 $TAGCMD $CERT $CONTAINER $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "view locked vospace container "
-$LSCMD $CERT $CONTAINER | grep LOCKED || echo " [FAIL]" && exit -1
+echo -n "view locked container "
+$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
 echo " [OK]"
 
+echo -n "unlock container "
+$TAGCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "view unlocked container "
+$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+
+echo -n "create link "
+$CPCMD $CERT something.png $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
+$LNCMD $CERT $CONTAINER/something.png $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
+$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+
 echo -n "lock link "
-$CPCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
-$LNCMD $CERT $CONTAINER/target $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
 $TAGCMD $CERT $CONTAINER/target $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view locked link "
-$LSCMD $CERT $CONTAINER/target | grep LOCKED || echo " [FAIL]" && exit -1
+$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
 echo " [OK]"
+
+echo -n "unlock link "
+$TAGCMD $CERT $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "view unlocked link "
+$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+
+echo -n "view node "
+$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
 
 echo -n "lock node "
 $TAGCMD $CERT $CONTAINER/something.png $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view locked node "
-$LSCMD $CERT $CONTAINER/something.png | grep LOCKED || echo " [FAIL]" && exit -1
+$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
 echo " [OK]"
+
+echo -n "unlock node "
+$TAGCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "view unlocked node "
+$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+
+echo -n "delete container "
+$RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+$TAGCMD $CERT $CONTAINER $LIST_ARGS >& /dev/null || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
 
 echo
 echo "*** test sequence passed ***"
