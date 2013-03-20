@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+
 """copy files from / to vospace directly without using the FUSE layer"""
 
 from vos import vos, __version__
@@ -21,19 +22,16 @@ import time
 import errno
 
 
-nodeList = {}
-
-def getNode(filename, limit=0):
+def getNode(filename):
     """Get node, from cache if possible"""
-    if filename not in nodeList or ( (limit is None or limit > 0 ) and len(nodeList[filename].getNodeList()) == 0 and nodeList[filename].isdir() ) :
-        nodeList[filename] = client.getNode(filename, limit=limit)
-    return nodeList[filename]
+    return client.getNode(filename, limit=None)
+
 
 def isdir(filename):
     logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
-            return getNode(filename, limit=None).isdir()
+            return getNode(filename).isdir()
         except:
             return False
     else:
@@ -53,7 +51,7 @@ def access(filename,mode):
     logging.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
         try:
-            node = getNode(filename, limit=None)
+            node = getNode(filename)
             return True
         except:
             return False
@@ -63,16 +61,9 @@ def access(filename,mode):
 def listdir(dirname):
     """Walk through the directory structure a al os.walk"""
     logging.debug("getting a dirlist %s " %(dirname))
+    
     if dirname[0:4]=="vos:":
-        names = []
-        node = getNode(dirname, limit=None)
-        while node.type == "vos:LinkNode":
-            uri = node.target
-            node = getNode(uri, limit=None)
-        for thisNode in node.getNodeList():
-            nodeList[os.path.join(dirname,thisNode.name)] = thisNode
-            names.append(thisNode.name)
-        return names
+        return client.listdir(dirname)
     else:
         return os.listdir(dirname)
 
@@ -110,6 +101,7 @@ def copy(source,dest,exclude=None,include=None):
             mkdir(dest)
         ## for all files in the current source directory copy them to the destination directory
         for filename in listdir(source):
+            logging.debug("%s -> %s" % ( filename, source))
             copy(os.path.join(source,filename),os.path.join(dest,filename))
       else:
         if opt.interogate:
@@ -148,7 +140,7 @@ def copy(source,dest,exclude=None,include=None):
             logging.info("%s -> %s " % ( source, dest))
         while not skip:
             try:
-                client.copy(source,dest,sendMD5=True,nodeList=nodeList)
+                client.copy(source,dest,sendMD5=True)
                 break
             except Exception as e:
                 if getattr(e,'errno',-1) == 104:
@@ -187,7 +179,7 @@ if __name__=='__main__':
     parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
     parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
     parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-
+    parser.add_option("--quick",action="store_true", help="Use default CADC urls, for speed but can fail if CADC changes data storage mechanism", default=False)
 
     name=sys.argv[0]
 
@@ -223,7 +215,7 @@ if __name__=='__main__':
 
     
     try:
-        client=vos.Client(certFile=opt.certfile)
+        client=vos.Client(certFile=opt.certfile, cadc_short_cut=opt.quick)
 
         for source in args:
             if source[0:4] != "vos:":
