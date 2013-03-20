@@ -2,7 +2,8 @@
 
 """copy files from / to vospace directly without using the FUSE layer"""
 
-from vos import vos, __version__
+from vos import __version__ 
+
 usage = """
   vcp filename vos:rootNode/destination
 
