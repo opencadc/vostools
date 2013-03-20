@@ -292,7 +292,7 @@ class VOFS(LoggingMixIn, Operations):
         ### force if this is a container we've not looked in before
         if path in self.node and not force:
             node = self.node[path]
-            if node.isdir() and limit > 0 and not len(node._nodeList) > 0 :
+            if node.isdir() and not limit==0 and not len(node.getNodeList()) > 0 :
                force = True
             if not force:
                logging.debug("Sending back chached metadata for %s" % ( path))
@@ -302,7 +302,7 @@ class VOFS(LoggingMixIn, Operations):
         ## Pull the node meta data from VOSpace.
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
-            self.node[path]=self.client.getNode(path,limit=limit)
+            self.node[path]=self.client.getNode(path,force=True,limit=limit)
         except Exception as e:
             logging.error(str(e))
             logging.error(type(e))
@@ -612,12 +612,12 @@ class VOFS(LoggingMixIn, Operations):
                 e = FuseOSError(EAGAIN)
                 e.strerror = "Timeout waiting for directory listing"
                 raise e
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=False,limit=1000).getNodeList() ]
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=False,limit=None).getNodeList() ]
 
     def load_dir(self,path):
         """Load the dirlist from VOSpace"""
         logging.debug("Starting getNodeList thread")
-        self.getNode(path,force=not opt.cache_nodes,limit=500).getNodeList()
+        self.getNode(path,force=not opt.cache_nodes,limit=None).getNodeList()
         self.loading_dir[path] = False
         logging.debug("Got listing for %s" %(path))
         return 
