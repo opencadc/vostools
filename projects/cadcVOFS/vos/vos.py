@@ -195,6 +195,9 @@ class Node:
         self.isPublic = False
         if self.props.get('ispublic', 'false') == 'true':
             self.isPublic = True
+	self.isLocked = False
+        if self.props.get('islocked', 'false') == 'true':
+            self.isLocked = True
         self.groupwrite = self.props.get('groupwrite', '')
         self.groupread = self.props.get('groupread', '')
         self.setattr()
@@ -778,7 +781,7 @@ class Client:
 
     ### reservered vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length", "creator", "date",
-                   "groupread", "groupwrite", "ispublic"]
+                   "groupread", "groupwrite", "ispublic", "islocked"]
 
 
     def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
