@@ -296,6 +296,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
         throws TransientException
     {
@@ -303,11 +304,12 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         dao.setBusyState(node, curState, newState);
     }
 
-    public void setFileMetadata(DataNode node, FileMetadata meta)
+    @Override
+    public void setFileMetadata(DataNode node, FileMetadata meta, boolean strict)
         throws TransientException
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.updateNodeMetadata(node, meta);
+        dao.updateNodeMetadata(node, meta, strict);
     }
     
     /**

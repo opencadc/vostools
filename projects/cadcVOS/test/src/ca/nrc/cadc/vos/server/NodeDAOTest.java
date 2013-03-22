@@ -951,7 +951,7 @@ public class NodeDAOTest
             log.debug("** update without setting busy state **");
             try
             {
-                nodeDAO.updateNodeMetadata(dNode, meta);
+                nodeDAO.updateNodeMetadata(dNode, meta, false);
                 Assert.fail("expected IllegalStateException calling updateNodeMetadata with busy=N");
             }
             catch(IllegalStateException expected)
@@ -965,7 +965,7 @@ public class NodeDAOTest
 
             log.debug("** set busy state correctly and redo **");
             nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            nodeDAO.updateNodeMetadata(dNode, meta);
+            nodeDAO.updateNodeMetadata(dNode, meta, true);
 
             // check size on root container
             Node n = nodeDAO.getPath(HOME_CONTAINER);
@@ -1384,7 +1384,7 @@ public class NodeDAOTest
             
             // set busy state correctly and update
             nodeDAO.setBusyState(nodeA, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            nodeDAO.updateNodeMetadata(nodeA, meta);
+            nodeDAO.updateNodeMetadata(nodeA, meta, true);
 
             nodeA = (DataNode) nodeDAO.getPath(nodePath1);
             lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
@@ -1468,7 +1468,7 @@ public class NodeDAOTest
             {
                 log.debug("caught expected exception: " + expected);
             }
-            nodeDAO.updateNodeMetadata(dNode, meta);
+            nodeDAO.updateNodeMetadata(dNode, meta, true);
 
             // check size on root container
             Node n = nodeDAO.getPath(HOME_CONTAINER);
@@ -1982,7 +1982,7 @@ public class NodeDAOTest
             FileMetadata meta = new FileMetadata();
             
             // perform the metadata update
-            nodeDAO.updateNodeMetadata(dataNode, meta);
+            nodeDAO.updateNodeMetadata(dataNode, meta, true);
             
             int delta = jdbc.queryForInt("select delta from Node where name='" + dataNode.getName() + "'");
             Assert.assertEquals("Wrong delta", 6, delta);

@@ -309,9 +309,9 @@ public class VOSpaceAuthorizer implements Authorizer
         Subject subject = Subject.getSubject(acContext);
         
         // check if the node is locked
-	if (!disregardLocks)
-            if (node.isLocked())
-                throw new NodeLockedException(node.getUri().toString());
+        if (!disregardLocks)
+                if (node.isLocked())
+                    throw new NodeLockedException(node.getUri().toString());
         
         // check for root ownership
         LinkedList<Node> nodes = Node.getNodeList(node);

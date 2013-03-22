@@ -962,9 +962,10 @@ public class NodeDAO
      * decrement, plus set BusyState of the DataNode to  not-busy.
      *
      * @param node
-     * @param delta amount to increment (+) or decrement (-)
+     * @param meta the new metadata
+     * @param strict If the update should only occur if the lastModified date is the same.
      */
-    public void updateNodeMetadata(DataNode node, FileMetadata meta) throws TransientException
+    public void updateNodeMetadata(DataNode node, FileMetadata meta, boolean strict) throws TransientException
     {
         log.debug("updateNodeMetadata: " + node.getUri().getPath());
 
@@ -979,16 +980,27 @@ public class NodeDAO
             startTransaction();
             prof.checkpoint("start.DataNodeUpdateStatementCreator");
             
+            // get the last modified date object if matching on the update
+            Date lastModified = null;
+            if (strict)
+            {
+                String lastModStr = node.getPropertyValue(VOS.PROPERTY_URI_DATE);
+                lastModified = dateFormat.parse(lastModStr);
+            }
+            
             // update nodeSize, maybe contentLength and md5
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
-                    getNodeID(node), meta.getContentLength(), meta.getMd5Sum());
-            jdbc.update(dnup);
+                    getNodeID(node), meta.getContentLength(), meta.getMd5Sum(), lastModified);
+            int num = jdbc.update(dnup);
             prof.checkpoint("DataNodeUpdateStatementCreator");
+            log.debug("updateMetadata, rows updated: " + num);
+            if (strict && num != 1)
+                throw new IllegalStateException("Node has different lastModified value.");
             
             // last, update the busy state of the target node
             String trans = getSetBusyStateSQL(node, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
             log.debug(trans);
-            int num = jdbc.update(trans);
+            num = jdbc.update(trans);
             prof.checkpoint("getSetBusyStateSQL");
             if (num != 1)
                 throw new IllegalStateException("updateFileMetadata requires a node with busyState=W: "+node.getUri());
@@ -2162,12 +2174,14 @@ public class NodeDAO
         private Long len;
         private String md5;
         private Long nodeID;
+        private Date lastModified;
 
-        public DataNodeUpdateStatementCreator(Long nodeID, Long len, String md5)
+        public DataNodeUpdateStatementCreator(Long nodeID, Long len, String md5, Date lastModified)
         {
             this.nodeID = nodeID;
             this.len = len;
             this.md5 = md5;
+            this.lastModified = lastModified;
         }
         public PreparedStatement createPreparedStatement(Connection conn)
             throws SQLException
@@ -2189,6 +2203,12 @@ public class NodeDAO
                 sb.append(" delta = (coalesce(contentLength, 0) - coalesce(nodeSize, 0))");
             }
             sb.append(" WHERE nodeID = ?");
+            
+            if (lastModified != null)
+            {
+                sb.append(" AND lastModified = ?");
+            }
+            
             String sql = sb.toString();
             log.debug(sql);
 
@@ -2227,6 +2247,15 @@ public class NodeDAO
             }
             prep.setLong(col++, nodeID);
             sb.append(nodeID);
+            
+            if (lastModified != null)
+            {
+                Timestamp lastModTs = new Timestamp(lastModified.getTime());
+                prep.setTimestamp(col++, lastModTs, cal);
+                sb.append(",");
+                sb.append(lastModTs);
+            }
+            
             log.debug(sb.toString());
             return prep;
         }

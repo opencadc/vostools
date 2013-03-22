@@ -192,6 +192,9 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         return fileMetadata;
     }
     
+    /**
+     * Set the file metadate for the node.
+     */
     @Override
     public void set(final URI resource, final FileMetadata meta)
             throws FileNotFoundException, IllegalArgumentException, TransientException
@@ -217,7 +220,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         if (persistentNode instanceof DataNode)
         {
             DataNode dn = (DataNode) persistentNode;
-            nodePersistence.setFileMetadata(dn, meta);
+            nodePersistence.setFileMetadata(dn, meta, false);
         }
         // ignore other node types
     }

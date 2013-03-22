@@ -207,9 +207,10 @@ public interface NodePersistence
      *
      * @param node
      * @param meta metadata from the successful put
+     * @param strict If the update should only occur if the lastModified date is the same.
      * @throws TransientException
      */
-    void setFileMetadata(DataNode node, FileMetadata meta)
+    void setFileMetadata(DataNode node, FileMetadata meta, boolean strict)
         throws TransientException;
 
     /**
