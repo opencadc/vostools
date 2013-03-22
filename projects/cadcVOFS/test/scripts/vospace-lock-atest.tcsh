@@ -191,7 +191,7 @@ endif
 echo 
 
 echo -n "test case 15: move a locked node "
-$MVCMD $CERT $CONTAINER/something.png $CONTAINER/something.png1 > /dev/null || set SUCCESS = "true"
+$MVCMD $CERT $CONTAINER/something.png something1.png > /dev/null || set SUCCESS = "true"
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -201,7 +201,18 @@ else
 endif
 echo 
 
-echo -n "test case 16: unlock node "
+echo -n "test case 16: move locked node within vospace "
+$MVCMD $CERT $CONTAINER/something.png $CONTAINER/something1.png > /dev/null || set SUCCESS = "true"
+if ( ${SUCCESS} == "true" ) then
+    set SUCCESS = "false"
+    echo " [OK]"
+else
+    echo " [FAIL]"
+    exit -1
+endif
+echo 
+
+echo -n "test case 17: unlock node "
 $LOCKCMD $CERT $CONTAINER/something.png $UNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked node "
@@ -211,6 +222,7 @@ echo
 
 # clean up
 echo -n "test clean up: delete container "
+rm -f something1.png
 $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 $TAGCMD $CERT $CONTAINER $LIST_ARGS >& /dev/null || set SUCCESS = "true"
 if ( ${SUCCESS} == "true" ) then
