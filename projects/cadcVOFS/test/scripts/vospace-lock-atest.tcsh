@@ -80,40 +80,7 @@ echo -n "check container is locked "
 $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "test case 3: move locked container "
-$MVCMD $CERT $CONTAINER $TEMPCONTAINER > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo
-
-echo -n "test case 4: move to a locked container "
-$MVCMD $CERT somedir/ $CONTAINER > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo
-
-echo -n "test case 5: copy to a locked container "
-$CPCMD $CERT somedir/ $CONTAINER > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo
-
-echo -n "test case 6: unlock container "
+echo -n "test case 3: unlock container "
 $LOCKCMD $CERT $CONTAINER $UNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked container "
@@ -121,14 +88,14 @@ $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = false' || echo " [FAIL
 echo " [OK]"
 echo
 
-echo -n "test case 7: create link "
+echo -n "test case 4: create link "
 $CPCMD $CERT something.png $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
 $LNCMD $CERT $CONTAINER/something.png $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
 $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = false' || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 
-echo -n "test case 8: lock link "
+echo -n "test case 5: lock link "
 $LOCKCMD $CERT $CONTAINER/target $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check locked link "
@@ -136,18 +103,7 @@ $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || echo "
 echo " [OK]"
 echo
 
-echo -n "test case 9: move locked link "
-$MVCMD $CERT $CONTAINER/target $CONTAINER/target1 > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo 
-
-echo -n "test case 10: unlock link "
+echo -n "test case 6: unlock link "
 $LOCKCMD $CERT $CONTAINER/target $UNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked link "
@@ -155,12 +111,12 @@ $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = false' || echo 
 echo " [OK]"
 echo
 
-echo -n "test case 11: check unlocked node "
+echo -n "test case 7: check unlocked node "
 $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = false' || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo
 
-echo -n "test case 12: lock node "
+echo -n "test case 8: lock node "
 $LOCKCMD $CERT $CONTAINER/something.png $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check locked node "
@@ -168,51 +124,7 @@ $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' ||
 echo " [OK]"
 echo
 
-echo -n "test case 13: copy to a locked node "
-$CPCMD $CERT something.png $CONTAINER/something.png > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo 
-
-echo -n "test case 14: move to a locked node "
-$MVCMD $CERT something.png $CONTAINER/something.png > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo 
-
-echo -n "test case 15: move a locked node "
-$MVCMD $CERT $CONTAINER/something.png something1.png > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo 
-
-echo -n "test case 16: move locked node within vospace "
-$MVCMD $CERT $CONTAINER/something.png $CONTAINER/something1.png > /dev/null || set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
-endif
-echo 
-
-echo -n "test case 17: unlock node "
+echo -n "test case 9: unlock node "
 $LOCKCMD $CERT $CONTAINER/something.png $UNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked node "
