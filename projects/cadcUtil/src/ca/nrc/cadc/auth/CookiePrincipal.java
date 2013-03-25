@@ -33,11 +33,11 @@
  */
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.util.ArrayUtil;
+
+import ca.nrc.cadc.util.StringUtil;
 
 import java.io.Serializable;
 import java.security.Principal;
-import java.util.Arrays;
 
 
 /**
@@ -46,19 +46,19 @@ import java.util.Arrays;
  */
 public class CookiePrincipal implements Principal, Serializable
 {
-    private static final long serialVersionUID = 20120410151134l;
+    private static final long serialVersionUID = 20130313151134l;
 
-    private final String username;
-    private final char[] token;
-
-    // Initially set by the persistence layer.
-    private long sessionID;
+    private final String sessionID;
 
 
-    public CookiePrincipal(final String username, final char[] token)
+    public CookiePrincipal(final String sessionID)
     {
-        this.username = username;
-        this.token = token;
+        if (!StringUtil.hasText(sessionID))
+        {
+            throw new IllegalArgumentException("Null or emplty sessionID");
+        }
+
+        this.sessionID = sessionID;
     }
 
     @Override
@@ -75,29 +75,12 @@ public class CookiePrincipal implements Principal, Serializable
     @Override
     public String getName()
     {
-        return getUsername() + "|" + getSessionID()
-               + "|" + (ArrayUtil.isEmpty(getToken())
-                        ? null : Arrays.toString(getToken()));
-    }
-
-    public String getUsername()
-    {
-        return username;
-    }
-
-    public char[] getToken()
-    {
-        return token;
-    }
-
-    public long getSessionID()
-    {
         return sessionID;
     }
 
-    public void setSessionID(final long sessionID)
+    public String getSessionId()
     {
-        this.sessionID = sessionID;
+        return sessionID;
     }
 
     @Override
@@ -115,16 +98,12 @@ public class CookiePrincipal implements Principal, Serializable
 
         final CookiePrincipal that = (CookiePrincipal) o;
 
-        return (sessionID == that.sessionID)
-               && Arrays.equals(token, that.token)
-               && username.equals(that.username);
+        return sessionID.equals(that.sessionID);
     }
 
     @Override
     public int hashCode()
     {
-        int result = username.hashCode();
-        result = 31 * result + Arrays.hashCode(token);
-        return 31 * result + (int) (sessionID ^ (sessionID >>> 32));
+        return sessionID.hashCode();
     }
 }

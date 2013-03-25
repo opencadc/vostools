@@ -374,12 +374,6 @@ public class AuthenticationUtil
                 userId = principal.getName();
                 userids.add(userId);
             }
-
-            for (final CookiePrincipal cookiePrincipal : cookiePrincipals)
-            {
-                userId = cookiePrincipal.getUsername();
-                userids.add(userId);
-            }
         }
         return userids;
     }

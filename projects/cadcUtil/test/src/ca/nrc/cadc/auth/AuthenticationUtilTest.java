@@ -494,7 +494,7 @@ public class AuthenticationUtilTest
                     {
                             new Cookie("SOMECOOKIE", "SOMEVALUE"),
                             new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME,
-                                       "username=TESTUSER|sessionID=88|token=AAABBB")
+                                       "sessionID=AAABBB")
                     };
             final HttpServletRequest mockRequest =
                     createMock(HttpServletRequest.class);
@@ -511,9 +511,7 @@ public class AuthenticationUtilTest
             Principal p = subject1.getPrincipals().iterator().next();
             assertTrue(p instanceof CookiePrincipal);
             CookiePrincipal cp = (CookiePrincipal) p;
-            assertEquals("TESTUSER", cp.getUsername());
-            assertEquals(88, cp.getSessionID());
-            assertEquals("AAABBB", new String(cp.getToken()));
+            assertEquals("AAABBB", new String(cp.getSessionId()));
             assertEquals(0, subject1.getPublicCredentials().size());
             assertEquals(0, subject1.getPrivateCredentials().size());
 

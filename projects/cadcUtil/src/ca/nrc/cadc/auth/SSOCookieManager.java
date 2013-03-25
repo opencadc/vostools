@@ -50,31 +50,36 @@ public class SSOCookieManager
     {
         String value = cookie.getValue();
         final String[] items = value.split("\\|");
-        final StringBuilder usernameBuilder = new StringBuilder();
-        final StringBuilder tokenBuilder = new StringBuilder();
         final StringBuilder sessionIDBuilder = new StringBuilder();
 
-        for (final String item : items)
+        if (items.length == 3)
         {
-            if (item.startsWith("username="))
+            // olds style cookies. All we are interested in is the token
+            // which has become the session id.
+            // this if case exists for backwards compatibility
+            // and it's to be removed when no old style cookies exist.
+            // adriand - 13/03/2013
+            for (final String item : items)
             {
-                usernameBuilder.append(item.split("=")[1]);
+                if (item.startsWith("token=")) 
+                {
+                    sessionIDBuilder.append(item.split("=")[1]);
+                }
             }
-            else if (item.startsWith("token="))
+        }
+        else
+        {
+            if (value.startsWith("sessionID=")) 
             {
-                tokenBuilder.append(item.split("=")[1]);
+                sessionIDBuilder.append(value.split("=")[1]);
             }
-            else if (item.startsWith("sessionID="))
+            else
             {
-                sessionIDBuilder.append(item.split("=")[1]);
+                throw new IllegalArgumentException(
+                        "Cannot parse SSO cookie with value:" + value);
             }
         }
 
-        String username = usernameBuilder.toString();
-        char[] token = tokenBuilder.toString().toCharArray();
-        long sessionID = Long.parseLong(sessionIDBuilder.toString());
-        CookiePrincipal ret = new CookiePrincipal(username, token);
-        ret.setSessionID(sessionID);
-        return ret;
+        return new CookiePrincipal(sessionIDBuilder.toString());
     }
 }
