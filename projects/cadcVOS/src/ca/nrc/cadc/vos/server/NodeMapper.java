@@ -137,21 +137,14 @@ public class NodeMapper implements RowMapper
         String contentEncoding = rs.getString("contentEncoding");
         String link = null;
 
-        Long nodeSize = null;
-        Object o = rs.getObject("nodeSize");
-        if (o != null)
-        {
-            Number n = (Number) o;
-            nodeSize = new Long(n.longValue());
-        }
         Long contentLength = null;
-        o = rs.getObject("contentLength");
+        Object o = rs.getObject("contentLength");
         if (o != null)
         {
             Number n = (Number) o;
             contentLength = new Long(n.longValue());
         }
-        log.debug("readNode: nodeSize = " + nodeSize + ", contentLength = " + contentLength);
+        log.debug("readNode: contentLength = " + contentLength);
 
         Object contentMD5 = rs.getObject("contentMD5");
         Date lastModified = rs.getTimestamp("lastModified", cal);
@@ -204,20 +197,10 @@ public class NodeMapper implements RowMapper
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
         }
 
-        if (node instanceof DataNode)
-        {
-            if (contentLength != null)
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
-                else
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-        }
-        else if (node instanceof ContainerNode)
-        {
-            if (nodeSize != null)
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
-            else
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-        }
+        if (contentLength != null)
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+        else
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
 
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {
@@ -245,7 +228,9 @@ public class NodeMapper implements RowMapper
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
         }
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
-        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, isLocked ? "true" : "false"));
+        
+        if (isLocked)
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, isLocked ? "true" : "false"));
         
         // set the read-only flag on the properties
         for (String propertyURI : VOS.READ_ONLY_PROPERTIES)

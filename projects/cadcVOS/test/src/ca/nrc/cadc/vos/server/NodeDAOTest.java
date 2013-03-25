@@ -139,7 +139,7 @@ public class NodeDAOTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
     
     DataSource dataSource;
@@ -166,7 +166,7 @@ public class NodeDAOTest
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
 
-            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable file meta
+            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true); // TOP
 
             // cleanup from old runs
             //JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -1331,84 +1331,6 @@ public class NodeDAOTest
     }
 
     @Test
-    public void testReadOnlyFileMetadata()
-    {
-        // md5 is stored as a binary(16) which is sometimes tricky with trailing zero(s)
-        log.debug("testReadOnlyFileMetadata - START");
-        try
-        {
-            DBConfig dbConfig = new DBConfig();
-            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
-            this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
-            
-            DataNode dataNode = null;
-            ContainerNode containerNode = null;
-            Node putNode = null;
-
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("ROOT: " + rootContainer);
-            Assert.assertNotNull(rootContainer);
-            String basePath = "/" + HOME_CONTAINER + "/";
-
-            NodeProperty len = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
-            NodeProperty md5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0}));
-            log.debug("len: " + len.getPropertyValue());
-            log.debug("md5: " + md5.getPropertyValue());
-            // /a
-            String nodePath1 = basePath + getNodeName("a");
-            List<NodeProperty> props = new ArrayList<NodeProperty>();
-            props.add(len);
-            props.add(md5);
-            dataNode = getCommonDataNode(nodePath1, props);
-            dataNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode, owner);
-            DataNode nodeA = (DataNode) nodeDAO.getPath(nodePath1);
-            Assert.assertNotNull(nodeA);
-            nodeDAO.getProperties(nodeA);
-            log.debug("PutNode: " + putNode);
-            log.debug("GetNode: " + nodeA);
-            
-            // we tried to set the props, but they are not writable
-            NodeProperty lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-            NodeProperty md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            Assert.assertNotNull("persisted contentLength", lenActual);
-            Assert.assertEquals("0", lenActual.getPropertyValue()); // unchanged by update
-            Assert.assertNull("persisted contentMD5", md5Actual);
-
-            // now try to update them via updateFileMetadata
-            FileMetadata meta = new FileMetadata();
-            meta.setContentLength(new Long(2048L));
-            meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            
-            // set busy state correctly and update
-            nodeDAO.setBusyState(nodeA, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            nodeDAO.updateNodeMetadata(nodeA, meta, true);
-
-            nodeA = (DataNode) nodeDAO.getPath(nodePath1);
-            lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-            md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            Assert.assertNotNull("persisted contentLength", lenActual);
-            Assert.assertEquals("0", lenActual.getPropertyValue()); // unchanged by update
-            Assert.assertNull("persisted contentMD5", md5Actual);
-
-            nodeDAO.delete(nodeA, 10, false); // cleanup
-            assertRecursiveDelete();
-
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("testReadOnlyFileMetadata - DONE");
-        }
-    }
-
-    @Test
     public void testDelete()
     {
         log.debug("testDelete - START");
@@ -1953,7 +1875,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -1976,10 +1898,11 @@ public class NodeDAOTest
             
             // manually set the content length & nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set contentLength=10, nodeSize=4, busyState='W' where name='" + dataNode.getName() + "'";
+            String sql = "update Node set contentLength=4, busyState='W' where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
             
             FileMetadata meta = new FileMetadata();
+            meta.setContentLength(10L);
             
             // perform the metadata update
             nodeDAO.updateNodeMetadata(dataNode, meta, true);
@@ -2008,7 +1931,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -2031,7 +1954,7 @@ public class NodeDAOTest
             
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set nodeSize=2 where name='" + dataNode.getName() + "'";
+            String sql = "update Node set contentLength=2 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
             
             // manually set the delta
@@ -2065,7 +1988,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -2094,7 +2017,7 @@ public class NodeDAOTest
             
             // manually set the nodeSize
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            String sql = "update Node set nodeSize=9 where name='" + dataNode.getName() + "'";
+            String sql = "update Node set contentLength=9 where name='" + dataNode.getName() + "'";
             jdbc.update(sql);
             
             // manually set the deltas
@@ -2131,7 +2054,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -2204,7 +2127,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);

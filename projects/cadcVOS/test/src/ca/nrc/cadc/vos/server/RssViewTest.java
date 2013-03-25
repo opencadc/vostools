@@ -399,7 +399,7 @@ public class RssViewTest
             super(new NodeDAO.NodeSchema(
                     database + "." + schema + ".Node", 
                     database + "." + schema + ".NodeProperty",
-                    true, true), DELETED_NODES
+                    true), DELETED_NODES
                 );
             this.server = server;
             this.database = database;

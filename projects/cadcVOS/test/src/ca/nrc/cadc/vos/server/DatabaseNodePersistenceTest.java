@@ -72,11 +72,14 @@ package ca.nrc.cadc.vos.server;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -86,9 +89,6 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import java.net.URI;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
 
 /**
  * Class to test DatabaseNodePersistence in cadcVOS.
@@ -265,7 +265,7 @@ public class DatabaseNodePersistenceTest
 
         public DatabaseNodePersistenceStub()
         {
-            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true, true), DELETED_NODES);
+            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true), DELETED_NODES);
         }
 
         @Override
