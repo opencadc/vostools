@@ -439,28 +439,28 @@ class VOFS(LoggingMixIn, Operations):
         else:
             os.unlink(fname)
 
-    locked=False
+        locked=False
 
-    if node and node.props.get('islocked', False):
-         logging.info("%s is locked." % path)
-         locked = True
+        if node and node.props.get('islocked', False):
+             logging.info("%s is locked." % path)
+             locked = True
 
-    if not locked:
-         if node.type == "vos:DataNode":
-              parentNode = self.getNode(os.path.dirname(path),force=False,limit=1)
-              if parentNode.props.get('islocked', False):
-                   logging.info("%s is locked by parent node." % path)
-                   locked=True
-         elif node.type == "vos:LinkNode":
-              targetNode = self.getNode(node.target,force=False,limit=1)
-              if targetNode.props.get('islocked', False):
-                    logging.info("%s target node is locked." % path)
-                    locked=True
-              else:
-                    targetParentNode = self.getNode(os.path.dirname(node.target),force=False,limit=1)
-                    if targetParentNode.props.get('islocked', False):
-                        logging.info("%s is locked by target parent node." % path)
+        if not locked:
+             if node.type == "vos:DataNode":
+                  parentNode = self.getNode(os.path.dirname(path),force=False,limit=1)
+                  if parentNode.props.get('islocked', False):
+                       logging.info("%s is locked by parent node." % path)
+                       locked=True
+             elif node.type == "vos:LinkNode":
+                  targetNode = self.getNode(node.target,force=False,limit=1)
+                  if targetNode.props.get('islocked', False):
+                        logging.info("%s target node is locked." % path)
                         locked=True
+                  else:
+                        targetParentNode = self.getNode(os.path.dirname(node.target),force=False,limit=1)
+                        if targetParentNode.props.get('islocked', False):
+                            logging.info("%s is locked by target parent node." % path)
+                            locked=True
 
         ## OK, we've cleared the cache if need be, so now open the file as needed
         ## Don't pull a copy into the cache here, that's done only if a read or write
