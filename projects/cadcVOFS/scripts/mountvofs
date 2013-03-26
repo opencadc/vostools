@@ -189,7 +189,7 @@ class VOFS(LoggingMixIn, Operations):
 
         
     def create(self, path, flags):
-        """Create a node. Currently ignors the ownership mode"""
+        """Create a node. Currently ignores the ownership mode"""
         import re,os
 
         logging.debug("Creating a node: %s with mode %s" % (path, os.O_CREAT))
@@ -230,7 +230,7 @@ class VOFS(LoggingMixIn, Operations):
         needed as the network connection can be slow."""
         mode = flag2mode(self.fh[fh]['flags'])
         if not ('w' in mode or 'a' in mode ):
-            logging.debug("file was not openned for writing")
+            logging.debug("file was not opened for writing")
             return 
 
         if opt.readonly:
@@ -265,6 +265,10 @@ class VOFS(LoggingMixIn, Operations):
             return 
         mode=''
         if self.fh.get(fh,None) is not None:
+            locked = self.fh[fh].get('locked',False)
+            if locked:
+                logging.info("%s is locked, no sync allowed" % path)
+                raise FuseOSError(EPERM)
             mode = flag2mode(self.fh[fh]['flags'])
         if 'w' in mode or 'a' in mode:
             try:
@@ -295,7 +299,7 @@ class VOFS(LoggingMixIn, Operations):
             if node.isdir() and not limit==0 and not len(node.getNodeList()) > 0 :
                force = True
             if not force:
-               logging.debug("Sending back chached metadata for %s" % ( path))
+               logging.debug("Sending back cached metadata for %s" % ( path))
                return node
             
 
@@ -367,6 +371,10 @@ class VOFS(LoggingMixIn, Operations):
         set the mode after creation. """
         #try:
         if 1==1:
+            parentNode = self.getNode(os.path.dirname(path), force=False, limit=1)
+            if parentNode and parentNode.props.get('islocked', False):
+                logging.info("Parent node of %s is locked." % path)
+                raise FuseOSError(EPERM)
             self.client.mkdir(path)
             self.chmod(path,mode)
         #except Exception as e:
@@ -379,18 +387,18 @@ class VOFS(LoggingMixIn, Operations):
 
 
     def open(self, path, flags, *mode):
-        """Open file with the desidred modes
+        """Open file with the desired modes
 
         Here we return a handle to the cached version of the file
         which is updated if older than the one stored in VOSpace. 
 
         If someone changes the VOSpace file while we are updating the
         cached one some confusion will occur as the cache can be newer 
-        than the vospace stored version..
+        than the vospace stored version.
         """
         import io
 
-        logging.debug("Openning %s with flags %s" % ( path, flag2mode(flags)))
+        logging.debug("Opening %s with flags %s" % ( path, flag2mode(flags)))
         # if len(mode)>0:
         #    logging.debug("got mode %s" % ( mode))
         #    self.chmod(path,mode)
@@ -423,7 +431,7 @@ class VOFS(LoggingMixIn, Operations):
         md5Row = self.get_md5_db(fname)
         try:
             node = self.getNode(path)
-        except Exceptrion as e:
+        except Exception as e:
             if e.errno != ENOENT:
                 raise e
         if node and md5Row['md5']==node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
@@ -431,19 +439,42 @@ class VOFS(LoggingMixIn, Operations):
         else:
             os.unlink(fname)
 
+    locked=False
+
+    if node and node.props.get('islocked', False):
+         logging.info("%s is locked." % path)
+         locked = True
+
+    if not locked:
+         if node.type == "vos:DataNode":
+              parentNode = self.getNode(os.path.dirname(path),force=False,limit=1)
+              if parentNode.props.get('islocked', False):
+                   logging.info("%s is locked by parent node." % path)
+                   locked=True
+         elif node.type == "vos:LinkNode":
+              targetNode = self.getNode(node.target,force=False,limit=1)
+              if targetNode.props.get('islocked', False):
+                    logging.info("%s target node is locked." % path)
+                    locked=True
+              else:
+                    targetParentNode = self.getNode(os.path.dirname(node.target),force=False,limit=1)
+                    if targetParentNode.props.get('islocked', False):
+                        logging.info("%s is locked by target parent node." % path)
+                        locked=True
+
         ## OK, we've cleared the cache if need be, so now open the file as needed
         ## Don't pull a copy into the cache here, that's done only if a read or write
         ## is called on the handle.  
-        ## Cache files are always openned oin RDWR mode with optional create 
+        ## Cache files are always opened in RDWR mode with optional create 
 
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
         fs = io.open(fh,mode='r+b')
         os.lseek(fh,0,os.SEEK_SET)
-        self.fh[fh]={'flags': flags, 'cached': cached, 'fs': fs, 'name':fname, 'writing': False}
+        self.fh[fh]={'flags': flags, 'cached': cached, 'fs': fs, 'name':fname, 'writing': False, 'locked': locked}
         self.setPath(fh,path)
 
         return fh
-    
+
     def read(self, path, size=0, offset=0, fh=None):
         """ Read the entire file from the VOSpace server, place in a temporary file and then offset
         to the desired location.  
@@ -596,8 +627,8 @@ class VOFS(LoggingMixIn, Operations):
 
 
     def readdir(self, path, fh):
-        """Send a list of entried in this directory"""
-        logging.debug("Getting direcotry list for %s " % ( path))
+        """Send a list of entries in this directory"""
+        logging.debug("Getting directory list for %s " % ( path))
         ## reading from VOSpace can be slow, we'll do this in a thread
         import thread, time
         if not self.loading_dir.get(path,False):
@@ -626,7 +657,7 @@ class VOFS(LoggingMixIn, Operations):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
         import os
 
-        ## get the MODE of the oringal open, if 'w/a/w+/a+' we should write to VOSpace
+        ## get the MODE of the original open, if 'w/a/w+/a+' we should write to VOSpace
         ## we do that here before closing the filehandle since we delete the reference to 
         ## the file handle at this point.
         if self.fh.get(fh,None) is not None:
@@ -702,20 +733,27 @@ class VOFS(LoggingMixIn, Operations):
         #   return -1
         #if not self.client.isdir(os.path.dirname(dest)):
         #    return -1
-        logging.debug("Moving %s to %s" % ( src,dest))
-        result=self.client.move(src,dest)
-        logging.debug(str(result))
-        if result:
-           srcPath=os.path.normpath(self.cache_dir+src)
-           destPath=os.path.normpath(self.cache_dir+dest)
-           if os.access(srcPath,os.F_OK):
-              # only rename in cache if the source exists
-               dirs=os.path.dirname(destPath)
-               if not os.path.exists(dirs):
-                   os.makedirs(dirs)
-               os.rename(srcPath,destPath)
-           return 0
-        return -1
+        try:
+            logging.debug("Moving %s to %s" % ( src,dest))
+            result=self.client.move(src,dest)
+            logging.debug(str(result))
+            if result:
+                srcPath=os.path.normpath(self.cache_dir+src)
+                destPath=os.path.normpath(self.cache_dir+dest)
+                if os.access(srcPath,os.F_OK):
+                    # only rename in cache if the source exists
+                    dirs=os.path.dirname(destPath)
+                    if not os.path.exists(dirs):
+                        os.makedirs(dirs)
+                    os.rename(srcPath,destPath)
+                return 0
+            return -1
+        except Exception, e:
+            logging.error("%s" % str(e))
+            import re
+            if re.search('NodeLocked', str(e)) != None:
+                raise FuseOSError(EPERM)
+            return -1
     
     def dead_setxattr(self, path, name, value, size, options, *args):
         """Simple xattr setting, ignorring options for now"""
@@ -759,6 +797,9 @@ class VOFS(LoggingMixIn, Operations):
         #    raise FuseOSError(ENOTDIR)
         #if len(node.getNodeList())>0:
         #    raise FuseOSError(ENOTEMPTY)
+        if node and node.props.get('islocked', False):
+            logging.info("%s is locked." % path)
+            raise FuseOSError(EPERM)
         fname=os.path.normpath(self.cache_dir+path)
         if os.access(fname,os.F_OK):
             os.rmdir(fname)
@@ -850,13 +891,17 @@ class VOFS(LoggingMixIn, Operations):
         return
 
     def unlink(self,path):
+    	node = self.getNode(path, force=False, limit=1)
         fname=os.path.normpath(self.cache_dir+path)
+        if node and node.props.get('islocked', False):
+            logging.info("%s is locked." % path)
+            raise FuseOSError(EPERM)
         if os.access(fname,os.F_OK):
             os.unlink(fname)
-        if self.getNode(path):
+        if node:
             self.client.delete(path)
         self.delNode(path,force=True)
-        ## update the access times on the parrent node
+        ## update the access times on the parent node
 
 
     def utimens(self, path, times=None):
@@ -889,14 +934,19 @@ class VOFS(LoggingMixIn, Operations):
         import ctypes
 
         if opt.readonly:
-            loggin.debug("File system is readonly.. so writing 0 bytes\n")
+            logging.debug("File system is readonly.. so writing 0 bytes\n")
             return 0
 
 
         mode = flag2mode(self.fh[fh]['flags'])
         if not ('w' in mode or 'a' in mode ):
-            logging.debug("file was not openned for writing")
+            logging.debug("file was not opened for writing")
             return 0
+
+        locked = self.fh[fh].get('locked',False)
+        if locked:
+            logging.info("file is locked, so writing 0 bytes")
+            raise FuseOSError(EPERM)
 
         logging.debug("%s -> %s" % ( path,fh))
         if not self.fh[fh].get('cached',False) and offset > 0 :
@@ -960,10 +1010,10 @@ if __name__ == "__main__":
     else:
         logLevel = logging.ERROR
 
-    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s %(message)s"
+    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s"
     logging.basicConfig(level=logLevel, format=format, filename=opt.log)
 
-    logging.debug("Checking connetion to VOSpace ")
+    logging.debug("Checking connection to VOSpace ")
     if not os.access(opt.certfile,os.F_OK):
         certfile=None
     else:

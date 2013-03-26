@@ -78,7 +78,7 @@ class Connection:
 
         ## allow anonymous access if no certfile is specified...
         if certfile is not None and not os.access(certfile, os.F_OK):
-            raise EnvironmentError(errno.EACCES, "No certifacte file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
+            raise EnvironmentError(errno.EACCES, "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
 
         self.certfile = certfile
         # logging.debug("Using certificate file %s" % (str(self.certfile)))
@@ -112,7 +112,7 @@ class Connection:
 
         ## Try to open this connection. 
         timestart = time.time()
-        logging.debug("Openning the connection")
+        logging.debug("Opening the connection")
         while True:
             try:
                 connection.connect()
@@ -195,7 +195,7 @@ class Node:
         self.isPublic = False
         if self.props.get('ispublic', 'false') == 'true':
             self.isPublic = True
-	self.isLocked = False
+        self.isLocked = False
         if self.props.get('islocked', 'false') == 'true':
             self.isLocked = True
         self.groupwrite = self.props.get('groupwrite', '')
@@ -458,6 +458,10 @@ class Node:
         if self.type == "vos:LinkNode":
             return True
         return False
+
+    def islocked(self):
+        """Check if target state is locked for update/delete."""
+        return self.props["islocked"] == "true"
 
     def getInfo(self):
         """Organize some information about a node and return as dictionary"""
@@ -976,6 +980,7 @@ class Client:
 
     def move(self, srcURI, destURI):
         """Move srcUri to targetUri"""
+        logging.debug("Moving %s to %s" % (srcURI, destURI))
         transfer = ET.Element("transfer")
         transfer.attrib['xmlns'] = Node.VOSNS
         transfer.attrib['xmlns:vos'] = Node.VOSNS
@@ -1034,7 +1039,8 @@ class Client:
                        'InvalidArgument': errno.EINVAL,
                        'InvalidURI': errno.EFAULT,
                        'TransferFailed': errno.EIO,
-                       'DuplicateNode.': errno.EEXIST}
+                       'DuplicateNode.': errno.EEXIST,
+                       'NodeLocked': errno.EPERM}
         jobURL = str.replace(url, "/results/transferDetails", "")
         try:
             phaseURL = jobURL + "/phase"

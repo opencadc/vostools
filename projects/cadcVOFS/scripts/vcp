@@ -76,7 +76,7 @@ def mkdir(filename):
         return os.mkdir(filename)
 
 def getMD5(filename):
-    logging.debug("getting the MD5")
+    logging.debug("getting the MD5 for %s" % (filename))
     if filename[0:4]=='vos:':
         md5 = getNode(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
     else:
@@ -258,6 +258,9 @@ if __name__=='__main__':
     except Exception as e:
         message = str(e)
         logging.error(message)
+        import re
+        if re.search('NodeLocked',str(e)) != None:
+            logging.error("Use vlock to unlock the node before copying to %s." % (thisDest))
         exitCode = getattr(e,'errno',-1)
 
     sys.exit(exitCode)
