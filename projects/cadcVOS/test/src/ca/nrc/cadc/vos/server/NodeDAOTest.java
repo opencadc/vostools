@@ -2189,6 +2189,81 @@ public class NodeDAOTest
             log.debug("testApplyNodeSizePropagation - DONE");
         }
     }
+    
+    @Test
+    public void testDatabaseDateRoundTrip()
+    {
+        log.debug("testDatabaseDateRoundTrip - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // TOP
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("trickle-test2");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the busy state
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            
+            // update the metadata, using the strict option
+            nodeDAO.updateNodeMetadata(dataNode, new FileMetadata(), true);
+            
+            // ensure the state is back to normal
+            sql = "select busyState from Node where name='" + dataNode.getName() + "'";
+            String curState = (String) jdbc.queryForObject(sql, String.class);
+            Assert.assertEquals("Wrong busy state", "N", curState);
+            
+            // manually reset the busy state
+            sql = "update Node set busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            
+            // modify some metadata (this will tweak the date)
+            List<NodeProperty> properties = new ArrayList<NodeProperty>();
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISLOCKED, "true"));
+            nodeDAO.updateProperties(dataNode, properties);
+            
+            // update the metadata again (should get illegal argument exception)
+            try
+            {
+                nodeDAO.updateNodeMetadata(dataNode, new FileMetadata(), true);
+                Assert.fail("Strict option failed.");
+            }
+            catch (IllegalStateException e)
+            {
+                // expected
+            }
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testDatabaseDateRoundTrip - DONE");
+        }
+    }
 
     private long getContentLength(Node node)
     {
