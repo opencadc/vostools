@@ -146,6 +146,10 @@ public class JavaWebStartServlet extends HttpServlet
         setRegistryClientProps(request);
 
         log.debug("looking for ssocookie attribute...");
+
+        // if the ssodomains attribute is sent, the sso cookie can be used 
+        // with multiple domains
+        String ssodomains = (String) request.getAttribute("ssodomains");
         final Cookie[] cookies = request.getCookies();
         if (!ArrayUtil.isEmpty(cookies))
         {
@@ -158,6 +162,10 @@ public class JavaWebStartServlet extends HttpServlet
                     log.debug("ssocookie attribute: " + cookie.getValue());
                     String servername = NetUtil.getServerName(this.getClass());
                     String domain = NetUtil.getDomainName(servername);
+                    if (ssodomains != null)
+                    {
+                        domain = ssodomains;
+                    }
                     request.setAttribute("ssocookiedomain", domain);
                     log.debug("ssocookie domain: " + domain);
                 }

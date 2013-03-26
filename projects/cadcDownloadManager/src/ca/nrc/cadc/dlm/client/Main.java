@@ -167,10 +167,21 @@ public class Main
                       Main.usage();
                       System.exit(-1);
                   }
-                  SSOCookieCredential cred = new SSOCookieCredential(
+                  final String[] domains = ssoCookieDomain.split(",");
+                  if (domains.length < 1)
+                  {
+                      System.out.
+                      println("Invalid ssocookiedomain argument: " + ssoCookieDomain);
+                      Main.usage();
+                      System.exit(-1);
+                  }
+                  for (String domain : domains)
+                  {
+                      SSOCookieCredential cred = new SSOCookieCredential(
                           SSOCookieManager.DEFAULT_SSO_COOKIE_NAME + "=" + 
-                                  ssoCookieStr, ssoCookieDomain);
-                  subject.getPublicCredentials().add(cred);
+                                  ssoCookieStr, domain.trim());
+                      subject.getPublicCredentials().add(cred);
+                  }
             }
 
             final List<String> uris = DownloadUtil.decodeListURI(uriStr);
