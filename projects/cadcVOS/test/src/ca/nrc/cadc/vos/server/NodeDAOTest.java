@@ -139,7 +139,7 @@ public class NodeDAOTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
     
     DataSource dataSource;

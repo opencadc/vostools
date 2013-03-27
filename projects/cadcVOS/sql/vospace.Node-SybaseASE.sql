@@ -73,45 +73,44 @@ print "create table Node ..."
 go
 
 CREATE TABLE Node (
-   nodeID            BIGINT            IDENTITY,
+   nodeID            BIGINT            IDENTITY primary key nonclustered,
    parentID          BIGINT            NULL,
--- max node name length==256, plus space to stick a timestamp on the end
+-- max node name length==256, + 20 for timestamp in nodes marked for delete
    name              VARCHAR(276)      NOT NULL,
    type              CHAR(1)           NOT NULL,
    busyState         CHAR(1)           NOT NULL,
 
    ownerID           VARCHAR(256)      NOT NULL,
    creatorID         VARCHAR(256)      NOT NULL,
-   
+
    groupRead         VARCHAR(256)      NULL,
    groupWrite        VARCHAR(256)      NULL,
    isPublic          BIT               NOT NULL,
    isLocked          BIT               NOT NULL,
-   
+
+   delta             BIGINT            NULL,
    contentType       VARCHAR(100)      NULL,
    contentEncoding   VARCHAR(50)       NULL,
-   contentLength     BIGINT            DEFAULT 0 NULL,
-   
--- delta: internal column used when managing own metadata
-   delta             BIGINT            DEFAULT 0 NOT NULL,
-   contentMD5        BINARY(16)        NULL,
+   contentLength     BIGINT	       NULL,
+   contentMD5        binary(16)	       NULL,
 
 -- createdOn: internal column not referenced in NodeDAO
    createdOn         DATETIME          DEFAULT getDate(),
    lastModified      DATETIME          NOT NULL,
-
--- uri of the target of a LinkNode
+   
    link              TEXT              NULL
 )
 lock datarows
 with identity_gap = 512
 go
 
-create unique clustered index Node_parentID_name_index on Node(parentID, name)
-go
+-- this is needed in production so the link column (TEXT) does not 
+-- allocate a page for every row where it is null BUT you have to be DBO
+-- to issue this command so we don't enable it here
+--sp_chgattribute Node,"dealloc_first_txtpg",1
+--go
 
-alter table Node add
-constraint Node_pk primary key nonclustered (nodeID)
+create unique clustered index Node_parentID_name_index on Node(parentID, name)
 go
 
 print "create table NodeProperty ..."
@@ -119,30 +118,21 @@ go
 
 CREATE TABLE NodeProperty
 (
--- nodePropertyID is used by sybase replication and update trigger below
--- it is not used by any cadcVOS software at this time
-   nodePropertyID    BIGINT            IDENTITY,
    nodeID            BIGINT            NOT NULL,
    propertyURI       VARCHAR(256)      NOT NULL,
    propertyValue     VARCHAR(512)      NULL,
--- this is something we add to tables to make it easier to see when things change
--- see also the update trigger below
-   lastModified      DATETIME          DEFAULT getDate()
+
+   lastModified      DATETIME          DEFAULT getDate(),
+
+-- support replication with a fake primary key
+   _rep_support        bigint identity primary key nonclustered,
+   foreign key (nodeID) references Node (nodeID)
 )
 lock datarows
 with identity_gap = 512
 go
 
 create clustered index NodeProperty_nodeID_index on NodeProperty(nodeID,propertyURI)
-go
-
-alter table NodeProperty add constraint NodeProperty_pk
-primary key nonclustered (nodePropertyID)
-go
-
-alter table NodeProperty add
-constraint NodeProperty_fk foreign key (nodeID)
-references Node(nodeID)
 go
 
 
@@ -157,16 +147,12 @@ go
 
 create table DeletedNode
 (
-    nodeID        BIGINT       NOT NULL,
-    name              VARCHAR(276)      NOT NULL,
-    ownerID           VARCHAR(256)      NOT NULL,
-    lastModified  DATETIME     NOT NULL
+    nodeID        BIGINT        NOT NULL primary key clustered,
+    name          VARCHAR(276)  NOT NULL,
+    ownerID       VARCHAR(256)  NOT NULL,
+    lastModified  DATETIME      NOT NULL
 )
 lock datarows
-go
-
-alter table DeletedNode add
-constraint DeletedNode_pk primary key clustered (nodeID)
 go
 
 CREATE TRIGGER Node_delete_trig
@@ -176,8 +162,23 @@ CREATE TRIGGER Node_delete_trig
     BEGIN
         INSERT INTO DeletedNode (nodeID,name,ownerID,lastModified)
         (SELECT nodeID,name,ownerID,getdate() FROM deleted
-		WHERE type='D' and contentLength IS NOT NULL)
+		WHERE type='D' and (contentLength IS NOT NULL OR busyState='W'))
     END
 go
 
--- TODO: grant permissions to read and write to these tables
+-- when container nodes are deleted, they actuaslly get renamed and moved under this
+-- node. It will never show up via the web service since it is not public, but if the
+-- ownerID was valid that user could see it. The intent is that one implements an admin
+-- tool to come through here and delete everything (in batches) and the trigger above
+-- will strick DataNode(s) into the DeletedNode table for a second admin tool to clean up
+-- the stored bytes (files)
+print "creating DeletedNodes container..."
+go
+
+-- note: the ownerID and creatorID here should be an admin account and the values probably
+-- have to be a valid X500 principal (eg a Distinguished Name from an X509 cert). the DAO
+-- tests do not actually care but this node will be unreadable by an admin tool that cleans
+-- up the containers in here
+insert into Node (name,type,busyState,ownerID,creatorID,isPublic,isLocked,lastModified)
+values ('DeletedNodes','C','N','admin','admin',0,0,getdate())
+go

@@ -1793,7 +1793,7 @@ public class NodeDAO
     protected String getSelectNodePropertiesByID(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT nodePropertyID, propertyURI, propertyValue FROM ");
+        sb.append("SELECT propertyURI, propertyValue FROM ");
         sb.append(getNodePropertyTableName());
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
