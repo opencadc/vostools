@@ -191,6 +191,8 @@ public class DeleteNodeAction extends NodeAction
         throws AccessControlException, NodeNotFoundException,
             TransientException, NodeLockedException
     {
+        log.debug("checkDeletePermission: " + node.getUri().getURIObject().toString());
+        
         // check if the node is locked
         if (node.isLocked())
             throw new NodeLockedException(node.getUri().toString());
@@ -198,20 +200,30 @@ public class DeleteNodeAction extends NodeAction
         if (node instanceof ContainerNode)
         {
             ContainerNode container = (ContainerNode) node;
-            
-            nodePersistence.getChildren(container);
-            if (container.getNodes().size() > 0)
+            voSpaceAuthorizer.getWritePermission(container);
+                
+            Integer batchSize = new Integer(1000);
+            VOSURI startURI = null;
+            nodePersistence.getChildren(container, startURI, batchSize);
+            while ( !container.getNodes().isEmpty() )
             {
-                log.debug("Checking delete privilege on: " +
-                        container.getUri().getURIObject().toString());
-                voSpaceAuthorizer.getWritePermission(container);
                 for (Node child : container.getNodes())
                 {
                     checkDeletePermission(child);
+                    startURI = child.getUri();
+                }
+                // clear the children for garbage collection
+                container.getNodes().clear();
+                
+                // get next batch
+                nodePersistence.getChildren(container, startURI, batchSize);
+                if ( !container.getNodes().isEmpty() )
+                {
+                    Node n = container.getNodes().get(0);
+                    if ( n.getUri().equals(startURI) )
+                        container.getNodes().remove(0); // avoid recheck and infinite loop
                 }
             }
-            // clear the children for garbage collection
-            container.setNodes(new ArrayList<Node>());
         }
     }
 
