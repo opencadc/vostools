@@ -119,6 +119,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -378,6 +379,15 @@ public class NodeDAO
             loadSubjects(ret);
             return ret;
         }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + path, ex);
+            dirtyRead = null;
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + path, ex);
+            else
+                throw new RuntimeException("failed to get node: " + path, ex);
+        }
         catch(Throwable t)
         {
             log.error("rollback dirtyRead for node: " + path, t);
@@ -432,6 +442,15 @@ public class NodeDAO
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
             prof.checkpoint("commit.getProperties");
+        }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + node.getUri().getPath(), ex);
+            dirtyRead = null;
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + node.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + node.getUri().getPath(), ex);
         }
         catch(Throwable t)
         {
@@ -495,6 +514,14 @@ public class NodeDAO
             
             loadSubjects(nodes);
             addChildNodes(parent, nodes);
+        }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + parent.getUri().getPath(), ex);
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + parent.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), ex);
         }
         catch(Throwable t)
         {
@@ -573,6 +600,14 @@ public class NodeDAO
 
             loadSubjects(nodes);
             addChildNodes(parent, nodes);
+        }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + parent.getUri().getPath(), ex);
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + parent.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), ex);
         }
         catch(Throwable t)
         {
@@ -741,6 +776,14 @@ public class NodeDAO
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
             return node;
         }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + node.getUri().getPath(), ex);
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + node.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + node.getUri().getPath(), ex);
+        }
         catch(Throwable t)
         {
             log.error("rollback for node: " + node.getUri().getPath(), t);
@@ -832,6 +875,14 @@ public class NodeDAO
             }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + node.getUri().getPath(), ex);
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + node.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + node.getUri().getPath(), ex);
+        }
         catch(IllegalStateException ex)
         {
             log.debug(ex.toString());
@@ -912,6 +963,14 @@ public class NodeDAO
                 throw new IllegalStateException("setBusyState " + curState + " -> " + newState + " failed: " + node.getUri());
             commitTransaction();
             prof.checkpoint("commit.getSetBusyStateSQL");
+        }
+        catch(CannotCreateTransactionException ex)
+        {
+            log.error("failed to create transaction: " + node.getUri().getPath(), ex);
+            if (DBUtil.isTransientDBException(ex))
+                throw new TransientException("failed to get node: " + node.getUri().getPath(), ex);
+            else
+                throw new RuntimeException("failed to get node: " + node.getUri().getPath(), ex);
         }
         catch(IllegalStateException ex)
         {
