@@ -494,7 +494,8 @@ public class AuthenticationUtilTest
                     {
                             new Cookie("SOMECOOKIE", "SOMEVALUE"),
                             new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME,
-                                       "sessionID=AAABBB")
+//                                       "sessionID=AAABBB")
+                                       "AAABBB")
                     };
             final HttpServletRequest mockRequest =
                     createMock(HttpServletRequest.class);

@@ -60,8 +60,10 @@ public class SSOCookieManagerTest
     @Test
     public void parseCookieValue() throws Exception
     {
-        Cookie ck = new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME, "sessionID=AAABBB");
-        
+//        Cookie ck = new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME, "sessionID=AAABBB");
+        Cookie ck = new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME,
+                               "AAABBB");
+
         SSOCookieManager cm = new SSOCookieManager();
         
         CookiePrincipal cp = cm.createPrincipal(ck);

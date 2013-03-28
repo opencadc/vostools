@@ -69,15 +69,16 @@ public class SSOCookieManager
         }
         else
         {
-            if (value.startsWith("sessionID=")) 
-            {
-                sessionIDBuilder.append(value.split("=")[1]);
-            }
-            else
-            {
-                throw new IllegalArgumentException(
-                        "Cannot parse SSO cookie with value:" + value);
-            }
+            sessionIDBuilder.append(value);
+//            if (value.startsWith("sessionID="))
+//            {
+//                sessionIDBuilder.append(value.split("=")[1]);
+//            }
+//            else
+//            {
+//                throw new IllegalArgumentException(
+//                        "Cannot parse SSO cookie with value:" + value);
+//            }
         }
 
         return new CookiePrincipal(sessionIDBuilder.toString());
