@@ -72,6 +72,7 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,6 +111,8 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
         expect(mockVOS.getParentURI()).andReturn(mockParentVOS).once();
         expect(mockParentVOS.isRoot()).andReturn(false).once();
         expect(getMockNodeS().getParent()).andReturn(mockParentNode).once();
+        expect(getMockNodeS().getUri()).andReturn(mockVOS).once();
+        expect(mockVOS.getURIObject()).andReturn(new URI(vosURI)).anyTimes();
         expect(getMockNodeS().isLocked()).andReturn(false).once();
         //
         //expect(mockParentNode.getUri()).andReturn(mockParentVOS).anyTimes();
