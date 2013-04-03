@@ -71,7 +71,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
-import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
@@ -119,6 +118,10 @@ public class DeleteNodeAction extends NodeAction
             {
                 log.debug("Checking delete privilege on: " + parentURI);
                 voSpaceAuthorizer.getWritePermission(target.getParent());
+            }
+            catch (NodeLockedException e)
+            {
+                throw e;
             }
             catch (AccessControlException e)
             {
