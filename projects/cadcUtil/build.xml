@@ -117,6 +117,7 @@
             <test name="ca.nrc.cadc.util.ArrayUtilTest"/>
             <test name="ca.nrc.cadc.net.NetUtilTest"/>
             <test name="ca.nrc.cadc.util.Log4jInitTest" />
+            <test name="ca.nrc.cadc.util.ThrowableUtilTest" />
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
