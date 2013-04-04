@@ -93,24 +93,35 @@ public class Main
 
         // Cookie based authentication?
         final String ssoCookieStr = fixNull(argumentMap.getValue("ssocookie"));
+
         if (ssoCookieStr != null)
         {
-            final String ssoCookieDomain =
-                    fixNull(argumentMap.getValue("ssocookiedomain"));
-            if (ssoCookieDomain == null)
-            {
-                System.out.println("Missing ssocookiedomain argument...");
-                Main.usage();
-                System.exit(-1);
-            }
-            else
-            {
-                final SSOCookieCredential ssoCookieCredential =
-                        new SSOCookieCredential(
-                                SSOCookieManager.DEFAULT_SSO_COOKIE_NAME
-                                + "=\"" + ssoCookieStr + "\"", ssoCookieDomain);
-                subject.getPublicCredentials().add(ssoCookieCredential);
-            }
+
+              String ssoCookieDomain =
+                  fixNull(am.getValue("ssocookiedomain"));
+              if (ssoCookieDomain == null)
+              {   
+                  System.out.
+                  println("Missing ssocookiedomain argument...");
+                  Main.usage();
+                  System.exit(-1);
+              }
+              final String[] domains = ssoCookieDomain.split(",");
+              if (domains.length < 1)
+              {   
+                  System.out.
+                  println("Invalid ssocookiedomain argument: " + ssoCookieDomain);
+                  Main.usage();
+                  System.exit(-1);
+              }
+              for (String domain : domains)
+              {   
+                  SSOCookieCredential cred = new SSOCookieCredential(
+                      SSOCookieManager.DEFAULT_SSO_COOKIE_NAME + "=" +
+                              ssoCookieStr, domain.trim());
+                  subject.getPublicCredentials().add(cred);
+              }
+
         }
 
         final Boolean successfulStart =
