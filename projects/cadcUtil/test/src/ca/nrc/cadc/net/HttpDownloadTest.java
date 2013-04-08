@@ -642,7 +642,7 @@ public class HttpDownloadTest
                 dest.delete();
         }
     }
-    
+
     @Test
     public void testDownloadCookie() throws Exception
     {
@@ -671,6 +671,76 @@ public class HttpDownloadTest
             Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
             Assert.assertNotNull("content-md5 missing", dl.getContentMD5());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            if (dest != null)
+                dest.delete();
+        }
+    }
+    
+    
+    @Test
+    public void testDownloadCookieMultipleDomains() throws Exception
+    {
+        log.debug("TEST: testDownloadCookie");
+        URL src = privHttpURL;
+        File dest = new File(tmpDir, "privateFile");
+        try
+        {
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(false);
+
+            Subject s = new Subject();
+            s.getPublicCredentials().add(
+                    new SSOCookieCredential(
+                            "CADC_SSO=token=test-token--do-not-delete", 
+                            "cadc.hia.nrc.gc.ca"));
+            s.getPublicCredentials().add(
+                    new SSOCookieCredential(
+                            "CADC_SSO=token=test-token--do-not-delete", 
+                            "ccda.iha.cnrc.gc.ca"));
+            s.getPublicCredentials().add(
+                    new SSOCookieCredential(
+                            "CADC_SSO=username=cadcauthtest1|sessionID=132|token=test-token--do-not-delete", 
+                            "cadc-ccda.hia-iha.nrc-cnrc.gc.ca"));
+            Subject.doAs(s, new RunnableAction(dl));
+
+            Assert.assertNull("HttpDownload failed: " + dl.getThrowable(), dl.getThrowable());
+
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists after download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
+            Assert.assertNotNull("content-md5 missing", dl.getContentMD5());
+
+            //wrong domains
+            s = new Subject();
+            s.getPublicCredentials().add(
+                    new SSOCookieCredential(
+                            "CADC_SSO=token=test-token--do-not-delete", 
+                            "somedomain.com"));
+            Subject.doAs(s, new RunnableAction(dl));
+
+            Assert.assertNotNull("HttpDownload succeeded: " 
+                    + dl.getThrowable(), dl.getThrowable());
+            Assert.assertTrue("Unexpected exception: " 
+                    + dl.getThrowable().getClass(), 
+                    dl.getThrowable() instanceof AccessControlException);
+            Assert.assertTrue("Unexpected cause: " 
+                    + dl.getThrowable().getMessage(), 
+                    dl.getThrowable().getMessage().
+                    startsWith("authentication failed (401) Unauthorized:"));
+
+
         }
         catch (Exception unexpected)
         {
