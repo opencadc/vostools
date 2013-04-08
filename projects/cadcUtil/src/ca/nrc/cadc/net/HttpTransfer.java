@@ -655,13 +655,22 @@ public abstract class HttpTransfer implements Runnable
                     .getPublicCredentials(SSOCookieCredential.class);
             if ((cookieCreds != null) && (cookieCreds.size() > 0))
             {
-                // grab the first cookie (it should be only one anyways)
-                SSOCookieCredential cookieCred = cookieCreds.iterator().next();
-                if (conn.getURL().getHost().endsWith(cookieCred.getDomain()))
-                    conn.setRequestProperty("Cookie", cookieCred.getSsoCookieValue());
-                else
-                    log.debug("setRequestSSOCookie: domain mismatch - "
-                            + cookieCred.getDomain() + " vs " + conn.getURL().getHost());
+                // grab the first cookie that matches the domain
+                boolean found = false;
+                for (SSOCookieCredential cookieCred : cookieCreds)
+                {
+                    if (conn.getURL().getHost().endsWith(cookieCred.getDomain()))
+                    {
+                        conn.setRequestProperty("Cookie", cookieCred.getSsoCookieValue());
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    log.debug("setRequestSSOCookie: no cookie for domain: "
+                            + conn.getURL().getHost());
+                }
             }
             else
                 log.debug("setRequestSSOCookie: no cookie");
