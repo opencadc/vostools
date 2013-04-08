@@ -673,7 +673,9 @@ public abstract class HttpTransfer implements Runnable
                 }
             }
             else
+            {
                 log.debug("setRequestSSOCookie: no cookie");
+            }
         }
     }
 }

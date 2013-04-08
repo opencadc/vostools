@@ -69,11 +69,19 @@
 
 package ca.nrc.cadc.net;
 
+import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.util.Log4jInit;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+import sun.net.www.protocol.http.HttpURLConnection;
+
+import javax.security.auth.Subject;
+import java.net.URL;
+import java.security.PrivilegedAction;
+
 
 /**
  *
@@ -126,6 +134,48 @@ public class HttpTransferTest
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Test
+    public void setRequestSSOCookie() throws Exception
+    {
+        final HttpTransfer testSubject = new HttpTransfer()
+        {
+            @Override
+            public void run()
+            {
+
+            }
+        };
+
+        final Subject subject = new Subject();
+        subject.getPublicCredentials().add(
+                new SSOCookieCredential("CADC_SSO=VALUE_1", "en.host.com"));
+        subject.getPublicCredentials().add(
+                new SSOCookieCredential("CADC_SSO=VALUE_2", "fr.host.com"));
+        final URL testURL =
+                new URL("http://www.fr.host.com/my/path/to/file.txt");
+        final HttpURLConnection mockConnection =
+                EasyMock.createMock(HttpURLConnection.class);
+
+        EasyMock.expect(mockConnection.getURL()).andReturn(testURL).once();
+
+        mockConnection.setRequestProperty("Cookie", "CADC_SSO=VALUE_2");
+        EasyMock.expectLastCall().once();
+
+        EasyMock.replay(mockConnection);
+
+        Subject.doAs(subject, new PrivilegedAction<Object>()
+        {
+            @Override
+            public Object run()
+            {
+                testSubject.setRequestSSOCookie(mockConnection);
+                return null;
+            }
+        });
+
+        EasyMock.verify(mockConnection);
     }
 
     private class TestDummy extends HttpTransfer
