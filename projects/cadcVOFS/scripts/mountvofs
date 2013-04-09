@@ -424,11 +424,6 @@ class VOFS(LoggingMixIn, Operations):
 
         ## check that internally stored md5 is recent enough
         md5Row = self.get_md5_db(fname)
-        if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
-            self.update_md5_db(fname)
-
-        ## Check if the disk cache matches the vospace copy
-        md5Row = self.get_md5_db(fname)
         try:
             node = self.getNode(path)
         except Exception as e:
@@ -558,7 +553,6 @@ class VOFS(LoggingMixIn, Operations):
                 wrote = wrote + len(buf)
             os.fsync(wh)
             logging.debug("Wrote: %d" % (wrote))
-            self.update_md5_db(self.fh[fh]['name'])
             vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
             cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
             if vosMD5 != cacheMD5['md5']:
@@ -580,6 +574,8 @@ class VOFS(LoggingMixIn, Operations):
 
     def get_md5_db(self,fname):
         """Get the MD5 for this fname from the SQL cache"""
+        if not os.access(fname,os.R_OK):
+            raise FuseOSError(EACCES)
         sqlConn=sqlite3.connect(self.cache_db)
         sqlConn.row_factory = sqlite3.Row
         cursor= sqlConn.cursor()
@@ -587,6 +583,9 @@ class VOFS(LoggingMixIn, Operations):
         md5Row=cursor.fetchone()
         cursor.close()
         sqlConn.close()
+	if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
+            self.update_md5_db(fname)
+            return self.get_md5_db(fname)
         return md5Row
 
     def delete_md5_db(self,fname):
@@ -604,22 +603,29 @@ class VOFS(LoggingMixIn, Operations):
     def update_md5_db(self,fname):
         """Update a record in the cache MD5 database"""
         import hashlib
-        md5=hashlib.md5()
-        r=open(fname,'r')
-        while True:
-            buf=r.read(READBUF)
-            if len(buf)==0:
-                break
-            md5.update(buf)
-        r.close()
-
+	st_mtime_end = None
+	st_mtime_start = os.stat(fname).st_mtime
+        ## make sure the file doesn't change while were computing the MD5
+	while st_mtime_end != st_mtime_start:
+            md5 = hashlib.md5()  
+	    ### get the modifcation time prior to reading the file
+            st_mtime_start = os.stat(fname).st_mtime
+            r=open(fname,'r')
+            while True:
+                buf=r.read(READBUF)
+                if len(buf)==0:
+                    break
+                md5.update(buf)
+            r.close()
+	    ### now get mtime again
+            st_mtime_end = os.stat(fname).st_mtime
         ## UPDATE the MD5 database
         sqlConn=sqlite3.connect(self.cache_db)
         sqlConn.row_factory = sqlite3.Row
         cursor=sqlConn.cursor()
         cursor.execute("DELETE FROM md5_cache WHERE fname = ?", (fname,))
         if md5 is not None:
-            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5.hexdigest(), os.stat(fname).st_mtime))
+            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5.hexdigest(), st_mtime_end))
         sqlConn.commit()
         cursor.close()
         sqlConn.close()
@@ -678,11 +684,6 @@ class VOFS(LoggingMixIn, Operations):
         if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ):
             
             ## check if the cache MD5 is up-to-date
-            md5Row = self.get_md5_db(self.fh[fh]['name'])
-            if md5Row is None or md5Row['st_mtime'] < os.stat(self.fh[fh]['name']).st_mtime:
-                self.update_md5_db(self.fh[fh]['name'])
-
-            ## now compare the cache MD5 to the VOSpace value
             md5Row = self.get_md5_db(self.fh[fh]['name'])
             voMD5 = self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
             if md5Row['md5'] != voMD5:
@@ -851,9 +852,6 @@ class VOFS(LoggingMixIn, Operations):
         ## but don't use standard read since we only want at most 'length' of this file
         if length > 0 :
             voMD5  = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
-            if cacheMD5 is None :
-                self.update_md5_db(self.fh[fh]['name'])
             cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
             if not self.fh[fh].get('cached',False) and ( cacheMD5 is None or cacheMD5['md5'] != voMD5) : 
                 ## cache file  (really we don't need the entire file, just upto length
