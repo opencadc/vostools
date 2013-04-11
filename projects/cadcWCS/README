@@ -1,0 +1,10 @@
+
+The cadCWCS library is the java interface to wcsLibJNI which is a thing transaltion layer
+on top of wcslib (http://www.atnf.csiro.au/people/mcalabre/WCS/). This library can be built
+on it's own but testing and running requires a functioning build of wcsLibJNI (also in OpenCADC)
+which in turn requires wvslib from the above URL.
+
+The header file in build/tmp is generated and should be identical to the wcslib.h file in 
+wcsLibJNI. However, instead of a build dependency we simply copy the generated header from 
+here and commit it to wcsLibJNI whenever it changes.
+

@@ -1,0 +1,10 @@
+Native libraries requied to run (test) cadcWCS
+====================================================
+
+Name in build.xml    Versioned library       Project URL
+-----------------    --------------------    -----------
+                     wcslib-4.7              http://www.atnf.csiro.au/people/mcalabre/WCS/
+                     wcsLibJNI               http://code.google.com/p/opencadc/
+
+
+
