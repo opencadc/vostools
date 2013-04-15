@@ -100,6 +100,7 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
@@ -119,7 +120,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
-import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -1956,18 +1956,31 @@ public class NodeDAO
         List<String> sql = new ArrayList<String>();
         Date now = new Date();
         
-        // update 1 adjusts the child node size
+        // update 1 either adjusts the date (for a container node) or
+        // locks the child (for a data node)
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" SET contentLength = coalesce(contentLength, 0) + coalesce(delta, 0)");
-        if (NODE_TYPE_CONTAINER.equals(propagation.getChildType()))
+        
+        if (NODE_TYPE_DATA.equals(propagation.getChildType()))
+        {
+            // set the type equal to the existing type (no-op lock)
+            sb.append(" SET type='");
+            sb.append(NODE_TYPE_DATA);
+            sb.append("'");
+        }
+        else if (NODE_TYPE_CONTAINER.equals(propagation.getChildType()))
         {
             // tweak the date if a container node
-            sb.append(", lastModified = '");
+            sb.append(" SET lastModified = '");
             sb.append(dateFormat.format(now));
             sb.append("'");
         }
+        else
+        {
+            throw new IllegalStateException("Wrong node type for delta application.");
+        }
+        
         sb.append(" WHERE nodeID = ");
         sb.append(propagation.getChildID());
         if (propagation.getParentID() == null)
