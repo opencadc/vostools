@@ -1956,8 +1956,8 @@ public class NodeDAO
         List<String> sql = new ArrayList<String>();
         Date now = new Date();
         
-        // update 1 either adjusts the date (for a container node) or
-        // locks the child (for a data node)
+        // update 1 adjusts the conentLength and date.  for data nodes, the
+        // child is only locked.
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
@@ -1965,14 +1965,16 @@ public class NodeDAO
         if (NODE_TYPE_DATA.equals(propagation.getChildType()))
         {
             // set the type equal to the existing type (no-op lock)
-            sb.append(" SET type='");
+            sb.append(" SET type = '");
             sb.append(NODE_TYPE_DATA);
             sb.append("'");
         }
         else if (NODE_TYPE_CONTAINER.equals(propagation.getChildType()))
         {
-            // tweak the date if a container node
-            sb.append(" SET lastModified = '");
+            // apply the delta to the contentLength
+            sb.append(" SET contentLength = coalesce(contentLength, 0) + coalesce(delta, 0),");
+            // tweak the date
+            sb.append(" lastModified = '");
             sb.append(dateFormat.format(now));
             sb.append("'");
         }
