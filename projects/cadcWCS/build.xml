@@ -105,18 +105,18 @@
 
     <!-- Library path for installed testing, T is the target architecture: if you just have a 'lib' dir then
          make up a value for T and make a symlink so this path below exists and contains wcsLibJNI -->
-    <property name="lib.path" value="${env.CADC_PREFIX}/lib.${T}" />
+    <property name="lib.path" value="${env.CADC_PREFIX}/lib.${env.T}" />
 
     <!-- Run the all test methods -->
     <target name="test" depends="compile-test">
-        <java classpath="${build}/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
+        <java classpath="${build}/class:${build}/test/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
             <jvmarg value="-Djava.library.path=${lib.path}"/>
         </java>
     </target>
 
     <!-- Only run the wcstest method -->
     <target name="test-wcstest" depends="compile-test">
-        <java classpath="${build}/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
+        <java classpath="${build}/class:${build}/test/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
             <jvmarg value="-Djava.library.path=${lib.path}"/>
             <arg value="wcstest"/>
         </java>
@@ -124,7 +124,7 @@
 
     <!-- Only run the translate method -->
     <target name="test-translate" depends="compile-test">
-        <java classpath="${build}/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
+        <java classpath="${build}/class:${build}/test/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
             <jvmarg value="-Djava.library.path=${lib.path}"/>
             <arg value="translate"/>
         </java>
@@ -132,7 +132,7 @@
 
     <!-- Only run the vertices method -->
     <target name="test-vertices" depends="compile-test">
-        <java classpath="${build}/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
+        <java classpath="${build}/class:${build}/test/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
             <jvmarg value="-Djava.library.path=${lib.path}"/>
             <arg value="vertices"/>
         </java>
@@ -140,11 +140,10 @@
 
     <!-- Only run the pix2sky method -->
     <target name="test-pix2sky" depends="compile-test">
-        <java classpath="${build}/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
+        <java classpath="${build}/class:${build}/test/class" classname="ca.nrc.cadc.wcs.TestWCSLib" failonerror="true" fork="true">
             <jvmarg value="-Djava.library.path=${lib.path}"/>
             <arg value="pix2sky"/>
         </java>
     </target>
 
-    <import file="build.extras" optional="true" />
 </project>
