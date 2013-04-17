@@ -69,35 +69,36 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.vos.Direction;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.TransferParsingException;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.xml.XmlUtil;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
-import java.net.URL;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
-import org.jdom.Namespace;
-import static org.junit.Assert.*;
+import org.jdom2.JDOMException;
+import org.jdom2.Namespace;
 import org.xml.sax.SAXException;
+
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.xml.XmlUtil;
+
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Base class for testing Transfer resources.

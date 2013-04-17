@@ -146,6 +146,9 @@ public class MoveContainerNodeTest extends VOSTransferTest
             Transfer transfer = new Transfer(targetNode.sampleNode.getUri(), destinationNode.sampleNode.getUri(), false);
             TransferResult result = doTransfer(transfer);
             
+            // Wait for job to complete
+            Thread.sleep(5000);
+            
             // Phase should be COMPLETED
             assertEquals("Phase should be COMPLETED", ExecutionPhase.COMPLETED, result.job.getExecutionPhase());
 
@@ -228,6 +231,9 @@ public class MoveContainerNodeTest extends VOSTransferTest
             // Do the move without LinkNodes in the paths.
             Transfer transfer = new Transfer(targetNode.sampleNodeWithLink.getUri(), destinationNode.sampleNodeWithLink.getUri(), false);
             TransferResult result = doTransfer(transfer);
+            
+            // Wait for job to complete
+            Thread.sleep(5000);
 
             // If the service supports LinkNodes and it resolves parent LinkNodes.
             if (resolvePathNodes)

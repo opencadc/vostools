@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;

@@ -94,7 +94,7 @@
 
 
     <property name="cadc" value="${cadcUtil}:${cadcUWS}:${cadcVOS}:${cadcRegistryClient}" />
-    <property name="external" value="${ext.lib}/httpunit.jar:${ext.lib}/jdom.jar:${ext.lib}/junit.jar:${ext.lib}/log4j.jar:${ext.lib}/xmlunit.jar" />
+    <property name="external" value="${ext.lib}/httpunit.jar:${ext.lib}/jdom2.jar:${ext.lib}/junit.jar:${ext.lib}/log4j.jar:${ext.lib}/xmlunit.jar" />
 
     <property name="jars" value="${cadc}:${external}" />
 
