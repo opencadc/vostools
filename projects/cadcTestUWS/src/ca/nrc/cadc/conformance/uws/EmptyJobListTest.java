@@ -69,16 +69,19 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebResponse;
 import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.junit.Assert;
 import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Test that the /joblist resource appears to be empty (no jobs). This test is

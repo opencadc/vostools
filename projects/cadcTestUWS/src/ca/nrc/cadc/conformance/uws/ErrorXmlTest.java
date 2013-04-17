@@ -76,9 +76,9 @@ import static org.junit.Assert.fail;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.junit.Test;
 
 import com.meterware.httpunit.PostMethodWebRequest;

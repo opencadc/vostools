@@ -69,17 +69,18 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import org.apache.log4j.Level;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.input.SAXBuilder;
+import org.jdom2.input.SAXBuilder;
 import org.junit.Before;
+
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * Abstract class for UWS XML job test.

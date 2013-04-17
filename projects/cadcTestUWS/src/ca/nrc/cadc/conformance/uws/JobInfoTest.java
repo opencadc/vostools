@@ -69,21 +69,27 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
-import java.io.StringWriter;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
 import java.io.PrintWriter;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebResponse;
+import java.io.StringWriter;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.junit.Assert;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Test the /joblist and /joblist/jobid resources handling of POSTed XML into the JobInfo.

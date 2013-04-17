@@ -69,10 +69,23 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
+import org.junit.Assert;
+import org.junit.Test;
+import org.xml.sax.SAXException;
 
 import ca.nrc.cadc.util.Log4jInit;
 
@@ -81,18 +94,6 @@ import com.meterware.httpunit.HttpNotFoundException;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.util.List;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
-import org.junit.Assert;
-import org.junit.Test;
-import org.xml.sax.SAXException;
-
-import static org.junit.Assert.*;
 
 /**
  * Test the /joblist/jobid resource.
