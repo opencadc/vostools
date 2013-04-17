@@ -84,8 +84,8 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -96,6 +96,7 @@ import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.util.XmlUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.LinkNode;
@@ -107,7 +108,6 @@ import ca.nrc.cadc.vos.StructuredDataNode;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  *

@@ -83,13 +83,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.Namespace;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.Namespace;
 
+import ca.nrc.cadc.uws.util.XmlUtil;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * Constructs a Node from an XML source. This class is not thread safe but it is

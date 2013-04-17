@@ -83,7 +83,7 @@ import java.util.Map;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
+import org.jdom2.JDOMException;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpPost;
@@ -95,7 +95,6 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
 
 /**

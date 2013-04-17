@@ -71,7 +71,7 @@ package ca.nrc.cadc.vos.server;
 import java.util.Collection;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
+import org.jdom2.Element;
 
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.DataNode;

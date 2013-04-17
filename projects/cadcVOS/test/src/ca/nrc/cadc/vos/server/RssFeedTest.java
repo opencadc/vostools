@@ -69,20 +69,27 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -95,13 +102,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
-import java.io.ByteArrayOutputStream;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.junit.Assert;
 
 /**
  *
