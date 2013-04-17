@@ -67,51 +67,125 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws.web.restlet.representation;
+package ca.nrc.cadc.uws;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
-import org.jdom2.Document;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-import org.restlet.data.MediaType;
-import org.restlet.representation.OutputRepresentation;
 
 /**
- * Representation for a JDOM Document.
+ * Written to support the streaming of XML job list data.
+ * 
+ * @author majorb
  *
- * @author jburke
  */
-public class JDOMRepresentation extends OutputRepresentation
+public class JobListXMLOutputter //extends XMLOutputter
 {
-    private Document document;
-
-    /**
-     * Constructor.
-     *
-     * @param mediaType The representation's media type.
-     * @param document JDOM document.
-     */
-    public JDOMRepresentation(MediaType mediaType, Document document)
-    {
-        super(mediaType);
-        this.document = document;
-    }
-
-    /**
-     * Write the Document to the OutputStream.
-     * 
-     * @param out The OutputStream to write to.
-     * @throws IOException if there is a problem writing the Document.
-     */
-    @Override
-    public void write(OutputStream out)
-        throws IOException
-    {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(document, out);
-    }
+//    @SuppressWarnings("unused")
+//    private static Logger log = Logger.getLogger(JobListXMLOutputter.class);
+//
+//    // XML declaration.
+//    private static final String XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+//
+//    // Line separator.
+//    private static final String NEW_LINE = System.getProperty("line.separator");
+//    
+//    private Iterator<Job> jobs;
+//
+//    // Indicates an error occurred writing results.
+//    protected boolean error;
+//
+//    /**
+//     * Default Constructor.
+//     */
+//    public JobListXMLOutputter(Iterator<Job> jobs)
+//    {
+//        super();
+//        this.jobs = jobs;
+//    }
+//
+//    /**
+//     * Stream the job list XML to the writer.
+//     */
+//    public void output(Writer out) throws IOException
+//    {
+//        NamespaceStack myStack = new MyNamespaceStack();
+//        
+//        out.write(XML_DECLARATION);
+//        out.write(NEW_LINE);
+//        
+//        Element root = getRootElement();
+//        super.printElement(out, root, 1, myStack);
+//        
+//        Job next = null;
+//        Element nextElement = null;
+//        
+//        while (jobs.hasNext())
+//        {
+//            next = jobs.next();
+//            nextElement = this.getShortJobDescription(next);
+//            root.addContent(nextElement);
+//            super.printElement(out, nextElement, 1, myStack);
+//            out.flush();
+//        }
+//        
+//        out.write("\n</uws:jobs>");
+//        out.flush();
+//    }
+//    
+//    public Element getRootElement()
+//    {
+//        Element root = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
+//        root.addNamespaceDeclaration(UWS.NS);
+//        root.addNamespaceDeclaration(UWS.XLINK_NS);
+//        return root;
+//    }
+//
+//    /**
+//     * Create the XML for a short job description.
+//     * @param job
+//     * @return
+//     */
+//    public Element getShortJobDescription(Job job)
+//    {
+//        Element shortJobDescription = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
+//        //shortJobDescription.addNamespaceDeclaration(UWS.NS);
+//        //shortJobDescription.addNamespaceDeclaration(UWS.XLINK_NS);
+//
+//        shortJobDescription.addContent(getJobId(job));
+//        shortJobDescription.addContent(getPhase(job));
+//
+//        return shortJobDescription;
+//    }
+//    
+//
+//    /**
+//     * Get an Element representing the Job jobId.
+//     *
+//     * @return The Job jobId Element.
+//     */
+//    public Element getJobId(Job job)
+//    {
+//        Element element = new Element(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
+//        element.addContent(job.getID());
+//        return element;
+//    }
+//    
+//
+//    /**
+//     * Get an Element representing the Job phase.
+//     *
+//     * @return The Job phase Element.
+//     */
+//    public Element getPhase(Job job)
+//    {
+//        Element element = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
+//        element.addContent(job.getExecutionPhase().toString());
+//        return element;
+//    }
+//
+//    protected class MyNamespaceStack extends NamespaceStack
+//    {
+//        MyNamespaceStack()
+//        {
+//        }
+//    }
 
 }

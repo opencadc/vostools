@@ -90,14 +90,14 @@
     <property name="cadcLog"            value="${lib}/cadcLog.jar" />
 
     <property name="fileupload"         value="${ext.lib}/commons-fileupload.jar" />
-    <property name="jdom"               value="${ext.lib}/jdom.jar" />
+    <property name="jdom2"              value="${ext.lib}/jdom2.jar" />
     <property name="log4j"              value="${ext.lib}/log4j.jar" />
     <property name="restlet"            value="${ext.lib}/org.restlet.jar" />
     <property name="restlet-fileupload" value="${ext.lib}/org.restlet.ext.fileupload.jar" />
     <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
     <property name="spring"             value="${ext.lib}/spring.jar" />
     <property name="cadc"               value="${cadcUtil}:${cadcLog}" />
-    <property name="external"           value="${fileupload}:${jdom}:${log4j}:${restlet}:${restlet-fileupload}:${servlet-api}:${spring}" />
+    <property name="external"           value="${fileupload}:${jdom2}:${log4j}:${restlet}:${restlet-fileupload}:${servlet-api}:${spring}" />
 
     <property name="jars"               value="${cadc}:${external}" />
 
@@ -173,6 +173,7 @@
             </classpath>
 
             <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
+            <test name="ca.nrc.cadc.uws.JobListReaderWriterTest" />
 
             <formatter type="plain" usefile="false" />
         </junit>

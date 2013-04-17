@@ -79,7 +79,7 @@ import java.util.Map;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
+import org.jdom2.Document;
 import org.restlet.Request;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;

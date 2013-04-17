@@ -71,8 +71,9 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 
+import org.jdom2.Document;
+
 import ca.nrc.cadc.uws.JobWriter;
-import org.jdom.Document;
 
 
 /**

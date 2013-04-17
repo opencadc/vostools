@@ -3,7 +3,7 @@
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2009.                            (c) 2009.
+*  (c) 2011.                            (c) 2011.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,56 +62,114 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 5 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws.web.restlet.representation;
+package ca.nrc.cadc.uws.util;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.net.URL;
+import java.util.Map;
+import java.util.MissingResourceException;
 
+import org.apache.log4j.Logger;
 import org.jdom2.Document;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-import org.restlet.data.MediaType;
-import org.restlet.representation.OutputRepresentation;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.input.sax.XMLReaderSAX2Factory;
 
 /**
- * Representation for a JDOM Document.
  *
- * @author jburke
+ * @author pdowler
  */
-public class JDOMRepresentation extends OutputRepresentation
+public final class XmlUtil 
 {
-    private Document document;
-
+    private static final Logger log = Logger.getLogger(XmlUtil.class);
+    
+    private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    private static final String GRAMMAR_POOL = "org.apache.xerces.parsers.XMLGrammarCachingConfiguration";
+    
+    private XmlUtil() { }
+    
     /**
-     * Constructor.
-     *
-     * @param mediaType The representation's media type.
-     * @param document JDOM document.
-     */
-    public JDOMRepresentation(MediaType mediaType, Document document)
-    {
-        super(mediaType);
-        this.document = document;
-    }
-
-    /**
-     * Write the Document to the OutputStream.
+     * Build a XML Document from string, without schema validation
      * 
-     * @param out The OutputStream to write to.
-     * @throws IOException if there is a problem writing the Document.
+     * @param xml
+     * @return
+     * @throws IOException 
+     * @throws JDOMException 
      */
-    @Override
-    public void write(OutputStream out)
-        throws IOException
+    public static Document buildDocument(String xml) throws JDOMException, IOException
     {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(document, out);
+        SAXBuilder parser = new SAXBuilder(PARSER, false);
+        return parser.build(new StringReader(xml));
     }
+    
+    public static Document buildDocument(Reader reader, Map<String, String> schemaMap)
+        throws IOException, JDOMException
+    {
+        SAXBuilder sb = createBuilder(schemaMap);
+        return sb.build(reader);
+    }
+    
+    public static String getResourceUrlString(String resourceFileName, Class runningClass)
+    {
+        URL url = runningClass.getClassLoader().getResource(resourceFileName);
+        if (url == null)
+            throw new MissingResourceException("Resource not found: " + resourceFileName, runningClass.getName(), resourceFileName);
+        return url.toExternalForm();
+    }
+    
+    public static SAXBuilder createBuilder(Map<String, String> schemaMap)
+    {
+        long start = System.currentTimeMillis();
+        boolean schemaVal = (schemaMap != null);
+        String schemaResource;
+        String space = " ";
+        StringBuilder sbSchemaLocations = new StringBuilder();
+        if (schemaVal)
+        {
+            log.debug("schemaMap.size(): " + schemaMap.size());
+            for (String schemaNSKey : schemaMap.keySet())
+            {
+                schemaResource = (String) schemaMap.get(schemaNSKey);
+                sbSchemaLocations.append(schemaNSKey).append(space).append(schemaResource).append(space);
+            }
+            // enable xerces grammar caching
+            System.setProperty("org.apache.xerces.xni.parser.XMLParserConfiguration", GRAMMAR_POOL);
+        }
 
+        XMLReaderSAX2Factory factory = new XMLReaderSAX2Factory(schemaVal, PARSER);
+        SAXBuilder builder = new SAXBuilder(factory);
+        if (schemaVal)
+        {
+            builder.setFeature("http://xml.org/sax/features/validation", true);
+            builder.setFeature("http://apache.org/xml/features/validation/schema", true);
+            if (schemaMap.size() > 0)
+            {
+                builder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                    sbSchemaLocations.toString());
+            }
+        }
+        long finish = System.currentTimeMillis();
+        log.debug("SAXBuilder in " + (finish - start) + "ms");
+        return builder;
+    }
+    
+    public static Document validateXml(String xml, Map<String, String> schemaMap)
+            throws IOException, JDOMException
+    {
+        log.debug("validateXml:\n" + xml);
+        return validateXml(new StringReader(xml), schemaMap);
+    }
+    
+    public static Document validateXml(Reader reader, Map<String, String> schemaMap) throws IOException, JDOMException
+    {
+        SAXBuilder builder = createBuilder(schemaMap);
+        return builder.build(reader);
+    }
 }

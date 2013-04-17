@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.uws;
 
-import org.jdom.Namespace;
+import org.jdom2.Namespace;
 
 /**
  * Holder of commonly used constants.
@@ -85,5 +85,6 @@ public class UWS
     public static final Namespace NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
     public static final Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
     public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    
     
 }

@@ -38,7 +38,7 @@ import java.security.PrivilegedAction;
 
 import javax.security.auth.Subject;
 
-import org.jdom.Document;
+import org.jdom2.Document;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 

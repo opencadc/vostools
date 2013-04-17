@@ -76,7 +76,7 @@ import java.security.PrivilegedActionException;
 
 import javax.security.auth.Subject;
 
-import org.jdom.Document;
+import org.jdom2.Document;
 import org.restlet.data.MediaType;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;

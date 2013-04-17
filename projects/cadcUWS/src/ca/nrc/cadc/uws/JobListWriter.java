@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,51 +67,123 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws.web.restlet.representation;
+package ca.nrc.cadc.uws;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.Iterator;
 
+import org.apache.log4j.Logger;
 import org.jdom2.Document;
+import org.jdom2.Element;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
-import org.restlet.data.MediaType;
-import org.restlet.representation.OutputRepresentation;
 
 /**
- * Representation for a JDOM Document.
- *
- * @author jburke
+ * Writes a JobList as XML.
+ * 
+ * @author majorb
  */
-public class JDOMRepresentation extends OutputRepresentation
+public class JobListWriter
 {
-    private Document document;
+    private static Logger log = Logger.getLogger(JobListWriter.class);
 
-    /**
-     * Constructor.
-     *
-     * @param mediaType The representation's media type.
-     * @param document JDOM document.
-     */
-    public JDOMRepresentation(MediaType mediaType, Document document)
+    public JobListWriter() 
     {
-        super(mediaType);
-        this.document = document;
     }
-
+    
     /**
-     * Write the Document to the OutputStream.
-     * 
-     * @param out The OutputStream to write to.
-     * @throws IOException if there is a problem writing the Document.
+     * Write to root Element to a writer.
+     *
+     * @param root Root Element to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
      */
-    @Override
-    public void write(OutputStream out)
+    protected void writeDocument(Element root, Writer writer)
         throws IOException
     {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(document, out);
+        Document document = new Document(root);
+        outputter.output(document, writer);
     }
 
+    /**
+     * Write the job list to an OutputStream.
+     *
+     * @param job
+     * @param out OutputStream to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void write(Iterator<Job> jobs, OutputStream out)
+        throws IOException
+    {
+        write(jobs, new OutputStreamWriter(out));
+    }
+
+    /**
+     * Write the job list to our streaming xml writer.
+     *
+     * @param job
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void write(Iterator<Job> jobs, Writer writer)
+        throws IOException
+    {
+        Element root = getRootElement(jobs);
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        Document document = new Document(root);
+        outputter.output(document, writer);
+    }
+    
+    public Element getRootElement(Iterator<Job> jobs)
+    {
+        Element root = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
+        root.addNamespaceDeclaration(UWS.NS);
+        root.addNamespaceDeclaration(UWS.XLINK_NS);
+        
+        Job next = null;
+        Element nextElement = null;
+        
+        while (jobs.hasNext())
+        {
+            next = jobs.next();
+            nextElement = getShortJobDescription(next);
+            root.addContent(nextElement);
+        }
+        
+        return root;
+    }
+
+    /**
+     * Create the XML for a short job description.
+     * @param job
+     * @return
+     */
+    public Element getShortJobDescription(Job job)
+    {
+        Element shortJobDescription = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
+        shortJobDescription.setAttribute("id", job.getID());
+        shortJobDescription.addContent(getPhase(job));
+        return shortJobDescription;
+    }
+
+    /**
+     * Get an Element representing the Job phase.
+     *
+     * @return The Job phase Element.
+     */
+    private Element getPhase(Job job)
+    {
+        Element element = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
+        element.addContent(job.getExecutionPhase().toString());
+        return element;
+    }
+    
+
 }
+    

@@ -72,11 +72,15 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import java.io.IOException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Iterator;
 
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Post;
@@ -84,6 +88,8 @@ import org.restlet.resource.Post;
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobListWriter;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 
 
@@ -159,11 +165,59 @@ public class AsynchResource extends UWSResource
      * @param document The Document to build up.
      * @throws java.io.IOException If something went wrong or the XML cannot be
      *                             built.
+     * @throws PrivilegedActionException 
      */
     
     @Override
     protected void buildXML(final Document document) throws IOException
     {
-        throw new AccessControlException("permission denied: job list");
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            doBuildXML(document);
+        }
+
+        try
+        {
+            Subject.doAs(subject,
+                new PrivilegedExceptionAction<Object>()
+                {
+                    public Object run() throws Exception
+                    {
+                        doBuildXML(document);
+                        return null;
+                    }
+                });
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw new IOException(e.getCause());
+        }
+    }
+    
+    private void doBuildXML(final Document document) throws IOException
+    {
+        try
+        {
+            Iterator<Job> jobs = getJobManager().iterator();
+            JobListWriter jobListWriter = new JobListWriter();
+            Element root = jobListWriter.getRootElement(jobs);
+            document.setRootElement(root);
+        }
+        catch (UnsupportedOperationException e)
+        {
+            // not implemented--turn into a 'Forbidden'
+            throw new AccessControlException("permission denied: job list");
+        }
+        catch (TransientException e)
+        {
+            LOGGER.error(e);
+            generateErrorRepresentation(Status.SERVER_ERROR_SERVICE_UNAVAILABLE, "Transient error.");
+        }
+        catch (JobPersistenceException e)
+        {
+            LOGGER.error(e);
+            generateErrorRepresentation(Status.SERVER_ERROR_INTERNAL, "Internal error.");
+        }
     }
 }

@@ -70,21 +70,21 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import java.security.PrivilegedAction;
+
+import javax.security.auth.Subject;
+
+import org.jdom2.Document;
+import org.restlet.data.Form;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Post;
+
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.JobWriter;
-import org.restlet.resource.Post;
-import org.restlet.representation.Representation;
-import org.restlet.data.Form;
-
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
-
-import java.security.PrivilegedAction;
-
-import javax.security.auth.Subject;
-import org.jdom.Document;
 
 /**
  * Resource to handle the Parameter List.
