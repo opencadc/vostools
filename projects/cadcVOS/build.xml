@@ -107,7 +107,7 @@
     <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.servlet}:${ext.jdom2}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}:${cadcLog}" />
 
     <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
-    <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
+    <property name="client.external.jars" value="${ext.jdom2}:${ext.xerces}:${ext.log4j}" />
     <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
     
     <target name="build" depends="compile,resources,manifest">
