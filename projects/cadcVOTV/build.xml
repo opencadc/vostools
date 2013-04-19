@@ -21,35 +21,10 @@ server, you can set the PROXY_URL filter token value to "".
   <!-- In general the user should not modify values below here -->
   <property name="proj_version" value="1.0"/>
   <property name="srcdir" value="./src" />
-  <property name="jsdir" value="${srcdir}/javascript"/>
-  <property name="htmldir" value="${srcdir}/html"/>
-  <property name="imgdir" value="${srcdir}/images"/>
-  <property name="cssdir" value="${srcdir}/css"/>
   <property name="testdir" value="./test"/>
 
-  <target name="install" depends="clean">
-    <copy todir="${dest_js}" filtering="true">
-      <fileset dir="${jsdir}">
-        <include name="slick*.js"/>
-        <include name="cadc*.js"/>
-        <include name="jquery*.js" />
-      </fileset>
-    </copy>
-
-    <copy todir="${dest_html}">
-      <fileset dir="${htmldir}" includes="*"/>
-    </copy>
-
-    <copy todir="${dest_img}">
-      <fileset dir="${imgdir}" includes="**/*"/>
-    </copy>
-
-    <copy todir="${dest_css}">
-      <fileset dir="${cssdir}" includes="*"/>
-    </copy>
-
+  <target name="install">
     <tstamp/>
-
     <touch file="${proj_root}/LASTINSTALL.${DSTAMP}_${TSTAMP}_v${proj_version}"/>
   </target>
 
@@ -57,7 +32,18 @@ server, you can set the PROXY_URL filter token value to "".
       
     <!-- QUnit Javascript Unit Tests -->
     <echo message="Executing QUnit Javascript Unit Tests..."/>
-    
+
+    <echo message="VOTable Tests"/>
+    <apply executable="${testdir}/phantomjs" failonerror="true">
+      <arg value="${testdir}/qunit-runner.js" />
+      <arg line="--qunit ${testdir}/qunit-1.10.0.js --package ${testdir}/src/votable/package.json --tests ${testdir}/src/votable/cadc.votable.js --junit ${testdir}/src/votable/qunit-results.xml" />
+      <fileset dir="${testdir}/src/votable">
+        <include name="cadc.votable.js" />
+        <exclude name="package.json" />
+      </fileset>
+      <srcfile/>
+    </apply>
+
     <echo message="CADC VOTV Search Filter tests"/>
     <apply executable="${testdir}/phantomjs" failonerror="true">
       <arg value="${testdir}/qunit-runner.js" />
@@ -80,9 +66,5 @@ server, you can set the PROXY_URL filter token value to "".
       <srcfile/>
     </apply>
       
-  </target>
-
-  <target name="clean">
-    <delete dir="${dest_root}"/>
   </target>
 </project>

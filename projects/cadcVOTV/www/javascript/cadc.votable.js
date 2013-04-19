@@ -351,12 +351,18 @@ cadc.vot.VOTable.Cell.prototype.getField = function()
   return this.field;
 };
 
-cadc.vot.VOTable.TableData = function(__rows)
+cadc.vot.VOTable.TableData = function(__rows, _longestValues)
 {
   this.rows = __rows;
+  this.longestValues = _longestValues;
 };
 
 cadc.vot.VOTable.TableData.prototype.getRows = function()
 {
   return this.rows;
+};
+
+cadc.vot.VOTable.TableData.prototype.getLongestValueLength = function(_fieldID)
+{
+  return this.longestValues[_fieldID];
 };

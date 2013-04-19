@@ -245,6 +245,14 @@ cadc.vot.XMLBuilder.prototype.build = function()
 
     var resourceTableFieldDOM = this.evaluateXPath(resourceTableDOM, "FIELD");
 
+    // To record the longest value for each field (Column).  Will be stored in
+    // the TableData instance.
+    //
+    // It contains a key of the field ID, and the value is the integer length.
+    //
+    // Born from User Story 1103.
+    var longestValues = {};
+
     for (var fieldIndex in resourceTableFieldDOM)
     {
       var fieldDOM = resourceTableFieldDOM[fieldIndex];
@@ -265,6 +273,8 @@ cadc.vot.XMLBuilder.prototype.build = function()
       {
         fieldID = xmlFieldName;
       }
+
+      longestValues[fieldID] = -1;
 
       var field = new cadc.vot.VOTable.Field(
           xmlFieldName,
@@ -303,6 +313,15 @@ cadc.vot.XMLBuilder.prototype.build = function()
                        ? cellField.getDatatype().toLowerCase() : "";
         var stringValue = (cellDataDOM.childNodes && cellDataDOM.childNodes[0])
                           ? cellDataDOM.childNodes[0].nodeValue : "";
+        var stringValueLength = (stringValue && stringValue.length)
+                                ? stringValue.length : -1;
+        var currLongestValue = longestValues[cellField.getID()];
+
+        if (stringValueLength > currLongestValue)
+        {
+          longestValues[cellField.getID()] = stringValueLength;
+        }
+
         var cellValue;
 
         if ((dataType == "double") || (dataType == "int")
@@ -345,7 +364,8 @@ cadc.vot.XMLBuilder.prototype.build = function()
       tableDataRows.push(new cadc.vot.VOTable.Row(rowID, rowCells));
     }
 
-    var tableData = new cadc.vot.VOTable.TableData(tableDataRows);
+    var tableData = new cadc.vot.VOTable.TableData(tableDataRows,
+                                                   longestValues);
 
     resourceTables.push(new cadc.vot.VOTable.Table(tableMetadata, tableData));
   }
