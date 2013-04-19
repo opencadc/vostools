@@ -90,7 +90,7 @@ public final class XmlUtil
 {
     private static final Logger log = Logger.getLogger(XmlUtil.class);
     
-    private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
     private static final String GRAMMAR_POOL = "org.apache.xerces.parsers.XMLGrammarCachingConfiguration";
     
     private XmlUtil() { }
