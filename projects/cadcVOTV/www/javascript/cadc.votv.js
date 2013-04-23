@@ -678,29 +678,43 @@ cadc.vot.Viewer.prototype.init = function()
                                                  for (var c in gridColumns)
                                                  {
                                                    var col = gridColumns[c];
-                                                   var colOpts = viewer.getOptionsForColumn(col.name);
-                                                   var minWidth = col.width;
-                                                   var lengthDiv = $("<div></div>");
-                                                   var lengthStr = "";
-                                                   var userColumnWidth = colOpts.width;
-
-                                                   for (var v = 0; v < tabData.getLongestValueLength(col.id); v++)
+                                                   var colWidth;
+                                                   if (col.id != "_checkbox_selector")
                                                    {
-                                                     lengthStr += "a";
+                                                     var colOpts = viewer.getOptionsForColumn(col.name);
+                                                     var minWidth = col.name.length + 3;
+                                                     var longestCalculatedWidth = tabData.getLongestValueLength(col.id);
+                                                     var textWidthToUse = (longestCalculatedWidth > minWidth)
+                                                         ? longestCalculatedWidth : minWidth;
+
+                                                     var lengthDiv = $("<div></div>");
+                                                     var lengthStr = "";
+                                                     var userColumnWidth = colOpts.width;
+
+                                                     for (var v = 0; v < textWidthToUse; v++)
+                                                     {
+                                                       lengthStr += "a";
+                                                     }
+
+                                                     lengthDiv.attr("style", "position: absolute;visibility: hidden;height: auto;width: auto;");
+                                                     lengthDiv.text(lengthStr);
+                                                     $(document.body).append(lengthDiv);
+
+                                                     colWidth = (userColumnWidth || lengthDiv.innerWidth());
+                                                   }
+                                                   else
+                                                   {
+                                                     // Buffer the checkbox.
+                                                     colWidth = col.width + 15;
                                                    }
 
-                                                   lengthDiv.attr("style", "position: absolute;visibility: hidden;height: auto;width: auto;");
-                                                   lengthDiv.text(lengthStr);
-                                                   $(document.body).append(lengthDiv);
-
-  //                                                 var columnWidth = userColumnWidth || (lengthDiv.innerWidth() == 0 ? 0 : (lengthDiv.innerWidth() / 4));
-                                                   var columnWidth = userColumnWidth || lengthDiv.innerWidth();
-                                                   columnWidth = (columnWidth < minWidth) ? minWidth : columnWidth;
-
-                                                   console.log("Found length of '" + col.id + "' to be " + columnWidth + " from string length " + lengthStr.length);
-
-                                                   totalWidth += columnWidth;
+                                                   console.log("Pixel width is " + colWidth
+                                                               + " for id " + col.id + " and name "
+                                                               + col.name);
+                                                   totalWidth += colWidth;
                                                  }
+
+                                                 console.log("Total width is " + totalWidth);
 
                                                  if (totalWidth > 0)
                                                  {
@@ -719,27 +733,6 @@ cadc.vot.Viewer.prototype.init = function()
                               {
                                 dataView.updateItem(args.item.id, args.item);
                               });
-
-  /*
-  grid.onAddNewRow.subscribe(function (e, args)
-                                           {
-                                             var item =
-                                             {
-                                               "num": viewer.getGridData().length,
-                                               "id": "new_" + (Math.round(Math.random() * 10000)),
-                                               "title": "New task",
-                                               "duration": "1 day",
-                                               "percentComplete": 0,
-                                               "start": "01/01/2009",
-                                               "finish": "01/01/2009",
-                                               "effortDriven": false
-                                             };
-
-                                             $.extend(item, args.item);
-
-                                             dataView.addItem(item);
-                                           });
-  */
 
   grid.onKeyDown.subscribe(function(e)
                            {
@@ -957,12 +950,16 @@ cadc.vot.Viewer.prototype.refreshColumns = function(table)
 
     if (forceFitMax)
     {
-      var minWidth = 20;
+      // Buffer the length of the column header.
+      var minWidth = colOpts.width ? colOpts.width : (field.getLabel().length + 3);
+      var longestCalculatedWidth = tableData.getLongestValueLength(fieldKey);
+      var textWidthToUse = (longestCalculatedWidth > minWidth)
+                           ? longestCalculatedWidth : minWidth;
       var lengthDiv = $("<div></div>");
       var lengthStr = "";
       var userColumnWidth = colOpts.width;
 
-      for (var v = 0; v < tableData.getLongestValueLength(fieldKey); v++)
+      for (var v = 0; v < textWidthToUse; v++)
       {
         lengthStr += "a";
       }
@@ -971,10 +968,7 @@ cadc.vot.Viewer.prototype.refreshColumns = function(table)
       lengthDiv.text(lengthStr);
       $(document.body).append(lengthDiv);
 
-//      var columnWidth = userColumnWidth || (lengthDiv.innerWidth() == 0 ? 0 : (lengthDiv.innerWidth() / 4));
-      var columnWidth = userColumnWidth || lengthDiv.innerWidth();
-      columnWidth = (columnWidth < minWidth) ? minWidth : columnWidth;
-      columnProperties.width = columnWidth;
+      columnProperties.width = userColumnWidth || lengthDiv.innerWidth();
     }
     // Here to handle XTypes like the adql:timestamp xtype.
     else if (field.getXType() && field.getXType().match(/timestamp/i))
