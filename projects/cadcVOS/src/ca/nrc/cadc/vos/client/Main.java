@@ -390,6 +390,7 @@ public class Main implements Runnable
         }
         catch(Throwable t)
         {
+            log.debug(t);
             if (t instanceof IllegalArgumentException)
             {
                 throw (IllegalArgumentException) t;
