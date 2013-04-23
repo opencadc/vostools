@@ -83,7 +83,8 @@ if opt.Size:
 if opt.verbose:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 elif opt.debug:
-    logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
+    format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
+    logging.basicConfig(level=logging.DEBUG, format=format)
 else:
     logging.basicConfig(level=logging.ERROR, format="%(message)s")
 
