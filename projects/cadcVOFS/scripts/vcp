@@ -32,7 +32,7 @@ def isdir(filename):
     logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
-            return getNode(filename).isdir()
+            return client.isdir(filename)
         except:
             return False
     else:
