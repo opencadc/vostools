@@ -145,6 +145,7 @@ for node in args:
     if node[0:4] != "vos:":
         parser.error("Improper vospace specification: %s " % (node))
     try:
+        logging.debug("getting listing of: %s" % ( str(node)))
         infoList = client.getInfoList(node)
     except IOError as e:
         logging.error("Error getting listing of %s ( %s )" % (node, e.strerror))
