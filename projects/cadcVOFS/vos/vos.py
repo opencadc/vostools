@@ -122,11 +122,10 @@ class Connection:
                 if time.time() - timestart > 1200:
                     raise e
             except Exception as e:
-                logging.error(str(e))
-                logging.error("Perhaps your proxy certificate is expired?")
+                logging.debug(str(e))
                 ex = IOError()
                 ex.errno = errno.ECONNREFUSED
-                ex.strerror = "VOSpace connection failed"
+                ex.strerror = str(e)
                 ex.filename = parts.netloc
                 raise ex
             break
@@ -880,17 +879,18 @@ class Client:
             # Just past this back, I don't know how to fix...
             return uri
         ## Check that path name compiles with the standard
-        filename = os.path.basename(parts.path)
-        #logging.debug("Checking file name: %s" %( filename))
-        #logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
+
+        # Check for 'cutout' syntax values.
+        path = re.match("(?P<fname>[^\[]*)(?P<ext>(\[\d*\:?\d*\])?(\[\d*\:?\d*,?\d*\:?\d*\])?)",parts.path)
+        filename = os.path.basename(path.group('fname'))
         if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$", filename):
             raise IOError(errno.EINVAL, "Illegal vospace container name", filename)
-
+        path = path.group('fname')
         ## insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
             host = self.VOSpaceServer
-        path = os.path.normpath(parts.path).strip('/')
+        path = os.path.normpath(path).strip('/')
         return "%s://%s/%s" % (parts.scheme, host, path)
 
 
@@ -915,12 +915,13 @@ class Client:
                 nextURI = None
                 while nextURI != node.getNodeList()[-1].uri:
                     nextURI = node.getNodeList()[-1].uri
-                    xml_file = self.open(uri, os.O_RDONLY, nextURI=nextURI)
+                    xml_file = self.open(uri, os.O_RDONLY, nextURI=nextURI, limit=limit)
                     next_page = Node(ET.parse(xml_file).getroot())
                     if len(next_page.getNodeList()) > 0 and nextURI == next_page.getNodeList()[0].uri:
                         next_page.getNodeList().pop(0)
                     node.getNodeList().extend(next_page.getNodeList())
-                    nextURI = node.getNodeList()[-1].uri
+                    logging.debug("Next URI currently %s" % ( nextURI))
+                    logging.debug("Last URI currently %s" % ( node.getNodeList()[-1].uri ) )
             self.nodeCache[uri] = node            
             for node in self.nodeCache[uri].getNodeList():
                 self.nodeCache[node.uri]=node
@@ -940,8 +941,10 @@ class Client:
 
         parts = urlparse(uri)
         path = parts.path.strip('/')
-        server = Client.VOServers.get(parts.netloc)
-        #logging.debug("Node URI: %s" %( uri))
+        server = Client.VOServers.get(parts.netloc,None)
+        if server is None:
+            return uri
+        logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
 
         if (method == 'GET' and view == 'data') or method == "PUT" :
             ## only get here if cadc_short_cut == True
@@ -960,10 +963,10 @@ class Client:
         data = ""
         if len(fields) > 0 :
                data = "?" + urllib.urlencode(fields)
-        # logging.debug("data: %s" % ( data) ) 
-	# logging.debug("Fields: %s" % ( str(fields)))
+        logging.debug("data: %s" % ( data) ) 
+	logging.debug("Fields: %s" % ( str(fields)))
         URL = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
-        #logging.debug("Node URL %s (%s)" % (URL, method))
+        logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
     def link(self, srcURI, linkURI):
@@ -1013,12 +1016,11 @@ class Client:
         ET.SubElement(transferXML, "direction").text = direction
         ET.SubElement(transferXML, "view").attrib['uri'] = "%s#%s" % (Node.IVOAURL, "defaultview")
         ET.SubElement(transferXML, "protocol").attrib['uri'] = "%s#%s" % (Node.IVOAURL, protocol[direction])
-        # logging.debug("Transfer XML doc: %s" % (ET.tostring(transferXML)))
         url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransfer)
         con = VOFile(url, self.conn, method="POST", followRedirect=False)
         con.write(ET.tostring(transferXML))
         transURL = con.read()
-        # logging.debug("Got back %s from trasnfer " % (con))
+        logging.debug("Got back %s from trasnfer " % (con))
         con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
         F = ET.parse(con)
 
@@ -1099,7 +1101,8 @@ class Client:
         ### sometimes this is called with mode from ['w', 'r']
         ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
 
-        #logging.debug("URI: %s" % ( uri))
+        logging.debug("URI: %s" % ( uri))
+        logging.debug("URL: %s" %(URL))
 
         if type(mode) == str:
             mode = os.O_RDONLY
@@ -1121,13 +1124,12 @@ class Client:
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
             URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI)
-        #logging.debug("URL: %s" %(URL))
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
             node = self.getNode(uri)
             if node.type == "vos:LinkNode":
-                ## yeah...
+                logging.debug("appears that %s is a linkNode" % ( node.uri))
                 target = node.node.findtext(Node.TARGET)
                 #logging.debug(target)
                 if target is None:
@@ -1222,16 +1224,18 @@ class Client:
         """Retrieve a list of tupples of (NodeName, Info dict)"""
         infoList = {}
         node = self.getNode(uri, limit=None)
-        # logging.debug(str(node))
+        #logging.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
-            node = self.getNode(uri, limit=None)
-            # logging.debug(uri)
-        # logging.debug(str(node.getNodeList()))
+            try:
+               node = self.getNode(uri, limit=None)
+            except Exception as e:
+               logging.error(str(e))
+               break
         for thisNode in node.getNodeList():
             # logging.debug(str(thisNode.name))
             infoList[thisNode.name] = thisNode.getInfo()
-        if node.type == "vos:DataNode":
+        if node.type in [ "vos:DataNode", "vos:LinkNode" ]:
             infoList[node.name] = node.getInfo()
         return infoList.items()
 
