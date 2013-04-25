@@ -129,7 +129,7 @@
 
     <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easyMock}:${ext.dev}/objenesis.jar:${junit}:${xerces}:${gson}" />
     
-    <target name="test" depends="build,log-test,xml-test,dao-test">
+    <target name="test" depends="build,log-test,xml-test,dao-test,util-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
@@ -208,6 +208,24 @@
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.uws.server.ThreadExecutorTest"/>
           <test name="ca.nrc.cadc.uws.server.ThreadPoolExecutorTest"/>
+        </junit>
+    </target>
+    
+    <target name="util-test" depends="compile-test">
+        <copy file="test/src/resources/foo.xsd" todir="${build}/test/class"/>
+        <copy file="test/src/resources/bar.xsd" todir="${build}/test/class"/>
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.uws.util.XmlUtilTest"/>
+          <test name="ca.nrc.cadc.uws.util.IterableContentTest"/>
         </junit>
     </target>
 

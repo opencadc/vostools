@@ -67,125 +67,21 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws;
+package ca.nrc.cadc.uws.util;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
-
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-
-import ca.nrc.cadc.uws.util.ContentConverter;
-import ca.nrc.cadc.uws.util.IterableContent;
+import org.jdom2.Content;
 
 /**
- * Writes a JobList as XML.
+ * Given an object, convert it to jdom content.
  * 
  * @author majorb
+ *
+ * @param <E> The type of jdom content.
+ * @param <T> The type of object to convert.
  */
-public class JobListWriter
+public interface ContentConverter<E extends Content, T>
 {
-    private static Logger log = Logger.getLogger(JobListWriter.class);
-
-    public JobListWriter() 
-    {
-    }
     
-    /**
-     * Write to root Element to a writer.
-     *
-     * @param root Root Element to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    protected void writeDocument(Element root, Writer writer)
-        throws IOException
-    {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
-
-    /**
-     * Write the job list to an OutputStream.
-     *
-     * @param job
-     * @param out OutputStream to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void write(Iterator<Job> jobs, OutputStream out)
-        throws IOException
-    {
-        write(jobs, new OutputStreamWriter(out));
-    }
-
-    /**
-     * Write the job list to our streaming xml writer.
-     *
-     * @param job
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void write(Iterator<Job> jobs, Writer writer)
-        throws IOException
-    {
-        Element root = getRootElement(jobs);
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
-    
-    public Element getRootElement(Iterator<Job> jobs)
-    {
-        ContentConverter<Element, Job> contentConverter =
-            new ContentConverter<Element, Job>()
-            {
-                @Override
-                public Element convert(final Job job)
-                {
-                    return getShortJobDescription(job);
-                }
-            };
-        
-        Element root = new IterableContent<Element, Job>(JobAttribute.JOBS.getAttributeName(), UWS.NS, jobs, contentConverter);
-        root.addNamespaceDeclaration(UWS.NS);
-        root.addNamespaceDeclaration(UWS.XLINK_NS);
-        return root;
-    }
-
-    /**
-     * Create the XML for a short job description.
-     * @param job
-     * @return
-     */
-    public Element getShortJobDescription(Job job)
-    {
-        Element shortJobDescription = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
-        shortJobDescription.setAttribute("id", job.getID());
-        shortJobDescription.addContent(getPhase(job));
-        return shortJobDescription;
-    }
-
-    /**
-     * Get an Element representing the Job phase.
-     *
-     * @return The Job phase Element.
-     */
-    private Element getPhase(Job job)
-    {
-        Element element = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
-        element.addContent(job.getExecutionPhase().toString());
-        return element;
-    }
-    
+    public E convert(T obj);
 
 }
-    

@@ -3,7 +3,7 @@ JAR files required for the OpenCADC cadcUWS project
 
 Name in build.xml          Versioned Name		Project URL
 -----------------          --------------       	-----------
-jdom.jar		   jdom-2.0.2   		http://www.jdom.org/
+jdom2.jar		           jdom-2.0.5   		http://www.jdom.org/
 log4j.jar                  log4j-1.2.15         	http://logging.apache.org/
 org.restlet.jar            restlet-jee-2.0m7    	http://www.restlet.org/
 org.restlet.ext.fileupload.jar restlet-jee-2.0m7    	http://www.restlet.org/
