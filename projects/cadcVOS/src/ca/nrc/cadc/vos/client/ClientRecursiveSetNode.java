@@ -93,9 +93,9 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.util.XmlUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * A client-side wrapper for a recursive set node job to make it runnable.

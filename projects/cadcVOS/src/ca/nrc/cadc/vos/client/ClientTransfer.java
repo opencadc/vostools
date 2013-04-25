@@ -106,11 +106,11 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.util.XmlUtil;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * A client-side wrapper for a transfer to make it runnable.
