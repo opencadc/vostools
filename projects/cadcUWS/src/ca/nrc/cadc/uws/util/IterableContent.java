@@ -204,6 +204,7 @@ public class IterableContent<E extends Content, T> extends Element
         private B next;
         private long rowCount = 0;
         private boolean maxIterationsReached = false;
+        private boolean maxIterationsReachedCalled = false;
         
         ContentConversionIterator(ContentConverter<A, B> contentConverter,
                 Iterator<B> iterator, MaxIterations maxIterations)
@@ -246,8 +247,11 @@ public class IterableContent<E extends Content, T> extends Element
         @Override
         public boolean hasNext()
         {
-            if (maxIterationsReached)
+            if (maxIterationsReached && !maxIterationsReachedCalled)
+            {
                 maxIterations.maxIterationsReached();
+                maxIterationsReachedCalled = true;
+            }
             
             return (next != null);
         }
