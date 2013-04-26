@@ -71,6 +71,7 @@
 <!DOCTYPE project>
 <project default="build" basedir=".">
     <property environment="env" />
+    <property file="local.build.properties" />
 
     <!-- site-specific build properties or overrides of values in opencadc.properties -->
     <property file="${env.CADC_PREFIX}/etc/local.properties" />
@@ -91,13 +92,12 @@
     <property name="cadcUWS"        value="${lib}/cadcUWS.jar" />
     <property name="cadc"           value="${cadcUtil}:${cadcUWS}" />
 
-    <property name="jdom"           value="${ext.lib}/jdom.jar" />
     <property name="jdom2"          value="${ext.lib}/jdom2.jar" />
     <property name="log4j"          value="${ext.lib}/log4j.jar" />
     <property name="extlib"         value="${jdom2}:${log4j}" />
 
     <property name="jars"           value="${cadc}:${extlib}" />
-    <property name="runtimeJars"    value="${jars}:${jdom}" />
+    <property name="runtimeJars"    value="${jars}:${jdom2}" />
 
     <target name="build" depends="compile,xsd">
         <jar jarfile="${build}/lib/${project}.jar"

@@ -69,9 +69,6 @@
 
 package ca.nrc.cadc.dali.tables.votable;
 
-import ca.nrc.cadc.dali.tables.TableWriter;
-import ca.nrc.cadc.dali.util.Format;
-import ca.nrc.cadc.dali.util.FormatFactory;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -79,11 +76,19 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
 import org.jdom2.output.XMLOutputter;
+
+import ca.nrc.cadc.dali.tables.TableWriter;
+import ca.nrc.cadc.dali.util.Format;
+import ca.nrc.cadc.dali.util.FormatFactory;
+import ca.nrc.cadc.uws.util.ContentConverter;
+import ca.nrc.cadc.uws.util.IterableContent;
+import ca.nrc.cadc.uws.util.MaxIterations;
 
 /**
  *
@@ -202,6 +207,8 @@ public class VOTableWriter implements TableWriter<VOTable>
     public void write(VOTable votable, Writer writer, Long maxrec)
         throws IOException
     {
+        log.debug("write, maxrec=" + maxrec);
+        
         // VOTable document and root element.
         Document document = createDocument();
         Element root = document.getRootElement();
@@ -241,46 +248,19 @@ public class VOTableWriter implements TableWriter<VOTable>
         // Create the DATA and TABLEDATA elements.
         Element data = new Element("DATA", namespace);
         table.addContent(data);
-        Element tabledata = new Element("TABLEDATA", namespace);
-        data.addContent(tabledata);
         
         // Add content.
-        int rowCount = 0;
         try
         {
             Iterator<List<Object>> it = votable.getTableData().iterator();
-            while (it.hasNext())
-            {
-                // If maxRec reached, write overflow INFO and exit loop.
-                if (rowCount++ > maxrec)
-                {
-                    Element info = new Element("INFO", namespace);
-                    info.setAttribute("name", "QUERY_STATUS");
-                    info.setAttribute("value", "OVERFLOW");
-                    resource.addContent(info);
-                    break;
-                }
 
-                // TR element.
-                Element tr = new Element("TR", namespace);
-                tabledata.addContent(tr);
+            TabledataContentConverter elementConverter = new TabledataContentConverter(namespace);
+            TabledataMaxIterations maxIterations = new TabledataMaxIterations(maxrec, resource, namespace);
 
-                // TD elements.
-                List<Object> columns = it.next();
-                for (int i = 0; i < columns.size(); i++)
-                {
-                    Object column = columns.get(i);
-                    Class c = null;
-                    if (column != null)
-                    {
-                        c = column.getClass();
-                    }
-                    Format format = FormatFactory.getFormat(c);
-                    Element td = new Element("TD", namespace);
-                    td.setText(format.format(column));
-                    tr.addContent(td);
-                }
-            }
+            IterableContent<Element, List<Object>> tabledata =
+                    new IterableContent<Element, List<Object>>("TABLEDATA", namespace, it, elementConverter, maxIterations);
+            
+            data.addContent(tabledata);
         }
         catch(Throwable t)
         {
@@ -375,6 +355,78 @@ public class VOTableWriter implements TableWriter<VOTable>
                 sb.append(thrown.getMessage());
         }
         return sb.toString();
+    }
+    
+    private class TabledataMaxIterations implements MaxIterations
+    {
+        
+        private long maxRec;
+        private Element resource;
+        private Namespace namespace;
+        
+        TabledataMaxIterations(Long maxRec, Element resource, Namespace namespace)
+        {
+            if (maxRec == null)
+                this.maxRec = Long.MAX_VALUE;
+            else
+                this.maxRec = maxRec;
+            this.resource = resource;
+            this.namespace = namespace;
+        }
+
+        @Override
+        public long getMaxIterations()
+        {
+            return maxRec;
+        }
+
+        @Override
+        public void maxIterationsReached()
+        {
+            // If maxRec reached, write overflow INFO.
+            Element info = new Element("INFO", namespace);
+            info.setAttribute("name", "QUERY_STATUS");
+            info.setAttribute("value", "OVERFLOW");
+            resource.addContent(info);
+        }
+        
+    }
+    
+    private class TabledataContentConverter implements ContentConverter<Element, List<Object>>
+    {
+        
+        private Namespace namespace;
+        
+        TabledataContentConverter(Namespace namespace)
+        {
+            this.namespace = namespace;
+        }
+
+        @Override
+        public Element convert(List<Object> columns)
+        {            
+            // TR element.
+            Element tr = new Element("TR", namespace);
+
+            // TD elements.
+            for (int i = 0; i < columns.size(); i++)
+            {
+                Object column = columns.get(i);
+                Class c = null;
+                if (column != null)
+                {
+                    c = column.getClass();
+                }
+                Format format = FormatFactory.getFormat(c);
+                Element td = new Element("TD", namespace);
+                td.setText(format.format(column));
+                tr.addContent(td);
+            }
+            
+            return tr;
+            
+        }
+        
     }
 
 }

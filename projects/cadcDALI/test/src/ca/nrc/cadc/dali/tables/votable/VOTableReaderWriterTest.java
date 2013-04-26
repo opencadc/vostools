@@ -68,6 +68,24 @@
 */
 package ca.nrc.cadc.dali.tables.votable;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.StringWriter;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import ca.nrc.cadc.dali.tables.TableData;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.stc.Circle;
@@ -78,17 +96,6 @@ import ca.nrc.cadc.stc.ReferencePosition;
 import ca.nrc.cadc.stc.Region;
 import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.StringWriter;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  *
@@ -137,14 +144,65 @@ public class VOTableReaderWriterTest
             VOTableWriter writer = new VOTableWriter();
             writer.write(expected, sw);
             String xml = sw.toString();
-            log.debug("XML:\n\n" + xml);
+            log.debug("Expected XML: \n\n" + xml);
 
             // Read in xml to VOTable with schema validation.
             VOTableReader reader = new VOTableReader();
             VOTable actual = reader.read(xml);
+            
+            log.debug("Expected:\n\n" + expected);
+            log.debug("Actual:\n\n" + actual);
 
             // Compare VOTAble's.
-            compareVOTable(expected, actual);
+            compareVOTable(expected, actual, null);
+
+            log.info("testReadWriteVOTable passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testReadWriteVOTableWithMax() throws Exception
+    {
+        log.debug("testReadWriteVOTable");
+        try
+        {
+            String resourceName = "VOTable resource name";
+
+            // Build a VOTable.
+            VOTable expected = new VOTable();
+            expected.setResourceName(resourceName);
+
+            // Add INFO's.
+            expected.getInfos().addAll(getTestInfos());
+
+            // Add TableFields.
+            expected.getParams().addAll(getTestParams());
+            expected.getColumns().addAll(getTestFields());
+
+            // Add TableData.
+            expected.setTableData(new TestTableData());
+
+            // Write VOTable to xml.
+            StringWriter sw = new StringWriter();
+            VOTableWriter writer = new VOTableWriter();
+            writer.write(expected, sw, 3L);
+            String xml = sw.toString();
+            log.debug("Expected XML: \n\n" + xml);
+
+            // Read in xml to VOTable with schema validation.
+            VOTableReader reader = new VOTableReader();
+            VOTable actual = reader.read(xml);
+            
+            log.debug("Expected:\n\n" + expected);
+            log.debug("Actual:\n\n" + actual);
+
+            // Compare VOTAble's.
+            compareVOTable(expected, actual, 3L);
 
             log.info("testReadWriteVOTable passed");
         }
@@ -160,7 +218,7 @@ public class VOTableReaderWriterTest
      * Test might be a bit dodgy since it's assuming the VOTable
      * elements will be written and read in the same order.
      */
-    public void compareVOTable(VOTable expected, VOTable actual)
+    public void compareVOTable(VOTable expected, VOTable actual, Long actualMax)
     {
         assertNotNull(expected);
         assertNotNull(actual);
@@ -254,59 +312,76 @@ public class VOTableReaderWriterTest
         Iterator<List<Object>> actualIter = actualTableData.iterator();
         assertNotNull(expectedIter);
         assertNotNull(actualIter);
+        Long iteratorCount = 0L;
         while (expectedIter.hasNext())
         {
-            assertTrue(actualIter.hasNext());
-            List<Object> expectedList = expectedIter.next();
-            List<Object> actualList = actualIter.next();
-            assertEquals(expectedList.size(), actualList.size());
-            for (int i = 0; i < expectedList.size(); i++)
-            {
-                Object expectedObject = expectedList.get(i);
-                Object actualObject = actualList.get(i);
+            log.debug("iteratorCount: " + (iteratorCount));
 
-                if (expectedObject instanceof byte[] && actualObject instanceof byte[])
+            List<Object> expectedList = expectedIter.next();
+            log.debug("Next expected row: " + expectedList);
+            
+            if (actualMax != null && iteratorCount >= actualMax)
+            {
+                assertTrue("Should have reached max.", !actualIter.hasNext());
+            }
+            else
+            {
+                iteratorCount++;
+            
+                assertTrue("Missing " + expectedList, actualIter.hasNext());
+                List<Object> actualList = actualIter.next();
+                assertEquals(expectedList.size(), actualList.size());
+                for (int i = 0; i < expectedList.size(); i++)
                 {
-                    Assert.assertArrayEquals((byte[]) expectedObject, (byte[]) actualObject);
-                }
-                else if (expectedObject instanceof double[] && actualObject instanceof double[])
-                {
-                    Assert.assertArrayEquals((double[]) expectedObject, (double[]) actualObject, 0.0);
-                }
-                else if (expectedObject instanceof float[] && actualObject instanceof float[])
-                {
-                    Assert.assertArrayEquals((float[]) expectedObject, (float[]) actualObject, 0.0f);
-                }
-                else if (expectedObject instanceof int[] && actualObject instanceof int[])
-                {
-                    Assert.assertArrayEquals((int[]) expectedObject, (int[]) actualObject);
-                }
-                else if (expectedObject instanceof long[] && actualObject instanceof long[])
-                {
-                    Assert.assertArrayEquals((long[]) expectedObject, (long[]) actualObject);
-                }
-                else if (expectedObject instanceof short[] && actualObject instanceof short[])
-                {
-                    Assert.assertArrayEquals((short[]) expectedObject, (short[]) actualObject);
-                }
-                else if (expectedObject instanceof Position && actualObject instanceof Position)
-                {
-                    Position expectedPosition = (Position) expectedObject;
-                    Position actaulPosition = (Position) actualObject;
-                    assertEquals(STC.format(expectedPosition), STC.format(actaulPosition));
-                }
-                else if (expectedObject instanceof Region && actualObject instanceof Region)
-                {
-                    Region expectedRegion = (Region) expectedObject;
-                    Region actualRegion = (Region) actualObject;
-                    assertEquals(STC.format(expectedRegion), STC.format(actualRegion));
-                }
-                else
-                {
-                    assertEquals(expectedObject, actualObject);
+                    Object expectedObject = expectedList.get(i);
+                    Object actualObject = actualList.get(i);
+        
+                    if (expectedObject instanceof byte[] && actualObject instanceof byte[])
+                    {
+                        Assert.assertArrayEquals((byte[]) expectedObject, (byte[]) actualObject);
+                    }
+                    else if (expectedObject instanceof double[] && actualObject instanceof double[])
+                    {
+                        Assert.assertArrayEquals((double[]) expectedObject, (double[]) actualObject, 0.0);
+                    }
+                    else if (expectedObject instanceof float[] && actualObject instanceof float[])
+                    {
+                        Assert.assertArrayEquals((float[]) expectedObject, (float[]) actualObject, 0.0f);
+                    }
+                    else if (expectedObject instanceof int[] && actualObject instanceof int[])
+                    {
+                        Assert.assertArrayEquals((int[]) expectedObject, (int[]) actualObject);
+                    }
+                    else if (expectedObject instanceof long[] && actualObject instanceof long[])
+                    {
+                        Assert.assertArrayEquals((long[]) expectedObject, (long[]) actualObject);
+                    }
+                    else if (expectedObject instanceof short[] && actualObject instanceof short[])
+                    {
+                        Assert.assertArrayEquals((short[]) expectedObject, (short[]) actualObject);
+                    }
+                    else if (expectedObject instanceof Position && actualObject instanceof Position)
+                    {
+                        Position expectedPosition = (Position) expectedObject;
+                        Position actaulPosition = (Position) actualObject;
+                        assertEquals(STC.format(expectedPosition), STC.format(actaulPosition));
+                    }
+                    else if (expectedObject instanceof Region && actualObject instanceof Region)
+                    {
+                        Region expectedRegion = (Region) expectedObject;
+                        Region actualRegion = (Region) actualObject;
+                        assertEquals(STC.format(expectedRegion), STC.format(actualRegion));
+                    }
+                    else
+                    {
+                        assertEquals(expectedObject, actualObject);
+                    }
                 }
             }
         }
+        
+        if (actualMax != null)
+            assertEquals("wrong number of iterations", actualMax, iteratorCount);
     }
 
     protected List<Info> getTestInfos()
@@ -578,6 +653,10 @@ public class VOTableReaderWriterTest
             row1.add(dateFormat.parse(DATE_TIME));
             row1.add(new Position(Frame.ICRS, ReferencePosition.BARYCENTER, Flavor.SPHERICAL2, 1.0, 2.0));
             row1.add(new Circle(Frame.ICRS, ReferencePosition.GEOCENTER, Flavor.SPHERICAL2, 1.0, 2.0, 3.0));
+            fields.add(row1);
+            fields.add(row1);
+            fields.add(row1);
+            fields.add(row1);
             fields.add(row1);
 
             List<Object> row2 = new ArrayList<Object>();
