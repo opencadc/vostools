@@ -219,17 +219,23 @@ public class IterableContent<E extends Content, T> extends Element
         
         private void advance()
         {
+            next = null;
+
             if (this.iterator.hasNext())
+            {
                 next = this.iterator.next();
-            else
-                next = null;
+            }
             
             if (maxIterations != null)
             {
-                rowCount++;
-                if (rowCount++ > maxIterations.getMaxIterations())
+                if (rowCount >= maxIterations.getMaxIterations())
+                {
                     maxIterationsReached = true;
+                    next = null;
+                }
             }
+            
+            rowCount++;
         }
         
         boolean isEmpty()
@@ -240,6 +246,9 @@ public class IterableContent<E extends Content, T> extends Element
         @Override
         public boolean hasNext()
         {
+            if (maxIterationsReached)
+                maxIterations.maxIterationsReached();
+            
             return (next != null);
         }
 
@@ -247,22 +256,15 @@ public class IterableContent<E extends Content, T> extends Element
         public A next()
         {
             log.debug("ContentConversionIterator.next");
+            
             if (next == null)
                 throw new NoSuchElementException();
 
             // convert the object
             A nextContent = contentConverter.convert(next);
-            
-            if (maxIterationsReached)
-            {
-                next = null;
-                maxIterations.maxIterationsReached();
-            }
-            else
-            {
-                // advance the iterator
-                advance();
-            }
+
+            // advance the iterator
+            advance();
             
             return nextContent;
         }

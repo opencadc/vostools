@@ -102,145 +102,181 @@ public class IterableContentTest
     }
 
     @Test
-    public void testContentIteration() throws Exception
+    public void testContentIteration()
     {
-        List<String> testData = new ArrayList<String>(3);
-        testData.add("string1");
-        testData.add("string2");
-        testData.add("string3");
-        
-        ContentConverter<Element, String> cc = new ContentConverter<Element, String>()
-        {
-            public Element convert(String obj)
-            {
-                Element e = new Element(obj);
-                e.setText(obj);
-                return e;
-            }
-        };
-        
-        Namespace ns = Namespace.getNamespace("test", "http://test.name.space");
-        IterableContent<Element, String> ic = new IterableContent<Element, String>("name", ns, testData.iterator(), cc);
-        
-        List<Content> contentList = ic.getContent();
-        
-        // ensure these operations are not supported
-        try { contentList.add(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.add(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.addAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.addAll(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.clear(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.contains(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.containsAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.equals(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.get(0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.indexOf(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.lastIndexOf(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.listIterator(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.remove(0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.remove(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.removeAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.retainAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.set(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.size(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.subList(0, 0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.toArray(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        try { contentList.toArray(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
-        
-        Assert.assertFalse("should not be empty.", contentList.isEmpty());
-        Iterator<Content> it = contentList.iterator();
-        
-        Assert.assertTrue(it.hasNext());
-        Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string1"));
-        Assert.assertTrue(it.hasNext());
-        Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string2"));
-        Assert.assertTrue(it.hasNext());
-        Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string3"));
-        
-        Assert.assertFalse(it.hasNext());
         try
         {
-            it.next();
-            Assert.fail("Should be No Such Element");
+            List<String> testData = new ArrayList<String>(3);
+            testData.add("string1");
+            testData.add("string2");
+            testData.add("string3");
+            
+            ContentConverter<Element, String> cc = new ContentConverter<Element, String>()
+            {
+                public Element convert(String obj)
+                {
+                    Element e = new Element(obj);
+                    e.setText(obj);
+                    return e;
+                }
+            };
+            
+            Namespace ns = Namespace.getNamespace("test", "http://test.name.space");
+            IterableContent<Element, String> ic = new IterableContent<Element, String>("name", ns, testData.iterator(), cc);
+            
+            List<Content> contentList = ic.getContent();
+            
+            // ensure these operations are not supported
+            try { contentList.add(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.add(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.addAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.addAll(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.clear(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.contains(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.containsAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.equals(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.get(0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.indexOf(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.lastIndexOf(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.listIterator(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.remove(0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.remove(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.removeAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.retainAll(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.set(0, null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.size(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.subList(0, 0); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.toArray(); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            try { contentList.toArray(null); Assert.fail("Should be unsupported."); } catch (UnsupportedOperationException e) {};
+            
+            Assert.assertFalse("should not be empty.", contentList.isEmpty());
+            Iterator<Content> it = contentList.iterator();
+            
+            Assert.assertTrue(it.hasNext());
+            Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string1"));
+            Assert.assertTrue(it.hasNext());
+            Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string2"));
+            Assert.assertTrue(it.hasNext());
+            Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string3"));
+            
+            Assert.assertFalse(it.hasNext());
+            try
+            {
+                it.next();
+                Assert.fail("Should be No Such Element");
+            }
+            catch (NoSuchElementException e)
+            {
+                // expected
+            }
+            
+            Assert.assertTrue("should be empty.", contentList.isEmpty());
         }
-        catch (NoSuchElementException e)
+        catch (Throwable t)
         {
-            // expected
+            log.error(t);
+            Assert.fail(t.getMessage());
         }
-        
-        Assert.assertTrue("should be empty.", contentList.isEmpty());
         
     }
     
     @Test
-    public void testMaxContentIteration() throws Exception
+    public void testMaxContentIterations()
     {
-        List<String> testData = new ArrayList<String>(3);
-        testData.add("string1");
-        testData.add("string2");
-        testData.add("string3");
-        
-        ContentConverter<Element, String> cc = new ContentConverter<Element, String>()
-        {
-            public Element convert(String obj)
-            {
-                Element e = new Element(obj);
-                e.setText(obj);
-                return e;
-            }
-        };
-        
-        TestMaxIterations max = new TestMaxIterations();
-        
-        Namespace ns = Namespace.getNamespace("test", "http://test.name.space");
-        IterableContent<Element, String> ic = new IterableContent<Element, String>("name", ns, testData.iterator(), cc, max);
-        
-        List<Content> contentList = ic.getContent();
-        
-        Assert.assertFalse("should not be empty.", contentList.isEmpty());
-        Iterator<Content> it = contentList.iterator();
-        
-        Assert.assertTrue(it.hasNext());
-        max.itCount = max.itCount + 1;
-        Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string1"));
-        
-        Assert.assertTrue(it.hasNext());
-        max.itCount = max.itCount + 1;
-        Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string2"));
-        
-        Assert.assertFalse(it.hasNext());
+        this.testMaxContentIterations(0);
+        this.testMaxContentIterations(1);
+        this.testMaxContentIterations(2);
+        this.testMaxContentIterations(3);
+        this.testMaxContentIterations(4);
+        this.testMaxContentIterations(5);
+    }
+    
+    private void testMaxContentIterations(int max)
+    {
+        log.debug("Testing max iterations: " + max);
         try
         {
-            max.itCount = max.itCount + 1;
-            it.next();
-            Assert.fail("Should be No Such Element");
+            List<String> testData = new ArrayList<String>(3);
+            testData.add("string1");
+            testData.add("string2");
+            testData.add("string3");
+            testData.add("string4");
+            testData.add("string5");
+            
+            ContentConverter<Element, String> cc = new ContentConverter<Element, String>()
+            {
+                public Element convert(String obj)
+                {
+                    Element e = new Element(obj);
+                    e.setText(obj);
+                    return e;
+                }
+            };
+            
+            TestMaxIterations maxIter = new TestMaxIterations(max);
+            
+            Namespace ns = Namespace.getNamespace("test", "http://test.name.space");
+            IterableContent<Element, String> ic = new IterableContent<Element, String>("name", ns, testData.iterator(), cc, maxIter);
+            
+            List<Content> contentList = ic.getContent();
+            
+            if (max == 0)
+                Assert.assertTrue("should not be empty.", contentList.isEmpty());
+            else
+                Assert.assertFalse("should not be empty.", contentList.isEmpty());
+            
+            Iterator<Content> it = contentList.iterator();
+            
+            for (int i=0; i<max; i++)
+            {
+                Assert.assertTrue(it.hasNext());
+                maxIter.itCount++;
+                Assert.assertTrue("wrong content", ((Element)it.next()).getName().equals("string" + (i + 1)));                
+            }
+            
+            Assert.assertFalse("Shoud not have more elements", it.hasNext());
+            try
+            {
+                it.next();
+                Assert.fail("Should be No Such Element");
+            }
+            catch (NoSuchElementException e)
+            {
+                // expected
+            }
+            
+            Assert.assertTrue("should be empty.", contentList.isEmpty());
+            Assert.assertTrue("maxInterationsReached not called.", maxIter.maxIterationsCalled);
         }
-        catch (NoSuchElementException e)
+        catch (Throwable t)
         {
-            // expected
+            log.error(t.getMessage(), t);
+            Assert.fail(t.getMessage());
         }
-        
-        Assert.assertTrue("should be empty.", contentList.isEmpty());
-        
-        Assert.assertTrue("max interations reached not called.", max.maxIterationsCalled);
         
     }
     
     class TestMaxIterations implements MaxIterations
     {
+        private long max;
         public long itCount = 0L;
         public boolean maxIterationsCalled = false;
         
+        TestMaxIterations(long max)
+        {
+            this.max = max;
+        }
+        
         public long getMaxIterations()
         {
-            return 2L;
+            return max;
         }
 
         @Override
         public void maxIterationsReached()
         {
             maxIterationsCalled = true;
-            Assert.assertEquals("wrong num max iterations", 2L, itCount);
+            Assert.assertEquals("wrong num iterations", max, itCount);
         }
     };
     
