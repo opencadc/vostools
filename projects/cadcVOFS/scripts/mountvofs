@@ -19,7 +19,7 @@ import sqlite3
 from vos.__version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
-
+import urlparse 
 libcPath = find_library('c')
 libc = cdll.LoadLibrary(libcPath)
 
@@ -47,7 +47,6 @@ class VOFS(LoggingMixIn, Operations):
     chown = None
     link = None
     mknode = None
-    readlink = None
     rmdir = None
     symlink = None
     getxattr = None
@@ -466,15 +465,21 @@ class VOFS(LoggingMixIn, Operations):
                        logging.info("%s is locked by parent node." % path)
                        locked=True
              elif node.type == "vos:LinkNode":
-                  targetNode = self.getNode(node.target,force=False,limit=1)
-                  if targetNode.props.get('islocked', False):
-                        logging.info("%s target node is locked." % path)
-                        locked=True
-                  else:
-                        targetParentNode = self.getNode(os.path.dirname(node.target),force=False,limit=1)
-                        if targetParentNode.props.get('islocked', False):
-                            logging.info("%s is locked by target parent node." % path)
-                            locked=True
+	          try:
+		     ## sometimes targetNodes aren't internall... so then not locked
+                      targetNode = self.getNode(node.target,force=False,limit=1)  
+                      if targetNode.props.get('islocked', False):
+                          logging.info("%s target node is locked." % path)
+                          locked=True
+                      else:
+                          targetParentNode = self.getNode(os.path.dirname(node.target),force=False,limit=1)
+                          if targetParentNode.props.get('islocked', False):
+                              logging.info("%s is locked by target parent node." % path)
+                              locked=True
+                  except Exception as e:
+                      logging.error("Got an error while checking for lock: "+str(e))
+                      pass
+
 
 
         ## setup the data cache structure, which returns a 
@@ -555,6 +560,16 @@ class VOFS(LoggingMixIn, Operations):
 
         return self.read(path, size, offset, fh)
         
+    def readlink(self, path):
+        """Return a string representing the path to which the symbolic link points.
+
+	path: filesystem location that is a link
+
+	returns the file that path is a link to. 
+
+	Currently doesn't provide correct capabilty for VOSpace FS.
+        """
+        return self.getNode(path).target
         
     def load_into_cache(self, path, fh ):
         """Load path from VOSpace and store into fh"""
