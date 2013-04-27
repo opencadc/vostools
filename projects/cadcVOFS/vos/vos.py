@@ -244,12 +244,16 @@ class Node:
 
         ## set the MODE by orring together all flags from stat
         st_mode = 0
+        self.attr['st_nlink'] = 1
+
         if node.type == 'vos:ContainerNode':
             st_mode |= stat.S_IFDIR
             self.attr['st_nlink'] = len(node.getNodeList()) + 2
+        elif node.type == 'vos:LinkNode':
+            st_mode |= stat.S_IFLNK
         else:
-            self.attr['st_nlink'] = 1
             st_mode |= stat.S_IFREG
+
 
         ## Set the OWNER permissions
         ## All files are read/write/execute by owner...
@@ -836,17 +840,24 @@ class Client:
 
         destSize = 0
         md5 = hashlib.md5()
-        while True:
-            buf = fin.read(BUFSIZE)
-            # In this tight loop I don't think you want logging
-            # logging.debug("Read %d bytes from %s" % ( len(buf),src))
-            if len(buf) == 0:
-                break
-            fout.write(buf)
-            md5.update(buf)
-            destSize += len(buf)
-        fout.close()
-        fin.close()
+        ## wrap the read statements in a try/except repeat
+        ## if you get this far into copy then the node exists
+        ## and the error is likely a transient timeout issue
+        try:
+            while True:
+                buf = fin.read(BUFSIZE)
+                if len(buf) == 0:
+                    break
+                fout.write(buf)
+                md5.update(buf)
+                destSize += len(buf)
+        except IOError as e:
+            logging.error(str(e))
+            return self.copy(src,dest,sendMD5=sendMD5)
+        finally:
+            fout.close()
+            fin.close()
+
 
         if checkSource:
             if srcNode.type != "vos:LinkNode" :
@@ -1154,7 +1165,7 @@ class Client:
         #logging.debug("Updating %s" % ( node.name))
         #logging.debug(str(node.props))
         ## Get a copy of what's on the server
-        storedNode = self.getNode(node.uri)
+        storedNode = self.getNode(node.uri,force=True)
         for prop in storedNode.props:
             if prop in node.props and storedNode.props[prop] == node.props[prop] and node.props[prop] is not None:
                 del(node.props[prop])
