@@ -51,7 +51,7 @@ for arg in args:
     if arg[0:4]!="vos:":
         logging.error("%s is not a valid VOSpace handle" % (arg))
     try:
-        if client.isfile(arg):
+        if client.isfile(arg) or client.getNode(arg).islink():
             logging.info("deleting %s" %(arg))
             client.delete(arg)
         elif client.isdir(arg):
