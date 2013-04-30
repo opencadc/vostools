@@ -69,24 +69,27 @@
 
 package ca.nrc.cadc.uws.server;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.naming.NamingException;
+import javax.security.auth.Subject;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRef;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import javax.naming.NameNotFoundException;
-import javax.naming.NamingException;
-import javax.security.auth.Subject;
-import javax.sql.DataSource;
-import org.apache.log4j.Logger;
 
 /**
  * JobPersistence implementation that uses an underlying relational database
@@ -175,7 +178,7 @@ public abstract class DatabaseJobPersistence implements JobPersistence, JobUpdat
         dao.getDetails(job);
     }
 
-    public Iterator<Job> iterator()
+    public Iterator<JobRef> iterator()
         throws JobPersistenceException, TransientException
     {
         JobDAO dao = getDAO();

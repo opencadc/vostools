@@ -185,7 +185,7 @@ public class JobListReader
         this.docBuilder = XmlUtil.createBuilder(schemaMap);
     }
 
-    public List<Job> read(InputStream in) 
+    public List<JobRef> read(InputStream in) 
         throws JDOMException, IOException, ParseException
     {
         try
@@ -198,22 +198,22 @@ public class JobListReader
         }
     }
 
-    public List<Job> read(Reader reader) 
+    public List<JobRef> read(Reader reader) 
         throws JDOMException, IOException, ParseException
     {
         Document doc = docBuilder.build(reader);
         return parseJobList(doc);
     }
 
-    private List<Job> parseJobList(Document doc)
+    private List<JobRef> parseJobList(Document doc)
         throws ParseException, DataConversionException
     {
         Element root = doc.getRootElement();
         List<Element> children = root.getChildren();
         Iterator<Element> childIterator = children.iterator();
-        List<Job> jobs = new ArrayList<Job>();
+        List<JobRef> jobs = new ArrayList<JobRef>();
         Element next = null;
-        Job job = null;
+        JobRef jobRef = null;
         ExecutionPhase executionPhase = null;
         while (childIterator.hasNext())
         {
@@ -222,10 +222,8 @@ public class JobListReader
             Element phaseElement = next.getChild(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
             String phase = phaseElement.getValue();
             executionPhase = ExecutionPhase.valueOf(phase);
-            job = new Job(jobID, executionPhase, null, null, null,
-                    null, null, null, null, null,
-                    null, null, null, null, null);
-            jobs.add(job);
+            jobRef = new JobRef(jobID, executionPhase);
+            jobs.add(jobRef);
         }
         
         return jobs;

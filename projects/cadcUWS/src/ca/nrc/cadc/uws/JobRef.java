@@ -67,125 +67,42 @@
 ************************************************************************
 */
 
+
 package ca.nrc.cadc.uws;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
-
-import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-
-import ca.nrc.cadc.uws.util.ContentConverter;
-import ca.nrc.cadc.uws.util.IterableContent;
-
 /**
- * Writes a JobList as XML.
+ * Lightweight reference to a Job.
  * 
  * @author majorb
+ *
  */
-public class JobListWriter
+public class JobRef
 {
-    private static Logger log = Logger.getLogger(JobListWriter.class);
+    private String jobID;
+    private ExecutionPhase executionPhase;
 
-    public JobListWriter() 
+    public JobRef() { }
+
+    public JobRef(String jobID,
+                ExecutionPhase executionPhase)
     {
+        this.jobID = jobID;
+        this.executionPhase = executionPhase;
+    }
+
+    public ExecutionPhase getExecutionPhase()
+    {
+        return executionPhase;
+    }
+
+    public void setExecutionPhase(ExecutionPhase executionPhase)
+    {
+        this.executionPhase = executionPhase;
+    }
+
+    public String getJobID()
+    {
+        return jobID;
     }
     
-    /**
-     * Write to root Element to a writer.
-     *
-     * @param root Root Element to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    protected void writeDocument(Element root, Writer writer)
-        throws IOException
-    {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
-
-    /**
-     * Write the job list to an OutputStream.
-     *
-     * @param job
-     * @param out OutputStream to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void write(Iterator<JobRef> jobs, OutputStream out)
-        throws IOException
-    {
-        write(jobs, new OutputStreamWriter(out));
-    }
-
-    /**
-     * Write the job list to our streaming xml writer.
-     *
-     * @param job
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void write(Iterator<JobRef> jobs, Writer writer)
-        throws IOException
-    {
-        Element root = getRootElement(jobs);
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        Document document = new Document(root);
-        outputter.output(document, writer);
-    }
-    
-    public Element getRootElement(Iterator<JobRef> jobs)
-    {
-        ContentConverter<Element, JobRef> contentConverter =
-            new ContentConverter<Element, JobRef>()
-            {
-                @Override
-                public Element convert(final JobRef jobRef)
-                {
-                    return getShortJobDescription(jobRef);
-                }
-            };
-        
-        Element root = new IterableContent<Element, JobRef>(JobAttribute.JOBS.getAttributeName(), UWS.NS, jobs, contentConverter);
-        root.addNamespaceDeclaration(UWS.NS);
-        root.addNamespaceDeclaration(UWS.XLINK_NS);
-        return root;
-    }
-
-    /**
-     * Create the XML for a short job description.
-     * @param job
-     * @return
-     */
-    public Element getShortJobDescription(JobRef jobRef)
-    {
-        Element shortJobDescription = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
-        shortJobDescription.setAttribute("id", jobRef.getJobID());
-        shortJobDescription.addContent(getPhase(jobRef));
-        return shortJobDescription;
-    }
-
-    /**
-     * Get an Element representing the Job phase.
-     *
-     * @return The Job phase Element.
-     */
-    private Element getPhase(JobRef jobRef)
-    {
-        Element element = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
-        element.addContent(jobRef.getExecutionPhase().toString());
-        return element;
-    }
-    
-
 }
-    

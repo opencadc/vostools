@@ -105,13 +105,11 @@ public class JobListReaderWriterTest
     public void testRoundTrip() throws Exception
     {
         
-        List<Job> startJobs = new ArrayList<Job>();
+        List<JobRef> startJobs = new ArrayList<JobRef>();
         ExecutionPhase phase = ExecutionPhase.QUEUED;
         for (int i=0; i<5; i++)
         {
-            Job job = new Job("jobID-" + i, phase, null, null, null,
-                    null, null, null, null, null,
-                    null, null, null, null, null);
+            JobRef job = new JobRef("jobID-" + i, phase);
             startJobs.add(job);
         }
         
@@ -126,26 +124,26 @@ public class JobListReaderWriterTest
         ByteArrayInputStream in = new ByteArrayInputStream(xml.getBytes());
         
         JobListReader reader = new JobListReader();
-        List<Job> endJobs = reader.read(in);
+        List<JobRef> endJobs = reader.read(in);
         
         Assert.assertEquals("wrong number of jobs", startJobs.size(), endJobs.size());
-        for (Job next : startJobs)
+        for (JobRef next : startJobs)
         {
             assertListContainsJob(endJobs, next);
         }
     }
     
-    private void assertListContainsJob(List<Job> list, Job job)
+    private void assertListContainsJob(List<JobRef> list, JobRef job)
     {
-        String jobID = job.getID();
-        for (Job next : list)
+        String jobID = job.getJobID();
+        for (JobRef next : list)
         {
-            if (next.getID().equals(jobID))
+            if (next.getJobID().equals(jobID))
             {
                 return;
             }
         }
-        Assert.fail("Missing job: " + job.getID());
+        Assert.fail("Missing job: " + job.getJobID());
     }
 
 }

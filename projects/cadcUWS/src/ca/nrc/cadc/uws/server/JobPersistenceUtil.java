@@ -69,12 +69,15 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.Iterator;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRef;
 
 /**
  * Static utility methods to help implement the JobPersistence interface.
@@ -250,7 +253,6 @@ public class JobPersistenceUtil
         job.setQuote(d);
     }
 
-
     /**
      * Make a deep copy of the specified job, including the jobID.
      * 
@@ -273,12 +275,12 @@ public class JobPersistenceUtil
      * @param inner
      * @return immutable job iterator
      */
-    public static Iterator<Job> createImmutableIterator(Iterator<Job> inner)
+    public static Iterator<JobRef> createImmutableIterator(Iterator<Job> inner)
     {
         return new JobIterator(inner);
     }
 
-    private static class JobIterator implements Iterator<Job>
+    private static class JobIterator implements Iterator<JobRef>
     {
         private Iterator<Job> inner;
         JobIterator(Iterator<Job> inner) { this.inner = inner; }
@@ -286,9 +288,10 @@ public class JobPersistenceUtil
         {
             return inner.hasNext();
         }
-        public Job next()
+        public JobRef next()
         {
-            return deepCopy(inner.next());
+            Job next = inner.next();
+            return new JobRef(next.getID(), next.getExecutionPhase());
         }
         public void remove()
         {

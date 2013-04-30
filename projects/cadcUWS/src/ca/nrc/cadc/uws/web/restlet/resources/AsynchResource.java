@@ -89,6 +89,7 @@ import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobListWriter;
+import ca.nrc.cadc.uws.JobRef;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 
@@ -199,7 +200,7 @@ public class AsynchResource extends UWSResource
     {
         try
         {
-            Iterator<Job> jobs = getJobManager().iterator();
+            Iterator<JobRef> jobs = getJobManager().iterator();
             JobListWriter jobListWriter = new JobListWriter();
             Element root = jobListWriter.getRootElement(jobs);
             document.setRootElement(root);

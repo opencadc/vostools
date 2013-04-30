@@ -69,23 +69,13 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.auth.IdentityManager;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.db.DBUtil;
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.profiler.Profiler;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ErrorType;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.Result;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -100,8 +90,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
+
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -111,6 +103,20 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.profiler.Profiler;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.JobRef;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
 
 /**
  * JobDAO class that stores the jobs in a RDBMS. This is an abstract class;
@@ -609,20 +615,42 @@ public class JobDAO
      *
      * @return job iterator
      */
-    public Iterator<Job> iterator()
+    public Iterator<JobRef> iterator() throws TransientException, JobPersistenceException
     {
-        throw new UnsupportedOperationException("not implemented");
+        log.debug("iterator");
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        return iterator(subject);
     }
 
     /**
      * Iterator over jobs owned by the specified owner.
      *
-     * @param owner
+     * @param ownerID
      * @return job iterator
      */
-    public Iterator<Job> iterator(Subject owner)
+    private Iterator<JobRef> iterator(Subject subject) throws TransientException, JobPersistenceException
     {
-        throw new UnsupportedOperationException("not implemented");
+        String ownerID = identManager.toOwnerString(subject);
+        if (ownerID == null)
+            throw new IllegalArgumentException("Job listing not allowed.");
+
+        log.debug("iterator(" + ownerID + ")");
+        try
+        {
+            JobListStatementCreator sc = new JobListStatementCreator();
+            sc.setOwnerID(ownerID);
+            Iterator<JobRef> it = (Iterator<JobRef>) jdbc.query(sc, new JobListExtractor());
+            prof.checkpoint("JobListStatementCreator");
+            return it;
+        }
+        catch(Throwable t)
+        {
+            if (DBUtil.isTransientDBException(t))
+                throw new TransientException("failed to get job list for owner: " + ownerID, t);
+            else
+                throw new JobPersistenceException("failed to get job list for owner: " + ownerID, t);
+        }
     }
 
     /**
@@ -1156,6 +1184,38 @@ public class JobDAO
             return sb.toString();
         }
     }
+    
+    class JobListStatementCreator implements PreparedStatementCreator
+    {
+        private String ownerID;
+        private String sql;
+
+        public JobListStatementCreator()
+        {
+            this.sql = getSQL();
+        }
+
+        public void setOwnerID(String ownerID) { this.ownerID = ownerID; }
+
+        public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
+        {
+            PreparedStatement ret = conn.prepareStatement(sql);
+            ret.setString(1, ownerID);
+            log.debug(sql);
+            return ret;
+        }
+
+        String getSQL()
+        {
+            if (sql != null)
+                return sql;
+            StringBuilder sb = new StringBuilder();
+            sb.append("SELECT jobID, executionPhase FROM ");
+            sb.append(jobSchema.jobTable);
+            sb.append(" WHERE ownerID = ? AND deletedByUser = 0");
+            return sb.toString();
+        }
+    }
 
     class JobSelectStatementCreator implements PreparedStatementCreator
     {
@@ -1618,6 +1678,68 @@ public class JobDAO
             catch(NoSuchFieldException fex) { throw new RuntimeException("BUG", fex); }
             catch(IllegalAccessException bug) { throw new RuntimeException("BUG", bug); }
         }
+    }
+    
+    // extract a list of jobs as an iterator
+    private class JobListExtractor implements ResultSetExtractor
+    {
+        public JobListExtractor() {}
+
+        public Object extractData(ResultSet rs) throws SQLException, DataAccessException
+        {
+            return new JobListIterator(rs);
+        }
+    }
+    
+    private class JobListIterator implements Iterator<JobRef>
+    {
+        private ResultSet rs;
+        private JobRef next;
+        
+        JobListIterator(ResultSet rs)
+        {
+            this.rs = rs;
+            advance();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return (next != null);
+        }
+
+        @Override
+        public JobRef next()
+        {
+            JobRef ret = next;
+            advance();
+            return ret;
+        }
+        
+        private void advance()
+        {
+            try
+            {
+                // jobID
+                String jobID = rs.getString("jobID");
+    
+                // executionPhase
+                ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());
+                
+                next = new JobRef(jobID, executionPhase);
+            }
+            catch (Exception e)
+            {
+                throw new IllegalStateException("Could not get next jobRef", e);
+            }
+        }
+
+        @Override
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+        
     }
 
 

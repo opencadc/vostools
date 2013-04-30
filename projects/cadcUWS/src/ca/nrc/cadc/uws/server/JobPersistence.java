@@ -69,11 +69,13 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.net.TransientException;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import java.util.Iterator;
 import java.util.List;
+
+import ca.nrc.cadc.net.TransientException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRef;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Service interface for job persistence.
@@ -133,11 +135,11 @@ public interface JobPersistence
         throws JobPersistenceException, TransientException;
 
     /**
-     * Obtain a listing of Job instances.
+     * Obtain a listing of JobRef instances.
      *
      * @return iterator over visible jobs
      */
-    public Iterator<Job> iterator()
+    public Iterator<JobRef> iterator()
         throws JobPersistenceException, TransientException;
 
     // optimised access methods

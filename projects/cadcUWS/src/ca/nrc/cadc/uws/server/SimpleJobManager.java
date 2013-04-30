@@ -86,6 +86,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRef;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -228,7 +229,7 @@ public class SimpleJobManager implements JobManager
         return job;
     }
     
-    public Iterator<Job> iterator()
+    public Iterator<JobRef> iterator()
         throws JobPersistenceException, TransientException
     {
         return jobPersistence.iterator();

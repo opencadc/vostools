@@ -76,6 +76,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -98,6 +99,7 @@ import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.JobRef;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 
@@ -473,6 +475,48 @@ public abstract class JobDAOTest
             persisted = dao.get(job.getID());
             dao.getDetails(persisted);
             compareJobs("persisted", job, persisted);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testPutList()
+    {
+        Job ret, job1, job2, job3;
+        String id1, id2, id3;
+
+        try
+        {
+            job1 = createJob();
+            job2 = createJob();
+            job3 = createJob();
+
+            JobDAO dao = getDAO();
+            ret = dao.put(job1, null);
+            id1 = ret.getID();
+            ret = dao.put(job2, null);
+            id2 = ret.getID();
+            ret = dao.put(job3, null);
+            id3 = ret.getID();
+            
+            Iterator<JobRef> it = dao.iterator();
+            boolean found1 = false, found2 = false, found3 = false;
+            String next = null;
+            while (it.hasNext())
+            {
+                next = it.next().getJobID();
+                if (next.equals(id1))
+                    found1 = true;
+                if (next.equals(id2))
+                    found2 = true;
+                if (next.equals(id3))
+                    found3 = true;
+            }
+            Assert.assertTrue("Job list incomplete", found1 && found2 && found3);
         }
         catch(Exception unexpected)
         {

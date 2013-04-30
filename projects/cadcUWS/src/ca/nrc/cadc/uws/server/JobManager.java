@@ -75,6 +75,7 @@ import java.util.List;
 
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRef;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -126,7 +127,7 @@ public interface JobManager
      * 
      * @return
      */
-    public Iterator<Job> iterator()
+    public Iterator<JobRef> iterator()
         throws JobPersistenceException, TransientException;
 
     /**
