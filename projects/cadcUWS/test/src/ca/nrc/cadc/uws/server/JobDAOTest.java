@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws.server;
 import java.net.URI;
 import java.net.URL;
 import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -486,37 +487,50 @@ public abstract class JobDAOTest
     @Test
     public void testPutList()
     {
-        Job ret, job1, job2, job3;
-        String id1, id2, id3;
-
         try
         {
-            job1 = createJob();
-            job2 = createJob();
-            job3 = createJob();
-
-            JobDAO dao = getDAO();
-            ret = dao.put(job1, null);
-            id1 = ret.getID();
-            ret = dao.put(job2, null);
-            id2 = ret.getID();
-            ret = dao.put(job3, null);
-            id3 = ret.getID();
+            Subject subject = new Subject();
+            X500Principal principal = new X500Principal("testPutList");
+            subject.getPrincipals().add(principal);
             
-            Iterator<JobRef> it = dao.iterator();
-            boolean found1 = false, found2 = false, found3 = false;
-            String next = null;
-            while (it.hasNext())
-            {
-                next = it.next().getJobID();
-                if (next.equals(id1))
-                    found1 = true;
-                if (next.equals(id2))
-                    found2 = true;
-                if (next.equals(id3))
-                    found3 = true;
-            }
-            Assert.assertTrue("Job list incomplete", found1 && found2 && found3);
+            Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
+                {
+                    public Object run() throws Exception
+                    {
+                        
+                        Job ret, job1, job2, job3;
+                        String id1, id2, id3;
+                        
+                        job1 = createJob();
+                        job2 = createJob();
+                        job3 = createJob();
+
+                        JobDAO dao = getDAO();
+                        ret = dao.put(job1, null);
+                        id1 = ret.getID();
+                        ret = dao.put(job2, null);
+                        id2 = ret.getID();
+                        ret = dao.put(job3, null);
+                        id3 = ret.getID();
+                        
+                        Iterator<JobRef> it = dao.iterator();
+                        boolean found1 = false, found2 = false, found3 = false;
+                        String next = null;
+                        while (it.hasNext())
+                        {
+                            next = it.next().getJobID();
+                            if (next.equals(id1))
+                                found1 = true;
+                            if (next.equals(id2))
+                                found2 = true;
+                            if (next.equals(id3))
+                                found3 = true;
+                        }
+                        Assert.assertTrue("Job list incomplete", found1 && found2 && found3);
+                        return null;
+                    }
+                });
+
         }
         catch(Exception unexpected)
         {
