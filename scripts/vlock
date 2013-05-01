@@ -1,0 +1,88 @@
+#!/usr/bin/env python2.7
+"""set the islocked property of a node.
+
+A node is locked by setting the islocked property. When a node is
+locked, it cannot be copied to, moved or deleted. """
+
+
+import time
+import errno
+
+from vos import vos, __version__
+
+usage = """
+  vlock [options] node islocked <true|false> 
+     
+      Version: %s """ % (__version__.version)
+
+
+def signal_handler(signal, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+
+
+if __name__ == '__main__':
+
+    import optparse
+    import logging, sys
+    import vos, errno, os
+    ## handle interupts nicely
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+
+    parser = optparse.OptionParser(usage)
+
+    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
+    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
+    parser.add_option("--certfile",
+                        help="location of your CADC security certificate file",
+                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+    (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vlock version %s \n\n" % (__version__.version)) 
+        sys.exit(0)
+    
+    if opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")
+
+    key_value = args[1:]
+    if len(key_value) != 2 or key_value[0] != "islocked" or \
+        (key_value[1] != "true" and key_value[1] != "false"):
+        parser.print_help()
+        sys.stderr.write("\n\nRequire 'islocked' <true|false>\n\n")
+        sys.exit(-1)
+
+    logLevel = logging.INFO
+    logging.basicConfig(level=logLevel,
+                        format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
+
+    returnCode = 0
+    while True:
+
+        try:
+            client = vos.Client(certFile=opt.certfile)
+            node = client.getNode(args[0])
+            for i in range(0, len(key_value), 2):
+                if node.changeProp(key_value[i], key_value[i+1]) == 1:
+                    # value is changed
+                    node.props[key_value[i]] = key_value[i+1]
+            logging.debug("Calling UPDATE with " + str(node))
+            client.update(node)
+            break
+        except KeyboardInterrupt:
+            sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+            sys.exit(-1)
+        except Exception as e:
+            sys.stderr.write(str(e))
+            sys.exit(-1)
+    sys.exit(returnCode)
