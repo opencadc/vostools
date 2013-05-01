@@ -56,7 +56,9 @@ echo -n "mount vospace"
 fusermount -u $MOUNTPOINT >& /dev/null
 rmdir $MOUNTPOINT >& /dev/null
 rm -fR /tmp/vos_cache #clean the cache
+echo "$MOUNTCMD $CERT --vospace="vos:CADCRegtest1/atest" --mountpoint=$MOUNTPOINT --cache_dir=/tmp/vos_cache --log=/tmp/mountvofs.log -d "
 $MOUNTCMD $CERT --vospace="vos:CADCRegtest1/atest" --mountpoint=$MOUNTPOINT --cache_dir=/tmp/vos_cache --log=/tmp/mountvofs.log -d || echo " [FAIL]" && exit -1
+sleep 3
 ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
 echo " [OK]"
 

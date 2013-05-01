@@ -64,7 +64,7 @@ except Exception as e:
 try:
     vos.link(args[0],args[1])
 except Exception as e:
-    logging.error("Failed to make link from %s] to %s" % ( args[0], args[1]))
+    logging.error("Failed to make link from %s to %s" % ( args[0], args[1]))
     logging.error(getattr(e,'strerror','Unkown Error'))
     sys.exit(-1)
 
