@@ -489,7 +489,7 @@ public abstract class JobDAOTest
     {
         try
         {
-            Subject subject = new Subject();
+            final Subject subject = new Subject();
             X500Principal principal = new X500Principal("testPutList");
             subject.getPrincipals().add(principal);
             
@@ -506,11 +506,11 @@ public abstract class JobDAOTest
                         job3 = createJob();
 
                         JobDAO dao = getDAO();
-                        ret = dao.put(job1, null);
+                        ret = dao.put(job1, subject);
                         id1 = ret.getID();
-                        ret = dao.put(job2, null);
+                        ret = dao.put(job2, subject);
                         id2 = ret.getID();
-                        ret = dao.put(job3, null);
+                        ret = dao.put(job3, subject);
                         id3 = ret.getID();
                         
                         Iterator<JobRef> it = dao.iterator();
