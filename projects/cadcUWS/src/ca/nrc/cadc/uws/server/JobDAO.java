@@ -90,6 +90,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
@@ -611,7 +612,8 @@ public class JobDAO
     
 
     /**
-     * Iterator over all jobs.
+     * Iterate over the jobs owned by the user in the subject contained in the
+     * access control context.
      *
      * @return job iterator
      */
@@ -629,27 +631,30 @@ public class JobDAO
      * @param ownerID
      * @return job iterator
      */
-    private Iterator<JobRef> iterator(Subject subject) throws TransientException, JobPersistenceException
+    public Iterator<JobRef> iterator(Subject subject) throws TransientException, JobPersistenceException
     {
-        String ownerID = identManager.toOwnerString(subject);
-        if (ownerID == null)
+        Object owner = identManager.toOwner(subject);
+        if (owner == null)
             throw new IllegalArgumentException("Job listing not allowed.");
 
-        log.debug("iterator(" + ownerID + ")");
+        log.debug("iterator(" + owner + ")");
         try
         {
             JobListStatementCreator sc = new JobListStatementCreator();
-            sc.setOwnerID(ownerID);
-            Iterator<JobRef> it = (Iterator<JobRef>) jdbc.query(sc, new JobListExtractor());
+            sc.setOwner(owner);
+            
+            DataSource dataSource = jdbc.getDataSource();
+            Connection conn = dataSource.getConnection();
+            JobListIterator jobListIterator = new JobListIterator(conn, sc);
             prof.checkpoint("JobListStatementCreator");
-            return it;
+            return jobListIterator;
         }
         catch(Throwable t)
         {
             if (DBUtil.isTransientDBException(t))
-                throw new TransientException("failed to get job list for owner: " + ownerID, t);
+                throw new TransientException("failed to get job list for owner: " + owner, t);
             else
-                throw new JobPersistenceException("failed to get job list for owner: " + ownerID, t);
+                throw new JobPersistenceException("failed to get job list for owner: " + owner, t);
         }
     }
 
@@ -1187,7 +1192,7 @@ public class JobDAO
     
     class JobListStatementCreator implements PreparedStatementCreator
     {
-        private String ownerID;
+        private Object owner;
         private String sql;
 
         public JobListStatementCreator()
@@ -1195,12 +1200,12 @@ public class JobDAO
             this.sql = getSQL();
         }
 
-        public void setOwnerID(String ownerID) { this.ownerID = ownerID; }
+        public void setOwner(Object owner) { this.owner = owner; }
 
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             PreparedStatement ret = conn.prepareStatement(sql);
-            ret.setString(1, ownerID);
+            ret.setObject(1, owner);
             log.debug(sql);
             return ret;
         }
@@ -1680,26 +1685,27 @@ public class JobDAO
         }
     }
     
-    // extract a list of jobs as an iterator
-    private class JobListExtractor implements ResultSetExtractor
-    {
-        public JobListExtractor() {}
-
-        public Object extractData(ResultSet rs) throws SQLException, DataAccessException
-        {
-            return new JobListIterator(rs);
-        }
-    }
-    
     private class JobListIterator implements Iterator<JobRef>
     {
+        private Connection conn;
+        private PreparedStatement prepStmt;
+        
         private ResultSet rs;
         private JobRef next;
         
-        JobListIterator(ResultSet rs)
+        JobListIterator(Connection conn, JobListStatementCreator sc)
         {
-            this.rs = rs;
-            advance();
+            try
+            {
+                this.conn = conn;
+                prepStmt = sc.createPreparedStatement(conn);
+                rs = prepStmt.executeQuery();
+                advance();
+            }
+            catch (SQLException e)
+            {
+                throw new IllegalStateException(e);
+            }
         }
 
         @Override
@@ -1711,14 +1717,25 @@ public class JobDAO
         @Override
         public JobRef next()
         {
+            if (next == null)
+                throw new NoSuchElementException();
+            
             JobRef ret = next;
-            advance();
-            return ret;
+            
+            try
+            {
+                advance();
+                return ret;
+            }
+            catch (SQLException e)
+            {
+                throw new IllegalStateException(e);
+            }
         }
         
-        private void advance()
+        private void advance() throws SQLException
         {
-            try
+            if (rs.next())
             {
                 // jobID
                 String jobID = rs.getString("jobID");
@@ -1728,10 +1745,24 @@ public class JobDAO
                 
                 next = new JobRef(jobID, executionPhase);
             }
-            catch (Exception e)
+            else
             {
-                throw new IllegalStateException("Could not get next jobRef", e);
+                next = null;
+                
+                // reached the end of the results, release the
+                // resources
+                try
+                {
+                    rs.close();
+                    prepStmt.close();
+                    conn.commit();
+                }
+                catch (SQLException e)
+                {
+                    log.warn("Could not close job list database resources.", e);
+                }
             }
+            log.debug("Next JobRef: " + next);
         }
 
         @Override

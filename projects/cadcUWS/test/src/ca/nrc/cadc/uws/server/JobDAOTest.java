@@ -490,7 +490,7 @@ public abstract class JobDAOTest
         try
         {
             final Subject subject = new Subject();
-            X500Principal principal = new X500Principal("testPutList");
+            X500Principal principal = new X500Principal("cn=test user,ou=hia.nrc.ca,o=grid,c=ca");
             subject.getPrincipals().add(principal);
             
             Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
@@ -519,6 +519,7 @@ public abstract class JobDAOTest
                         while (it.hasNext())
                         {
                             next = it.next().getJobID();
+                            log.debug("Next jobID: " + next);
                             if (next.equals(id1))
                                 found1 = true;
                             if (next.equals(id2))

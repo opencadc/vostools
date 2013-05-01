@@ -105,4 +105,9 @@ public class JobRef
         return jobID;
     }
     
+    public String toString()
+    {
+        return "JobRef: " + jobID;
+    }
+    
 }
