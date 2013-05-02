@@ -118,7 +118,7 @@ class Connection:
                 connection.connect()
             except httplib.HTTPException as e:
                 logging.critical("%s" % (str(e)))
-                logggin.critical("Retrying connection for 30 seconds")
+                logging.critical("Retrying connection for 30 seconds")
                 if time.time() - timestart > 1200:
                     raise e
             except Exception as e:
@@ -1073,7 +1073,7 @@ class Client:
             return False
         if status in ['HELD' , 'SUSPENDED', 'ABORTED']:
             ## requeue the job and continue to monitor for completion.
-            raise OSError("UWS status: %s" % (status), eerno.EFAULT)
+            raise OSError("UWS status: %s" % (status), errno.EFAULT)
         errorURL = jobURL + "/error"
         con = VOFile(errorURL, self.conn, method="GET")
         errorMessage = con.read()
