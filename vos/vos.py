@@ -951,16 +951,15 @@ class Client:
             return self._put(uri)
 
         parts = urlparse(uri)
-        path = parts.path.strip('/')
-        server = Client.VOServers.get(parts.netloc,None)
+        server = Client.VOServers.get(parts.netloc, None)
         if server is None:
             return uri
-        logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
+        logging.debug("Node URI: %s, server: %s, parts: %s " % (uri, server, str(parts)))
 
-        if (method == 'GET' and view == 'data') or method == "PUT" :
+        if (method == 'GET' and view == 'data') or method == "PUT":
             ## only get here if cadc_short_cut == True
-            URL = "%s://%s/%s/%s/%s" % ( self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
-            logging.debug("Sending short cuturl: %s" %( URL))
+            URL = "%s://%s/%s/%s/%s" % (self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
+            logging.debug("Sending short cuturl: %s" % URL)
             return URL
 
         ### this is a GET so we might have to stick some data onto the URL...
@@ -972,10 +971,10 @@ class Client:
         if nextURI is not None:
             fields['uri'] = nextURI
         data = ""
-        if len(fields) > 0 :
-               data = "?" + urllib.urlencode(fields)
-        logging.debug("data: %s" % ( data) ) 
-	logging.debug("Fields: %s" % ( str(fields)))
+        if len(fields) > 0:
+            data = "?" + urllib.urlencode(fields)
+        logging.debug("data: %s" % data)
+        logging.debug("Fields: %s" % str(fields))
         URL = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
         logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
