@@ -1,0 +1,81 @@
+#!/usr/bin/env python2.7
+"""Create a directory (ContainerNode) in the VOSpace repositotry"""
+
+
+import vos
+import time
+import os, sys, logging
+from optparse import OptionParser
+import signal
+from vos import vos, __version__
+
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+def main():
+    signal.signal(signal.SIGINT, signal_handler)
+    usage = """
+    vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.
+
+Version: %s """ % (__version__.version)
+
+    parser = OptionParser(usage)
+    parser.add_option("-v", "--verbose", action="store_true")
+    parser.add_option("-d", "--debug", action="store_true")
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+    parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+
+    (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vmv version %s \n\n" % (__version__.version)) 
+        sys.exit()
+
+    if opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="vmv: %(message)s")
+    elif opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="vmv: %(module)s.%(funcName)s %(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="vmv: %(message)s")
+
+
+    if len(args) != 2:
+        parser.error("You must supply a source and desitination")
+
+
+
+    try:
+        client = vos.Client(certFile=opt.certfile)
+    except Exception as e:
+        logging.error("Conneciton failed:  %s" % (str(e)))
+        sys.exit(e.errno)
+
+    source = args[0]
+    dest = args[1]
+
+    try:
+        client.move(source, dest)
+    except KeyboardInterrupt:
+        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(-1)
+    except Exception as e:
+        import re
+        if re.search('NodeLocked', str(e)) != None:
+            logging.error('Use vlock to unlock nodes before moving.')
+        logging.error(str(e))
+        sys.exit(-1)
+
+
+
+if __name__ == '__main__':
+
+    try:
+        main()
+    except:
+        import traceback
+        logging.debug(sys.exc_info())
+        sys.exit(-1)

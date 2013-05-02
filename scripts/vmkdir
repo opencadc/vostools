@@ -1,0 +1,68 @@
+#!/usr/bin/env python2.7
+"""Create a directory (ContainerNode) in the VOSpace repositotry"""
+
+
+import vos
+import time
+import optparse, os, sys, logging
+from vos import vos, __version__
+
+usage="""
+        vmkdir vos:/root/node   -- creates a new directory (ContainerNode) called node at vospace root 
+ Version: %s """ % (__version__.version)
+
+
+
+parser=optparse.OptionParser(usage)
+parser.add_option("-v","--verbose",action="store_true")
+parser.add_option("-d","--debug",action="store_true")
+parser.add_option("-p",action="store_true",help="Create intermediate directories as required.")
+parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+
+if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+        
+(opt,args)=parser.parse_args()
+
+if opt.version:
+        sys.stdout.write("vmkdir version %s \n\n" % (__version__.version)) 
+        sys.exit()
+
+if opt.verbose:
+    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
+elif opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="vmkdir:%(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="vmkdir: %(message)s")
+
+
+if len(args)>1:
+    parser.error("Only one directory can be built per call")
+
+logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
+
+
+try:
+
+    client=vos.Client(certFile=opt.certfile)
+
+    dirNames=[]
+    thisDir = args[0]
+    if opt.p:
+        while not client.access(thisDir):
+            dirNames.append(os.path.basename(thisDir))
+            thisDir = os.path.dirname(thisDir)
+        while len(dirNames) > 0:
+            thisDir = os.path.join(thisDir,dirNames.pop())
+            client.mkdir(thisDir)
+    else:
+        client.mkdir(thisDir)
+
+except Exception as e:
+    logging.error(str(e))
+    sys.exit(getattr(e,'errno',-1))
+
+
+sys.exit(0)

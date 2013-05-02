@@ -1,0 +1,70 @@
+#!/usr/bin/env python2.7
+
+"""vls:  list the contents of a voSpace"""
+import vos
+import optparse
+import logging
+import os,sys
+from vos import vos, __version__
+
+usage="""
+  vln vos:VOSpaceSource vos:VOSpaceTarget
+  
+
+examples:  
+
+vln vos:vospace/junk.txt vos:vospace/linkToJunk.txt
+vln vos:vospace/directory vos:vospace/linkToDirectory
+vln http://external.data.source vos:vospace/linkToExternalDataSource
+
+ Version: %s """ % (__version__.version)
+
+
+parser=optparse.OptionParser(usage)
+
+parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
+parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
+parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit()
+
+(opt,args)=parser.parse_args()
+
+if opt.version:
+    sys.stdout.write("vln version %s \n\n" % (__version__.version)) 
+    sys.exit()
+
+
+if opt.verbose:
+    logging.basicConfig(level=logging.INFO,format="%(module)s: %(message)s")
+elif opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="%(module)s: %(message)s")
+
+if len(args) !=  2:
+    parser.error("You must specifiy a source file and a target file")
+    sys.exit(-1)
+
+if args[1][0:4] != "vos:":
+    parser.error("The target to source must be in vospace")
+    sys.exit(-1)
+
+logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
+
+try:
+    vos=vos.Client(certFile=opt.certfile)
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+    sys.exit(-1)
+
+try:
+    vos.link(args[0],args[1])
+except Exception as e:
+    logging.error("Failed to make link from %s to %s" % ( args[0], args[1]))
+    logging.error(getattr(e,'strerror','Unkown Error'))
+    sys.exit(-1)
+

@@ -1,0 +1,99 @@
+#!/usr/bin/env python2.7
+"""set/read/(list) a property(ies) if a node.
+
+The tag system is meant to allow tags, in addition to the standard
+nodode properties. """
+
+
+import time
+import errno
+import pprint
+from vos import vos, __version__
+
+usage = """
+  vtag [options] node [key [value] [key [value] ...]]
+     
+      Version: %s """ % (__version__.version)
+
+
+def signal_handler(signal, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+
+def vtag(node,props):
+    """Lists/sets values of node properties based on context (length of props).
+    
+    node: vos.vos.Node object
+    props: dictionary of properties to set.  If dict is zero length, list them all.
+
+    """
+    client = vos.Client(certFile=opt.certfile)
+    node = client.getNode(node)
+    if len(props) == 0 : 
+        ## print all properties
+        pprint.pprint(node.props)
+    elif len(props) == 1:
+        ## get one property
+        logging.debug("just print this one out %s" % (props[0]))
+        pprint.pprint(node.props.get(props[0], None))
+    else:
+        ## update properties
+        changed = 0
+        for i in range(0, len(props), 2):
+            changed += node.changeProp(props[i], props[i+1])
+        if changed > 0 : 
+            client.addProps(node)
+
+    return 0
+
+
+
+
+if __name__ == '__main__':
+
+    import optparse
+    import logging, sys
+    import vos, errno, os
+    ## handle interupts nicely
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+
+    parser = optparse.OptionParser(usage, version=__version__.version)
+
+    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
+    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
+    parser.add_option('--list', '-l', action="store_true", help='list node properties')
+    parser.add_option("--certfile",
+                        help="location of your CADC security certificate file",
+                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("-R", "--recursive", action='store_const', const=True,
+                        help="Recursive set read/write properties")
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+    (opt, args) = parser.parse_args()
+
+    if opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
+
+    if len(args)-1 % 2 != 0 and len(args) > 2:
+        parser.error("\n\nRequire either just one key to look-up or a set of key/value pairs to set.\n\n")
+
+    ## the node should be the first argument, the rest should contain the key/val pairs
+    node = args.pop(0)
+    
+    try:
+        sys.exit(vtag(node, args))
+    except KeyboardInterrupt:
+        #sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        pass
+    except Exception as e:
+        logging.error(str(e))
+
+    sys.exit(-1)
+

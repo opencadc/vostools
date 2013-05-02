@@ -1,0 +1,127 @@
+#!/usr/bin/env python2.7
+"""set read/write properties of a node.
+
+"""
+
+
+import time
+import errno
+import optparse
+import vos
+import signal
+from vos import vos, __version__
+
+
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt, "SIGINT signal handler"
+
+if __name__ == '__main__':
+
+    signal.signal(signal.SIGINT, signal_handler)
+    import logging, sys
+    import errno, os
+    usage = """
+    vchmod mode node [read/write group names in quotes - maxim 4 each] -- Sets read/write properties of a node.   
+    
+    Version: %s
+""" % (__version__.version)
+
+    parser = optparse.OptionParser(usage)
+
+    parser.add_option("--certfile", help="location of your CADC security certificate file",
+                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("-R", "--recursive", action='store_const', const=True,
+                        help="Recursive set read/write properties")
+    parser.add_option("-v", "--verbose", action='store_const', const=True,
+                        help="print some diagnostics")
+    parser.add_option("-d", "--debug", action='store_const', const=True,
+                        help="print all diagnositics")
+    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit()
+
+    (opt, args) = parser.parse_args()
+
+    if opt.version:
+        sys.stdout.write("vchmod version %s \n\n" % (__version__.version)) 
+        sys.exit()
+
+    if opt.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    elif opt.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
+    else:
+        logging.basicConfig(level=logging.ERROR, format="%(message)s")
+
+    if len(args) < 2:
+        parser.error("Requires mode and node arguments")
+    cmdArgs = dict(zip(['mode', 'node'], args[0:2]))
+    groupNames = args[2:]
+    import re
+    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[\+\-\=]{1})(?P<what>rw$|wr$|r$|w$)", cmdArgs['mode'])
+    if not mode:
+        parser.print_help()
+        logging.error("\n\nAccepted modes: (og|go|o|g)[+-=](rw|wr|r\w)\n\n")
+        sys.exit(-1)
+
+    props = {}
+    if 'o' in mode.group('who'):
+        if not mode.group('what') == 'r':   # read only
+            parser.print_help()
+            logging.error("\n\nPublic access is readonly, no public write available \n\n")
+            sys.exit(-1)
+        if mode.group('op') == '-':
+            props['ispublic'] = 'false'
+        else:
+            props['ispublic'] = 'true'
+    if 'g' in mode.group('who'):
+        if '-' == mode.group('op'):
+            if not len(groupNames) == 0:
+                parser.print_help()
+                logging.error("\n\nNames of groups not required with remove permission\n\n")
+                sys.exit(-1)
+            if 'r' in mode.group('what'):
+                props['readgroup'] = None
+            if "w" in mode.group('what'):
+                props['writegroup'] = None
+        else:
+            if not len(groupNames) == len(mode.group('what')):
+                parser.print_help()
+                logging.error("\n\n%s group names required for %s\n\n" %
+                                 (len(mode.group('what')), mode.group('what')))
+                sys.exit(-1)
+            if mode.group('what').find('r') > -1: 
+                # remove duplicate whitespaces
+                rgroups = " ".join(groupNames[mode.group('what').find('r')].split())
+                props['readgroup'] = (vos.CADC_GMS_PREFIX + 
+                     rgroups.replace(" ", " " + vos.CADC_GMS_PREFIX))
+            if mode.group('what').find('w') > -1:
+                wgroups = " ".join(groupNames[mode.group('what').find('w')].split())
+                props['writegroup'] = (vos.CADC_GMS_PREFIX + 
+                    wgroups.replace(" ", " " + vos.CADC_GMS_PREFIX))
+    logging.debug("Properties: %s" % (str(props)))
+    logging.debug("Node: %s" % cmdArgs['node'])
+    returnCode = 0
+    try:
+        client = vos.Client(certFile=opt.certfile)
+        node = client.getNode(cmdArgs['node'])
+        if opt.recursive:
+            node.props.clear()
+            node.clearProps()
+            #del node.node.findall(vos.Node.PROPERTIES)[0:]
+        if 'readgroup' in props:
+            node.chrgrp(props['readgroup'])
+        if 'writegroup' in props:
+            node.chwgrp(props['writegroup'])
+        if 'ispublic' in props:
+            node.setPublic(props['ispublic'])
+        returnCode = client.update(node, opt.recursive)
+    except KeyboardInterrupt as ke:
+        logging.error("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(getattr(ke, 'errno', -1))
+    except Exception as e:
+        logging.error("Error: " + str(e))
+        sys.exit(getattr(e, 'errno', -1))
+    sys.exit(returnCode)
