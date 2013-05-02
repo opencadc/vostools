@@ -5,30 +5,44 @@ from mock import Mock
 
 import vos
 
-TEST_URI = "vos://naming_authority/mydata/file1"
+TEST_ENDPOINT = "http://www.testendpoint.ca"
+
+TEST_URI_1 = "vos://naming_authority/mydata/file1"
+TEST_URI_2 = "vos://cadc.nrc.ca!vospace/mydata/file1"
 
 
 class ClientTest(unittest.TestCase):
     def setUp(self):
         self.conn = Mock(spec=vos.Connection)
 
-        self.undertest = vos.Client(conn=self.conn)
+        # Set certFile to None because person running this may or may not
+        # have a certification file.
+        self.undertest = vos.Client(certFile=None, conn=self.conn)
 
     def test_open_basic_vofile(self):
-        vofile = self.undertest.open(TEST_URI)
+        vofile = self.undertest.open(TEST_URI_1)
         assert_that(vofile.name, equal_to("file1"))
 
     def test_getNodeURL_viewdata(self):
-        test_endpoint = "http://www.testendpoint.ca"
-        self.undertest.transfer = Mock(return_value=test_endpoint)
+        self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
 
-        url = self.undertest.getNodeURL(TEST_URI, view="data")
-        assert_that(url, equal_to(test_endpoint))
-        self.undertest.transfer.assert_called_with(TEST_URI, "pullFromVoSpace")
+        url = self.undertest.getNodeURL(TEST_URI_1, view="data")
+        assert_that(url, equal_to(TEST_ENDPOINT))
+        self.undertest.transfer.assert_called_with(TEST_URI_1, "pullFromVoSpace")
 
-        url = self.undertest.getNodeURL(TEST_URI, view="data", method="PUT")
-        assert_that(url, equal_to(test_endpoint))
-        self.undertest.transfer.assert_called_with(TEST_URI, "pushToVoSpace")
+        url = self.undertest.getNodeURL(TEST_URI_1, view="data", method="PUT")
+        assert_that(url, equal_to(TEST_ENDPOINT))
+        self.undertest.transfer.assert_called_with(TEST_URI_1, "pushToVoSpace")
+
+    def test_getNodeURL_cadcshortcut(self):
+        # Create client with different params for this test
+        self.undertest = vos.Client(certFile=None, conn=self.conn, cadc_short_cut=True)
+        self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
+
+        url = self.undertest.getNodeURL(TEST_URI_2, view="data")
+        assert_that(not self.undertest.transfer.called)
+        assert_that(url,
+                    equal_to("http://%s/%s/vospace/mydata/file1" % (vos.vos.SERVER, vos.Client.DWS)))
 
 
 if __name__ == '__main__':
