@@ -44,6 +44,31 @@ class ClientTest(unittest.TestCase):
         assert_that(url,
                     equal_to("http://%s/%s/vospace/mydata/file1" % (vos.vos.SERVER, vos.Client.DWS)))
 
+    def test_getNodeURL_cutout(self):
+        self.undertest.transfer = Mock(return_value="http://www.cadc.hia.nrc.gc.ca"
+                                                    "/data/pub/CFHT/1616220")
+
+        uri = "vos://cadc.nrc.ca~vospace/OSSOS/dbimages/1616220/1616220o.fits.fz"
+        url = self.undertest.getNodeURL(uri, view="cutout",
+                                        cutout="[1][100:300,200:400]")
+
+        assert_that(url,
+                    equal_to("http://www.cadc.hia.nrc.gc.ca/data/pub/CFHT/1616220"
+                             "?cutout=[1][100:300,200:400]"))
+
+    def test_getNodeURL_cutout_with_runid(self):
+        self.undertest.transfer = Mock(return_value="http://www.cadc.hia.nrc.gc.ca"
+                                                    "/data/pub/CFHT/1616220?RUNID=abc123")
+
+        uri = "vos://cadc.nrc.ca~vospace/OSSOS/dbimages/1616220/1616220o.fits.fz"
+        url = self.undertest.getNodeURL(uri, view="cutout",
+                                        cutout="[1][100:300,200:400]")
+
+        assert_that(url,
+                    equal_to("http://www.cadc.hia.nrc.gc.ca/data/pub/CFHT/1616220"
+                             "?RUNID=abc123"
+                             "&cutout=[1][100:300,200:400]"))
+
 
 if __name__ == '__main__':
     unittest.main()

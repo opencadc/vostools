@@ -939,10 +939,10 @@ class Client:
         return self.nodeCache[uri]
 
 
-    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None):
+    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None):
         """Split apart the node string into parts and return the correct URL for this node"""
-
         uri = self.fixURI(uri)
+
         if not self.cadc_short_cut and method == 'GET' and view == 'data':
             return self._get(uri)
 
@@ -961,6 +961,16 @@ class Client:
             URL = "%s://%s/%s/%s/%s" % (self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
             logging.debug("Sending short cuturl: %s" % URL)
             return URL
+
+        if view == "cutout":
+            if cutout is None:
+                raise ValueError("For view=cutout, must specify a cutout "
+                                "value of the form"
+                                "[extension number][x1:x2,y1:y2]")
+            urlbase = self._get(uri)
+            basepath = urlparse(urlbase).path
+            ext = "&" if "?" in basepath else "?"
+            return urlbase + ext + "cutout=" + cutout
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
@@ -1105,7 +1115,7 @@ class Client:
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None, cutout=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1133,7 +1143,7 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
-            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI)
+            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
@@ -1149,7 +1159,7 @@ class Client:
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
                     #logging.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
-                    return self.open(target, mode, view, head, URL, limit, nextURI, size)
+                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
                     #logging.debug("Opening %s with urllib2" % (target))
