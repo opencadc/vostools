@@ -735,6 +735,7 @@ public class JobDAO
             prof.checkpoint("commit.JobPutStatementCreator");
 
             // OK to modify the job now
+            job.ownerSubject = owner;
             job.setOwnerID( identManager.toOwnerString(owner) );
             prof.checkpoint("IdentityManager.toOwnerString");
             return job;
