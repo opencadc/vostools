@@ -111,28 +111,12 @@ public class DeleteNodeAction extends NodeAction
             if (vosURI.isRoot() || parentURI.isRoot())
                 throw new AccessControlException("permission denied");
             
-            // get the target node
             Node target = nodePersistence.get(vosURI);
-            // check the permissions on parent
-            try
-            {
-                log.debug("Checking delete privilege on: " + parentURI);
-                voSpaceAuthorizer.getWritePermission(target.getParent());
-            }
-            catch (NodeLockedException e)
-            {
-                throw e;
-            }
-            catch (AccessControlException e)
-            {
-                throw new AccessControlException("Write permission denied on " + parentURI);
-            }
             
-            // check delete permissions and locks on target node and children
-            checkDeletePermission(target);
+            log.debug("Checking delete privilege on: " + target.getUri());
+            voSpaceAuthorizer.getDeletePermission(target);
             
             return target;
-
         }
         catch (NodeNotFoundException ex)
         {
@@ -179,55 +163,5 @@ public class DeleteNodeAction extends NodeAction
         return NodeFault.NodeNotFound;
     }
     
-    /**
-     * Check the delete permission on the given parent.
-     * 
-     * Delete permission is granted if write permission is granted
-     * on all non-leaf nodes within this container.
-     * 
-     * @param container
-     * @throws AccessControlException
-     * @throws FileNotFoundException
-     * @throws NodeLockedException
-     */
-    private void checkDeletePermission(Node node)
-        throws AccessControlException, NodeNotFoundException,
-            TransientException, NodeLockedException
-    {
-        log.debug("checkDeletePermission: " + node.getUri().getURIObject().toString());
-        
-        // check if the node is locked
-        if (node.isLocked())
-            throw new NodeLockedException(node.getUri().toString());
-        
-        if (node instanceof ContainerNode)
-        {
-            ContainerNode container = (ContainerNode) node;
-            voSpaceAuthorizer.getWritePermission(container);
-                
-            Integer batchSize = new Integer(1000);
-            VOSURI startURI = null;
-            nodePersistence.getChildren(container, startURI, batchSize);
-            while ( !container.getNodes().isEmpty() )
-            {
-                for (Node child : container.getNodes())
-                {
-                    checkDeletePermission(child);
-                    startURI = child.getUri();
-                }
-                // clear the children for garbage collection
-                container.getNodes().clear();
-                
-                // get next batch
-                nodePersistence.getChildren(container, startURI, batchSize);
-                if ( !container.getNodes().isEmpty() )
-                {
-                    Node n = container.getNodes().get(0);
-                    if ( n.getUri().equals(startURI) )
-                        container.getNodes().remove(0); // avoid recheck and infinite loop
-                }
-            }
-        }
-    }
-
+    
 }

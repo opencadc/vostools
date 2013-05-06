@@ -99,6 +99,7 @@ import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.net.TransientException;
 import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeLockedException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -256,8 +257,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * Obtain the Write Permission for the given URI.
      *
      * @param uri       The URI to check.
-     * @return          The Write Permission objectual representation, such as
-     *                  a Group, or User.
+     * @return          The resource object for the argument URI (if any)
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
      * @throws NodeLockedException    If the node is locked
@@ -309,9 +309,8 @@ public class VOSpaceAuthorizer implements Authorizer
         Subject subject = Subject.getSubject(acContext);
         
         // check if the node is locked
-        if (!disregardLocks)
-                if (node.isLocked())
-                    throw new NodeLockedException(node.getUri().toString());
+        if (!disregardLocks && node.isLocked())
+            throw new NodeLockedException(node.getUri().toString());
         
         // check for root ownership
         LinkedList<Node> nodes = Node.getNodeList(node);
@@ -334,6 +333,66 @@ public class VOSpaceAuthorizer implements Authorizer
                     throw new AccessControlException("Read permission denied on " + n.getUri().toString());
         }
         return node;
+    }
+    
+    /**
+     * Recursively checks if a node can be deleted by the current subject. 
+     * The caller must have write permission on the parent container and all 
+     * non-empty containers. The argument and all child nodes must not 
+     * be locked (unless locks are being ignored).
+     * 
+     * @param node
+     * @throws AccessControlException
+     * @throws NodeLockedException
+     * @throws TransientException 
+     */
+    public void getDeletePermission(Node node)
+        throws AccessControlException, NodeLockedException, TransientException
+    {
+        initState();
+        if (!writable)
+        {
+            if (readable)
+                throw new IllegalStateException(READ_ONLY_MSG);
+            throw new IllegalStateException(OFFLINE_MSG);
+        }
+        
+        // check parent
+        ContainerNode parent = node.getParent();
+        getWritePermission(parent); // checks lock and rw permission
+        
+        // check if the node is locked
+        if (!disregardLocks && node.isLocked())
+            throw new NodeLockedException(node.getUri().toString());
+        
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode container = (ContainerNode) node;
+            getWritePermission(container); // checks lock and rw permission
+                
+            Integer batchSize = new Integer(1000); // TODO: any value in not hard-coding this?
+            VOSURI startURI = null;
+            nodePersistence.getChildren(container, startURI, batchSize);
+            while ( !container.getNodes().isEmpty() )
+            {
+                for (Node child : container.getNodes())
+                {
+                    getDeletePermission(child); // recursive
+                    startURI = child.getUri();
+                }
+                // clear the children for garbage collection
+                container.getNodes().clear();
+                
+                // get next batch
+                nodePersistence.getChildren(container, startURI, batchSize);
+                if ( !container.getNodes().isEmpty() )
+                {
+                    Node n = container.getNodes().get(0);
+                    if ( n.getUri().equals(startURI) )
+                        container.getNodes().remove(0); // avoid recheck and infinite loop
+                }
+            }
+        }
     }
     
     /**
@@ -695,7 +754,8 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private boolean hasSingleNodeWritePermission(Node node, Subject subject)
     {
-
+        if (node.getUri().isRoot())
+            return false;
         if (subject != null)
         {
             if (isOwner(node, subject))

@@ -137,6 +137,16 @@ public class PathResolver
         return resolveWithReadPermissionCheck(uri, null, false);
     }
 
+    public Node resolveWithReadPermissionCheck(VOSURI uri, 
+            VOSpaceAuthorizer readAuthorizer,
+            boolean resolveLeafNodes)
+            throws NodeNotFoundException, LinkingException, TransientException
+    {
+        visitCount = 0;
+        visitedPaths = new ArrayList<String>();
+        Node n = doResolve(uri, readAuthorizer);
+        return resolveWithReadPermissionCheck(uri, n, readAuthorizer, resolveLeafNodes);
+    }
 
     /**
      * Resolve the path/node identified by parameter uri.  Check read permission on
@@ -150,56 +160,53 @@ public class PathResolver
      * @throws LinkingException
      * @throws TransientException
      */
-    public Node resolveWithReadPermissionCheck(VOSURI uri, 
+    public Node resolveWithReadPermissionCheck(VOSURI uri, Node node, 
             VOSpaceAuthorizer readAuthorizer,
             boolean resolveLeafNodes)
             throws NodeNotFoundException, LinkingException, TransientException
     {
-        visitCount = 0;
-        visitedPaths = new ArrayList<String>();
-        Node result = doResolve(uri, readAuthorizer);
+        
         if (resolveLeafNodes)
         {
             // resolve the leaf linknodes
-            while (result instanceof LinkNode)
+            while (node instanceof LinkNode)
             {
-                LinkNode linkNode = (LinkNode)result;
+                LinkNode linkNode = (LinkNode) node;
                 PathResolver.validateTargetURI(linkNode);
                 // follow the link           
-                result = doResolve(
-                        new VOSURI(linkNode.getTarget()), readAuthorizer);
+                node = doResolve(new VOSURI(linkNode.getTarget()), readAuthorizer);
             }
         }
 
         // If the given URI has query or fragment parts, and the node is a DataNode
         // add the query and fragment to the Node URI.
         // Use case: URI is a LinkNode with cutout query to a DataNode.
-        if (uri.getQuery() != null && result instanceof DataNode)
+        if (uri.getQuery() != null && node instanceof DataNode)
         {
             String fragment = null;
             if (uri.getFragment() != null)
                 fragment = uri.getFragment();
             try
             {
-                URI queryUri = new URI(result.getUri().getScheme(),
-                                       result.getUri().getAuthority(),
-                                       result.getUri().getPath(),
+                URI queryUri = new URI(node.getUri().getScheme(),
+                                       node.getUri().getAuthority(),
+                                       node.getUri().getPath(),
                                        uri.getQuery(),
                                        fragment);
-                Node dataNode = new DataNode(new VOSURI(queryUri), result.getProperties());
-                dataNode.setAccepts(result.accepts());
-                dataNode.setProvides(result.provides());
-                dataNode.setParent(result.getParent());
-                dataNode.setName(result.getName());
+                Node dataNode = new DataNode(new VOSURI(queryUri), node.getProperties());
+                dataNode.setAccepts(node.accepts());
+                dataNode.setProvides(node.provides());
+                dataNode.setParent(node.getParent());
+                dataNode.setName(node.getName());
                 return dataNode;
             }
             catch (URISyntaxException e)
             {
-                throw new LinkingException("Unable to append query part to " + result.getUri());
+                throw new LinkingException("Unable to append query part to " + node.getUri());
             }
             
         }
-        return result;
+        return node;
     }
 
     /*
