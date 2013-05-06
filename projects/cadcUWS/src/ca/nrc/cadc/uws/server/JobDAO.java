@@ -1756,7 +1756,6 @@ public class JobDAO
                 {
                     rs.close();
                     prepStmt.close();
-                    conn.commit();
                 }
                 catch (SQLException e)
                 {
