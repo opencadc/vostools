@@ -69,10 +69,9 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.jdom2.Element;
-
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;
+import org.jdom2.Element;
 
 /**
  * Class extends NodeWriter to create a Node with an invalid xsi:type
