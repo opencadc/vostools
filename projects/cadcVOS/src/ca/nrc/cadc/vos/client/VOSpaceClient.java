@@ -80,7 +80,10 @@ import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -569,14 +572,27 @@ public class VOSpaceClient
     private ClientTransfer createTransferSync(Transfer transfer)
     {
         try
-        {                      
-            // POST the Job and get the redirect location.
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(transfer, sw);
-            
+        {   
             URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
-            HttpPost httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
+            HttpPost httpPost = null;
+        	if (transfer.isQuickTransfer())
+        	{
+        		Map<String, Object> form = new HashMap<String, Object>();
+        		form.put("TARGET", transfer.getTarget());
+        		form.put("DIRECTION", transfer.getDirection().getValue());
+        		form.put("PROTOCOL", transfer.getProtocols().iterator().
+        				next().getUri()); // try first protocol?
+        		httpPost = new HttpPost(postUrl, form, false);        		
+        	}
+        	else
+        	{
+	            // POST the Job and get the redirect location.
+	            TransferWriter writer = new TransferWriter();
+	            StringWriter sw = new StringWriter();
+	            writer.write(transfer, sw);
+	            	
+	            httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
+        	}
             
             runHttpTransfer(httpPost);
 
@@ -586,34 +602,50 @@ public class VOSpaceClient
                 throw new RuntimeException("Unable to post transfer because " + httpPost.getThrowable().getMessage());
             }
             
+            
             URL redirectURL = httpPost.getRedirectURL();
-            log.debug("POST: transfer jobURL: " + redirectURL);
+            
             if (redirectURL == null)
             {
                 throw new RuntimeException("Redirect not received from UWS.");
             }
 
-            // follow the redirect to run the job
-            log.debug("GET - opening connection: " + redirectURL.toString());
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            HttpDownload get = new HttpDownload(redirectURL, out);
-            
-            runHttpTransfer(get);
-
-            if (get.getThrowable() != null)
+            if( transfer.isQuickTransfer())
             {
-                log.debug("Unable to run the job", get.getThrowable());
-                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
+            	log.debug("Quick transfer URL: " + redirectURL);
+            	// create a new transfer with a protocol with an end point
+            	List<Protocol> prots = new ArrayList<Protocol>();
+            	prots.add(new Protocol(transfer.getProtocols().iterator().next().getUri(), redirectURL.toString(), null));
+            	Transfer trf = new Transfer(transfer.getTarget(), transfer.getDirection(), prots);
+            	return new ClientTransfer(null, trf, false);
             }
-            
-            TransferReader txfReader = new TransferReader(schemaValidation);
-            log.debug("GET - reading content: " + redirectURL);
-            Transfer trans = txfReader.read(new String(out.toByteArray(), "UTF-8"));
-            log.debug("GET - done: " + redirectURL);
-            log.debug("negotiated transfer: " + trans);
-
-            URL jobURL = extractJobURL(this.baseUrl, redirectURL);
-            return new ClientTransfer(jobURL, trans, schemaValidation);
+            else
+            {	            
+	            log.debug("POST: transfer jobURL: " + redirectURL);
+	
+	
+	            // follow the redirect to run the job
+	            log.debug("GET - opening connection: " + redirectURL.toString());
+	            ByteArrayOutputStream out = new ByteArrayOutputStream();
+	            HttpDownload get = new HttpDownload(redirectURL, out);
+	            
+	            runHttpTransfer(get);
+	
+	            if (get.getThrowable() != null)
+	            {
+	                log.debug("Unable to run the job", get.getThrowable());
+	                throw new RuntimeException("Unable to run the job because " + get.getThrowable().getMessage());
+	            }
+	            
+	            TransferReader txfReader = new TransferReader(schemaValidation);
+	            log.debug("GET - reading content: " + redirectURL);
+	            Transfer trans = txfReader.read(new String(out.toByteArray(), "UTF-8"));
+	            log.debug("GET - done: " + redirectURL);
+	            log.debug("negotiated transfer: " + trans);
+	
+	            URL jobURL = extractJobURL(this.baseUrl, redirectURL);
+	            return new ClientTransfer(jobURL, trans, schemaValidation);
+            }
         }
         catch (MalformedURLException e)
         {

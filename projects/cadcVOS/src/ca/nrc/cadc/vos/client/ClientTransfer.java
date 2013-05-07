@@ -217,7 +217,10 @@ public class ClientTransfer implements Runnable
 
     private Job getJob()
         throws IOException
-    {
+    {       
+        if (transfer.isQuickTransfer())
+        	throw new IllegalStateException("No job information available for quick transfers");
+        
         try
         {
             ByteArrayOutputStream out = new ByteArrayOutputStream();

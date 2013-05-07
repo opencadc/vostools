@@ -154,6 +154,7 @@ public class Main implements Runnable
     public static final String ARG_CONTENT_MD5 = "content-md5";
     public static final String ARG_RECURSIVE = "recursive";
     public static final String ARG_LOCK = "lock";
+    public static final String ARG_QUICK = "quick";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -192,6 +193,7 @@ public class Main implements Runnable
     private VOSpaceClient client = null;
     private Subject subject;
     private boolean retryEnabled = false;
+    private boolean quickTransfer = false;
 
     private boolean recursiveMode = false;
     
@@ -716,6 +718,7 @@ public class Main implements Runnable
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
         Transfer transfer = new Transfer(dest, Direction.pushToVoSpace, view, protocols);
+        transfer.setQuickTransfer(this.quickTransfer);
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         // set http headers for put
@@ -740,8 +743,10 @@ public class Main implements Runnable
         clientTransfer.setFile(fileToUpload);
         
         clientTransfer.runTransfer();
-        checkPhase(clientTransfer);
-        
+        if (!quickTransfer)
+        {
+        	checkPhase(clientTransfer);
+        }
         Node node = client.getNode(dest.getPath());
 
         boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
@@ -810,6 +815,7 @@ public class Main implements Runnable
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
 
         Transfer transfer = new Transfer(src, Direction.pullFromVoSpace, view, protocols);
+        transfer.setQuickTransfer(this.quickTransfer);
         ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         log.debug("this.source: " + source);
@@ -824,7 +830,10 @@ public class Main implements Runnable
         clientTransfer.setFile(fileToSave);
         
         clientTransfer.runTransfer();
-        checkPhase(clientTransfer);
+        if (!quickTransfer)
+        {
+        	checkPhase(clientTransfer);
+        }
     }
     
     private void moveToVOSpace()
@@ -1190,6 +1199,10 @@ public class Main implements Runnable
         {
             if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE))
             {
+            	if (this.operation.equals(Operation.COPY) && argMap.isSet(ARG_QUICK))
+            	{
+            		this.quickTransfer = true;
+            	}
                 String strSrc = argMap.getValue(ARG_SRC);
                 String strDest = argMap.getValue(ARG_DEST);
                 if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))

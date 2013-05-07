@@ -87,6 +87,7 @@ public class Transfer
     private View view;
     private List<Protocol> protocols;
     private boolean keepBytes = true;
+    private boolean quickTransfer = false;
 
     protected Transfer() { }
 
@@ -149,6 +150,24 @@ public class Transfer
         this.keepBytes = keepBytes;
         if (this.protocols == null)
             this.protocols = new ArrayList<Protocol>();
+    }
+    
+    /**
+     * Transfer uses the CADC quick transfer feature
+     * @return True if client uses CADC quick copy feature
+     */
+    public boolean isQuickTransfer()
+    {
+    	return this.quickTransfer;
+    }
+    
+    /**
+     * Enable/Disable CADC quick transfer feature
+     * @param quickCopy True if enable quick transfer, false otherwise
+     */
+    public void setQuickTransfer(boolean quickTransfer)
+    {
+    	this.quickTransfer = quickTransfer;
     }
     
     /**

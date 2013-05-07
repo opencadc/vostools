@@ -405,6 +405,68 @@ public class VOSpaceClientTest
         Assert.assertEquals(FileUtil.compare(origFile, file), true);
         // file.delete();
     }
+    
+    //@Test
+    public void testQuickPushPull() throws Exception
+    {
+        File testFile = TestUtil.getTestFile();
+        Assert.assertNotNull(testFile);
+        log.debug("testfile exists? " + testFile.exists() );
+        log.debug("testfile absolutePath: " + testFile.getAbsolutePath());
+        log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
+
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        VOSURI vosURI = new VOSURI(VOS_URI + slashPath1);
+        View dview = new View(new URI(VOS.VIEW_DEFAULT));
+
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+
+        // upload
+        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+        transfer.setQuickTransfer(true);
+        ClientTransfer clientTransfer = client.createTransfer(transfer);
+        clientTransfer.setFile(testFile);
+        clientTransfer.run();
+        boolean noJobInfo = false;
+        try
+        {
+        	clientTransfer.getPhase();
+        }
+        catch (IllegalArgumentException ex)
+        {
+        	noJobInfo = true;
+        }
+        Assert.assertTrue("No job information for quick transfers", noJobInfo);
+
+        File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
+        log.debug(file.getAbsolutePath());
+        log.debug(file.getCanonicalPath());
+
+        // download
+        Transfer trans2 = new Transfer(vosURI, Direction.pullFromVoSpace, dview, protocols);
+        ClientTransfer txRtn = client.createTransfer(trans2);
+        txRtn.setFile(file);
+        txRtn.run();
+        noJobInfo = false;
+        try
+        {
+        	clientTransfer.getPhase();
+        }
+        catch (IllegalArgumentException ex)
+        {
+        	noJobInfo = true;
+        }
+        Assert.assertTrue("No job information for quick transfers", noJobInfo);
+
+        File origFile = TestUtil.getTestFile();
+        Assert.assertNotNull(origFile);
+        log.debug(origFile.getAbsolutePath());
+        log.debug(origFile.getCanonicalPath());
+        
+        Assert.assertEquals(FileUtil.compare(origFile, file), true);
+        // file.delete();
+    }
 
     @Override
     public String toString()
