@@ -90,12 +90,12 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         certFilename -- the name of the certificate pem file.
         """
-        #logging.debug("parsing url: %s" %(url))
+        logging.debug("parsing url: %s" %(url))
         parts = urlparse(url)
-        #logging.debug("Got: %s " % ( str(parts)))
+        logging.debug("Got: %s " % ( str(parts)))
         ports = {"http": 80, "https": 443}
         certfile = self.certfile
-        #logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+        logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
 
         try:
             if parts.scheme=="https":
@@ -784,6 +784,10 @@ class Client:
 
     VOTransfer = '/vospace/synctrans'
     VOProperties = '/vospace/nodeprops'
+    VO_HTTPGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpget'
+    VO_HTTPPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpput'
+    VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
+    VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
 
     ### reservered vospace properties, not to be used for extended property setting
@@ -957,9 +961,41 @@ class Client:
             return uri
         logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
 
-        if (method == 'GET' and view == 'data') or method == "PUT" :
+        if self.cadc_short_cut and ((method == 'GET' and view == 'data') or method == "PUT") :
             ## only get here if cadc_short_cut == True
-            URL = "%s://%s/%s/%s/%s" % ( self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
+            # find out the URL to the CADC data server
+            direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
+            transProtocol = ''
+            if self.protocol == 'http':
+                if method == 'GET':
+                    transProtocol = Client.VO_HTTPGET_PROTOCOL
+                else:
+                    transProtocol = Client.VO_HTTPPUT_PROTOCOL
+            else:
+                if method == 'GET':
+                    transProtocol = Client.VO_HTTPSGET_PROTOCOL
+                else:
+                    transProtocol = Client.VO_HTTPSPUT_PROTOCOL
+ 
+            url = "%s://%s%s" % (self.protocol, SERVER, "")
+            logging.debug("URL: %s" % (url))
+
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction, 'PROTOCOL' : transProtocol})
+            headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+            httpCon = self.conn.getConnection(url)
+            httpCon.request("POST", Client.VOTransfer, form, headers)
+            try:
+                response = httpCon.getresponse()
+                if response.status == 303:
+                    URL = response.getheader('Location', None)
+                else:
+                    logging.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
+                            (Client.VOTransfer, response.status))
+            except Exception as e:
+                logging.error(str(e))
+            finally: 
+                httpCon.close()          
+  
             logging.debug("Sending short cuturl: %s" %( URL))
             return URL
 
