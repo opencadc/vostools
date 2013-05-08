@@ -90,6 +90,7 @@ import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.Namespace;
+import org.jdom2.input.sax.XMLReaderSAX2Factory;
 import org.jdom2.input.SAXBuilder;
 import org.junit.Assert;
 import org.xml.sax.SAXException;
@@ -100,6 +101,7 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+
 
 public abstract class AbstractUWSTest
 {
@@ -129,11 +131,11 @@ public abstract class AbstractUWSTest
         serviceSchema = url.toString();
         log.debug("serviceSchema: " + serviceSchema);
 
-        parser = new SAXBuilder(PARSER, false);
+        parser = new SAXBuilder(new XMLReaderSAX2Factory(false, PARSER));
         parser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", 
                 "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
 
-        validatingParser = new SAXBuilder(PARSER, true);
+        validatingParser = new SAXBuilder(new XMLReaderSAX2Factory(true, PARSER));
         validatingParser.setFeature("http://xml.org/sax/features/validation", true);
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema", true);
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
