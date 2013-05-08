@@ -80,8 +80,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -94,7 +94,7 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.SyncOutput;
-import ca.nrc.cadc.xml.XmlUtil;
+import ca.nrc.cadc.uws.util.XmlUtil;
 
 /**
  * Basic Job Runner class. The sample job takes two params:</p>
@@ -106,19 +106,19 @@ import ca.nrc.cadc.xml.XmlUtil;
  */
 public class HelloWorld implements JobRunner
 {
-	private static final Logger log = Logger.getLogger(HelloWorld.class);
+    private static final Logger log = Logger.getLogger(HelloWorld.class);
 
     public static long MIN_RUNFOR = 500L;   // milliseconds
     public static long MAX_RUNFOR = 10000L; // milliseconds
     
-	public static String PASS   = "PASS";
+    public static String PASS   = "PASS";
     public static String RUNFOR = "RUNFOR";
     public static String STREAM = "STREAM";
 
     public static String RESULT = "HelloWorld -- OK";
     public static String ERROR  = "HelloWorld -- FAIL";
 
-	private Job job;
+    private Job job;
     private JobUpdater jobUpdater;
     private SyncOutput syncOutput;
 
