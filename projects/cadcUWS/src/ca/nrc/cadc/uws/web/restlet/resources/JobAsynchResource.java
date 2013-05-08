@@ -111,6 +111,7 @@ public class JobAsynchResource extends BaseJobResource
 
     private static final String RUN = "RUN";
     private static final String ABORT = "ABORT";
+    private static final String SHUTDOWN = "SHUTDOWN";
 
     private DateFormat dateFormat;
 
@@ -273,6 +274,10 @@ public class JobAsynchResource extends BaseJobResource
                     getJobManager().execute(job);
                 }
                 else if (ABORT.equalsIgnoreCase(phase))
+                    getJobManager().abort(jobID);
+                // Permit the command PHASE=SHUTDOWN without 
+                // defining a SHUTDOWN ExecutionPhase.
+                else if (SHUTDOWN.equalsIgnoreCase(phase))
                     getJobManager().abort(jobID);
                 else
                     throw new InvalidActionException("invalid phase request: " + phase);
