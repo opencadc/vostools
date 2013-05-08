@@ -106,16 +106,14 @@ public class HttpPost extends HttpTransfer
     private String content;
     private String contentType;
     private OutputStream outputStream;
-    private boolean followRedirects = false;
 
     // result information
-    private URL redirectURL;
     private String responseContentType;
     private String responseContentEncoding;
     private String responseBody;
     
     /**
-     * HttpPost contructor.  All server redirects will be followed.
+     * HttpPost contructor.  Redirects will be followed.
      * Ideal for large expected responses.
      * 
      * @param url The POST destination.
@@ -124,7 +122,7 @@ public class HttpPost extends HttpTransfer
      */
     public HttpPost(URL url, Map<String, Object> map, OutputStream outputStream)
     {
-        super();
+        super(true);
         this.remoteURL = url;
         this.map = map;
         this.outputStream = outputStream;
@@ -145,10 +143,9 @@ public class HttpPost extends HttpTransfer
      */
     public HttpPost(URL url, Map<String, Object> map, boolean followRedirects)
     {
-        super();
+        super(followRedirects);
         this.remoteURL = url;
         this.map = map;
-        this.followRedirects = followRedirects;
         if (url == null)
             throw new IllegalArgumentException("dest cannot be null.");
         if (map == null || map.isEmpty())
@@ -165,11 +162,10 @@ public class HttpPost extends HttpTransfer
      */
     public HttpPost(URL url, String content, String contentType, boolean followRedirects)
     {
-        super();
+        super(followRedirects);
         this.remoteURL = url;
         this.content = content;
         this.contentType = contentType;
-        this.followRedirects = followRedirects;
         if (url == null)
             throw new IllegalArgumentException("dest cannot be null.");
         if (!StringUtil.hasText(content))
@@ -179,15 +175,6 @@ public class HttpPost extends HttpTransfer
     @Override
     public String toString() { return "HttpPost[" + remoteURL + "]"; }
     
-    /**
-     * If the response resulted in a redirect that wasn't followed, it
-     * can be retrieved here.
-     */
-    public URL getRedirectURL()
-    {
-        return redirectURL;
-    }
-
     public String getResponseContentEncoding()
     {
         return responseContentEncoding;
@@ -350,7 +337,7 @@ public class HttpPost extends HttpTransfer
             || statusCode == HttpURLConnection.HTTP_MOVED_TEMP) 
             && location != null)
         {
-            redirectURL = new URL(location);
+            this.redirectURL = new URL(location);
         }
         else
         {

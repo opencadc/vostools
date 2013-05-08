@@ -102,6 +102,8 @@ import ca.nrc.cadc.util.StringUtil;
  * with a 503 and a valid Retry-After header, where valid means an integer (number of seconds)
  * that is between 0 and HttpTransfer.MAX_RETRY_DELAY.
  *
+ * Note: Redirects are followed by default.
+ * 
  * @author pdowler
  */
 public class HttpDownload extends HttpTransfer
@@ -183,7 +185,7 @@ public class HttpDownload extends HttpTransfer
      */
     public HttpDownload(String userAgent, URL src, File dest)
     {
-        super();
+        super(true);
         setUserAgent(userAgent);
         
         if (src == null)
@@ -232,7 +234,7 @@ public class HttpDownload extends HttpTransfer
      */
     public  HttpDownload(String userAgent, URL src, OutputStream dest)
     {
-        super();
+        super(true);
         setUserAgent(userAgent);
         if (src == null)
             throw new IllegalArgumentException("source URL cannot be null");
@@ -244,7 +246,7 @@ public class HttpDownload extends HttpTransfer
 
     public HttpDownload(String userAgent, URL src, InputStreamWrapper dest)
     {
-        super();
+        super(true);
         setUserAgent(userAgent);
         if (src == null)
             throw new IllegalArgumentException("source URL cannot be null");
@@ -255,7 +257,7 @@ public class HttpDownload extends HttpTransfer
     }
 
     // unused
-    private HttpDownload() { }
+    private HttpDownload() { super(true); }
 
     @Override
     public String toString() 
@@ -660,7 +662,14 @@ public class HttpDownload extends HttpTransfer
         this.responseCode = code;
         log.debug(logAction+" status: " + code + " for " + remoteURL);
 
-        if (code != HttpURLConnection.HTTP_OK)
+        String location = conn.getHeaderField("Location");
+        if ((code == HttpURLConnection.HTTP_SEE_OTHER
+            || code == HttpURLConnection.HTTP_MOVED_TEMP) 
+            && location != null)
+        {
+            this.redirectURL = new URL(location);
+        }
+        else if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
             String body = NetUtil.getErrorBody(conn);
@@ -707,11 +716,13 @@ public class HttpDownload extends HttpTransfer
             }
 
             setRequestSSOCookie(conn);
-            conn.setInstanceFollowRedirects(true);
+            conn.setInstanceFollowRedirects(followRedirects);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
             for (HttpRequestProperty rp : requestProperties)
+            {
                 conn.setRequestProperty(rp.getProperty(), rp.getValue());
+            }
 
             if (headOnly)
                 conn.setRequestMethod("HEAD");
@@ -721,7 +732,7 @@ public class HttpDownload extends HttpTransfer
             int code = checkStatusCode(conn);
             processHeader(conn);
 
-            if (headOnly)
+            if (headOnly || (!followRedirects && redirectURL != null))
                 return;
 
             // evaulate overwrite of complete file

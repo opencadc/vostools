@@ -90,11 +90,9 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.net.event.TransferEvent;
 
 /**
- * Perform an upload (PUT).
+ * Perform an upload (PUT). 
  * 
- * Following the structure of Download.java
- * 
- * @see /cadcDownloadManager/src/ca/nrc/cadc/dlm/client/Download.java
+ * Note: Redirects are never followed.
  * 
  * @author zhangsa, pdowler
  *
@@ -113,7 +111,7 @@ public class HttpUpload extends HttpTransfer
 
     public HttpUpload(File src, URL dest)
     {
-        super();
+        super(false);
         this.localFile = src;
         this.remoteURL = dest;
         if (remoteURL == null)
@@ -124,7 +122,7 @@ public class HttpUpload extends HttpTransfer
 
     public HttpUpload(InputStream src, URL dest)
     {
-        super();
+        super(false);
         this.istream = src;
         this.remoteURL = dest;
         if (remoteURL == null)
@@ -135,7 +133,7 @@ public class HttpUpload extends HttpTransfer
 
     public HttpUpload(OutputStreamWrapper src, URL dest)
     {
-        super();
+        super(false);
         this.wrapper = src;
         this.remoteURL = dest;
         if (remoteURL == null)
@@ -145,8 +143,16 @@ public class HttpUpload extends HttpTransfer
     }
     
     // unused
-    private HttpUpload() { }
+    private HttpUpload() { super(false); }
 
+    @Override
+    public void setFollowRedirects(boolean followRedirects)
+    {
+        if (followRedirects)
+            throw new IllegalArgumentException("followRedirects=true not allowed for upload");
+    }
+
+    
     public void setContentEncoding(String contentEncoding)
     {
         this.contentEncoding = contentEncoding;

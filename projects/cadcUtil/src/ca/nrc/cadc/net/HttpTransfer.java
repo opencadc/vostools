@@ -181,6 +181,8 @@ public abstract class HttpTransfer implements Runnable
     public String eventID = null;
     public Throwable failure;
     
+    protected boolean followRedirects = false;
+    protected URL redirectURL;
     protected int responseCode = -1;
 
     private SSLSocketFactory sslSocketFactory;
@@ -192,8 +194,9 @@ public abstract class HttpTransfer implements Runnable
         DEFAULT_USER_AGENT = "OpenCADC/" + HttpTransfer.class.getName() + "/" + jv + "/" + os;
     }
     
-    protected HttpTransfer() 
+    protected HttpTransfer(boolean followRedirects) 
     {
+        this.followRedirects = followRedirects;
         this.go = true;
         this.requestProperties = new ArrayList<HttpRequestProperty>();
         this.userAgent = DEFAULT_USER_AGENT;
@@ -228,6 +231,26 @@ public abstract class HttpTransfer implements Runnable
         log.debug("bufferSize: " + bufferSize);
     }
 
+    /**
+     * Set the current following redirects behaviour.
+     * 
+     * @param followRedirects 
+     */
+    public void setFollowRedirects(boolean followRedirects)
+    {
+        this.followRedirects = followRedirects;
+    }
+    
+    /**
+     * If the response resulted in a redirect that wasn't followed, it
+     * can be retrieved here.
+     */
+    public URL getRedirectURL()
+    {
+        return redirectURL;
+    }
+    
+    
     /**
      * Enable retry (maxRetries > 0) and set the maximum number of times
      * to retry before failing. The default is to retry only when the server

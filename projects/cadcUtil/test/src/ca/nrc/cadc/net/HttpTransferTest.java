@@ -139,7 +139,7 @@ public class HttpTransferTest
     @Test
     public void setRequestSSOCookie() throws Exception
     {
-        final HttpTransfer testSubject = new HttpTransfer()
+        final HttpTransfer testSubject = new HttpTransfer(true)
         {
             @Override
             public void run()
@@ -180,7 +180,7 @@ public class HttpTransferTest
 
     private class TestDummy extends HttpTransfer
     {
-        TestDummy() { super(); }
+        TestDummy() { super(true); }
         
         public void run()
         {
