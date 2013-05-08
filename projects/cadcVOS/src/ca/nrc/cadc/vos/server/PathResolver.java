@@ -145,12 +145,15 @@ public class PathResolver
         visitCount = 0;
         visitedPaths = new ArrayList<String>();
         Node n = doResolve(uri, readAuthorizer);
-        return resolveWithReadPermissionCheck(uri, n, readAuthorizer, resolveLeafNodes);
+        if (resolveLeafNodes)
+            return resolveLeafNodeWithReadPermissionCheck(uri, n, readAuthorizer);
+        return n;
     }
 
     /**
      * Resolve the path/node identified by parameter uri.  Check read permission on
-     * each link node resolution.
+     * each link node resolution. This method expects that the argument node was 
+     * returned from resolveWithReadPermissionCheck with resolveLeafNodes == false.
      * 
      * @param uri
      * @param readAuthorizer
@@ -160,27 +163,22 @@ public class PathResolver
      * @throws LinkingException
      * @throws TransientException
      */
-    public Node resolveWithReadPermissionCheck(VOSURI uri, Node node, 
-            VOSpaceAuthorizer readAuthorizer,
-            boolean resolveLeafNodes)
+    public Node resolveLeafNodeWithReadPermissionCheck(VOSURI uri, Node node, 
+            VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException, TransientException
     {
         
-        if (resolveLeafNodes)
+        // resolve the leaf linknodes
+        while (node instanceof LinkNode)
         {
-            // resolve the leaf linknodes
-            while (node instanceof LinkNode)
-            {
-                LinkNode linkNode = (LinkNode) node;
-                PathResolver.validateTargetURI(linkNode);
-                // follow the link           
-                node = doResolve(new VOSURI(linkNode.getTarget()), readAuthorizer);
-            }
+            LinkNode linkNode = (LinkNode) node;
+            PathResolver.validateTargetURI(linkNode);
+            // follow the link           
+            node = doResolve(new VOSURI(linkNode.getTarget()), readAuthorizer);
         }
-
-        // If the given URI has query or fragment parts, and the node is a DataNode
-        // add the query and fragment to the Node URI.
-        // Use case: URI is a LinkNode with cutout query to a DataNode.
+        
+        // HACK: this causes a query string embedded in the VOSURI (eg within LinkNode)
+        // to be tacked onto the DataNode and added to the resulting data URL... TBD.
         if (uri.getQuery() != null && node instanceof DataNode)
         {
             String fragment = null;

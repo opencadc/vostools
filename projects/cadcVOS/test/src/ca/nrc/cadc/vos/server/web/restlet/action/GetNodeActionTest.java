@@ -109,11 +109,11 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         
         expect(getMockNodeS().getUri()).andReturn(getTestSubject().vosURI).anyTimes();
         
-        expect(getTestSubject().vosURI.getURIObject()).andReturn(vosURIObject).atLeastOnce();
-        expect(getTestSubject().vosURI.getPath()).andReturn("/parent/" + nodeName).times(2);
-        expect(getTestSubject().vosURI.getQuery()).andReturn(null).atLeastOnce();
+        expect(getTestSubject().vosURI.getURIObject()).andReturn(vosURIObject).anyTimes();
+        expect(getTestSubject().vosURI.getPath()).andReturn("/parent/" + nodeName).anyTimes();
+        //expect(getTestSubject().vosURI.getQuery()).andReturn(null).atLeastOnce();
         
-        expect(mockPartialPathAuth.getReadPermission(vosURIObject)).andReturn(getMockNodeS()).anyTimes();
+        expect(mockPartialPathAuth.getReadPermission(vosURIObject)).andReturn(getMockNodeS()).atLeastOnce();
 
         replay(queryForm);
         replay(getMockRef());

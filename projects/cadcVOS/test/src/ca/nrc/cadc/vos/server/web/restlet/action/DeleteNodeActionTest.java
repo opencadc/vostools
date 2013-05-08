@@ -118,7 +118,8 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
         //expect(mockParentNode.getUri()).andReturn(mockParentVOS).anyTimes();
         //expect(mockParentVOS.getURIObject()).andStubReturn(new URI("vos://something")).anyTimes();
 
-        expect(getMockAuth().getWritePermission(mockParentNode)).andReturn(mockParentNode).once();
+        getMockAuth().getDeletePermission(getMockNodeS());
+        expectLastCall().once();
         
         // setup the children of the parent
         

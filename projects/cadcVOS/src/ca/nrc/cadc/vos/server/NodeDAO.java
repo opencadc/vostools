@@ -370,11 +370,11 @@ public class NodeDAO
             prof.checkpoint("commit.NodePathStatementCreator");
             
             // for non-LinkNode, 
-            if ((ret != null) && !(ret.getUri().getPath().equals("/" + path)))
-            {
-            	if (!(ret instanceof LinkNode))
-            		ret = null;
-            }
+            //if ((ret != null) && !(ret.getUri().getPath().equals("/" + path)))
+            //{
+            //	if (!(ret instanceof LinkNode))
+            //		ret = null;
+            //}
             
             loadSubjects(ret);
             return ret;
@@ -2041,12 +2041,16 @@ public class NodeDAO
         Node root1 = n1;
         Node root2 = null;
         while (root1.getParent() != null)
+        {
             root1 = root1.getParent();
+        }
         if (n2 != null)
         {
             root2 = n2;
             while (root2.getParent() != null)
+            {
                 root2 = root2.getParent();
+            }
         }
         
         return getUpdateLockSQL(root1, root2);
@@ -2090,33 +2094,6 @@ public class NodeDAO
         return sb.toString();
     }
     
-    // apply delta to Node.contentLength (set if NULL)
-//    protected String getUpdateContentLengthSQL(Node node, long delta)
-//    {
-//        // update Node set nodeSize=(case when nodeSize is null then diff else nodeSize+diff end) where nodeID=?
-//        StringBuilder sb = new StringBuilder();
-//        sb.append("UPDATE ");
-//        sb.append(getNodeTableName());
-//        sb.append(" SET contentLength = ");
-//        sb.append("(CASE WHEN contentLength IS NULL THEN ");
-//        sb.append(Long.toString(delta));
-//        sb.append(" ELSE ");
-//        sb.append("contentLength + ");
-//        sb.append(Long.toString(delta));
-//        sb.append(" END) WHERE nodeID = ");
-//        sb.append(getNodeID(node));
-//        // force check of parent to detect path changes
-//        if (node.getParent() != null)
-//        {
-//            sb.append(" AND parentID = ");
-//            sb.append(getNodeID(node.getParent()));
-//        }
-//        else
-//            sb.append(" AND parentID IS NULL");
-//
-//        return sb.toString();
-//    }
-
     protected String getMoveNodeSQL(Node src, ContainerNode dest, String name)
     {
         StringBuilder sb = new StringBuilder();
@@ -2791,19 +2768,17 @@ public class NodeDAO
                     {
                         log.debug("readNode at " + col + ", path="+curPath);
                         Node n = readNode(rs, col, curPath);
-                        ret = n; // always return the last node
+                        
                         if (n == null)
                         {
                         	done = true;
                         }
                         else
                         {
+                            ret = n; // always return the last node
 	                        log.debug("readNode: " + n.getUri());
 	                        curPath = n.getUri().getPath();
 	                        col += columnsPerNode;
-	                        if ((n instanceof LinkNode) || (n instanceof DataNode))
-	                            done = true; // exit while loop
-	                        
 	                        if (root == null) // root container
 	                        {
 	                            cur = n;
@@ -2886,7 +2861,8 @@ public class NodeDAO
             // returned with all columns having null values. Instead of 
             // checking all columns, if we do not have the following condition,
             // return a null node.
-            if (!((parentID == null) && (nodeID == null) && (name == null) && (type == null)))
+            //if (!((parentID == null) && (nodeID == null) && (name == null) && (type == null)))
+            if (nodeID != null) // found another node    
             {
 	            if (NODE_TYPE_CONTAINER.equals(type))
 	            {
