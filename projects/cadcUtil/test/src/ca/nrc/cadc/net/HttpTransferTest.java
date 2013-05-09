@@ -158,7 +158,7 @@ public class HttpTransferTest
         final HttpURLConnection mockConnection =
                 EasyMock.createMock(HttpURLConnection.class);
 
-        EasyMock.expect(mockConnection.getURL()).andReturn(testURL).once();
+        EasyMock.expect(mockConnection.getURL()).andReturn(testURL).atLeastOnce();
 
         mockConnection.setRequestProperty("Cookie", "CADC_SSO=VALUE_2");
         EasyMock.expectLastCall().once();
