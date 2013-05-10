@@ -100,6 +100,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -1726,63 +1727,26 @@ public class JobDAO
             return next;
         }
         
+        @SuppressWarnings("unchecked")
         private Iterator<JobRef> getNextBatchIterator() 
         {
-            PreparedStatement prepStmt;
-            ResultSet rs = null;        	
-
-            try
-            {
-                // get a connection
-                JobListStatementCreator sc = new JobListStatementCreator(this.lastJobID);
-                sc.setOwner(this.owner);
-                DataSource ds = this.jdbcTemplate.getDataSource();
-                Connection conn = ds.getConnection();
-                prepStmt = sc.createPreparedStatement(conn);
-            }
-            catch (SQLException e)
-            {
-                throw new IllegalStateException(e);
-            }
-
-            List<JobRef> jobs = new ArrayList<JobRef>();    
-            try
-            {
-                // get a batch of JobRef's
-                startTransaction();            
-                rs = prepStmt.executeQuery();  
-                String jobID = null;
-                while (rs.next())
+            List<JobRef> jobs = null;
+        	
+            JobListStatementCreator sc = new JobListStatementCreator(this.lastJobID);
+            sc.setOwner(this.owner);
+            jobs = this.jdbcTemplate.query(sc, new RowMapper() 
                 {
-                    jobID = rs.getString("jobID");
-                    ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());                
-                    jobs.add(new JobRef(jobID, executionPhase));        		
-                }    
-            	
-                if (jobID != null)
-                    this.lastJobID = jobID;
-            	
-                commitTransaction();
-            }
-            catch(SQLException e)
+            	    // mapRow is required to preserve the order of the ResultSet
+                    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
+                    {
+                        ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());
+                        return new JobRef(rs.getString("jobID"), executionPhase);        		
+                    }
+                });
+            
+            if (!jobs.isEmpty())
             {
-            	log.error("Batch transaction not completed.");
-                rollbackTransaction();
-                throw new IllegalStateException(e);
-            }
-            finally
-            {
-                try
-                {
-                    if (rs != null)
-                        rs.close();
-                	
-                    prepStmt.close();
-                }
-                catch (SQLException e)
-                {
-                    log.warn("Could not close job list database resources.", e);
-                }
+            	this.lastJobID = jobs.get(jobs.size() - 1).getJobID();
             }
         	
             return jobs.iterator();
@@ -1793,7 +1757,6 @@ public class JobDAO
         {
             throw new UnsupportedOperationException();
         }
-        
     }
 
 
