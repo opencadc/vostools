@@ -35,7 +35,7 @@ public class JobDAOTest_Sybase extends JobDAOTest
             Map<String,Integer> detailTabLimits = new HashMap<String,Integer>();
             detailTabLimits.put("value", 1024);
 
-            JOB_SCHEMA = new JobDAO.JobSchema("uws_Job", "uws_JobDetail", jobTabLimits, detailTabLimits);
+            JOB_SCHEMA = new JobDAO.JobSchema("uws_Job", "uws_JobDetail", true, jobTabLimits, detailTabLimits);
         }
         catch(Exception ex)
         {

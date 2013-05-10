@@ -90,7 +90,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
@@ -134,6 +133,7 @@ public class JobDAO
 {
     private static Logger log = Logger.getLogger(JobDAO.class);
 
+    private static final int BATCH_SIZE = 1000;
     private static final String TYPE_PARAMETER = "P";
     private static final String TYPE_RESULT = "R";
 
@@ -175,6 +175,7 @@ public class JobDAO
     {
         public String jobTable;
         public String detailTable;
+        boolean limitWithTop;
         /*
          * Map of columns that have size limits in the jobTable imposed by the
          * underlying database system.
@@ -209,15 +210,16 @@ public class JobDAO
         private List<String> jobColumns;
         private List<String> detailColumns;
 
-        public JobSchema(String jobTable, String detailTable)
+        public JobSchema(String jobTable, String detailTable, boolean limitWithTop)
         {
-            this(jobTable, detailTable, null, null);
+            this(jobTable, detailTable, limitWithTop, null, null);
         }
-        public JobSchema(String jobTable, String detailTable, 
+        public JobSchema(String jobTable, String detailTable, boolean limitWithTop,
                 Map<String,Integer> jobColumnLimits, Map<String,Integer> detailColumnLimits)
         {
             this.jobTable = jobTable;
             this.detailTable = detailTable;
+            this.limitWithTop = limitWithTop;
             this.jobColumnLimits = jobColumnLimits;
             this.detailColumnLimits = detailColumnLimits;
 
@@ -640,12 +642,7 @@ public class JobDAO
         log.debug("iterator(" + owner + ")");
         try
         {
-            JobListStatementCreator sc = new JobListStatementCreator();
-            sc.setOwner(owner);
-            
-            DataSource dataSource = jdbc.getDataSource();
-            Connection conn = dataSource.getConnection();
-            JobListIterator jobListIterator = new JobListIterator(conn, sc);
+            JobListIterator jobListIterator = new JobListIterator(jdbc, owner);
             prof.checkpoint("JobListStatementCreator");
             return jobListIterator;
         }
@@ -1194,31 +1191,43 @@ public class JobDAO
     class JobListStatementCreator implements PreparedStatementCreator
     {
         private Object owner;
-        private String sql;
+        private String lastJobID;
 
-        public JobListStatementCreator()
+        public JobListStatementCreator(String lastJobID)
         {
-            this.sql = getSQL();
+            this.lastJobID = lastJobID;
         }
 
         public void setOwner(Object owner) { this.owner = owner; }
 
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
+            String sql = getSQL();
             PreparedStatement ret = conn.prepareStatement(sql);
             ret.setObject(1, owner);
             log.debug(sql);
             return ret;
         }
 
-        String getSQL()
+        protected String getSQL()
         {
-            if (sql != null)
-                return sql;
             StringBuilder sb = new StringBuilder();
-            sb.append("SELECT jobID, executionPhase FROM ");
-            sb.append(jobSchema.jobTable);
-            sb.append(" WHERE ownerID = ? AND deletedByUser = 0");
+            
+            if (jobSchema.limitWithTop)
+            {
+                sb.append("SELECT TOP " + BATCH_SIZE + " jobID, executionPhase FROM ");
+                sb.append(jobSchema.jobTable);
+                sb.append(" WHERE ownerID = ? AND deletedByUser = 0 AND jobID > '" + lastJobID + "' ");
+                sb.append(" ORDER BY jobID ASC " );
+            }
+            else
+            {
+                sb.append("SELECT jobID, executionPhase FROM ");
+                sb.append(jobSchema.jobTable);
+                sb.append(" WHERE ownerID = ? AND deletedByUser = 0 AND jobID > '" + lastJobID + "' ");
+                sb.append(" ORDER BY jobID ASC " );
+                sb.append(" LIMIT " + BATCH_SIZE );
+            }
             return sb.toString();
         }
     }
@@ -1688,73 +1697,86 @@ public class JobDAO
     
     private class JobListIterator implements Iterator<JobRef>
     {
-        private Connection conn;
-        private PreparedStatement prepStmt;
+        private JdbcTemplate jdbcTemplate;
+        private Iterator<JobRef> jobRefIterator;
+        private String lastJobID = "";
+        private Object owner;
         
-        private ResultSet rs;
-        private JobRef next;
-        
-        JobListIterator(Connection conn, JobListStatementCreator sc)
+        JobListIterator(JdbcTemplate jdbc, Object owner)
         {
-            try
-            {
-                this.conn = conn;
-                prepStmt = sc.createPreparedStatement(conn);
-                rs = prepStmt.executeQuery();
-                advance();
-            }
-            catch (SQLException e)
-            {
-                throw new IllegalStateException(e);
-            }
+            this.jdbcTemplate = jdbc;
+            this.owner = owner;
+            this.jobRefIterator = getNextBatchIterator();
         }
 
         @Override
         public boolean hasNext()
         {
-            return (next != null);
+            if (!jobRefIterator.hasNext())
+                this.jobRefIterator = getNextBatchIterator();
+        	
+            return this.jobRefIterator.hasNext();
         }
 
         @Override
         public JobRef next()
         {
-            if (next == null)
-                throw new NoSuchElementException();
-            
-            JobRef ret = next;
-            
+            JobRef next = this.jobRefIterator.next();
+            log.debug("Next JobRef: " + next);
+            return next;
+        }
+        
+        private Iterator<JobRef> getNextBatchIterator() 
+        {
+            PreparedStatement prepStmt;
+            ResultSet rs = null;        	
+
             try
             {
-                advance();
-                return ret;
+                // get a connection
+                JobListStatementCreator sc = new JobListStatementCreator(this.lastJobID);
+                sc.setOwner(this.owner);
+                DataSource ds = this.jdbcTemplate.getDataSource();
+                Connection conn = ds.getConnection();
+                prepStmt = sc.createPreparedStatement(conn);
             }
             catch (SQLException e)
             {
                 throw new IllegalStateException(e);
             }
-        }
-        
-        private void advance() throws SQLException
-        {
-            if (rs.next())
+
+            List<JobRef> jobs = new ArrayList<JobRef>();    
+            try
             {
-                // jobID
-                String jobID = rs.getString("jobID");
-    
-                // executionPhase
-                ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());
-                
-                next = new JobRef(jobID, executionPhase);
+                // get a batch of JobRef's
+                startTransaction();            
+                rs = prepStmt.executeQuery();  
+                String jobID = null;
+                while (rs.next())
+                {
+                    jobID = rs.getString("jobID");
+                    ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());                
+                    jobs.add(new JobRef(jobID, executionPhase));        		
+                }    
+            	
+                if (jobID != null)
+                    this.lastJobID = jobID;
+            	
+                commitTransaction();
             }
-            else
+            catch(SQLException e)
             {
-                next = null;
-                
-                // reached the end of the results, release the
-                // resources
+            	log.error("Batch transaction not completed.");
+                rollbackTransaction();
+                throw new IllegalStateException(e);
+            }
+            finally
+            {
                 try
                 {
-                    rs.close();
+                    if (rs != null)
+                        rs.close();
+                	
                     prepStmt.close();
                 }
                 catch (SQLException e)
@@ -1762,7 +1784,8 @@ public class JobDAO
                     log.warn("Could not close job list database resources.", e);
                 }
             }
-            log.debug("Next JobRef: " + next);
+        	
+            return jobs.iterator();
         }
 
         @Override
