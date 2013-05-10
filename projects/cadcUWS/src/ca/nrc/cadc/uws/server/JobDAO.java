@@ -1730,11 +1730,9 @@ public class JobDAO
         @SuppressWarnings("unchecked")
         private Iterator<JobRef> getNextBatchIterator() 
         {
-            List<JobRef> jobs = null;
-        	
             JobListStatementCreator sc = new JobListStatementCreator(this.lastJobID);
             sc.setOwner(this.owner);
-            jobs = this.jdbcTemplate.query(sc, new RowMapper() 
+            List<JobRef> jobs = this.jdbcTemplate.query(sc, new RowMapper() 
                 {
             	    // mapRow is required to preserve the order of the ResultSet
                     public Object mapRow(ResultSet rs, int rowNum) throws SQLException
