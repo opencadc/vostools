@@ -88,7 +88,6 @@ import java.util.TimeZone;
  */
 public class DateUtil
 {
-    public static final String ISO_8601_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
     public static final String ISO_DATE_FORMAT_TZ = "yyyy-MM-dd HH:mm:ss.SSSZ";
     
