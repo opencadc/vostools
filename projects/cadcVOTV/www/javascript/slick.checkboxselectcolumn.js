@@ -34,10 +34,13 @@
       _handler.unsubscribeAll();
     }
 
-    function handleSelectedRowsChanged(e, args) {
+    function handleSelectedRowsChanged(e, args)
+    {
       var selectedRows = _grid.getSelectedRows();
+
       var lookup = {}, row, i;
-      for (i = 0; i < selectedRows.length; i++) {
+      for (i = 0; i < selectedRows.length; i++)
+      {
         row = selectedRows[i];
         lookup[row] = true;
         if (lookup[row] !== _selectedRowsLookup[row]) {
@@ -48,13 +51,21 @@
       for (i in _selectedRowsLookup) {
         _grid.invalidateRow(i);
       }
+
       _selectedRowsLookup = lookup;
+
       _grid.render();
 
-      if (selectedRows.length && selectedRows.length == _grid.getDataLength()) {
-        _grid.updateColumnHeader(_options.columnId, "<input type='checkbox' checked='checked'>", _options.toolTip);
-      } else {
-        _grid.updateColumnHeader(_options.columnId, "<input type='checkbox'>", _options.toolTip);
+      if (selectedRows.length && selectedRows.length == _grid.getDataLength())
+      {
+        _grid.updateColumnHeader(_options.columnId,
+                                 "<input type='checkbox' checked='checked'>",
+                                 _options.toolTip);
+      }
+      else
+      {
+        _grid.updateColumnHeader(_options.columnId, "<input type='checkbox'>",
+                                 _options.toolTip);
       }
     }
 
@@ -134,19 +145,24 @@
       };
     }
 
-    function checkboxSelectionFormatter(row, cell, value, columnDef, dataContext) {
-      if (dataContext) {
+    function checkboxSelectionFormatter(row, cell, value, columnDef,
+                                        dataContext)
+    {
+      if (dataContext)
+      {
         return _selectedRowsLookup[row]
             ? "<input type='checkbox' checked='checked'>"
             : "<input type='checkbox'>";
       }
-      return null;
+      else
+      {
+        return null;
+      }
     }
 
     $.extend(this, {
       "init": init,
       "destroy": destroy,
-
       "getColumnDefinition": getColumnDefinition
     });
   }

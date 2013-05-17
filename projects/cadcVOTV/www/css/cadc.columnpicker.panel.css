@@ -1,0 +1,44 @@
+.slick-columnpicker
+{
+  border: 1px solid #718BB7;
+  background: #f0f0f0;
+  padding: 6px;
+  -moz-box-shadow: 2px 2px 2px silver;
+  -webkit-box-shadow: 2px 2px 2px silver;
+  min-width: 600px;
+  cursor: default;
+}
+
+.slick-columnpicker li
+{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0.1em solid #336699;
+  height: auto;
+}
+
+.slick-columnpicker input
+{
+  vertical-align: middle;
+  margin: 4px;
+}
+
+div.slick-column-picker-label-text
+{
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.slick-columnpicker li a
+{
+  display: block;
+  padding: 4px;
+  font-weight: bold;
+}
+
+.slick-columnpicker li a:hover
+{
+  background: white;
+}

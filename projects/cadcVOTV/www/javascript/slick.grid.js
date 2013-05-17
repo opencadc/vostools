@@ -2093,12 +2093,14 @@ if (typeof Slick === "undefined") {
     // Interactivity
 
     function handleDragInit(e, dd) {
+
       var cell = getCellFromEvent(e);
+
       if (!cell || !cellExists(cell.row, cell.cell)) {
         return false;
       }
 
-      retval = trigger(self.onDragInit, dd, e);
+      var retval = trigger(self.onDragInit, dd, e);
       if (e.isImmediatePropagationStopped()) {
         return retval;
       }
@@ -2110,6 +2112,7 @@ if (typeof Slick === "undefined") {
 
     function handleDragStart(e, dd) {
       var cell = getCellFromEvent(e);
+
       if (!cell || !cellExists(cell.row, cell.cell)) {
         return false;
       }
