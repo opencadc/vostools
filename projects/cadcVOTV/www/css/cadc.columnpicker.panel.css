@@ -42,3 +42,10 @@ div.slick-column-picker-label-text
 {
   background: white;
 }
+
+.slick-column-picker-tooltip-threshold-line
+{
+  color: #f00;
+  background-color: #f00;
+  height: 5px;
+}

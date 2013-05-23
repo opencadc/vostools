@@ -727,10 +727,74 @@ cadc.vot.Viewer.prototype.init = function ()
     var columnPicker;
     var pickerStyle = columnPickerConfig.style;
 
+    // Used for resetting the force fit column widths.
+    var resetColumnWidths = function (e, args)
+    {
+      var g = args.grid;
+      var gridColumns = g.getColumns();
+      var totalWidth = 0;
+      var tabData = viewer.getVOTableData();
+
+      for (var c in gridColumns)
+      {
+        var col = gridColumns[c];
+        var colWidth;
+
+        // Do not calculate with checkbox column.
+        if (!checkboxSelector
+            || (col.id != checkboxSelector.getColumnDefinition().id))
+        {
+          var colOpts = viewer.getOptionsForColumn(col.name);
+          var minWidth = col.name.length + 3;
+          var longestCalculatedWidth = tabData.getLongestValueLength(col.id);
+          var textWidthToUse = (longestCalculatedWidth > minWidth)
+              ? longestCalculatedWidth : minWidth;
+
+          var lengthDiv = $("<div></div>");
+          var lengthStr = "";
+          var userColumnWidth = colOpts.width;
+
+          for (var v = 0; v < textWidthToUse; v++)
+          {
+            lengthStr += "a";
+          }
+
+          lengthDiv.attr("style", "position: absolute;visibility: hidden;height: auto;width: auto;");
+          lengthDiv.text(lengthStr);
+          $(document.body).append(lengthDiv);
+
+          colWidth = (userColumnWidth || lengthDiv.innerWidth());
+
+          lengthDiv.remove();
+        }
+        else
+        {
+          // Buffer the checkbox.
+          colWidth = col.width + 15;
+        }
+
+        totalWidth += colWidth;
+      }
+
+      if (totalWidth > 0)
+      {
+        $(viewer.getTargetNodeSelector()).css("width", totalWidth + "px");
+
+        if (viewer.usePager())
+        {
+          $(viewer.getPagerNodeSelector()).css("width", totalWidth + "px");
+        }
+
+        $(viewer.getHeaderNodeSelector()).css("width", totalWidth + "px");
+        g.resizeCanvas();
+      }
+    };
+
     if (pickerStyle == "header")
     {
       columnPicker = new Slick.Controls.ColumnPicker(viewer.getColumns(),
                                                      grid, viewer.getOptions());
+      columnPicker.onColumnAddOrRemove.subscribe(resetColumnWidths);
     }
     else if (pickerStyle == "tooltip")
     {
@@ -739,6 +803,11 @@ cadc.vot.Viewer.prototype.init = function ()
                                                           columnPickerConfig.panel,
                                                           columnPickerConfig.options,
                                                           viewer.getOptions());
+
+      columnPicker.onSort.subscribe(resetColumnWidths);
+      columnPicker.onResetColumnOrder.subscribe(resetColumnWidths);
+      columnPicker.onShowAllColumns.subscribe(resetColumnWidths);
+      columnPicker.onSortAlphabetically.subscribe(resetColumnWidths);
     }
     else
     {
@@ -766,71 +835,6 @@ cadc.vot.Viewer.prototype.init = function ()
 
     $(viewer.getHeaderNodeSelector()).css("width", totalWidth + "px");
     grid.resizeCanvas();
-
-    if (columnPicker)
-    {
-      // For when the column picker hides or shows columns.
-      columnPicker.onColumnAddOrRemove.subscribe(function (e, args)
-                                                 {
-                                                   var g = args.grid;
-                                                   var gridColumns = g.getColumns();
-                                                   var totalWidth = 0;
-                                                   var tabData =
-                                                       viewer.getVOTableData();
-
-                                                   for (var c in gridColumns)
-                                                   {
-                                                     var col = gridColumns[c];
-                                                     var colWidth;
-
-                                                     // Do not calculate with checkbox column.
-                                                     if (!checkboxSelector
-                                                         || (col.id != checkboxSelector.getColumnDefinition().id))
-                                                     {
-                                                       var colOpts = viewer.getOptionsForColumn(col.name);
-                                                       var minWidth = col.name.length + 3;
-                                                       var longestCalculatedWidth = tabData.getLongestValueLength(col.id);
-                                                       var textWidthToUse = (longestCalculatedWidth > minWidth)
-                                                           ? longestCalculatedWidth : minWidth;
-
-                                                       var lengthDiv = $("<div></div>");
-                                                       var lengthStr = "";
-                                                       var userColumnWidth = colOpts.width;
-
-                                                       for (var v = 0; v < textWidthToUse; v++)
-                                                       {
-                                                         lengthStr += "a";
-                                                       }
-
-                                                       lengthDiv.attr("style", "position: absolute;visibility: hidden;height: auto;width: auto;");
-                                                       lengthDiv.text(lengthStr);
-                                                       $(document.body).append(lengthDiv);
-
-                                                       colWidth = (userColumnWidth || lengthDiv.innerWidth());
-                                                     }
-                                                     else
-                                                     {
-                                                       // Buffer the checkbox.
-                                                       colWidth = col.width + 15;
-                                                     }
-
-                                                     totalWidth += colWidth;
-                                                   }
-
-                                                   if (totalWidth > 0)
-                                                   {
-                                                     $(viewer.getTargetNodeSelector()).css("width", totalWidth + "px");
-
-                                                     if (viewer.usePager())
-                                                     {
-                                                       $(viewer.getPagerNodeSelector()).css("width", totalWidth + "px");
-                                                     }
-
-                                                     $(viewer.getHeaderNodeSelector()).css("width", totalWidth + "px");
-                                                     g.resizeCanvas();
-                                                   }
-                                                 });
-    }
   }
 
   // move the filter panel defined in a hidden div into grid top panel
