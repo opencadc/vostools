@@ -44,6 +44,20 @@ class IntegrationTest(unittest.TestCase):
         # NOTE: Pixel range is inclusive
         assert_that(hdulist[0].data.shape, equal_to((4, 71, 61)))
 
+    def test_open_extension_header(self):
+        client = vos.Client()
+        uri = "vos://cadc.nrc.ca~vospace/drusk/1616681p.fits"
+
+        vofile = client.open(uri, view="cutout", cutout="[23]")
+
+        hdulist = fits.open(cStringIO.StringIO(vofile.read(size=2880)),
+                            ignore_missing_end=True)
+
+        assert_that(hdulist, has_length(1))
+        hdu = hdulist[0]
+        assert_that(hdu.header["NAXIS1"], equal_to(2112))
+        assert_that(hdu.header["NAXIS2"], equal_to(4644))
+
 
 if __name__ == '__main__':
     unittest.main()
