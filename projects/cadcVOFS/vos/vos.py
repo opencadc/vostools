@@ -58,7 +58,6 @@ class urlparse:
         self.path = m.group('path')
 
     def __str__(self):
-        #return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
         return "[scheme: %s, netloc: %s, path: %s]" % (self.scheme, self.netloc, self.path)
 
 
@@ -78,10 +77,11 @@ class Connection:
 
         ## allow anonymous access if no certfile is specified...
         if certfile is not None and not os.access(certfile, os.F_OK):
-            raise EnvironmentError(errno.EACCES, "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
-
+            raise EnvironmentError(
+                errno.EACCES, 
+                "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
         self.certfile = certfile
-        # logging.debug("Using certificate file %s" % (str(self.certfile)))
+
 
 
     def getConnection(self, url):
@@ -1018,7 +1018,7 @@ class Client:
 
     def link(self, srcURI, linkURI):
         """Make linkURI point to srcURI"""
-        if (self.access(linkURI)) :
+        if (self.isdir(linkURI)) :
             linkURI = os.path.join(linkURI, os.path.basename(srcURI))
         linkNode = Node(self.fixURI(linkURI), nodeType="vos:LinkNode")
         ET.SubElement(linkNode.node, "target").text = self.fixURI(srcURI)
