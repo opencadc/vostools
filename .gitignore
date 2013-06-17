@@ -7,3 +7,6 @@ dist/
 MANIFEST
 *.egg-info
 .coverage
+.svn
+*.pyc
+.idea/

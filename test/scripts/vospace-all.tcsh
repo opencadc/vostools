@@ -18,6 +18,11 @@ echo "vospace-read-permission-atest.tcsh"
 vospace-read-permission-atest.tcsh || echo "FAIL vospace-read-permission-atest.tcsh" && exit -1
 echo "vospace-node-properties.tcsh"
 vospace-node-properties.tcsh || echo "FAIL vospace-node-properties.tcsh" && exit -1
+<<<<<<< HEAD
+=======
+echo "vospace-lock-atest.tcsh"
+vospace-lock-atest.tcsh || echo "FAIL vospace-lock-atest.tcsh" && exit -1
+>>>>>>> drusk/opencutout
 
 
 echo

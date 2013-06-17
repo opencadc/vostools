@@ -63,6 +63,9 @@ Version: %s """ % (__version__.version)
         sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(-1)
     except Exception as e:
+        import re
+        if re.search('NodeLocked', str(e)) != None:
+            logging.error('Use vlock to unlock nodes before moving.')
         logging.error(str(e))
         sys.exit(-1)
 

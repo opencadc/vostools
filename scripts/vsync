@@ -113,6 +113,9 @@ class ThreadCopy(threading.Thread):
             except (IOError, OSError) as e:
                 logging.error("Error writing %s to server, skipping" % (src))
                 logging.error(str(e))
+                import re
+                if re.search('NodeLocked',str(e)) != None:
+                    logging.error("Use vlock to unlock the node before syncing to %s." % (dest))
                 try:
                     if e.errno == 104:
                         self.queue.put(requeue)
@@ -165,6 +168,7 @@ def copy(source, dest):
         logging.error("filename %s contains illegal characters, skipping" % (source))
         return
 
+    
     dirname = os.path.dirname(dest)
     mkdirs(dirname)
     if opt.include is not None and not re.search(opt.include, source):

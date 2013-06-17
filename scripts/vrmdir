@@ -41,7 +41,7 @@ else:
 try:
     client=vos.Client(certFile=opt.certfile)
 except Exception as e:
-    logging.error("Conneciton failed:  %s" %  (str(e)))
+    logging.error("Connection failed:  %s" %  (str(e)))
     sys.exit(e.errno)
 
 
@@ -60,6 +60,9 @@ try:
           logging.error("%s file not found" % (arg))
           sys.exit(-1)
 except Exception as e:
-    logging.error("Conneciton failed:  %s" %  (str(e)))
+    import re
+    if re.search('NodeLocked', str(e)) != None:
+       logging.error("Use vlock to unlock %s before removing." %(arg))
+    logging.error("Connection failed:  %s" %  (str(e)))
     sys.exit(-1)
 
