@@ -83,12 +83,8 @@ if opt.Size:
 if opt.verbose:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 elif opt.debug:
-<<<<<<< HEAD
-    logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
-=======
     format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=format)
->>>>>>> drusk/opencutout
 else:
     logging.basicConfig(level=logging.ERROR, format="%(message)s")
 
@@ -149,10 +145,7 @@ for node in args:
     if node[0:4] != "vos:":
         parser.error("Improper vospace specification: %s " % (node))
     try:
-<<<<<<< HEAD
-=======
         logging.debug("getting listing of: %s" % ( str(node)))
->>>>>>> drusk/opencutout
         infoList = client.getInfoList(node)
     except IOError as e:
         logging.error("Error getting listing of %s ( %s )" % (node, e.strerror))

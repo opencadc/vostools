@@ -17,18 +17,13 @@ set LSCMD = "python $CADC_ROOT/scripts/vls -l"
 set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
 set RMCMD = "python $CADC_ROOT/scripts/vrm"
 set CPCMD = "python $CADC_ROOT/scripts/vcp"
-<<<<<<< HEAD
-=======
+
 set MVCMD = "python $CADC_ROOT/scripts/vmv"
->>>>>>> drusk/opencutout
 set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
 set CHMODCMD = "python $CADC_ROOT/scripts/vchmod"
 set TAGCMD = "python $CADC_ROOT/scripts/vtag"
 set LNCMD = "python $CADC_ROOT/scripts/vln"
-<<<<<<< HEAD
-=======
 set LOCKCMD = "python $CADC_ROOT/scripts/vlock"
->>>>>>> drusk/opencutout
 
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
@@ -47,17 +42,14 @@ set BASE = "$VOHOME/atest/locktest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
 set CONTAINER = $BASE/$TIMESTAMP
-<<<<<<< HEAD
 
 
-echo -n "** checking base URI"
-=======
 set TEMPCONTAINER = $BASE/$TIMESTAMP"-temp"
 
 
 echo "test setup"
 echo -n "** checking base URI "
->>>>>>> drusk/opencutout
+
 $LSCMD $CERT $BASE > /dev/null
 if ( $status == 0) then
 	echo " [OK]"
@@ -67,25 +59,7 @@ else
         $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
 	echo " [OK]"
 endif
-<<<<<<< HEAD
-echo -n "** setting home and base to public, no groups"
-$CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
-echo -n " [OK]"
-$CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo
-echo "*** starting test sequence ***"
-echo
-echo "** test container: ${CONTAINER}"
-echo
 
-echo -n "create container "
-$MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "list container properties "
-$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo -n "** setting home to public, no groups "
 $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
 echo " [OK]"
@@ -103,7 +77,7 @@ $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked container "
 $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
+
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -111,23 +85,7 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
 
-echo -n "lock container "
-$TAGCMD $CERT $CONTAINER $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view locked container "
-$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "unlock container "
-$TAGCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view unlocked container "
-$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo
 
 echo "test case 2: "
@@ -144,7 +102,7 @@ $LOCKCMD $CERT $CONTAINER $UNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked container "
 $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
+
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -152,13 +110,7 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
 
-echo -n "create link "
-$CPCMD $CERT something.png $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
-$LNCMD $CERT $CONTAINER/something.png $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
-$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo
 
 echo "test case 4: "
@@ -166,7 +118,7 @@ echo -n "create link "
 $CPCMD $CERT something.png $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
 $LNCMD $CERT $CONTAINER/something.png $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
 $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
+
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -174,23 +126,6 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
-
-echo -n "lock link "
-$TAGCMD $CERT $CONTAINER/target $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view locked link "
-$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "unlock link "
-$TAGCMD $CERT $CONTAINER/target > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view unlocked link "
-$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo
 
 echo "test case 5: "
@@ -208,7 +143,7 @@ $LOCKCMD $CERT $CONTAINER/target $UNLOCK_ARGS> /dev/null || echo " [FAIL]" && ex
 echo " [OK]"
 echo -n "check unlocked link "
 $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
+
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -216,17 +151,11 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
-
-echo -n "view node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo
 
 echo "test case 7: "
 echo -n "check unlocked node "
 $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -234,23 +163,7 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
 
-echo -n "lock node "
-$TAGCMD $CERT $CONTAINER/something.png $LOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view locked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "unlock node "
-$TAGCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "view unlocked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked = true' || set SUCCESS = "true"
-=======
 echo
 
 echo "test case 8: "
@@ -292,7 +205,7 @@ $LOCKCMD $CERT $CONTAINER/something.png $UNLOCK_ARGS> /dev/null || echo " [FAIL]
 echo " [OK]"
 echo -n "check unlocked node "
 $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q 'islocked' || set SUCCESS = "true"
->>>>>>> drusk/opencutout
+
 if ( ${SUCCESS} == "true" ) then
     set SUCCESS = "false"
     echo " [OK]"
@@ -300,10 +213,7 @@ else
     echo " [FAIL]"
     exit -1
 endif
-<<<<<<< HEAD
 
-echo -n "delete container "
-=======
 echo
 
 # clean up
@@ -313,7 +223,7 @@ rm -f something1.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "delete non-empty container "
->>>>>>> drusk/opencutout
+
 $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
 $TAGCMD $CERT $CONTAINER $LIST_ARGS >& /dev/null || set SUCCESS = "true"
 if ( ${SUCCESS} == "true" ) then

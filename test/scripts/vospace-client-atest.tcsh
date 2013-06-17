@@ -115,6 +115,15 @@ cmp something.png something.png.2 || echo " [FAIL]" && exit -1
 \rm -f something.png.2
 echo " [OK]"
 
+echo -n "Check quick copy"
+$CPCMD $CERT --quick something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
+$CPCMD $CERT --quick $CONTAINER/something.png.3 something.png.3 || echo " [FAIL]" && exit -1
+cmp something.png something.png.3 || echo " [FAIL]" && exit -1
+\rm -f something.png.3
+echo " [OK]"
+
+$CPCMD $CERT $CONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
+
 echo -n "copy/overwrite existing data node "
 $CPCMD $CERT something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"

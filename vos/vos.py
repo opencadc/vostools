@@ -58,7 +58,10 @@ class urlparse:
         self.path = m.group('path')
 
     def __str__(self):
+<<<<<<< HEAD
         #return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
+=======
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         return "[scheme: %s, netloc: %s, path: %s]" % (self.scheme, self.netloc, self.path)
 
 
@@ -78,10 +81,18 @@ class Connection:
 
         ## allow anonymous access if no certfile is specified...
         if certfile is not None and not os.access(certfile, os.F_OK):
+<<<<<<< HEAD
             raise EnvironmentError(errno.EACCES, "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
 
         self.certfile = certfile
         # logging.debug("Using certificate file %s" % (str(self.certfile)))
+=======
+            raise EnvironmentError(
+                errno.EACCES, 
+                "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
+        self.certfile = certfile
+
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
 
 
     def getConnection(self, url):
@@ -90,12 +101,21 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         certFilename -- the name of the certificate pem file.
         """
+<<<<<<< HEAD
         #logging.debug("parsing url: %s" %(url))
         parts = urlparse(url)
         #logging.debug("Got: %s " % ( str(parts)))
         ports = {"http": 80, "https": 443}
         certfile = self.certfile
         #logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+=======
+        logging.debug("parsing url: %s" %(url))
+        parts = urlparse(url)
+        logging.debug("Got: %s " % ( str(parts)))
+        ports = {"http": 80, "https": 443}
+        certfile = self.certfile
+        logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
 
         try:
             if parts.scheme=="https":
@@ -118,7 +138,11 @@ class Connection:
                 connection.connect()
             except httplib.HTTPException as e:
                 logging.critical("%s" % (str(e)))
+<<<<<<< HEAD
                 logging.critical("Retrying connection for 30 seconds")
+=======
+                logggin.critical("Retrying connection for 30 seconds")
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
                 if time.time() - timestart > 1200:
                     raise e
             except Exception as e:
@@ -784,6 +808,13 @@ class Client:
 
     VOTransfer = '/vospace/synctrans'
     VOProperties = '/vospace/nodeprops'
+<<<<<<< HEAD
+=======
+    VO_HTTPGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpget'
+    VO_HTTPPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpput'
+    VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
+    VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
     DWS = '/data/pub/'
 
     ### reservered vospace properties, not to be used for extended property setting
@@ -939,10 +970,17 @@ class Client:
         return self.nodeCache[uri]
 
 
+<<<<<<< HEAD
     def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None):
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
+=======
+    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None):
+        """Split apart the node string into parts and return the correct URL for this node"""
+
+        uri = self.fixURI(uri)
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         if not self.cadc_short_cut and method == 'GET' and view == 'data':
             return self._get(uri)
 
@@ -951,6 +989,7 @@ class Client:
             return self._put(uri)
 
         parts = urlparse(uri)
+<<<<<<< HEAD
         server = Client.VOServers.get(parts.netloc, None)
         if server is None:
             return uri
@@ -972,6 +1011,52 @@ class Client:
             ext = "&" if "?" in basepath else "?"
             return urlbase + ext + "cutout=" + cutout
 
+=======
+        path = parts.path.strip('/')
+        server = Client.VOServers.get(parts.netloc,None)
+        if server is None:
+            return uri
+        logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
+
+        if self.cadc_short_cut and ((method == 'GET' and view == 'data') or method == "PUT") :
+            ## only get here if cadc_short_cut == True
+            # find out the URL to the CADC data server
+            direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
+            transProtocol = ''
+            if self.protocol == 'http':
+                if method == 'GET':
+                    transProtocol = Client.VO_HTTPGET_PROTOCOL
+                else:
+                    transProtocol = Client.VO_HTTPPUT_PROTOCOL
+            else:
+                if method == 'GET':
+                    transProtocol = Client.VO_HTTPSGET_PROTOCOL
+                else:
+                    transProtocol = Client.VO_HTTPSPUT_PROTOCOL
+ 
+            url = "%s://%s%s" % (self.protocol, SERVER, "")
+            logging.debug("URL: %s" % (url))
+
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction, 'PROTOCOL' : transProtocol})
+            headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+            httpCon = self.conn.getConnection(url)
+            httpCon.request("POST", Client.VOTransfer, form, headers)
+            try:
+                response = httpCon.getresponse()
+                if response.status == 303:
+                    URL = response.getheader('Location', None)
+                else:
+                    logging.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
+                            (Client.VOTransfer, response.status))
+            except Exception as e:
+                logging.error(str(e))
+            finally: 
+                httpCon.close()          
+  
+            logging.debug("Sending short cuturl: %s" %( URL))
+            return URL
+
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
         if limit is not None:
@@ -981,17 +1066,28 @@ class Client:
         if nextURI is not None:
             fields['uri'] = nextURI
         data = ""
+<<<<<<< HEAD
         if len(fields) > 0:
             data = "?" + urllib.urlencode(fields)
         logging.debug("data: %s" % data)
         logging.debug("Fields: %s" % str(fields))
+=======
+        if len(fields) > 0 :
+               data = "?" + urllib.urlencode(fields)
+        logging.debug("data: %s" % ( data) ) 
+	logging.debug("Fields: %s" % ( str(fields)))
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         URL = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
         logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
     def link(self, srcURI, linkURI):
         """Make linkURI point to srcURI"""
+<<<<<<< HEAD
         if (self.access(linkURI)) :
+=======
+        if (self.isdir(linkURI)) :
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
             linkURI = os.path.join(linkURI, os.path.basename(srcURI))
         linkNode = Node(self.fixURI(linkURI), nodeType="vos:LinkNode")
         ET.SubElement(linkNode.node, "target").text = self.fixURI(srcURI)
@@ -1104,7 +1200,11 @@ class Client:
             return False
         if status in ['HELD' , 'SUSPENDED', 'ABORTED']:
             ## requeue the job and continue to monitor for completion.
+<<<<<<< HEAD
             raise OSError("UWS status: %s" % (status), errno.EFAULT)
+=======
+            raise OSError("UWS status: %s" % (status), eerno.EFAULT)
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         errorURL = jobURL + "/error"
         con = VOFile(errorURL, self.conn, method="GET")
         errorMessage = con.read()
@@ -1115,7 +1215,11 @@ class Client:
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
+<<<<<<< HEAD
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None, cutout=None):
+=======
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None):
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1143,7 +1247,11 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
+<<<<<<< HEAD
             URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
+=======
+            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI)
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
@@ -1159,7 +1267,11 @@ class Client:
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
                     #logging.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
+<<<<<<< HEAD
                     return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
+=======
+                    return self.open(target, mode, view, head, URL, limit, nextURI, size)
+>>>>>>> b2181c478281c3dc65c8deb64ff4224258e5d992
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
                     #logging.debug("Opening %s with urllib2" % (target))
