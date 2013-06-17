@@ -938,7 +938,8 @@ class Client:
 
         if (method == 'GET' and view == 'data') or method == "PUT" :
             ## only get here if cadc_short_cut == True
-            URL = "%s://%s/%s/%s/%s" % ( self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
+            URL = "%s://%s/%s/%s/%s" % ( 
+                self.protocol, server, Client.DWS, self.archive, parts.path.strip('/'))
             logging.debug("Sending short cuturl: %s" %( URL))
             return URL
 
