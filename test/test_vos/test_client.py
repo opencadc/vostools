@@ -44,8 +44,6 @@ class ClientTest(unittest.TestCase):
         assert_that(url,
                     equal_to("http://%s/%s/vospace/mydata/file1" % (vos.vos.SERVER, vos.Client.DWS)))
 
-<<<<<<< HEAD
-=======
     def test_getNodeURL_cutout(self):
         self.undertest.transfer = Mock(return_value="http://www.cadc.hia.nrc.gc.ca"
                                                     "/data/pub/CFHT/1616220")
@@ -70,8 +68,6 @@ class ClientTest(unittest.TestCase):
                     equal_to("http://www.cadc.hia.nrc.gc.ca/data/pub/CFHT/1616220"
                              "?RUNID=abc123"
                              "&cutout=[1][100:300,200:400]"))
-
->>>>>>> drusk/opencutout
 
 if __name__ == '__main__':
     unittest.main()
