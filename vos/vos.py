@@ -5,6 +5,7 @@
 
 """
 
+import copy
 import errno
 import hashlib
 import html2text
@@ -176,6 +177,9 @@ class Node:
         self._nodeList = None
         self.update()
 
+    def __eq__(self, node):
+        return self.props == node.props
+
     def update(self):
         """Update the convience links of this node as we update the xml file"""
 
@@ -318,6 +322,44 @@ class Node:
             for prop in props.findall(Node.PROPERTY):
                 props.remove(prop)
 
+    def fix_prop(self,prop):
+        """Check if prop is a well formed uri and if not then make into one"""
+        (url,tag) = urllib.splittag(prop)
+        if tag is None and url in  ['title',
+                                    'creator',
+                                    'subject',
+                                    'description',
+                                    'publisher',
+                                    'contributer',
+                                    'date',
+                                    'type',
+                                    'format',
+                                    'identifier',
+                                    'source',
+                                    'language',
+                                    'relation',
+                                    'coverage',
+                                    'rights',
+                                    'availableSpace',
+                                    'groupread',
+                                    'groupwrite',
+                                    'publicread',
+                                    'quota',
+                                    'length',
+                                    'mtime',
+                                    'ctime',
+                                    'ispublic']:
+            tag = url
+            url = IVOAURL
+            prop = url+"#"+tag
+
+        parts = urlparse(url)
+        if parts.scheme is None or parts.netloc is None or parts.path is None or tag is None:
+            raise ValueError("Invalid VOSpace property uri: %s" % ( prop))
+
+        return prop
+    
+
     def changeProp(self, key, value):
         """Change the node property 'key' to 'value'.
 
@@ -326,14 +368,13 @@ class Node:
         This function should be split into 'set' and 'delete'
         """
         #logging.debug("Before change node XML\n %s" % ( self))
+        uri = self.fix_prop(key)
         changed = 0
         found = False
         properties = self.node.findall(Node.PROPERTIES)
         for props in properties:
             for prop in props.findall(Node.PROPERTY):
-                  uri = prop.attrib.get('uri', None)
-                  propName = urllib.splittag(uri)[1]
-                  if propName != key:
+                  if uri != prop.attrib.get('uri', None):
                       continue
                   found = True
                   if value is None:
@@ -341,7 +382,7 @@ class Node:
                       prop.attrib['xsi:nil'] = 'true'
                       prop.attrib["xmlns:xsi"] = Node.XSINS
                       prop.text = ""
-                      self.props[propName] = None
+                      self.props[self.getPropName(uri)] = None
                   else:
                       prop.text = value
                       changed = 1
@@ -353,9 +394,10 @@ class Node:
         propertyNode = ET.SubElement(props, Node.PROPERTY)
         propertyNode.attrib['readOnly'] = "false"
         ### There should be a '#' in there someplace...
-        propertyNode.attrib["uri"] = "%s#%s" % (Node.IVOAURL, key)
+        # propertyNode.attrib["uri"] = "%s#%s" % (Node.IVOAURL, key)
+        propertyNode.attrib['uri'] = uri
         propertyNode.text = value
-        self.props[key] = value
+        self.props[self.getPropName(uri)] = value
         #logging.debug("After change node XML\n %s" %( self))
         return 1
 
@@ -531,14 +573,16 @@ class Node:
     def setProps(self, props):
         """Set the properties of node, given the properties element of that node"""
         for propertyNode in props.findall(Node.PROPERTY):
-            self.props[self.getPropName(propertyNode)] = self.getPropValue(propertyNode)
+            self.props[self.getPropName(propertyNode.get('uri'))] = self.getPropValue(propertyNode)
         return
 
 
     def getPropName(self, prop):
         """parse the property uri and get the name of the property"""
-        (url, propName) = urllib.splittag(prop.get('uri'))
-        return propName
+        (url, propName) = urllib.splittag(prop)
+        if url == Node.IVOAURL:
+            return propName
+        return prop
 
     def getPropValue(self, prop):
         """Pull out the value part of node"""
@@ -882,7 +926,6 @@ class Client:
             raise IOError(errno.EIO, "sizes don't match", src)
         return destSize
 
-
     def fixURI(self, uri):
         """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
         parts = urlparse(uri)
@@ -1213,22 +1256,25 @@ class Client:
         #logging.debug("Updating %s" % ( node.name))
         #logging.debug(str(node.props))
         ## Get a copy of what's on the server
+        props = copy.deepcopy(node.props)
         storedNode = self.getNode(node.uri,force=True)
+        logging.debug("Old node == New node? %s" % ( storedNode.props == props ) ) 
         for prop in storedNode.props:
-            if prop in node.props and storedNode.props[prop] == node.props[prop] and node.props[prop] is not None:
-                del(node.props[prop])
+            if prop in props and storedNode.props[prop]==props[prop] and props[prop] is not None:
+                del(props[prop])
         for properties in node.node.findall(Node.PROPERTIES):
             node.node.remove(properties)
         properties = ET.Element(Node.PROPERTIES)
-        for prop in node.props:
-            property = ET.SubElement(properties, Node.PROPERTY, attrib={'readOnly': 'false', 'uri': "%s#%s" % (Node.IVOAURL, prop)})
-            if node.props[prop] is None:
+        for prop in props:
+            property = ET.SubElement(properties, Node.PROPERTY, attrib={'readOnly': 'false', 'uri': prop })
+            if props[prop] is None:
                 property.attrib['xsi:nil'] = 'true'
                 property.attrib["xmlns:xsi"] = Node.XSINS
                 property.text = ""
             else:
-                property.text = node.props[prop]
+                property.text = props[prop]
         node.node.insert(0, properties)
+        logging.debug(str(node))
         f = self.open(node.uri, mode=os.O_APPEND, size=len(str(node)))
         f.write(str(node))
         f.close()
