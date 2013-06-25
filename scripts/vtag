@@ -11,7 +11,7 @@ import pprint
 from vos import vos, __version__
 
 usage = """
-  vtag [options] node [key [value] [key [value] ...]]
+  vtag [options] node [key[=value] [key[=value] ...]]
      
       Version: %s """ % (__version__.version)
 
@@ -31,21 +31,30 @@ def vtag(node,props):
     node = client.getNode(node)
     if len(props) == 0 : 
         ## print all properties
-        pprint.pprint(node.props)
-    elif len(props) == 1:
-        ## get one property
-        logging.debug("just print this one out %s" % (props[0]))
-        pprint.pprint(node.props.get(props[0], None))
-    else:
-        ## update properties
-        changed = 0
-        for i in range(0, len(props), 2):
-            logging.debug("%s: %s -> %s" % ( props[i], node.props.get(props[i],None), props[i+1]))
-            changed += node.changeProp(props[i], props[i+1])
-        if changed > 0 : 
-            node.update()
-            client.addProps(node)
+        return pprint.pprint(node.props)
 
+    changed = False
+    for prop in props:
+        prop = prop.split('=')
+        if len(prop)==1:
+            ## get one property
+            logging.debug("just print this one out %s" % (prop[0]))
+            pprint.pprint(node.props.get(prop[0], None))
+        elif len(prop)==2:
+            ## update properties
+            key, value = prop
+            logging.debug("%s %s" % ( len(key), len(value)))
+            if len(value) == 0 :
+                value = None
+            logging.debug("%s: %s -> %s" % ( key, node.props.get(key,None), value))
+            if value != node.props.get(key,None):
+                node.props[key] = value
+                changed = True
+        else:
+            raise ValueError("Illigal keyword of value character ('=') used: %s" % ( '='.join(prop)))
+
+    if changed:
+        client.addProps(node)
     return 0
 
 
@@ -63,19 +72,21 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage, version=__version__.version)
 
     parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
-    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
-    parser.add_option('--list', '-l', action="store_true", help='list node properties')
+    parser.add_option('--debug', action="store_true", help='run in verbose mode')
+    parser.add_option('--remove', action="store_true", help='remove the listed property')
     parser.add_option("--certfile",
                         help="location of your CADC security certificate file",
                         default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("-R", "--recursive", action='store_const', const=True,
-                        help="Recursive set read/write properties")
-    
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
-    (opt, args) = parser.parse_args()
+# Not yet supported
+#    parser.add_option("-R", "--recursive", action='store_const', const=True,
+#                        help="Recursive set read/write properties")
+ 
 
+    (opt, args) = parser.parse_args()
+   
+    if len(args) == 0:
+        parser.error("no vospace supplied")
+ 
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
     elif opt.verbose:
@@ -83,12 +94,19 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
 
-    if ( len(args)-1 ) % 2 != 0 and len(args) > 2:
-        parser.error("\n\nRequire either just one key to look-up or a set of key/value pairs to set.\n\n")
-
     ## the node should be the first argument, the rest should contain the key/val pairs
     node = args.pop(0)
-    
+
+    if opt.remove:
+        ## remove signified by blank value in key=value listing
+        props=[]
+        for prop in args:
+            if '=' not in prop:
+                prop += "="
+            props.append(prop)
+        
+        args = props
+
     try:
         sys.exit(vtag(node, args))
     except KeyboardInterrupt:

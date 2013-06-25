@@ -313,14 +313,45 @@ class Node:
         #logging.debug("Setting value of ispublic to %s" % (str(value)))
         return self.changeProp('ispublic', value)
 
-    def clearProps(self):
-        """Clear the property list
-        """
-        #logging.debug("Clearing the property list")
-        properties = self.node.findall(Node.PROPERTIES)
-        for props in properties:
-            for prop in props.findall(Node.PROPERTY):
-                props.remove(prop)
+    def fix_prop(self,prop):
+        """Check if prop is a well formed uri and if not then make into one"""
+        (url,tag) = urllib.splittag(prop)
+        if tag is None and url in  ['title',
+                                    'creator',
+                                    'subject',
+                                    'description',
+                                    'publisher',
+                                    'contributer',
+                                    'date',
+                                    'type',
+                                    'format',
+                                    'identifier',
+                                    'source',
+                                    'language',
+                                    'relation',
+                                    'coverage',
+                                    'rights',
+                                    'availableSpace',
+                                    'groupread',
+                                    'groupwrite',
+                                    'publicread',
+                                    'quota',
+                                    'length',
+                                    'mtime',
+                                    'ctime',
+                                    'ispublic']:
+            tag = url
+            url = Node.IVOAURL
+            prop = url+"#"+tag
+
+        parts = urlparse(url)
+        if parts.scheme is None or parts.netloc is None or parts.path is None or tag is None:
+            raise ValueError("Invalid VOSpace property uri: %s" % ( prop))
+
+        return prop
+   
+    def setProp(self):
+        """Build the XML for a given node"""
 
     def fix_prop(self,prop):
         """Check if prop is a well formed uri and if not then make into one"""
@@ -377,6 +408,7 @@ class Node:
                   if uri != prop.attrib.get('uri', None):
                       continue
                   found = True
+                   changed = 1
                   if value is None:
                       ## this is actually a delete property
                       prop.attrib['xsi:nil'] = 'true'
@@ -385,7 +417,6 @@ class Node:
                       self.props[self.getPropName(uri)] = None
                   else:
                       prop.text = value
-                      changed = 1
         #logging.debug("key %s changed? %s (1 == yes)" % (key, changed))
         if found or value is None:
             return changed
@@ -455,13 +486,18 @@ class Node:
             #logging.debug("set type to %s" % (properties['type']))
         propertiesNode = ET.SubElement(node, Node.PROPERTIES)
         for property in properties.keys():
-            if not properties[property] == None :
-                propertyNode = ET.SubElement(propertiesNode, Node.PROPERTY)
-                propertyNode.attrib['readOnly'] = "false"
-                ### There should be a '#' in there someplace...
-                propertyNode.attrib["uri"] = "%s#%s" % (Node.IVOAURL, property)
-                if len(properties[property]) > 0:
-                    propertyNode.text = properties[property]
+            propertyNode = ET.SubElement(propertiesNode, Node.PROPERTY)
+            propertyNode.attrib['readOnly'] = "false"
+            ### There should be a '#' in there someplace...
+            propertyNode.attrib["uri"] = "%s" % self.fix_prop(property)
+            if properties[property] is None:
+                ## this is actually a delete property                                                                                                                                                
+                propertyNode.attrib['xsi:nil'] = 'true'
+                propertyNode.attrib["xmlns:xsi"] = Node.XSINS
+                propertyNode.text = ""
+            elif len(properties[property]) > 0:
+                propertyNode.text = properties[property]
+                    
 
         ## That's it for link nodes...
         if nodeType == "vos:LinkNode":
@@ -1256,24 +1292,12 @@ class Client:
         #logging.debug("Updating %s" % ( node.name))
         #logging.debug(str(node.props))
         ## Get a copy of what's on the server
-        props = copy.deepcopy(node.props)
-        storedNode = self.getNode(node.uri,force=True)
-        logging.debug("Old node == New node? %s" % ( storedNode.props == props ) ) 
-        for prop in storedNode.props:
-            if prop in props and storedNode.props[prop]==props[prop] and props[prop] is not None:
-                del(props[prop])
-        for properties in node.node.findall(Node.PROPERTIES):
-            node.node.remove(properties)
-        properties = ET.Element(Node.PROPERTIES)
-        for prop in props:
-            property = ET.SubElement(properties, Node.PROPERTY, attrib={'readOnly': 'false', 'uri': prop })
-            if props[prop] is None:
-                property.attrib['xsi:nil'] = 'true'
-                property.attrib["xmlns:xsi"] = Node.XSINS
-                property.text = ""
-            else:
-                property.text = props[prop]
-        node.node.insert(0, properties)
+        new_props = copy.deepcopy(node.props)
+        old_props = self.getNode(node.uri,force=True).props
+        for prop in old_props:
+            if prop in new_props and old_props[prop] == new_props[prop] and old_props[prop] is not None:
+                del(new_props[prop])
+        node.node = node.create(node.uri, nodeType=node.type, properties=new_props)
         logging.debug(str(node))
         f = self.open(node.uri, mode=os.O_APPEND, size=len(str(node)))
         f.write(str(node))
