@@ -408,7 +408,7 @@ class Node:
                   if uri != prop.attrib.get('uri', None):
                       continue
                   found = True
-                   changed = 1
+                  changed = 1
                   if value is None:
                       ## this is actually a delete property
                       prop.attrib['xsi:nil'] = 'true'
@@ -1041,7 +1041,7 @@ class Client:
             return uri
         logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
 
-        if self.cadc_short_cut and ((method == 'GET' and view == 'data') or method == "PUT") :
+        if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
             ## only get here if cadc_short_cut == True
             # find out the URL to the CADC data server
             direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
@@ -1076,6 +1076,15 @@ class Client:
             finally: 
                 httpCon.close()          
   
+            if view == "cutout":
+                if cutout is None:
+                    raise ValueError("For view=cutout, must specify a cutout "
+                                     "value of the form"
+                                     "[extension number][x1:x2,y1:y2]")
+
+                ext = "&" if "?" in URL else "?"
+                URL += ext + "cutout=" + cutout
+
             logging.debug("Sending short cuturl: %s" %( URL))
             return URL
 
