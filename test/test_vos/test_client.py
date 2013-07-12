@@ -1,7 +1,8 @@
+import httplib
 import unittest
 
 from hamcrest import assert_that, equal_to
-from mock import Mock
+from mock import Mock, ANY
 
 import vos
 
@@ -36,13 +37,23 @@ class ClientTest(unittest.TestCase):
 
     def test_getNodeURL_cadcshortcut(self):
         # Create client with different params for this test
-        self.undertest = vos.Client(certFile=None, conn=self.conn, cadc_short_cut=True)
+        shortcut_url = "shortcut_url"
+
+        http_con = Mock(spec=httplib.HTTPConnection)
+        http_response = Mock(status=303, spec=httplib.HTTPResponse)
+        http_response.getheader.return_value = shortcut_url
+        http_con.getresponse.return_value = http_response
+
+        conn = Mock(spec=vos.Connection)
+        conn.getConnection.return_value = http_con
+
+        self.undertest = vos.Client(certFile=None, conn=conn, cadc_short_cut=True)
         self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
 
         url = self.undertest.getNodeURL(TEST_URI_2, view="data")
         assert_that(not self.undertest.transfer.called)
-        assert_that(url,
-                    equal_to("http://%s/%s/vospace/mydata/file1" % (vos.vos.SERVER, vos.Client.DWS)))
+        http_response.getheader.assert_called_once_with("Location", ANY)
+        assert_that(url, equal_to(shortcut_url))
 
     def test_getNodeURL_cutout(self):
         self.undertest.transfer = Mock(return_value="http://www.cadc.hia.nrc.gc.ca"
