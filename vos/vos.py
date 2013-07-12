@@ -353,44 +353,6 @@ class Node:
     def setProp(self):
         """Build the XML for a given node"""
 
-    def fix_prop(self,prop):
-        """Check if prop is a well formed uri and if not then make into one"""
-        (url,tag) = urllib.splittag(prop)
-        if tag is None and url in  ['title',
-                                    'creator',
-                                    'subject',
-                                    'description',
-                                    'publisher',
-                                    'contributer',
-                                    'date',
-                                    'type',
-                                    'format',
-                                    'identifier',
-                                    'source',
-                                    'language',
-                                    'relation',
-                                    'coverage',
-                                    'rights',
-                                    'availableSpace',
-                                    'groupread',
-                                    'groupwrite',
-                                    'publicread',
-                                    'quota',
-                                    'length',
-                                    'mtime',
-                                    'ctime',
-                                    'ispublic']:
-            tag = url
-            url = IVOAURL
-            prop = url+"#"+tag
-
-        parts = urlparse(url)
-        if parts.scheme is None or parts.netloc is None or parts.path is None or tag is None:
-            raise ValueError("Invalid VOSpace property uri: %s" % ( prop))
-
-        return prop
-    
-
     def changeProp(self, key, value):
         """Change the node property 'key' to 'value'.
 
