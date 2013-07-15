@@ -1339,17 +1339,19 @@ class Client:
             infoList[node.name] = node.getInfo()
         return infoList.items()
 
-
-    def listdir(self, uri):
-        """Walk through the directory structure a al os.walk"""
+    def listdir(self, uri, force=False):
+        """
+        Walk through the directory structure a al os.walk.
+        Setting force=True will make sure no caching of results are used.
+        """
         #logging.debug("getting a listing of %s " % ( uri))
         names = []
         logging.debug(str(uri))
-        node = self.getNode(uri, limit=None)
+        node = self.getNode(uri, limit=None, force=force)
         while node.type == "vos:LinkNode":
             uri = node.target
             # logging.debug(uri)
-            node = self.getNode(uri, limit=None)
+            node = self.getNode(uri, limit=None, force=force)
         for thisNode in node.getNodeList():
             names.append(thisNode.name)
         return names
