@@ -62,10 +62,6 @@ if __name__ == '__main__':
         sys.stderr.write("\n\nRequire 'islocked' <true|false>\n\n")
         sys.exit(-1)
 
-    logLevel = logging.INFO
-    logging.basicConfig(level=logLevel,
-                        format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
-
     returnCode = 0
     while True:
 
@@ -73,8 +69,9 @@ if __name__ == '__main__':
             client = vos.Client(certFile=opt.certfile)
             node = client.getNode(args[0])
             for i in range(0, len(key_value), 2):
+	    	if key_value[i+1] == "false":
+		   key_value[i+1] = None
                 if node.changeProp(key_value[i], key_value[i+1]) == 1:
-                    # value is changed
                     node.props[key_value[i]] = key_value[i+1]
             logging.debug("Calling UPDATE with " + str(node))
             client.update(node)
