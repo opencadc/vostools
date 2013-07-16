@@ -51,7 +51,7 @@ if __name__ == '__main__':
     if opt.verbose:
         logging.basicConfig(level=logging.INFO, format="%(message)s")
     elif opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
+        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s.%(lineno)s %(message)s")
     else:
         logging.basicConfig(level=logging.ERROR, format="%(message)s")
 
