@@ -41,7 +41,7 @@ MAX_RETRY_DELAY = 128; # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30; # start delay between retries when Try_After not specified by server
 MAX_RETRY_TIME = 900; # maximum time for retries before giving up...
 
-SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.cadc.hia.nrc.gc.ca')
+SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
 class urlparse:
@@ -108,8 +108,8 @@ class Connection:
             logging.error("%s \n" % (str(e)))
             raise OSError(errno.ENTCONN, "VOSpace connection failed", parts.netloc)
 
-        #if logging.getLogger('root').getEffectiveLevel() == logging.DEBUG :
-        #    connection.set_debuglevel(1)
+        if logging.getLogger('root').getEffectiveLevel() == logging.DEBUG :
+            connection.set_debuglevel(1)
 
         ## Try to open this connection. 
         timestart = time.time()
@@ -336,6 +336,7 @@ class Node:
                                     'groupwrite',
                                     'publicread',
                                     'quota',
+                                    'islocked',
                                     'length',
                                     'mtime',
                                     'ctime',
@@ -345,7 +346,7 @@ class Node:
             prop = url+"#"+tag
 
         parts = urlparse(url)
-        if parts.scheme is None or parts.netloc is None or parts.path is None or tag is None:
+        if parts.path is None or tag is None:
             raise ValueError("Invalid VOSpace property uri: %s" % ( prop))
 
         return prop
@@ -558,6 +559,18 @@ class Node:
         childNode = Node(childEt)
         self._nodeList.append(childNode)
         return(childNode)
+
+    def clearProps(self):
+        logging.debug("Clearing Props")
+        properties_node_list = self.node.findall(Node.PROPERTIES)
+        for properties_node in properties_node_list:
+            for property in properties_node.findall(Node.PROPERTY):
+                key = self.getPropName(property.get('uri'))
+                if key in self.props:
+                    del self.props[key]
+                properties_node.remove(property)
+        logging.debug("Done Clearing Props")
+        return 
 
     def getInfoList(self):
         """Retrieve a list of tupples of (NodeName, Info dict)"""
@@ -1100,7 +1113,7 @@ class Client:
         ET.SubElement(transfer, "direction").text = self.fixURI(destURI)
         ET.SubElement(transfer, "keepBytes").text = "false"
 
-        url = "%s://%s/%s" % (self.protocol, SERVER, Client.VOTransfer)
+        url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransfer)
         con = VOFile(url, self.conn, method="POST" , followRedirect=False)
         con.write(ET.tostring(transfer))
         transURL = con.read()
@@ -1285,7 +1298,6 @@ class Client:
            properties are updated on the server. For recursive updates, node should
            only contain the properties to be changed in the node itself as well as
            all its children. """
-        # logging.debug("******************** %s *******" % str(node))
         ## Let's do this update using the async tansfer method
         URL = self.getNodeURL(node.uri)
         if recursive:
