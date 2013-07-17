@@ -1046,6 +1046,7 @@ class Client:
                 else:
                     logging.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
+                    URL = None
             except Exception as e:
                 logging.error(str(e))
             finally: 
@@ -1253,7 +1254,7 @@ class Client:
             if node.type == "vos:LinkNode":
                 logging.debug("appears that %s is a linkNode" % ( node.uri))
                 target = node.node.findtext(Node.TARGET)
-                #logging.debug(target)
+                logging.debug(target)
                 if target is None:
                     #logging.debug("Why is target None?")
                     ### hmm. well, that shouldn't have happened.
