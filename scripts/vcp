@@ -64,7 +64,7 @@ def listdir(dirname):
     logging.debug("getting a dirlist %s " %(dirname))
     
     if dirname[0:4]=="vos:":
-        return client.listdir(dirname)
+        return client.listdir(dirname, force=True)
     else:
         return os.listdir(dirname)
 
