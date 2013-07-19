@@ -1,0 +1,77 @@
+#!/usr/bin/env python2.7
+
+import vos
+from astropy.io import votable
+from cStringIO import StringIO
+
+import curses, time
+from datetime import datetime
+import warnings
+
+c=vos.Client()
+
+DELAY = 8
+RATE = 1
+PROGRESS = '*'
+
+def get_status(ch=0, w=None):
+   f=StringIO(c.open(uri=None,URL='https://www.canfar.phys.uvic.ca/proc/pub').read())
+
+   with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      table=votable.parse(f, invalid='mask').get_first_table().to_table()
+
+   if ch == ord('s'):
+      status = getName(w,'Status:')
+      table = table[table['Status']==status]
+   elif ch == ord('u'):
+      name = getName(w, 'Name:')
+      table = table[table['User']==name]
+   tt = "%s\n\n" % (datetime.now(), ) 
+   return tt+str(table)
+
+
+def init():
+    w = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    return  w
+
+def getName(w, prompt):
+
+    curses.echo()
+    w.addstr(1,0,prompt+" ")
+    name = w.getstr()
+    curses.noecho()
+    return name
+
+if __name__=='__main__':
+
+   w = init()
+   opt = 0
+   curses.halfdelay(RATE*10)
+
+   try:
+      while True:
+         scr = get_status(opt, w)
+         w.erase()
+         w.addstr(scr)
+         w.addstr('\n')
+         w.refresh()
+         elapsed = 0
+         while elapsed < DELAY:
+            cmd = w.getch()
+            if cmd > 0:
+               opt = cmd
+               break
+            elapsed += RATE
+            w.addstr(PROGRESS)
+            w.refresh()
+	 if opt == ord('q'):
+	    break
+   finally:
+      curses.nocbreak()
+      curses.echo()
+      curses.endwin()
+
+
