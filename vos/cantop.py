@@ -18,9 +18,7 @@ class Cantop(object):
       
    def __init__(self):
             
-      self.main_window = curses.initscr()
-      curses.noecho()
-      curses.cbreak()
+
       self.keep_columns=['Job_ID',
                          'User',
                          'Started_on',
@@ -29,6 +27,12 @@ class Cantop(object):
                          'Command']
       self.filter = {'User': None,
                      'Status': None}
+
+   def window_init(self):
+      self.main_window = curses.initscr()
+      curses.noecho()
+      curses.cbreak()
+
 
    def set_filter(self, ch):
       """Set a filter value"""
@@ -42,16 +46,18 @@ class Cantop(object):
          for key in self.filter:
             self.filter[key] = None
 
-   def get_status(self):
+   def get_proc_table(self):
       f=StringIO(c.open(uri=None,URL='https://www.canfar.phys.uvic.ca/proc/pub').read())
-
-      
 
       with warnings.catch_warnings():
          warnings.simplefilter("ignore")
-         table=votable.parse(f, invalid='mask').get_first_table().to_table()
+         self.table=votable.parse(f, invalid='mask').get_first_table().to_table()
 
-      resp = "%s \n" % ( datetime.now() ) 
+   def get_status(self):
+
+      self.get_proc_table()
+
+      resp = "%s \n" % ( str(datetime.now())[0:19] ) 
 
       for key in self.filter:
          if self.filter[key] is None:
@@ -60,6 +66,7 @@ class Cantop(object):
          resp += "%s: %s\t" % (key,self.filter[key]) 
       table.keep_columns(self.keep_columns)
       table = table[tuple(self.keep_columns)]
+      table.sort('Job_ID')
       resp += "\n"
       resp += str(table)
       resp += "\n"
@@ -96,6 +103,8 @@ if __name__=='__main__':
             if cmd > 0:
                cantop.set_filter(cmd)
                break
+            cantop.main_window.addch(1,25,str(DELAY-elapsed))
+            cantop.main_window.refresh()
             elapsed += RATE
 	 if cmd == ord('q'):
 	    break
