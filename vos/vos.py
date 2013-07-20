@@ -888,20 +888,21 @@ class Client:
         if src[0:4] == "vos:":
             srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
-            srcMD5 = srcNode.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            srcMD5 = srcNode.props.get('MD5', 
+                                       'd41d8cd98f00b204e9800998ecf8427e')
             fin = self.open(src, os.O_RDONLY, view='data')
             fout = open(dest, 'w')
             checkSource = True
         else:
-            srcSize = os.lstat(src).st_size
+            srcSize = os.stat(src).st_size
             fin = open(src, 'r')
             fout = self.open(dest, os.O_WRONLY, size=srcSize)
 
         destSize = 0
         md5 = hashlib.md5()
-        ## wrap the read statements in a try/except repeat
-        ## if you get this far into copy then the node exists
-        ## and the error is likely a transient timeout issue
+        # wrap the read statements in a try/except repeat
+        # if we get this far into copy then the node exists
+        # and the error is likely a transient timeout issue
         try:
             while True:
                 buf = fin.read(BUFSIZE)
@@ -922,14 +923,21 @@ class Client:
             if srcNode.type != "vos:LinkNode" :
                 checkMD5 = srcMD5
             else:
-                ### this is a hack .. we should check the data integraty of links too... just not sure how
+                # TODO
+                # this is a hack .. 
+                # we should check the data integraty of links too
+                # just not sure how
                 checkMD5 = md5.hexdigest()
         else:
-            checkMD5 = self.getNode(dest, force=True).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            checkMD5 = self.getNode(dest, 
+                                    force=True).props.get(
+                'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
 
         if sendMD5:
             if checkMD5 != md5.hexdigest():
-                logging.error("MD5s don't match ( %s -> %s ) " % (src, dest))
+                logging.debug(("MD5s don't match ( %s -> %s ) " 
+                               % (checkMD5, md5.hexdigest())))
+                                                                  
                 raise OSError(errno.EIO, "MD5s don't match", src)
             return md5.hexdigest()
         if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
@@ -938,9 +946,15 @@ class Client:
         return destSize
 
     def fixURI(self, uri):
-        """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
+        """given a uri check if the authority part is there and if it isn't
+        then add the CADC vospace authority
+        
+        """
         parts = urlparse(uri)
-        #TODO implement support for local files (parts.scheme=None and self.rootNode=None
+        # TODO 
+        # implement support for local files (parts.scheme=None
+        # and self.rootNode=None
+
         if parts.scheme is None:
             uri = self.rootNode + uri
         parts = urlparse(uri)
@@ -1046,6 +1060,7 @@ class Client:
                 else:
                     logging.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
+                    URL = None
             except Exception as e:
                 logging.error(str(e))
             finally: 
@@ -1253,7 +1268,7 @@ class Client:
             if node.type == "vos:LinkNode":
                 logging.debug("appears that %s is a linkNode" % ( node.uri))
                 target = node.node.findtext(Node.TARGET)
-                #logging.debug(target)
+                logging.debug(target)
                 if target is None:
                     #logging.debug("Why is target None?")
                     ### hmm. well, that shouldn't have happened.

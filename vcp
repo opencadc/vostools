@@ -4,6 +4,8 @@
 
 from vos import __version__ 
 
+exit_code = 0
+
 usage = """
   vcp filename vos:rootNode/destination
 
@@ -64,7 +66,7 @@ def listdir(dirname):
     logging.debug("getting a dirlist %s " %(dirname))
     
     if dirname[0:4]=="vos:":
-        return client.listdir(dirname)
+        return client.listdir(dirname, force=True)
     else:
         return os.listdir(dirname)
 
@@ -93,7 +95,7 @@ def getMD5(filename):
 
 
 def copy(source,dest,exclude=None,include=None):    
-
+    global exit_code
     ## determine if this is a directory we are copying so need to be recursive
     try:
       if isdir(source):
@@ -147,6 +149,10 @@ def copy(source,dest,exclude=None,include=None):
                 if getattr(e,'errno',-1) == 104:
                     ### 104 is connection reset by peer.  Try again on this error
                     logging.debug(str(e))
+		    exit_code = getattr(e,'errno',-1)
+                elif opt.ignore:
+                    logging.error("Ignoring error: %s " % ( str(e)))
+                    break
                 else:
                     raise e
     except IOError as e:
@@ -162,6 +168,7 @@ def signal_handler(signum, frame):
 
 if __name__=='__main__':
 
+
     from optparse import OptionParser
     import logging, sys
     import vos, errno, os
@@ -172,15 +179,16 @@ if __name__=='__main__':
     signal.signal(signal.SIGINT, signal_handler)
     
     parser=OptionParser(usage)
-    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-    parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
-    parser.add_option("--exclude",default=None,help="exclude files that match patern")
-    parser.add_option("--include",default=None,help="only include files that match patern (overides exclude)")
-    parser.add_option("-i","--interogate",action="store_true",help="Ask before overwriting files")
-    parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
+    parser.add_option("--certfile", help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("-d","--debug", action="store_true",help="set this option to get help solving connection issues")
+    parser.add_option("--exclude", default=None,help="exclude files that match patern")
+    parser.add_option("--include", default=None,help="only include files that match patern (overides exclude)")
+    parser.add_option("-i","--interogate", action="store_true",help="Ask before overwriting files")
+    parser.add_option("-v","--verbose", action="store_true",help="Verbose output")
     parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
     parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-    parser.add_option("--quick",action="store_true", help="Use default CADC urls, for speed but can fail if CADC changes data storage mechanism", default=False)
+    parser.add_option("--quick", action="store_true", help="Use default CADC urls, for speed but can fail if CADC changes data storage mechanism", default=False)
+    parser.add_option("--ignore", action="store_true", default=False, help="ignore errors and continue with recursive copy")
 
     name=sys.argv[0]
 
@@ -212,7 +220,6 @@ if __name__=='__main__':
     logging.basicConfig(level=logLevel,format=format)
 
 
-    exitCode = 0
 
     
     try:
@@ -251,16 +258,16 @@ if __name__=='__main__':
 
     except ssl.SSLError as e:
         logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
-        exitCode = getattr(e,'errno',-2)
+        exit_code = getattr(e,'errno',-2)
     except KeyboardInterrupt as ke:
-        logging.error("Received keyboard interrupt. Execution aborted...\n")
-        sys.exit(getattr(ke, 'errno', -1))
+        logging.info("Received keyboard interrupt. Execution aborted...\n")
+	exit_code = getattr(ke, 'errno', -1)
     except Exception as e:
         message = str(e)
         logging.error(message)
         import re
         if re.search('NodeLocked',str(e)) != None:
             logging.error("Use vlock to unlock the node before copying to %s." % (thisDest))
-        exitCode = getattr(e,'errno',-1)
+        exit_code = getattr(e,'errno',-1)
 
-    sys.exit(exitCode)
+    sys.exit(exit_code)

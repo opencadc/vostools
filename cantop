@@ -1,0 +1,34 @@
+#!/usr/bin/env python2.7
+
+import curses
+RATE = 1
+DELAY = 8
+from vos.cantop import Cantop
+
+if __name__=='__main__':
+
+   cantop = Cantop()
+   cantop.window_init()
+
+   try:
+      while True:
+         cantop.redraw()
+         curses.halfdelay(RATE*10)
+         elapsed = 0
+         while elapsed < DELAY:
+            cantop.main_window.addch(0,25,str(DELAY-elapsed))
+            cantop.main_window.refresh()
+            cmd = cantop.main_window.getch()
+            if cmd > 0:
+               cantop.set_filter(cmd)
+               break
+            elapsed += RATE
+         if cmd == ord('q'):
+            break
+   finally:
+      curses.nocbreak()
+      curses.echo()
+      curses.endwin()
+
+
+
