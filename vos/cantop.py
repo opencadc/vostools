@@ -58,7 +58,7 @@ class Cantop(object):
       table = get_proc_table()
 
       resp = "%s \n" % ( str(datetime.now())[0:19] ) 
-
+      table = self.table
       for key in self.filter:
          if self.filter[key] is None:
             continue
