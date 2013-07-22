@@ -51,25 +51,26 @@ class Cantop(object):
 
       with warnings.catch_warnings():
          warnings.simplefilter("ignore")
-         self.table=votable.parse(f, invalid='mask').get_first_table().to_table()
+         return votable.parse(f, invalid='mask').get_first_table().to_table()
 
    def get_status(self):
 
-      self.get_proc_table()
+      table = get_proc_table()
 
       resp = "%s \n" % ( str(datetime.now())[0:19] ) 
 
       for key in self.filter:
          if self.filter[key] is None:
             continue
-         table = table[table[key]==self.filter[key]]
+         self.table = self.table[self.table[key]==self.filter[key]]
          resp += "%s: %s\t" % (key,self.filter[key]) 
-      table.keep_columns(self.keep_columns)
-      table = table[tuple(self.keep_columns)]
-      table.sort('Job_ID')
+      self.table.keep_columns(self.keep_columns)
+      self.table = self.table[tuple(self.keep_columns)]
+      self.table.sort('Job_ID')
       resp += "\n"
-      resp += str(table)
+      resp += str(self.table)
       resp += "\n"
+
       return resp
 
 
