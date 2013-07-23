@@ -55,10 +55,10 @@ class Cantop(object):
 
    def get_status(self):
 
-      table = get_proc_table()
+      self.table = self.get_proc_table()
 
       resp = "%s \n" % ( str(datetime.now())[0:19] ) 
-      table = self.table
+
       for key in self.filter:
          if self.filter[key] is None:
             continue
