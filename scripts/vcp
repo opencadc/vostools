@@ -150,9 +150,13 @@ def copy(source,dest,exclude=None,include=None):
                     ### 104 is connection reset by peer.  Try again on this error
                     logging.debug(str(e))
 		    exit_code = getattr(e,'errno',-1)
+		elif getattr(e,'errno',-1) == errno.EIO:
+                    ### retry on IO errors
+                    logging.warning(str(e)+"\nRetrying")
+                    pass
                 elif opt.ignore:
                     logging.error("Ignoring error: %s " % ( str(e)))
-                    break
+                    skip = True
                 else:
                     raise e
     except IOError as e:
