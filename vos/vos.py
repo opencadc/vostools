@@ -141,6 +141,7 @@ class Node:
 
     IVOAURL = "ivo://ivoa.net/vospace/core"
     CADCURL = "ivo://cadc.nrc.ca/vospace/core"
+    ISLOCKED = CADCURL+"#islocked"
 
     VOSNS = "http://www.ivoa.net/xml/VOSpace/v2.0"
     XSINS = "http://www.w3.org/2001/XMLSchema-instance"
@@ -199,7 +200,7 @@ class Node:
         if self.props.get('ispublic', 'false') == 'true':
             self.isPublic = True
         self.isLocked = False
-        if self.props.get('islocked', 'false') == 'true':
+        if self.props.get(Node.ISLOCKED, 'false') == 'true':
             self.isLocked = True
         self.groupwrite = self.props.get('groupwrite', '')
         self.groupread = self.props.get('groupread', '')
@@ -336,7 +337,6 @@ class Node:
                                     'groupwrite',
                                     'publicread',
                                     'quota',
-                                    'islocked',
                                     'length',
                                     'mtime',
                                     'ctime',
@@ -505,7 +505,7 @@ class Node:
 
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props["islocked"] == "true"
+        return self.props[Node.ISLOCKED] == "true"
 
     def getInfo(self):
         """Organize some information about a node and return as dictionary"""
@@ -535,7 +535,7 @@ class Node:
         readGroup = self.props.get('groupread', 'NONE')
         if readGroup != 'NONE':
             perm[4] = 'r'
-        isLocked = self.props.get('islocked', "false")            
+        isLocked = self.props.get(Node.ISLOCKED, "false")            
         #logging.debug("%s: %s" %( self.name,self.props))
         return {"permisions": string.join(perm, ''),
                 "creator": creator,
@@ -647,24 +647,24 @@ class VOFile:
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
-        #logging.debug("inside the close")
         if self.closed:
-            return
-        #logging.debug("Closing connection")
+            return True
+        logging.debug("Closing connection")
         try:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
             self.resp = self.httpCon.getresponse()
-            time.sleep(0.1)
-            #logging.debug("closing connection for %s" % (self.url))
-            self.httpCon.close()
+            self.checkstatus(codes=code)
         except ssl.SSLError as e:
             raise IOError(errno.EAGAIN, str(e))
         except Exception as e:
             raise IOError(errno.ENOTCONN, str(e))
-        self.closed = True
-        logging.debug("Connection closed")
-        return self.checkstatus(codes=code)
+        finally:
+            self.httpCon.close()
+            self.closed = True
+            logging.debug("Connection closed")
+        return True
+        
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416, 416, 402, 408, 412, 504)):
         """check the response status"""
@@ -847,7 +847,7 @@ class Client:
 
     ### reservered vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length", "creator", "date",
-                   "groupread", "groupwrite", "ispublic", "islocked"]
+                   "groupread", "groupwrite", "ispublic" ]
 
 
     def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
@@ -1060,7 +1060,7 @@ class Client:
                 else:
                     logging.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
-                    URL = None
+                    return self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=False)
             except Exception as e:
                 logging.error(str(e))
             finally: 
@@ -1187,7 +1187,7 @@ class Client:
             roller = ( '\\' ,'-','/','|','\\','-','/','|' )
             phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
             # do not remove the line below. It is used for testing
-            logging.info("Job URL: " + jobURL + "/phase")
+            logging.debug("Job URL: " + jobURL + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN' ]:
                 # poll the job. Sleeping time in between polls is doubling each time 
                 # until it gets to 32sec
@@ -1202,12 +1202,11 @@ class Client:
                             slept += 1
                             totalSlept += 1
                             time.sleep(1)
+                        sys.stdout.write("\r                    \n")
                     else:
                         time.sleep(sleepTime)
                 phase = VOFile(phaseURL, self.conn, method="GET", followRedirect=False).read() 
                 logging.debug("Async transfer Phase for url %s: %s " % (url,  phase))
-            if logging.getLogger('root').getEffectiveLevel() == logging.INFO : 
-                sys.stdout.write("Done\n")
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
