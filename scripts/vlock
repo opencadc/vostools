@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+
 """set the islocked property of a node.
 
 A node is locked by setting the islocked property. When a node is
@@ -7,11 +7,11 @@ locked, it cannot be copied to, moved or deleted. """
 
 import time
 import errno
-
+from vos import Node 
 from vos import vos, __version__
 
 usage = """
-  vlock [options] node islocked <true|false> 
+  vlock [options] node [lock|unlock]
      
       Version: %s """ % (__version__.version)
 
@@ -30,56 +30,47 @@ if __name__ == '__main__':
     import signal
     signal.signal(signal.SIGINT, signal_handler)
 
-    parser = optparse.OptionParser(usage)
+    parser = optparse.OptionParser(usage, version=__version__.version)
 
     parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
     parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
     parser.add_option("--certfile",
                         help="location of your CADC security certificate file",
                         default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-    
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
-    (opt, args) = parser.parse_args()
+    parser.add_option("--lock", action="store_true", help="Lock the node")
+    parser.add_option("--unlock", action="store_true", help="unLock the node")
 
-    if opt.version:
-        sys.stdout.write("vlock version %s \n\n" % (__version__.version)) 
-        sys.exit(0)
+    (opt, args) = parser.parse_args()
     
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO, format="%(message)s")
     else:
-        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")
+        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")   
 
-    key_value = args[1:]
-    if len(key_value) != 2 or key_value[0] != "islocked" or \
-        (key_value[1] != "true" and key_value[1] != "false"):
-        parser.print_help()
-        sys.stderr.write("\n\nRequire 'islocked' <true|false>\n\n")
-        sys.exit(-1)
 
-    returnCode = 0
-    while True:
+    lock = None
+    if opt.lock:
+       lock = 'true'
+    elif opt.unlock:
+       lock = 'false'
+    
+    exit_code = 0
+    try:
+        client = vos.Client(certFile=opt.certfile)
+        node = client.getNode(args[0])
+        if lock is not None:
+            if node.changeProp(Node.ISLOCKED, lock) > 0:
+                logging.info("setting lock to %s" % (lock))
+                client.update(node)
+        else:
+            exit_code = ( node.props.get(Node.ISLOCKED,'false') == 'true' and 0 ) or -1
+	    logging.info(str(node.props.get(Node.ISLOCKED, 'false') == 'true'))
+    except KeyboardInterrupt:
+        exit_code = -1 
+    except Exception as e:
+        logging.error(str(e))
+        exit_code= -1
 
-        try:
-            client = vos.Client(certFile=opt.certfile)
-            node = client.getNode(args[0])
-            for i in range(0, len(key_value), 2):
-	    	if key_value[i+1] == "false":
-		   key_value[i+1] = None
-                if node.changeProp(key_value[i], key_value[i+1]) == 1:
-                    node.props[key_value[i]] = key_value[i+1]
-            logging.debug("Calling UPDATE with " + str(node))
-            client.update(node)
-            break
-        except KeyboardInterrupt:
-            sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
-            sys.exit(-1)
-        except Exception as e:
-            sys.stderr.write(str(e))
-            sys.exit(-1)
-    sys.exit(returnCode)
+    sys.exit(exit_code)
