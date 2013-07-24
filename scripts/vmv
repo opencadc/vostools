@@ -58,6 +58,7 @@ Version: %s """ % (__version__.version)
     dest = args[1]
 
     try:
+        logging.info("%s -> %s" % ( source, dest))
         client.move(source, dest)
     except KeyboardInterrupt:
         sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
