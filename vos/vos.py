@@ -657,6 +657,8 @@ class VOFile:
             self.checkstatus(codes=code)
         except ssl.SSLError as e:
             raise IOError(errno.EAGAIN, str(e))
+        except IOError as e:
+            raise e
         except Exception as e:
             raise IOError(errno.ENOTCONN, str(e))
         finally:
@@ -1029,7 +1031,7 @@ class Client:
         if server is None:
             return uri
         logging.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
-
+        URL = None
         if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
             ## only get here if cadc_short_cut == True
             # find out the URL to the CADC data server
