@@ -66,11 +66,12 @@ class urlparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, certfile=None):
+    def __init__(self, certfile=None, http_debug=False):
         """Setup the Certificate for later usage
 
         cerdServerURL -- the location of the cadc proxy certificate server
         certfile      -- where to store the certificate, if None then ${HOME}/.ssl or a temporary filename
+        http_debug -- set True to generate httplib debug statements
 
         The user must supply a valid certificate.
         """
@@ -82,8 +83,7 @@ class Connection:
                 errno.EACCES, 
                 "No certificate file found at %s\n (Perhaps use getCert to pull one)" % (certfile))
         self.certfile = certfile
-
-
+        self.http_debug = http_debug
 
     def getConnection(self, url):
         """Create an HTTPSConnection object and return.  Uses the client certificate if None given.
@@ -108,7 +108,7 @@ class Connection:
             logging.error("%s \n" % (str(e)))
             raise OSError(errno.ENTCONN, "VOSpace connection failed", parts.netloc)
 
-        if logging.getLogger('root').getEffectiveLevel() == logging.DEBUG :
+        if self.http_debug:
             connection.set_debuglevel(1)
 
         ## Try to open this connection. 
@@ -853,7 +853,8 @@ class Client:
 
 
     def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
-                 rootNode=None, conn=None, archive='vospace', cadc_short_cut=False):
+                 rootNode=None, conn=None, archive='vospace', cadc_short_cut=False,
+                 http_debug=False):
         """This could/should be expanded to set various defaults
 
         certFile: CADC proxy certficate location.
@@ -861,7 +862,7 @@ class Client:
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
         cadc_short_cut: if True then just assumed data web service urls
-        
+        http_debug: if True, then httplib will print debug statements
         
         """
         if certFile is not None and not os.access(certFile, os.F_OK):
@@ -874,7 +875,7 @@ class Client:
         else:
             self.protocol = "https"
         if not conn:
-            conn = Connection(certfile=certFile)
+            conn = Connection(certfile=certFile, http_debug=http_debug)
         self.conn = conn
         self.VOSpaceServer = "cadc.nrc.ca!vospace"
         self.rootNode = rootNode
