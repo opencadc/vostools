@@ -22,6 +22,7 @@ Version: %s """ % (__version__.version)
     parser = OptionParser(usage)
     parser.add_option("-v", "--verbose", action="store_true")
     parser.add_option("-d", "--debug", action="store_true")
+    parser.add_option("-w", "--warning", action="store_true")
     parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
     parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 
@@ -35,41 +36,44 @@ Version: %s """ % (__version__.version)
         sys.stdout.write("vmv version %s \n\n" % (__version__.version)) 
         sys.exit()
 
+
+    log_level = logging.ERROR
+    if opt.warning:
+        log_level = logging.WARNING
     if opt.verbose:
-        logging.basicConfig(level=logging.INFO, format="vmv: %(message)s")
-    elif opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="vmv: %(module)s.%(funcName)s %(message)s")
-    else:
-        logging.basicConfig(level=logging.ERROR, format="vmv: %(message)s")
+        log_level = logging.INFO
+    if opt.debug:
+        log_level = logging.DEBUG
+
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
+    logger = logging.getLogger('vos')
 
 
     if len(args) != 2:
         parser.error("You must supply a source and desitination")
 
-
-
     try:
         client = vos.Client(certFile=opt.certfile)
     except Exception as e:
-        logging.error("Conneciton failed:  %s" % (str(e)))
-        sys.exit(e.errno)
+        logger.error("Connection failed:  %s" % (str(e)))
+        sys.exit(e.__getattribute__('errno',-1))
 
     source = args[0]
     dest = args[1]
 
     try:
-        logging.info("%s -> %s" % ( source, dest))
+        logger.info("%s -> %s" % ( source, dest))
         client.move(source, dest)
     except KeyboardInterrupt:
-        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        logger.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(-1)
     except Exception as e:
         import re
         if re.search('NodeLocked', str(e)) != None:
-            logging.error('Use vlock to unlock nodes before moving.')
-        logging.error(str(e))
+            logger.error('Use vlock to unlock nodes before moving.')
+        logger.error(str(e))
         sys.exit(-1)
-
 
 
 if __name__ == '__main__':
@@ -77,6 +81,4 @@ if __name__ == '__main__':
     try:
         main()
     except:
-        import traceback
-        logging.debug(sys.exc_info())
         sys.exit(-1)

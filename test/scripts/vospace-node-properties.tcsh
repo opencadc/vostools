@@ -138,6 +138,7 @@ endif
 echo -n " vchmod"
 set logFile = "/tmp/vchmod-$TIMESTAMP.log"
 rm $logFile >& /dev/null
+echo $CHMODCMD $CERT -v -R g+r $TESTPATH $GROUP1
 $CHMODCMD $CERT -v -R g+r $TESTPATH $GROUP1 >& $logFile&
 #give vchmod command time to start
 set chmodPID = $!

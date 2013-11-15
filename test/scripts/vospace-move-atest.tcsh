@@ -151,6 +151,7 @@ $LSCMD $CERT $BASE > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "test move container into container (pass)"
+$RMDIRCMD $CERT $CONTAINER/d/a >& /dev/null
 $MVCMD $CERT $CONTAINER/a $CONTAINER/d >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/d/a > /dev/null || echo " [FAIL]" && exit -1

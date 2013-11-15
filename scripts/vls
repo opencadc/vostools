@@ -56,6 +56,7 @@ parser.add_option("-r", "--reverse", action="store_true", help="reverse the sort
 parser.add_option("-t", "--time", action="store_true", help="sort by time copied to VOSpace")
 parser.add_option("-v", "--verbose", action="store_true", help="print some diagnostics")
 parser.add_option("-d", "--debug", action="store_true", help="print all diagnositics")
+parser.add_option("-w", "--warning", action="store_true")
 parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 parser.add_option("--overwrite", help="Overwrite the existing certificate with a new one?", action="store_true")
 parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
@@ -80,13 +81,19 @@ if opt.time:
 if opt.Size:
     sortKey = "size"
 
+
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    log_level = logging.INFO
 elif opt.debug:
-    format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
-    logging.basicConfig(level=logging.DEBUG, format=format)
+    log_level = logging.DEBUG
+elif opt.warning:
+    log_level = logging.WARNING
 else:
-    logging.basicConfig(level=logging.ERROR, format="%(message)s")
+    log_level = logging.ERROR
+
+logging.getLogger('vos').setLevel(log_level)
+logging.getLogger('vos').addHandler(logging.StreamHandler())
+logger = logging.getLogger('vos')
 
 if len(args) < 1:
     parser.error("You must specifiy a VOSpace to list")
@@ -96,12 +103,12 @@ if len(args) < 1  :
     parser.error("Specify voSpace target to list using the vos: prefix")
     sys.exit(-1)
 
-logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
+logger.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
     client = vos.Client(certFile=opt.certfile)
 except Exception as e:
-    logging.error("Connection failed:  %s" % (str(e)))
+    logger.error("Connection failed:  %s" % (str(e)))
     sys.exit(-1)
 
 def sizeFormat(size):
@@ -145,13 +152,13 @@ for node in args:
     if node[0:4] != "vos:":
         parser.error("Improper vospace specification: %s " % (node))
     try:
-        logging.debug("getting listing of: %s" % ( str(node)))
+        logger.debug("getting listing of: %s" % ( str(node)))
         infoList = client.getInfoList(node)
     except IOError as e:
-        logging.error("Error getting listing of %s ( %s )" % (node, e.strerror))
+        logger.error("Error getting listing of %s ( %s )" % (node, e.strerror))
         sys.exit(e.errno)
     except Exception as e:
-        logging.error("Error getting listing of %s ( %s )" % (node, str(e)))
+        logger.error("Error getting listing of %s ( %s )" % (node, str(e)))
         sys.exit(-1)
 
     if sortKey:

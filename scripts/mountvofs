@@ -102,7 +102,7 @@ class VOFS(LoggingMixIn, Operations):
            self.client = vos.Client(rootNode=root,conn=conn)
         except Exception as e:
            e=FuseOSError(e.errno)
-           e.filename=path
+           e.filename=root
            e.strerror=getattr(e,'strerror','failed while making mount')
            raise e
 
@@ -444,7 +444,7 @@ class VOFS(LoggingMixIn, Operations):
             if e.errno == ENOENT:
                 if flags | os.O_RDONLY:
                     # file openned for readonly doens't exist
-                    FuserOSError(ENOENT)
+                    FuseOSError(ENOENT)
                 else:
                     ## no problem, maybe we should have created first... 
                     pass
@@ -1035,19 +1035,20 @@ if __name__ == "__main__":
     if opt.version:
         parser.print_version()
         sys.exit(0)
-       
-    if opt.debug:
-        logLevel = logging.DEBUG
-        forground=True
-    elif opt.verbose:
-        logLevel = logging.INFO
-    elif opt.warning:
-        logLevel = logging.WARNING
-    else:
-        logLevel = logging.ERROR
 
-    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s"
-    logging.basicConfig(level=logLevel, format=format, filename=opt.log)
+
+
+    if opt.verbose:
+        log_level = logging.INFO
+    elif opt.debug:
+        log_level = logging.DEBUG
+    elif opt.warning:
+        log_level = logging.WARNING
+    else:
+        log_level = logging.ERROR
+
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
 
     logging.debug("Checking connection to VOSpace ")
     if not os.access(opt.certfile,os.F_OK):
@@ -1064,7 +1065,8 @@ if __name__ == "__main__":
     if not os.access(mount,os.F_OK):
         os.makedirs(mount)
     if platform=="darwin":
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root,
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount,
+                    fsname=root,
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
@@ -1075,7 +1077,8 @@ if __name__ == "__main__":
                     noappledouble=True,
                     foreground=opt.foreground)
     else:
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root, 
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount,
+                    fsname=root,
                     readonly=opt.readonly,
                     allow_other=opt.allow_other,
                     #auto_cache=True,

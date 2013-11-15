@@ -1,3 +1,4 @@
+#!python
 
 """set the islocked property of a node.
 
@@ -5,72 +6,67 @@ A node is locked by setting the islocked property. When a node is
 locked, it cannot be copied to, moved or deleted. """
 
 
-import time
-import errno
 from vos import Node 
-from vos import vos, __version__
+import logging
+import optparse
+import sys
+import vos
+import os
+import signal
 
-usage = """
-  vlock [options] node [lock|unlock]
-     
-      Version: %s """ % (__version__.version)
 
 
 def signal_handler(signal, frame):
     raise KeyboardInterrupt, "SIGINT signal handler"
 
+signal.signal(signal.SIGINT, signal_handler)
+
+parser = optparse.OptionParser(version=vos.__version__.version)
+
+parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
+parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
+parser.add_option("--certfile",
+                    help="location of your CADC security certificate file",
+                    default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+parser.add_option("--lock", action="store_true", help="Lock the node")
+parser.add_option("--unlock", action="store_true", help="unLock the node")
+
+(opt, args) = parser.parse_args()
 
 
-if __name__ == '__main__':
+if opt.verbose:
+    log_level = logging.INFO
+elif opt.debug:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.ERROR
 
-    import optparse
-    import logging, sys
-    import vos, errno, os
-    ## handle interupts nicely
-    import signal
-    signal.signal(signal.SIGINT, signal_handler)
+logging.getLogger('vos').setLevel(log_level)
+logging.getLogger('vos').addHandler(logging.StreamHandler())
+logger = logging.getLogger('vos')
 
-    parser = optparse.OptionParser(usage, version=__version__.version)
+lock = None
+if opt.lock:
+   lock = 'true'
+elif opt.unlock:
+   lock = 'false'
 
-    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
-    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
-    parser.add_option("--certfile",
-                        help="location of your CADC security certificate file",
-                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("--lock", action="store_true", help="Lock the node")
-    parser.add_option("--unlock", action="store_true", help="unLock the node")
+exit_code = 0
 
-    (opt, args) = parser.parse_args()
-    
-    if opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
-    elif opt.verbose:
-        logging.basicConfig(level=logging.INFO, format="%(message)s")
+try:
+    client = vos.Client(certFile=opt.certfile)
+    node = client.getNode(args[0])
+    if lock is not None:
+        if node.changeProp(Node.ISLOCKED, lock) > 0:
+            logger.info("setting lock to %s" % (lock))
+            client.update(node)
     else:
-        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")   
+        exit_code = ( node.props.get(Node.ISLOCKED,'false') == 'true' and 0 ) or -1
 
+except KeyboardInterrupt:
+    exit_code = -1
+except Exception as e:
+    logger.error(str(e))
+    exit_code= -1
 
-    lock = None
-    if opt.lock:
-       lock = 'true'
-    elif opt.unlock:
-       lock = 'false'
-    
-    exit_code = 0
-    try:
-        client = vos.Client(certFile=opt.certfile)
-        node = client.getNode(args[0])
-        if lock is not None:
-            if node.changeProp(Node.ISLOCKED, lock) > 0:
-                logging.info("setting lock to %s" % (lock))
-                client.update(node)
-        else:
-            exit_code = ( node.props.get(Node.ISLOCKED,'false') == 'true' and 0 ) or -1
-	    logging.info(str(node.props.get(Node.ISLOCKED, 'false') == 'true'))
-    except KeyboardInterrupt:
-        exit_code = -1 
-    except Exception as e:
-        logging.error(str(e))
-        exit_code= -1
-
-    sys.exit(exit_code)
+sys.exit(exit_code)

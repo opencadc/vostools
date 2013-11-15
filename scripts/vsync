@@ -2,12 +2,11 @@
 """A script for sending files to VOSpace via multiple connection streams."""
 
 
-import vos, sys
+import sys
 import threading, Queue
 import datetime, optparse
 import errno
 import logging
-import time
 from vos import vos, __version__
 
 usage = """
@@ -67,7 +66,7 @@ class ThreadCopy(threading.Thread):
             stat = os.stat(src)
             if not opt.ignore_checksum and not opt.overwrite :
                 srcMD5 = fileMD5(src)
-            logging.debug("Source MD5: %s " % (srcMD5))
+            logger.debug("Source MD5: %s " % (srcMD5))
             if not opt.overwrite:
                 """Check if the file is the same"""
                 try:
@@ -75,9 +74,9 @@ class ThreadCopy(threading.Thread):
                     if opt.cache_nodes:
                         nodeInfo = md5Cache.get(dest)
                     if nodeInfo is None:
-                        logging.debug("Getting node info from VOSpace")
-                        logging.debug(str(nodeDict.keys()))
-                        logging.debug(str(dest))
+                        logger.debug("Getting node info from VOSpace")
+                        logger.debug(str(nodeDict.keys()))
+                        logger.debug(str(dest))
                         node = self.client.getNode(dest)
                         destMD5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
                         destLength = node.attr['st_size']
@@ -88,18 +87,18 @@ class ThreadCopy(threading.Thread):
                         destMD5 = nodeInfo[0]
                         destLength = nodeInfo[1]
                         destTime = nodeInfo[2]
-                    logging.debug("Dest MD5: %s " % (destMD5))
+                    logger.debug("Dest MD5: %s " % (destMD5))
                     if (not opt.ignore_checksum and srcMD5 == destMD5) or (opt.ignore_checksum and destTime >= stat.st_mtime and destLength == stat.st_size) :
-                        logging.info("skipping: %s  matches %s" % (src, dest))
+                        logger.info("skipping: %s  matches %s" % (src, dest))
                         self.filesSkipped += 1
                         self.bytesSkipped += destLength
                         self.queue.task_done()
                         continue
                 except (IOError, OSError) as e:
                     """Ignore the erorr"""
-                    logging.debug(str(e))
+                    logger.debug(str(e))
                     pass
-            logging.info("%s -> %s" % (src, dest))
+            logger.info("%s -> %s" % (src, dest))
             try:
                 self.client.copy(src, dest, sendMD5=True)
                 node = self.client.getNode(dest)
@@ -111,17 +110,17 @@ class ThreadCopy(threading.Thread):
                 self.filesSent += 1
                 self.bytesSent += stat.st_size
             except (IOError, OSError) as e:
-                logging.error("Error writing %s to server, skipping" % (src))
-                logging.error(str(e))
+                logger.error("Error writing %s to server, skipping" % (src))
+                logger.error(str(e))
                 import re
                 if re.search('NodeLocked',str(e)) != None:
-                    logging.error("Use vlock to unlock the node before syncing to %s." % (dest))
+                    logger.error("Use vlock to unlock the node before syncing to %s." % (dest))
                 try:
                     if e.errno == 104:
                         self.queue.put(requeue)
                 except Exception as e2:
-                    logging.error("Error during requeue")
-                    logging.error(str(e2))
+                    logger.error("Error during requeue")
+                    logger.error(str(e2))
                     pass
                 self.filesErrored += 1
                 pass
@@ -131,7 +130,7 @@ class ThreadCopy(threading.Thread):
 def mkdirs(dirs):
 
 
-    logging.debug("%s %s" % (dirs, str(goodDirs)))
+    logger.debug("%s %s" % (dirs, str(goodDirs)))
     ## if we've seen this before skip it.
     if dirs in goodDirs:
         return
@@ -140,7 +139,7 @@ def mkdirs(dirs):
     ## failure indicates we should see if subdirs exist
     try:
         c.mkdir(dirs)
-        logging.info("Made directory %s " % (dirs))
+        logger.info("Made directory %s " % (dirs))
         goodDirs.append(dirs)
         return
     except IOError as e:
@@ -158,14 +157,14 @@ def copy(source, dest):
     ## strip down dest until we find a part that exists
     ## and then build up the path.  Dest should include the filename
     if os.path.islink(source):
-        logging.error("%s is a link, skipping" % (source))
+        logger.error("%s is a link, skipping" % (source))
         return
     if not os.access(source, os.R_OK):
-        logging.error("Failed to open file %s, skipping" % (source))
+        logger.error("Failed to open file %s, skipping" % (source))
         return
     import re
     if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$', source) is None:
-        logging.error("filename %s contains illegal characters, skipping" % (source))
+        logger.error("filename %s contains illegal characters, skipping" % (source))
         return
 
     
@@ -178,7 +177,7 @@ def copy(source, dest):
 def startStreams(nstreams):
     streams = []
     for i in range(nstreams):
-        logging.info("Launching vospace connection stream %d" % (i))
+        logger.info("Launching vospace connection stream %d" % (i))
         t = ThreadCopy(queue)
         t.setDaemon(True)
         t.start()
@@ -201,7 +200,7 @@ def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
             if ignore is not None:
                 for thisIgnore in ignore.split(','):
                     if not thisDirname.find(thisIgnore) < 0:
-                        logging.info ("excluding: %s " % (thisDirname))
+                        logger.info ("excluding: %s " % (thisDirname))
                         skip = True
                         continue
             if skip:
@@ -215,7 +214,7 @@ def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
             if ignore is not None:
                 for thisIgnore in ignore.split(','):
                     if not srcfilename.find(thisIgnore) < 0:
-                        logging.info ("excluding: %s " % (srcfilename))
+                        logger.info ("excluding: %s " % (srcfilename))
                         skip = True
                         continue
             if skip:
@@ -236,7 +235,7 @@ def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
 
 
 def signal_handler(signal, frame):
-    logging.critical("Interupt\n")
+    logger.critical("Interupt\n")
     sys.exit(-1)
 
 
@@ -254,6 +253,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage)
     parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
     parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
+    parser.add_option('--warning', action="store_true")
     parser.add_option('--ignore-checksum', action="store_true", help='dont check MD5 sum, use size and time instead')
     parser.add_option('--cache_nodes', action='store_true', help='cache node MD5 sum in an sqllite db')
     parser.add_option('--recursive', '-r', help="Do a recursive sync", action="store_true")
@@ -275,12 +275,18 @@ if __name__ == '__main__':
         sys.stdout.write("vsync version %s \n\n" % (__version__.version)) 
         sys.exit(0)
 
-    if opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
-    elif opt.verbose:
-        logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if opt.verbose:
+        log_level = logging.INFO
+    elif opt.debug:
+        log_level = logging.DEBUG
+    elif opt.warning:
+        log_level = logging.WARNING
     else:
-        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s: %(message)s")
+        log_level = logging.ERROR
+
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
+    logger = logging.getLogger('vos')
 
     if len(args) < 2:
         parser.error("requires one or more source files and a single destination directory")
@@ -297,9 +303,9 @@ if __name__ == '__main__':
     if dest[0:4] != "vos:":
         parser.error("Only allows sync FROM local copy TO VOSpace")
     ## Currently we don't create nodes in sync and we don't sync onto files
-    logging.info("Connecting to VOSpace")
+    logger.info("Connecting to VOSpace")
     c = vos.Client(certFile=opt.certfile)
-    logging.info("Confirming Destination is a directory")
+    logger.info("Confirming Destination is a directory")
     destIsDir = c.isdir(dest)
 
     queue = Queue.Queue(maxsize=10 * opt.nstreams)
@@ -322,17 +328,17 @@ if __name__ == '__main__':
             try:
                 buildFileList(filename, destRoot=thisRoot, recursive=opt.recursive, ignore=opt.exclude)
             except Exception as e:
-                logging.error(str(e))
-                logging.error("ignoring error")
+                logger.error(str(e))
+                logger.error("ignoring error")
         elif os.path.isfile(filename):
             if destIsDir:
                 thisRoot = os.path.join(dest, os.path.basename(filename))
             copy(filename, thisRoot)
         else:
-            logging.error("%s: No such file or directory." % (filename))
+            logger.error("%s: No such file or directory." % (filename))
 
 
-    logging.info("\nWaiting for transfers to complete.\nCTRL-\ to interrupt\n")
+    logger.info("\nWaiting for transfers to complete.\nCTRL-\ to interrupt\n")
 
     queue.join()
     endTime = time.time()
@@ -348,18 +354,18 @@ if __name__ == '__main__':
         filesSkipped += stream.filesSkipped
         filesErrored += stream.filesErrored
 
-    logging.info("\n\n==== TRANSFER REPORT ====\n\n")
+    logger.info("\n\n==== TRANSFER REPORT ====\n\n")
 
     if bytesSent > 0:
         rate = bytesSent / (endTime - startTime) / 1024.0
-        logging.info("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)" % (filesSent, bytesSent / 1024.0, rate))
+        logger.info("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)" % (filesSent, bytesSent / 1024.0, rate))
         speedUp = (bytesSkipped + bytesSent) / bytesSent
-        logging.info("Speedup:  %f (skipped %d files)" % (speedUp, filesSkipped))
+        logger.info("Speedup:  %f (skipped %d files)" % (speedUp, filesSkipped))
 
     if bytesSent == 0:
-        logging.info("No files needed sending ")
+        logger.info("No files needed sending ")
 
     if filesErrored > 0:
-        logging.info("Error transferring %d files, please try again" % (filesErrored))
+        logger.info("Error transferring %d files, please try again" % (filesErrored))
 
 

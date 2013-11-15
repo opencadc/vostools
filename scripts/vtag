@@ -5,10 +5,8 @@ The tag system is meant to allow tags, in addition to the standard
 nodode properties. """
 
 
-import time
-import errno
 import pprint
-from vos import vos, __version__
+from vos import __version__
 
 usage = """
   vtag [options] node [key[=value] [key[=value] ...]]
@@ -38,15 +36,15 @@ def vtag(node,props):
         prop = prop.split('=')
         if len(prop)==1:
             ## get one property
-            logging.debug("just print this one out %s" % (prop[0]))
+            logger.debug("just print this one out %s" % (prop[0]))
             pprint.pprint(node.props.get(prop[0], None))
         elif len(prop)==2:
             ## update properties
             key, value = prop
-            logging.debug("%s %s" % ( len(key), len(value)))
+            logger.debug("%s %s" % ( len(key), len(value)))
             if len(value) == 0 :
                 value = None
-            logging.debug("%s: %s -> %s" % ( key, node.props.get(key,None), value))
+            logger.debug("%s: %s -> %s" % ( key, node.props.get(key,None), value))
             if value != node.props.get(key,None):
                 node.props[key] = value
                 changed = True
@@ -64,7 +62,7 @@ if __name__ == '__main__':
 
     import optparse
     import logging, sys
-    import vos, errno, os
+    import vos, os
     ## handle interupts nicely
     import signal
     signal.signal(signal.SIGINT, signal_handler)
@@ -86,13 +84,19 @@ if __name__ == '__main__':
    
     if len(args) == 0:
         parser.error("no vospace supplied")
- 
-    if opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
-    elif opt.verbose:
-        logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    if opt.verbose:
+        log_level = logging.INFO
+    elif opt.debug:
+        log_level = logging.DEBUG
+    elif opt.warning:
+        log_level = logging.WARNING
     else:
-        logging.basicConfig(level=logging.ERROR, format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
+        log_level = logging.ERROR
+
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
+    logger = logging.getLogger('vos')
 
     ## the node should be the first argument, the rest should contain the key/val pairs
     node = args.pop(0)
@@ -110,10 +114,10 @@ if __name__ == '__main__':
     try:
         sys.exit(vtag(node, args))
     except KeyboardInterrupt:
-        #sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        logger.debug("Received keyboard interrupt. Execution aborted...\n")
         pass
     except Exception as e:
-        logging.error(str(e))
+        logger.error(str(e))
 
     sys.exit(-1)
 

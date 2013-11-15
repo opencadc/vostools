@@ -24,6 +24,7 @@ parser=optparse.OptionParser(usage)
 
 parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
 parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
+parser.add_option("-w","--warning", action="store_true")
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
 
@@ -37,13 +38,18 @@ if opt.version:
     sys.stdout.write("vln version %s \n\n" % (__version__.version)) 
     sys.exit()
 
-
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="%(module)s: %(message)s")
+    log_level = logging.INFO
 elif opt.debug:
-    logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+    log_level = logging.DEBUG
+elif opt.warning:
+    log_level = logging.WARNING
 else:
-    logging.basicConfig(level=logging.ERROR,format="%(module)s: %(message)s")
+    log_level = logging.ERROR
+
+logging.getLogger('vos').setLevel(log_level)
+logging.getLogger('vos').addHandler(logging.StreamHandler())
+logger = logging.getLogger('vos')
 
 if len(args) !=  2:
     parser.error("You must specifiy a source file and a target file")
@@ -53,18 +59,18 @@ if args[1][0:4] != "vos:":
     parser.error("The target to source must be in vospace")
     sys.exit(-1)
 
-logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
+logger.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
     vos=vos.Client(certFile=opt.certfile)
 except Exception as e:
-    logging.error("Conneciton failed:  %s" %  (str(e)))
+    logger.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(-1)
 
 try:
     vos.link(args[0],args[1])
 except Exception as e:
-    logging.error("Failed to make link from %s to %s" % ( args[0], args[1]))
-    logging.error(getattr(e,'strerror','Unkown Error'))
+    logger.error("Failed to make link from %s to %s" % ( args[0], args[1]))
+    logger.error(getattr(e,'strerror','Unkown Error'))
     sys.exit(-1)
 

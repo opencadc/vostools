@@ -1,20 +1,25 @@
-#!/usr/bin/env python2.7
-"""set/read/(list) a property(ies) if a node.
+#!python
+"""
+Retrieve the UWS status of a given job.
 
-This script is used to retrieve the state of a job using X509 authentication. """
+The UWS system is used by VOSpace for asynchronous actions. Normally users do not use or need to use this script.
+checkJobPhase is provide for admin usage.
+
+This script is used to retrieve the state of a job using X509 authentication.
+
+"""
 
 
-import time
-import errno
 import sys
-from vos import vos
+from OpenSSL.rand import status
+import vos
 import argparse
-import errno, os
+import os
 import logging
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="List the tags on a file")
+    parser = argparse.ArgumentParser(description="Get the status of a UWS job.")
 
     parser.add_argument("--certfile",
                         help="location of your CADC security certificate file",
@@ -23,16 +28,24 @@ if __name__ == '__main__':
                         help="print some diagnostics")
     parser.add_argument("-d", "--debug", action='store_const', const=True,
                         help="print all diagnositics")
+    parser.add_option("-w","--warning",action="store_true")
     parser.add_argument("jobURL", action='store', help="The URL of the job to test")
 
 
     opt = parser.parse_args()
+
     if opt.verbose:
-        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        log_level = logging.INFO
     elif opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(module)s.%(funcName)s %(message)s")
+        log_level = logging.DEBUG
+    elif opt.warning:
+        log_level =  logging.WARNING
     else:
-        logging.basicConfig(level=logging.ERROR, format="%(message)s")
+        log_level = logging.ERROR
+
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
+
     try:
         client = vos.Client(certFile=opt.certfile)
         sys.stdout.write("%s\n" % client.getJobStatus(opt.jobURL))

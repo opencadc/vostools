@@ -10,7 +10,7 @@ TEST_ENDPOINT = "http://www.testendpoint.ca"
 
 TEST_URI_1 = "vos://naming_authority/mydata/file1"
 TEST_URI_2 = "vos://cadc.nrc.ca!vospace/mydata/file1"
-
+TEST_VOSPACE = "vos:jkavelaars"
 
 class ClientTest(unittest.TestCase):
     def setUp(self):

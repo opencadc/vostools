@@ -78,7 +78,7 @@ def signal_handler(signal, frame):
     sys.exit(-1)
 
 import optparse,os
-
+import logging
 import signal
 signal.signal(signal.SIGINT, signal_handler)
 
@@ -89,6 +89,18 @@ parser.add_option('--daysValid', type=int, default=10,
 parser.add_option('--dest', default=os.path.join(os.getenv('HOME','/tmp'),".ssl/cadcproxy.pem"),
                     help="Location to store the proxy certifacte")
 (opt,args) = parser.parse_args()
+
+
+if opt.verbose:
+    log_level = logging.INFO
+elif opt.debug:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.ERROR
+
+logging.getLogger('vos').setLevel(log_level)
+logging.getLogger('vos').addHandler(logging.StreamHandler())
+
 
 import urllib2,sys
 

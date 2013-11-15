@@ -224,7 +224,6 @@ if __name__=='__main__':
     logging.basicConfig(level=logLevel,format=format)
 
 
-
     
     try:
         client=vos.Client(certFile=opt.certfile, cadc_short_cut=opt.quick)

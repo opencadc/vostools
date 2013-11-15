@@ -31,20 +31,18 @@ if __name__=='__main__':
     (opt,args)=parser.parse_args()
 
     if opt.version:
-        sys.stdout.write("vcat version %s \n\n" % (__version__.version)) 
+        sys.stdout.write("vcat version %s \n\n" % (__version__.version))
         sys.exit()
 
     if opt.verbose:
-        logLevel=logging.INFO
-        format="%(asctime)s - %(message)s"
+        log_level = logging.INFO
     elif opt.debug:
-        logLevel=logging.DEBUG
-        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
+        log_level = logging.DEBUG
     else:
-        logLevel=logging.ERROR
-        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
+        log_level = logging.ERROR
 
-    logging.basicConfig(level=logLevel,format=format)
+    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
 
     
     try:

@@ -16,6 +16,7 @@ usage="""
 parser=optparse.OptionParser(usage)
 parser.add_option("-v","--verbose",action="store_true")
 parser.add_option("-d","--debug",action="store_true")
+parser.add_option("-w","--warning",action="store_true")
 parser.add_option("-p",action="store_true",help="Create intermediate directories as required.")
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
@@ -31,17 +32,23 @@ if opt.version:
         sys.exit()
 
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
+    log_level = logging.INFO
 elif opt.debug:
-    logging.basicConfig(level=logging.DEBUG,format="vmkdir:%(module)s.%(funcName)s %(message)s")
+    log_level = logging.DEBUG
+elif opt.warning:
+    log_level = logging.WARNING
 else:
-    logging.basicConfig(level=logging.ERROR,format="vmkdir: %(message)s")
+    log_level = logging.ERROR
+
+logging.getLogger('vos').setLevel(log_level)
+logging.getLogger('vos').addHandler(logging.StreamHandler())
+logger = logging.getLogger('vos')
 
 
 if len(args)>1:
     parser.error("Only one directory can be built per call")
 
-logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
+logger.info("Creating ContainerNode (directory) %s" % ( args[0]))
 
 
 try:
@@ -61,7 +68,7 @@ try:
         client.mkdir(thisDir)
 
 except Exception as e:
-    logging.error(str(e))
+    logger.error(str(e))
     sys.exit(getattr(e,'errno',-1))
 
 

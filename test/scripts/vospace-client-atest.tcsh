@@ -2,17 +2,13 @@
 
 date
 echo "###################"
-if (! ${?CADC_ROOT} ) then
-	set CADC_ROOT = "/usr/cadc/local"
-endif
-echo "using CADC_ROOT = $CADC_ROOT"
-
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
 else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 echo "###################"
+
 set LSCMD = "python $CADC_ROOT/scripts/vls -l"
 set MKDIRCMD = "python $CADC_ROOT/scripts/vmkdir"
 set RMCMD = "python $CADC_ROOT/scripts/vrm"

@@ -78,11 +78,12 @@ $CPCMD $CERT $CONTAINER/clink/something.png /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link without read permission and fail"
+echo $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp
 $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
  
 echo -n "create link to target file"
-$LNCMD $CERT $CONTAINER/target/something.png $CONTAINER/dlink > /dev/null || echo " [FAIL]" && exit -1
+$LNCMD $CERT $CONTAINER/target/something.png $CONTAINER/dlink >& /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the link to get the file"
@@ -90,7 +91,8 @@ $CPCMD $CERT $CONTAINER/dlink /tmp || echo " [FAIL]" && exit -1
 echo " [OK]"
  
 echo -n "create link to unknown authority in URI"
-$LNCMD $CERT vos://unknown.authority~vospace/unknown $CONTAINER/e1link > /dev/null || echo " [FAIL]" && exit -1
+$RMCMD $CERT $CONTAINER/e1link >& /dev/null
+$LNCMD $CERT vos://unknown.authority~vospace/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the invalid link and fail"
