@@ -1411,7 +1411,7 @@ class Client:
     def access(self, uri, mode=os.O_RDONLY):
         """Test for existance"""
         try:
-            dum = self.getNode(uri)
+            dum = self.getNode(uri, force=True)
             return True
         except Exception as e:
             # logger.debug(str(e))
