@@ -58,7 +58,9 @@ try:
           sys.exit(-1)
       if client.isdir(arg):
           logger.info("deleting %s" %(arg))
-          client.delete(arg)
+          if not client.delete(arg):
+              logger.error("Permission denied")
+              sys.exit(-1)
       elif client.isfile(arg):
           logger.error("%s is a file" % (arg))
           sys.exit(-1)

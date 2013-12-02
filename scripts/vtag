@@ -89,8 +89,6 @@ if __name__ == '__main__':
         log_level = logging.INFO
     elif opt.debug:
         log_level = logging.DEBUG
-    elif opt.warning:
-        log_level = logging.WARNING
     else:
         log_level = logging.ERROR
 

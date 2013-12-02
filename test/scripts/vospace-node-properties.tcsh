@@ -138,8 +138,8 @@ endif
 echo -n " vchmod"
 set logFile = "/tmp/vchmod-$TIMESTAMP.log"
 rm $logFile >& /dev/null
-echo $CHMODCMD $CERT -v -R g+r $TESTPATH $GROUP1
-$CHMODCMD $CERT -v -R g+r $TESTPATH $GROUP1 >& $logFile&
+#echo $CHMODCMD $CERT -d -R g+r $TESTPATH $GROUP1
+$CHMODCMD $CERT -d -R g+r $TESTPATH $GROUP1 >& $logFile&
 #give vchmod command time to start
 set chmodPID = $!
 set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{print $NF}'`
@@ -148,14 +148,13 @@ while ($jobURL == "")
     sleep 3
     set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{print $NF}'`
 end
-echo $jobURL
+#echo $jobURL
 kill -s INT $chmodPID 
 # give kill a chance to complete
 sleep 2 
 #rm $logFile >& /dev/null
 #verify job has been aborted
-set phase = `$CHECKJOB $CERT $jobURL`
-#echo "$phase"
+set phase = `$CHECKJOB $CERT $jobURL/phase`
 if $phase != 'ABORTED' then
     echo " [FAIL]" && exit -1
 else

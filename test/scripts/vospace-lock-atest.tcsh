@@ -28,11 +28,9 @@ set LOCKCMD = "python $CADC_ROOT/scripts/vlock"
 set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
 set SUCCESS = "false"
-set LIST_ARGS = "islocked"
-set LOCK_ARGS = "islocked=true"
-set UNLOCK_ARGS = "islocked="
-set VLOCK_ARGS = "islocked true"
-set VUNLOCK_ARGS = "islocked false"
+set LIST_ARGS = "ivo://cadc.nrc.ca/vospace/core#islocked"
+set VLOCK_ARGS = "--lock"
+set VUNLOCK_ARGS = "--unlock"
 
 echo "vls command: " $LSCMD $CERT
 echo
@@ -100,12 +98,9 @@ echo " [OK]"
 
 echo "test case 3: "
 echo -n "unlock container "
-echo "$LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS"
 $LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 echo -n "check unlocked container "
-echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS"
-$TAGCMD $CERT $CONTAINER $LIST_ARGS
 $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q None && set SUCCESS = "true"
 
 if ( ${SUCCESS} == "true" ) then
