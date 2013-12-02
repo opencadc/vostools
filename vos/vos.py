@@ -781,7 +781,7 @@ class VOFile:
             #logger.debug("left file pointer at: %d" % (self._fpos))
             return buff
         elif self.resp.status == 404:
-            raise IOError(errno.ENFILE, self.resp.read())
+            raise IOError(errnos[self.resp.status], self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location', None)
             logger.debug("Got redirect URL: %s" % (URL))
