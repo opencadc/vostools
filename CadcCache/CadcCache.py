@@ -66,16 +66,16 @@ class CadcCache:
             raise NotImplementedError( "IOProxy.readFromBacking" )
 
         def writeCache(self, buffer, offset):
-            print "zero"
-            print cacheFileStream
-            print cacheFileStream.tell()
-            print "zero"
-            if (cacheFileStream.tell() != offset):
+            print self.cacheFileStream.tell()
+            if (self.cacheFileStream.tell() != offset):
                 pass
-                #cacheFileStream.seek(offset )
+                self.cacheFileStream.seek(offset )
             print "one"
 
-            cacheFileStream.write( buffer )
+            try:
+                self.cacheFileStream.write( buffer )
+            except Exception as e:
+                print str( e )
             print "two"
 
 
@@ -139,6 +139,7 @@ class CadcCache:
 
             ##  now close the fh
             try:
+                print "closing: " + str( self.fh )
                 os.close(self.fh)
             except Exception as e:
                 ex = FuseOSError(getattr(e,'errno',EIO))
