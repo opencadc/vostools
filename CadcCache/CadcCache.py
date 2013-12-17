@@ -8,13 +8,20 @@ import time
 import logging
 import vos.fuse
 import sqlite3
+import hashlib
 from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 from threading import RLock
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
         EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 import subprocess
+import thread
 from ctypes import create_string_buffer
+import traceback
+from ctypes.util import find_library
+from ctypes import cdll
+libcPath = find_library('c')
+libc = cdll.LoadLibrary(libcPath)
 
 READBUF=2**14
 
@@ -32,7 +39,7 @@ def flag2mode(flags):
 
     return m
 
-class CadcCache:
+class CadcCache(object):
     READ_SLEEP = 1
     class CacheError(Exception):
         def __init__(self, value):
@@ -41,7 +48,7 @@ class CadcCache:
             return repr(self.value)
 
 
-    class IOProxy:
+    class IOProxy(object):
         def __init__( self, randomRead = False, randomWrite = False ):
             self.randomRead = randomRead
             self.randomWrite = randomWrite
@@ -66,26 +73,18 @@ class CadcCache:
             raise NotImplementedError( "IOProxy.readFromBacking" )
 
         def writeCache(self, buffer, offset):
-            print self.cacheFileStream.tell()
             if (self.cacheFileStream.tell() != offset):
-                pass
                 self.cacheFileStream.seek(offset )
-            print "one"
 
-            try:
-                self.cacheFileStream.write( buffer )
-            except Exception as e:
-                print str( e )
-            print "two"
+	    self.cacheFileStream.write( buffer )
 
 
-
-    class FileMetaData:
+    class FileMetaData(object):
         def __init__( self, md5sum, m_time ):
             self.md5sum = md5sum
             self.m_time = m_time
 
-    class CacheFh:
+    class CacheFh(object):
         def __init__( self, fh, path, cache, ioObject ):
             self.fh = fh
             self.path = path
@@ -97,7 +96,9 @@ class CadcCache:
         def release(self):
             """Close the file, but if this was a holding spot for writes, 
             then write the file to the node"""
-            import os
+
+	    # There needs to be a reference counter on the file to prevent
+	    # freeing something while it is open or a thread is running.
 
             ## get the MODE of the original open, if 'w/a/w+/a+' we should 
             ## write to VOSpace we do that here before closing the filehandle 
@@ -139,18 +140,21 @@ class CadcCache:
 
             ##  now close the fh
             try:
-                print "closing: " + str( self.fh )
+		print "1 - closing %d" % self.fh
                 os.close(self.fh)
             except Exception as e:
                 ex = FuseOSError(getattr(e,'errno',EIO))
                 ex.strerror = getattr(ex,'strerror','failed while closing %s' %
                         (self.path))
                 logging.debug(str(e))
+		print str(e)
                 raise ex
             finally:
                 self.cache.fh.pop(self.fh,None)
                 self.ioObject.delNode(self.path)
-                #self.cache.pop(path,None)
+                self.cache.cache.pop(self.path,None)
+		self.fh = None
+		self.path = None
             ## clear up the cache
             self.cache.clear_cache()
             return 
@@ -174,6 +178,7 @@ class CadcCache:
             inputfd = os.dup( fh )
             os.lseek( inputfd, 0, os.SEEK_SET )
             self.ioObject.writeToBacking( inputfd )
+	    print "2 - closing %d" %inputfd
             os.close( inputfd )
 
 
@@ -221,9 +226,20 @@ class CadcCache:
             return CadcCache.FileMetaData( md5sum['md5'], md5sum['st_mtime'] )
 
 
+	def delete_md5_db(self,fname):
+	    """Delete a record from the cache MD5 database"""
+	    sqlConn=sqlite3.connect(self.cache.cache_db)
+	    sqlConn.row_factory =  sqlite3.Row
+	    cursor = sqlConn.cursor()
+	    cursor.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
+	    sqlConn.commit()
+	    cursor.close()
+	    sqlConn.close()
+	    return 
+
+
         def update_md5_db(self,fname):
             """Update a record in the cache MD5 database"""
-            import hashlib
             with self.cache.cacheLock:
                 md5 = hashlib.md5()  
                 r=open(fname,'r')
@@ -272,16 +288,17 @@ class CadcCache:
                             ( str(size), str(offset), str(st_size)))
                     while ( st_size < offset + size and 
                             self.cache.cache[self.path]['writing'] ):
-                        logging.debug("sleeping for %d ..." % (READ_SLEEP))
-                        time.sleep(READ_SLEEP)
+                        logging.debug("sleeping for %d ..." % (self.cache.READ_SLEEP))
+                        time.sleep(self.cache.READ_SLEEP)
                         logging.debug("wake up ")
                         st_size = os.stat(self.cache.cache[self.path]['fname']).st_size
                     logging.debug("Done waiting. %s + %s < %s or reached EOF" % 
                             ( str(size), str(offset), str(st_size)))
-                    os.lseek(fh,offset,os.SEEK_SET)
-                    logging.debug("sending back %s for %s" % ( str(fh), str(size)))
+                    os.lseek(self.fh,offset,os.SEEK_SET)
+                    logging.debug("sending back %s for %s" % 
+			    ( str(self.fh), str(size)))
                     buf = create_string_buffer(size)
-                    retsize = libc.read(fh,buf,size)
+                    retsize = libc.read(self.fh,buf,size)
                     return buf
 
 
@@ -290,7 +307,6 @@ class CadcCache:
                     
                 vosMD5 = self.ioObject.getMD5(self.path)
                 cacheMD5 = self.get_md5_db(self.cache.cache[self.path]['fname'])
-                print "md5sums: %s : %s" % ( vosMD5, cacheMD5['md5'] )
                 if cacheMD5['md5'] == vosMD5 :
                     ## return a libc.read buffer
                     fs = self.fs
@@ -303,13 +319,11 @@ class CadcCache:
 
                 ## get a copy from VOSpace if the version we have is not 
                 ## current or cached.
-                print "writting: " + str( self.cache.cache[self.path]['writing']
-                )
                 if not self.cache.cache[self.path]['writing']:
                     self.cache.cache[self.path]['writing'] = True
-                    thread.start_new_thread( self.load_into_cache, (self.path, int(fh)))
+                    thread.start_new_thread( self.load_into_cache, (self.path,))
 
-            return self.read( self.path, size, offset )
+            return self.read( size, offset )
 
         def get_md5_db(self,fname):
             """Get the MD5 for this fname from the SQL cache"""
@@ -330,16 +344,14 @@ class CadcCache:
         def load_into_cache(self, path):
             """Load path from VOSpace and store into fh"""
             logging.debug("self: %s" % ( str(self.fh)))
-            print "file handle: " + str( self.fh )
             os.fsync(self.fh)
             os.ftruncate(self.fh,0)
-            self.ioObject.cacheFileStream = io.open(self.fh,'w')
+            self.ioObject.cacheFileStream = io.open(self.fh,'wb',closefd=False)
             try:
                 logging.debug("writing to %s" % ( self.cache.cache[path]['fname']))
                 logging.debug("reading from %d" % ( self.fh ) )
 
                 self.ioObject.readFromBacking()
-                print "file handle: " + str( self.fh )
                 os.fsync(self.fh)
                 vosMD5 = self.ioObject.getMD5(path)
                 cacheMD5 = self.get_md5_db(self.cache.cache[path]['fname'])
@@ -349,9 +361,15 @@ class CadcCache:
                     raise FuseOSError(EIO)
                 self.cache.cache[path]['cached'] = True
                 logging.debug("Finished caching file %s" %  ( str(self.fh)))
+            except FuseOSError as e:
+		raise e
             except OSError as e:
                 logging.error("ERROR: %s" % (str(e)))
-                ex = FuseOSError(e.errno)
+		if ( e.errno == None ):
+		    errno = -1
+		else:
+		    errno = e.errno
+                ex = FuseOSError(errno)
                 ex.strerror = getattr(e,'strerror','failed while reading from %s' %
                         (path))
                 raise ex
@@ -361,6 +379,39 @@ class CadcCache:
                 self.cache.cache[path]['writing'] = False
             return 
 
+	def write(self, data, size, offset):
+	    if self.cache.readonly:
+		logging.debug("File system is readonly.. so writing 0 bytes\n")
+		return 0
+
+
+	    mode = flag2mode(self.cache.fh[self.fh]['flags'])
+	    if not ('w' in mode or 'a' in mode ):
+		logging.debug("file was not opened for writing")
+		return 0
+
+	    locked = self.ioObject.isLocked(self.path)
+	    if locked:
+		logging.debug("file %s is locked, no write allowed" % ( path ) )
+		raise FuseOSError(EPERM)
+
+	    logging.debug("%s -> %s" % ( self.path,self.fh))
+	    if not self.cache.cache[self.path]['cached'] and offset > 0 :
+		## we are writing but never cached the original file, do that now
+		try:
+		    logging.debug("Getting data from VOSpace cause the cache is empty")
+		    self.load_into_cache(self.path)
+		except IOError as e:
+		    f=FuseOSError(e.errno)
+		    f.strerror=getattr(e,'strerror','failed during write of %s' %(path))
+		    raise f
+	    ## Update the access/mod times and delete the md5 from the cache db
+	    ## self.utimens(path)
+	    logging.debug("%d --> %d" % ( offset, offset+size))
+	    self.delete_md5_db(self.cache.cache[self.path]['fname'])
+	    self.cache.cache[self.path]['cached']=True
+	    os.lseek(self.fh, offset, os.SEEK_SET)
+	    return libc.write(self.fh, data, size)
 
     def __init__( self, cache_dir, max_cache_size, readonly = False ):
         """Setup the cache"""
@@ -372,7 +423,7 @@ class CadcCache:
         self.readonly = readonly
         self.cacheLock = RLock()
         self.cache_dir = cache_dir
-        self.data_dir = cache_dir + "/data"
+        self.data_dir = cache_dir + "/data/"
         self.max_cache_size = max_cache_size
 
         if os.path.exists( self.cache_dir ):
@@ -482,10 +533,11 @@ class CadcCache:
 
         ## open the cache file, return that handle to fuse layer.
         fh = os.open(self.cache[path]['fname'], os.O_RDWR )
+        print self.cache[path]['fname']
 
         ## also open a direct io path to this handle, use that for file write 
         ## operations 
-        fs = io.open(fh,mode='r+b')
+        fs = io.open(fh,mode='rb',closefd=False)
         os.lseek(fh,0,os.SEEK_SET)
 
         ## the fh dictionary provides lookups to some critical info... 
@@ -533,6 +585,7 @@ class CadcCache:
                 raise e
             finally:
                 if fh != None:
+		    print "3 - closing %d" %fh
                     os.close(fh)
 
         return

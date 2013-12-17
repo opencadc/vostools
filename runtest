@@ -1,2 +1,14 @@
+#!/bin/tcsh -f
+
+if ( $0:h == $0 ) then
+    set thisDir=$PWD
+else
+    set thisDir=$0:h
+    if ( $thisDir !~ "/*" ) then
+        set thisDir = $PWD/$thisDir
+    endif
+endif
+
+setenv PYTHONPATH $thisDir/CadcCache
 python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
     --ignore-module=test_cadcCache CadcCache/test/TestCadcCache.py
