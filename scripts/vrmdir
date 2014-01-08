@@ -58,7 +58,7 @@ try:
           sys.exit(-1)
       if client.isdir(arg):
           logger.info("deleting %s" %(arg))
-          client.delete(arg):
+          client.delete(arg)
       elif client.isfile(arg):
           logger.error("%s is a file" % (arg))
           sys.exit(-1)
