@@ -30,7 +30,7 @@ set CONTAINER = $BASE/$TIMESTAMP
 
 
 echo -n "** checking base URI"
-$LSCMD -v $CERT $BASE >& /dev/null
+$LSCMD -v $CERT $BASE > /dev/null
 if ( $status == 0) then
 	echo " [OK]"
 else
