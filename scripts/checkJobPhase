@@ -28,7 +28,6 @@ if __name__ == '__main__':
                         help="print some diagnostics")
     parser.add_argument("-d", "--debug", action='store_const', const=True,
                         help="print all diagnositics")
-    parser.add_option("-w","--warning",action="store_true")
     parser.add_argument("jobURL", action='store', help="The URL of the job to test")
 
 
@@ -38,8 +37,6 @@ if __name__ == '__main__':
         log_level = logging.INFO
     elif opt.debug:
         log_level = logging.DEBUG
-    elif opt.warning:
-        log_level =  logging.WARNING
     else:
         log_level = logging.ERROR
 

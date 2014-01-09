@@ -600,18 +600,18 @@ class Node:
 
 class VOFile:
     """
-    A class for managing http connecctions
+    A class for managing http connections
 
     Attributes:
     maxRetries - maximum number of retries when transient errors encountered. When set
-    too high (as the default value is) the number of retries are time limitted (max 15min)
+    too high (as the default value is) the number of retries are time limited (max 15min)
     maxRetryTime - maximum time to retry for when transient errors are encountered
     """
    
     ### if we get one of these codes, retry the command... ;-(
-    retryCodes = (503, 408, 504, 402, 412) 
+    retryCodes = (503, 408, 504, 412) 
 
-    def __init__(self, URL, connector, method, size=None, followRedirect=True):
+    def __init__(self, URLs, connector, method, size=None, followRedirect=True):
         self.closed = True
         self.resp = 503
         self.connector = connector
@@ -620,10 +620,18 @@ class VOFile:
         self.size = size
         self.maxRetries = 10000
         self.maxRetryTime = MAX_RETRY_TIME
+        # this should be redone during a cleanup. Basically, a GET might result in multiple
+        # URLs (list of URLs) but VOFile is also used to retrieve schema files and other info.
+        # All the calls should pass a list of URLs
+        if isinstance(URLs, list):
+            self.origURLs = URLs
+        else:
+            self.origURLs = [URLs]
+        self.URLs = list(self.origURLs) #copy
+        self.urlIndex = 0
         self.followRedirect = followRedirect
-        self.name = os.path.basename(URL)
         self._fpos = 0
-        self.open(URL, method)
+        self.open(self.URLs[self.urlIndex], method)
         # initial values for retry parameters
         self.currentRetryDelay = DEFAULT_RETRY_DELAY
         self.totalRetryDelay = 0
@@ -652,7 +660,7 @@ class VOFile:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
             self.resp = self.httpCon.getresponse()
-            self.checkstatus(codes=code)
+            return self.checkstatus(codes=code)
         except ssl.SSLError as e:
             raise IOError(errno.EAGAIN, str(e))
         except IOError as e:
@@ -688,7 +696,6 @@ class VOFile:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.certfile is None:
                     msg += " using anonymous access "
-                raise IOError(errnos[self.resp.status], msg, self.url)
             raise IOError(self.resp.status, msg, self.url)
         self.size = self.resp.getheader("Content-Length", 0)
         return True
@@ -750,7 +757,11 @@ class VOFile:
         """return size bytes from the connection response"""
         #logger.debug("Starting to read file by closing http(s) connection")
         if not self.closed:
-            self.close()
+            try:
+                self.close()
+            except IOError:
+                logger.info("Error on URL: %s" % (self.url) )
+                # gets might have other URLs to try on, so keep going ...
         bytes = None
         #if size != None:
         #    bytes = "bytes=%d-" % ( self._fpos)
@@ -770,7 +781,7 @@ class VOFile:
             #logger.debug("left file pointer at: %d" % (self._fpos))
             return buff
         elif self.resp.status == 404:
-            raise IOError(errno.ENFILE, self.resp.read())
+            raise IOError(errnos[self.resp.status], self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location', None)
             logger.debug("Got redirect URL: %s" % (URL))
@@ -786,34 +797,45 @@ class VOFile:
                 #logger.debug("Got url:%s from redirect but not following" % (self.url))
                 return self.url
         elif self.resp.status in VOFile.retryCodes:
-            ## try again in Retry-After seconds or fail
-            logger.error("Got %d: server busy on %s" % (self.resp.status, self.url))
-            msg = self.resp.read()
-            if msg is not None:
-                msg = html2text.html2text(msg, self.url).strip()
- 	    else:
-	        msg = "No Message Sent"
-            logger.error("Message:  %s" % (msg))
-            try:
-	        ### see if there is a Retry-After in the head...
-                ras = int(self.resp.getheader("Retry-After", 5))
-            except:
-                ras = self.currentRetryDelay
-                if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
-                    self.currentRetryDelay = self.currentRetryDelay * 2
-                else:
-                    self.currentRetryDelay = MAX_RETRY_DELAY
+            if self.urlIndex < len(self.URLs)-1:
+                # go to the next URL
+                self.urlIndex += 1
+                self.open(self.URLs[self.urlIndex], "GET")
+                return self.read(size)
+        else: 
+            self.URLs.pop(self.urlIndex) #remove url from list
+            if len(self.URLs) == 0:
+                # no more URLs to try...
+                raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+            if self.urlIndex < len(self.URLs):
+                self.open(self.URLs[self.urlIndex], "GET")
+                return self.read(size)
+                            
+        ## start from top of URLs with a delay
+        self.urlIndex = 0        
+        logger.error("Got %d: servers busy on %s" % (self.resp.status, self.URLs))
+        msg = self.resp.read()
+        if msg is not None:
+            msg = html2text.html2text(msg, self.url).strip()
         else:
-            # line below can be removed after we are sure all codes
-            # are caught
-            raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
-
+            msg = "No Message Sent"
+        logger.error("Message from last server (%s):  %s" % (self.url, msg))
+        try:
+        ### see if there is a Retry-After in the head...
+            ras = int(self.resp.getheader("Retry-After", 5))
+        except:
+            ras = self.currentRetryDelay
+            if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
+                self.currentRetryDelay = self.currentRetryDelay * 2
+            else:
+                self.currentRetryDelay = MAX_RETRY_DELAY
+                    
         if (self.retries < self.maxRetries) and (self.totalRetryDelay < self.maxRetryTime):
             logger.error("retrying in %d seconds" % (ras))
             self.totalRetryDelay = self.totalRetryDelay + ras
             self.retries = self.retries + 1
             time.sleep(int(ras))
-            self.open(self.url, "GET")
+            self.open(self.URLs[self.urlIndex], "GET")
             return self.read(size)
         else:
             raise IOError(self.resp.status, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
@@ -1163,10 +1185,13 @@ class Client:
         F = ET.parse(con)
 
         P = F.find(Node.PROTOCOL)
-        # logger.debug("Transfer protocol: %s" % (str(P)))
+        logger.debug("Transfer protocol: %s" % (str(F)))
         if P is None:
             return self.getTransferError(transURL, uri)
-        return P.findtext(Node.ENDPOINT)
+        result = []
+        for node in P.findall(Node.ENDPOINT):
+            result.append(node.text)
+        return result
 
     def getTransferError(self, url, uri):
         """Follow a transfer URL to the Error message"""

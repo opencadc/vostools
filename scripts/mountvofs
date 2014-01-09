@@ -1047,7 +1047,9 @@ if __name__ == "__main__":
     else:
         log_level = logging.ERROR
 
-    logging.getLogger('vos').setLevel(log_level)
+    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s"
+    logging.basicConfig(level=log_level, format=format, filename=opt.log)
+
     logging.getLogger('vos').addHandler(logging.StreamHandler())
 
     logging.debug("Checking connection to VOSpace ")
