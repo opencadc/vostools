@@ -43,7 +43,7 @@ class Cache(object):
         self.readOnly = readOnly
         self.fileHandleDict = {}
         # When cache locks and file locks need to be held at the same time,
-        # always acquire the file lock first.
+        # always acquire the cache lock first.
         self.cacheLock = threading.RLock()
 
         if os.path.exists(self.cacheDir):
@@ -101,36 +101,50 @@ class Cache(object):
 	ioObject - the object that provides access to the backing store
         """
 
-        fileHandle = self.getFileHandle(path, ioObject)
+        fileHandle = self.getFileHandle(path, new, ioObject)
         ioObject.setCacheFile(fileHandle)
 
 	
 	if new:
 	    fileHandle.fileModified = True
 	    fileHandle.fullyCached = True
-	    self.unlink(path)
+	    os.truncate(ioObject.cacheFileDescriptor)
+	    fileHandle.metadata.delete()
 	else:
-	    size = ioObject.getMD5()
+	    size = ioObject.getSize()
 	    blocks,blocks = ioObject.blockInfo(size, size)
 	    fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
 		    blocks, ioObject.getMD5())
-	    cacheFile.fullycached = False
+	    fileHandle.fullycached = False
 
         self.checkCacheSpace()
 
         return fileHandle
 
 
-    def getFileHandle(self, path, ioObject):
+    def getFileHandle(self, path, new, ioObject):
         """Find an existing file handle, or create one if necessary.
         """
         with self.cacheLock:
             try:
                 newFileHandle = self.fileHandleDict[path]
+		isNew = False
             except KeyError:
+		isNew = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
 	    with newFileHandle.fileLock:
+		if not isNew and new:
+		    # We got an old file handle, but are creating a new file.
+		    # Mark the old file handle as obsolete and create a new
+		    # file handle.
+		    with newFileHandle.fileLock:
+			newFileHandle.obsolete = True
+		    newFileHandle = FileHandle(path, self, ioObject)
+		    del self.fileHandleDict[path]
+		    self.fileHandleDict[path] = newFileHandle
+		    newFileHandle.metaData.delete()
+
 		newFileHandle.refCount += 1
         return newFileHandle
 
@@ -157,7 +171,8 @@ class Cache(object):
 	# threads do this is bad. It should also be done on a schedule to allow
 	# for files which grow.
 	(oldest_file, cacheSize) = self.determineCacheSize()
-        while ( cacheSize > self.maxCacheSize and oldest_file != None ) :
+        while ( cacheSize/1024/1024 > self.maxCacheSize and oldest_file != None ) :
+	    print cacheSize
 	    with self.cacheLock:
 		if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
 		    logging.debug("Removing file %s from the local cache" % 
@@ -186,6 +201,7 @@ class Cache(object):
         for dirpath, dirnames, filenames in os.walk(start_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
+		print fp
 		with self.cacheLock:
 		    inFileHandleDict = (f[len(self.dataDir):] not in 
 			    self.fileHandleDict)
@@ -194,27 +210,6 @@ class Cache(object):
                     oldest_file = fp
                 total_size += os.path.getsize(fp)
         return (oldest_file, total_size)
-
-    def unlink(self, path):
-	""" 
-	Remove an existing file.
-
-	The behaviour has to mimic the somewhat complicated behaviour if the
-	UNIX file systems - old file descriptors continue to access the old file
-	where a new file will be created.
-	"""
-	with self.cacheLock:
-	    try:
-		os.unlink(self.dataDir + path)
-		os.unlink(self.metaDataDir + path)
-	    except OSError:
-		pass
-
-	    # Ignore any errors that the key doesn't exist.
-	    try:
-		del self.fileHandleDict[path]
-	    except KeyError:
-		pass
 
 
 class CacheError(Exception):
@@ -373,9 +368,11 @@ class FileHandle(object):
 	    os.makedirs(os.path.dirname(self.cacheDataFile), stat.S_IRWXU)
 	except OSError:
 	    pass
-	self.ioObject.cacheFileStream = io.FileIO(self.cacheDataFile, "w+")
+	self.ioObject.cacheFileDescriptor = os.open(self.cacheDataFile,
+		os.O_RDWR | os.O_CREAT)
+	info = os.fstat(self.ioObject.cacheFileDescriptor)
         # When cache locks and file locks need to be held at the same time,
-        # always acquire the file lock first.
+        # always acquire the cache lock first.
         # Lock for modifing the FileHandle object.
         self.fileLock = threading.RLock()
 	self.fileCondition = threading.Condition(self.fileLock)
@@ -386,6 +383,8 @@ class FileHandle(object):
         self.refCount = 0
         self.fileModified = False
 	self.fullyCached = None
+	# Is this file now obsoleted by a new file.
+	self.obsolete = False
 	# Is the file being flushed out to vospace right now?
 	self.flushThread = None
 	self.flushException = None
@@ -405,7 +404,7 @@ class FileHandle(object):
         with self.fileLock:
 	    # If flushing is not already in progress, wait for it to finish.
             if (self.flushThread is None and self.refCount == 1 and 
-		    self.fileModified):
+		    self.fileModified and not self.obsolete):
 		if self.metaData is not None:
 		    md5 = self.metaData.md5sum
 		else:
@@ -437,8 +436,8 @@ class FileHandle(object):
         with nested(self.cache.cacheLock, self.fileLock):
 	    self.refCount -= 1
             if self.refCount == 0:
-		self.ioObject.cacheFileStream.close()
-		self.ioObject.cacheFileStream = None
+		os.close(self.ioObject.cacheFileDescriptor)
+		self.ioObject.cacheFileDescriptor = None
 		# The entry in fileHandleDict may have been removed by unlink,
 		# so don't panic
 		try:
@@ -456,7 +455,7 @@ class FileHandle(object):
 	size = 0
 
 	#TODO Don't open by file name
-	with open(self.cacheDataFile,'r') as r:
+	with os.fdopen(os.dup(self.ioObject.cacheFileDescriptor),'r') as r:
 	    while True:
 		buff=r.read(Cache.IO_BLOCK_SIZE)
 		if len(buff) == 0:
@@ -464,7 +463,8 @@ class FileHandle(object):
 		md5.update(buff)
 		size += len(buff)
 
-	info = os.stat(self.cacheDataFile)
+	print "size", size
+	info = os.fstat(self.ioObject.cacheFileDescriptor)
 	return md5.hexdigest(), size, info.st_mtime
 
     def flushNode(self):
