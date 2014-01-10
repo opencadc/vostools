@@ -1,2 +1,3 @@
 from CadcCache import CadcCache
-from SharedLock import SharedLock as SharedLock
+from SharedLock import SharedLock
+from CacheMetaData import CacheMetaData

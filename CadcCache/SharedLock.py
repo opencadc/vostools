@@ -14,6 +14,10 @@ class RecursionError(Exception):
 	return repr(self.value)
 
 class SharedLock(object):
+    """Defines a shared lock which allows multiple threads to acquire the lock
+       in shared mode, but only one thread to acquire the lock in exlcusive
+       mode.
+    """
 
     def __init__(self):
 	"""Constructor for a shared lock.
@@ -22,6 +26,22 @@ class SharedLock(object):
 	self.condition = threading.Condition(self.lock)
 	self.exclusiveLock = None
 	self.lockersList = set()
+
+    def __call__( self,shared):
+	"""Make the objects callable to acquire a lock.
+	"""
+	self.acquire(shared=shared)
+	return self
+
+    def __enter__(self):
+	"""Alows the shared lock to be used with the "with" construct.
+	"""
+	return self
+
+    def __exit__(self, type, value, traceback):
+	"""Alows the shared lock to be used with the "with" construct.
+	"""
+	self.release()
 
     def acquire(self, timeout = None, shared = True):
 	"""Acquire a lock.
@@ -62,12 +82,16 @@ class SharedLock(object):
 		self.exclusiveLock = threading.current_thread()
 
     def release(self):
+	"""Release a previously acquired lock.
+	"""
+
 	with self.lock:
 	    if self.exclusiveLock == threading.current_thread():
 		self.exclusiveLock = None
 		assert len(self.lockersList) == 0
 	    else:
 		self.lockersList.remove(threading.current_thread())
+	    self.condition.notify_all()
 
 
 
