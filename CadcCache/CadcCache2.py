@@ -364,7 +364,7 @@ class FileHandle(object):
         self.cache = cache
 	if not os.path.isabs(path):
 	    raise ValueError("Path '%s' is not an absolute path." % path )
-	done overwrite meta data file with an out of date file
+	#TODO don't overwrite meta data file with an out of date file
 	self.cacheDataFile = cache.dataDir + path
 	self.cacheMetaDataFile = cache.metaDataDir + path
 	self.metaData = None
@@ -455,7 +455,7 @@ class FileHandle(object):
 	md5 = hashlib.md5()
 	size = 0
 
-	Don't open by file name
+	#TODO Don't open by file name
 	with open(self.cacheDataFile,'r') as r:
 	    while True:
 		buff=r.read(Cache.IO_BLOCK_SIZE)
