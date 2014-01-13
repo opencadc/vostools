@@ -25,7 +25,7 @@ import SharedLock
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
-skipTests = False
+skipTests = True
 testDir = "/tmp/testcache"
 
 class IOProxyForTest(CadcCache.IOProxy):
@@ -136,21 +136,29 @@ class TestIOProxy(unittest.TestCase):
             self.assertEqual(testIOProxy.getMD5(),
                     "d41d8cd98f00b204e9800998ecf8427e")
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_blockInfo(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
             self.assertEqual((0, 0), testIOProxy.blockInfo(0, 0))
+            self.assertEqual((0, 1), testIOProxy.blockInfo(0, 1))
+            self.assertEqual((0, 1), testIOProxy.blockInfo(1, 1))
+            self.assertEqual((0, 1), 
+		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE - 1, 1))
+            self.assertEqual((1, 1), 
+		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE, 1))
             self.assertEqual((0, 1), 
                     testIOProxy.blockInfo(0, testCache.IO_BLOCK_SIZE))
-            self.assertEqual((0, 1), 
+            self.assertEqual((0, 2), 
+                    testIOProxy.blockInfo(0, testCache.IO_BLOCK_SIZE + 1))
+            self.assertEqual((0, 2), 
                     testIOProxy.blockInfo(100, testCache.IO_BLOCK_SIZE))
             self.assertEqual((2, 3), 
                     testIOProxy.blockInfo(testCache.IO_BLOCK_SIZE * 2, 
                     testCache.IO_BLOCK_SIZE * 3))
-            self.assertEqual((2, 3), 
+            self.assertEqual((2, 4), 
                     testIOProxy.blockInfo(100 + testCache.IO_BLOCK_SIZE * 2, 
                     testCache.IO_BLOCK_SIZE * 3 + 100))
 
@@ -647,6 +655,15 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking.assert_called_once_with(self.testMD5,
                     self.testSize, info.st_mtime)
 
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_read1(self):
+        """Test reading from a file which is not cached."""
+
+	with CadcCache.Cache(testDir, 100) as testCache:
+	    ioObject = IOProxyForTest()
+	    fd = testCache.open("/dir1/dir2/file", False, ioObject)
+	    data = fd.read(100,0)
+	    fd.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_determineCacheSize(self):

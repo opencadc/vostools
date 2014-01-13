@@ -302,6 +302,9 @@ class IOProxy(object):
             with self.condition:
                 self.condition.acquire()
                 #TODO self.metaData.setBlocksRead(firstBlock, numBLocks)
+
+                #TODO If the whole file has been read, set the fully cached
+                # flag.
                 self.condition.notify()
 
 
@@ -315,7 +318,11 @@ class IOProxy(object):
         """
 
         firstBlock = offset / self.cache.IO_BLOCK_SIZE
-        numBlocks = ((offset + size) / self.cache.IO_BLOCK_SIZE) - firstBlock
+        if size == 0:
+            numBlocks = 0
+        else:
+            numBlocks = (((offset + size - 1) / self.cache.IO_BLOCK_SIZE) -
+                    firstBlock + 1)
         return firstBlock, numBlocks
 
 
@@ -468,7 +475,7 @@ class FileHandle(object):
                 self.metaData = CacheMetaData(self.cacheMetaDataFile, blocks, 
                         md5)
 
-                self.metaData = CacheMetaData(self.metaDataFile,size, md5)
+                self.metaData = CacheMetaData(self.cacheMetaDataFile,size, md5)
                 self.metaData.md5sum = md5
                 self.metaData.persist()
 
@@ -485,31 +492,97 @@ class FileHandle(object):
 
     def write(self, data, size, offset):
         """Write data to the file.
+        This method will raise a CacheRetry error if the response takes longer
+        than the timeout.
         """
         raise NotImplementedError("TODO")
 
+        # Acquire a shared lock on the file
+
         # Ensure the entire file is in cache.
+        firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
+        self.makeCached(0, numBlocks)
 
         # Duplicate the file descriptor just in case
 
         # Seek and write.
 
 
+        # Update file size if it changed
+        with self.fileLock:
+            if offset + size > self.fileSize:
+                self.fileSize = offset + size
+            self.fileModified = True
 
-        self.fileModified = True
 
 
     def read( self, size, offset):
         """Read data from the file.
+        This method will raise a CacheRetry error if the response takes longer
+        than the timeout.
         """
-        raise NotImplementedError("TODO")
 
         # Ensure the required blocks are in the cache
-        first,last = self.ioObject.blockInfo(offset, size)
-        self.checkCached(firstBlock,lastBlock)
+        firstBlock,numBlocks = self.ioObject.blockInfo(offset, size)
+        self.makeCached(firstBlock,numBlocks)
+
+        raise NotImplementedError("TODO")
 
         # Duplicate the file descriptor just in case
 
         # seek and read.
 
         return buffer
+
+    def makeCached(self, firstBlock, numBlock):
+        """Ensure the specified data is in the cache file.
+
+        This method will raise a CacheRetry error if the response takes longer
+        than the timeout.
+        """
+
+        # If the whole file is cached, return
+        if self.fullyCached:
+            return
+
+        requiredRange = self.metaData.getRange(firstBlock, firstBlock +
+                numBlock - 1)
+
+        # If the required part of the file is cached, return
+        if requiredRange == (None,None):
+            return
+
+        raise NotImplementedError("TODO")
+        # TODO worry about race conditions with other reads and writes.
+
+
+        # There is a current read thread and it will "soon" get to the required
+        # data, modify the mandatory read range of the read thread.
+
+        # There is a current read thread and it will not soon get to the
+        # required data. 
+            # Abort the read thread
+            # Wait for the read thread to terminate
+
+        # If there is no current read thread, start a read for the new data 
+        # range with mandatory and optional ranges. Other threads may be 
+        # competing for the read thread.
+
+        # Wait for the required blocks to be available.
+
+
+class CacheReadThread:
+    def __init__(self, ???):
+        self.start = 
+        self.mandatoryEnd = 
+        self.optionEnd =
+        self.aborted = False
+        self.currentByte = ?
+        self.downloadSpeed = ?
+
+
+
+    def checkProgress(self, 
+
+    def execute(self, ioobject)
+        ioObject.read(self.start, self.opitonalEnd)
