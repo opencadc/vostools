@@ -1,6 +1,6 @@
 import sys, os
 import unittest
-from CacheMetaData import CacheMetaData
+from vos import CacheMetaData
 
 class TestCacheMetaData(unittest.TestCase):
     TEST_CACHE_PATH = "/tmp/.cacheMetadataTest/"

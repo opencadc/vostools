@@ -16,8 +16,6 @@ from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
         EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
-import vos.fuse
-###from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 
 
 class Cache(object):
@@ -172,7 +170,6 @@ class Cache(object):
 	# for files which grow.
 	(oldest_file, cacheSize) = self.determineCacheSize()
         while ( cacheSize/1024/1024 > self.maxCacheSize and oldest_file != None ) :
-	    print cacheSize
 	    with self.cacheLock:
 		if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
 		    logging.debug("Removing file %s from the local cache" % 
@@ -201,9 +198,8 @@ class Cache(object):
         for dirpath, dirnames, filenames in os.walk(start_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-		print fp
 		with self.cacheLock:
-		    inFileHandleDict = (f[len(self.dataDir):] not in 
+		    inFileHandleDict = (fp[len(self.dataDir):] not in 
 			    self.fileHandleDict)
                 if (inFileHandleDict and oldest_time > os.stat(fp).st_atime):
                     oldest_time = os.stat(fp).st_atime
