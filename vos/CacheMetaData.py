@@ -20,7 +20,6 @@ class CacheMetaData(object):
             metaDataFile - name of the metadata file to persist to
             blocks - number of blocks required to store the entire file
             md5sum - md5sum of the file"""
-            
         self.metaDataFile = metaDataFile
         self.md5sum = md5sum
         self.bitmap = None
