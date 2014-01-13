@@ -545,6 +545,7 @@ class FileHandle(object):
         if self.fullyCached:
             return
 
+        print "blocks: ", firstBlock, firstBlock + numBlock - 1
         requiredRange = self.metaData.getRange(firstBlock, firstBlock +
                 numBlock - 1)
 
@@ -572,17 +573,18 @@ class FileHandle(object):
 
 
 class CacheReadThread:
-    def __init__(self, ???):
-        self.start = 
-        self.mandatoryEnd = 
-        self.optionEnd =
+    def __init__(self ):
+        self.start = something
+        self.mandatoryEnd = something
+        self.optionEnd = something
         self.aborted = False
-        self.currentByte = ?
-        self.downloadSpeed = ?
+        self.currentByte = something
+        self.downloadSpeed = something
 
 
 
-    def checkProgress(self, 
+    def checkProgress(self, firstByte, lastByte):
+        pass
 
-    def execute(self, ioobject)
+    def execute(self, ioobject):
         ioObject.read(self.start, self.opitonalEnd)
