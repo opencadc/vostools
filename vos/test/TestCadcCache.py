@@ -13,7 +13,7 @@ import shutil
 import unittest
 from mock import Mock, MagicMock, patch
 
-import vos
+from vos import CadcCache, SharedLock, IOProxy, CacheError, Cache
 
 ###import vos.fuse
 
@@ -27,7 +27,7 @@ import vos
 skipTests = True
 testDir = "/tmp/testcache"
 
-class IOProxyForTest(vos.IOProxy):
+class IOProxyForTest(IOProxy):
     """
     Subclass of the vos.IOProxy class. Used for both testing the
     IOProxy class and as an IOProxy object when testing the Cache class.
@@ -37,7 +37,7 @@ class IOProxyForTest(vos.IOProxy):
         return 'd41d8cd98f00b204e9800998ecf8427e'
 
     def getSize(self):
-	return 0
+        return 0
 
     def delNode(self, force = False):
         return
@@ -75,7 +75,7 @@ class TestIOProxy(unittest.TestCase):
     def test_basic(self):
         """Test the IOProxy abstract methods
         """
-        with vos.Cache(testDir, 100, True) as testCache:
+        with Cache(testDir, 100, True) as testCache:
             testIOProxy = vos.IOProxy()
             with self.assertRaises(NotImplementedError):
                 testIOProxy.getMD5()
@@ -91,8 +91,8 @@ class TestIOProxy(unittest.TestCase):
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
-        with vos.Cache(testDir, 100, True) as testCache:
-            testIOProxy = vos.IOProxy()
+        with Cache(testDir, 100, True) as testCache:
+            testIOProxy = IOProxy()
 
             # Write to beginning of the output
             testIOProxy.cacheFileStream = io.BufferedIOBase()
@@ -114,7 +114,7 @@ class TestIOProxy(unittest.TestCase):
             testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
             testIOProxy.cacheFileStream.write = Mock(return_value = 3)
             testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            with self.assertRaises(vos.CacheError) as cm:
+            with self.assertRaises(CacheError) as cm:
                 testIOProxy.writeToCache("abc", 3)
 
             # Test a completed block write
@@ -135,21 +135,29 @@ class TestIOProxy(unittest.TestCase):
             self.assertEqual(testIOProxy.getMD5(),
                     "d41d8cd98f00b204e9800998ecf8427e")
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_blockInfo(self):
         testIOProxy = IOProxyForTest()
-        with vos.Cache(testDir, 100, True) as testCache:
+        with Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
             self.assertEqual((0, 0), testIOProxy.blockInfo(0, 0))
+            self.assertEqual((0, 1), testIOProxy.blockInfo(0, 1))
+            self.assertEqual((0, 1), testIOProxy.blockInfo(1, 1))
+            self.assertEqual((0, 1), 
+		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE - 1, 1))
+            self.assertEqual((1, 1), 
+		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE, 1))
             self.assertEqual((0, 1), 
                     testIOProxy.blockInfo(0, testCache.IO_BLOCK_SIZE))
-            self.assertEqual((0, 1), 
+            self.assertEqual((0, 2), 
+                    testIOProxy.blockInfo(0, testCache.IO_BLOCK_SIZE + 1))
+            self.assertEqual((0, 2), 
                     testIOProxy.blockInfo(100, testCache.IO_BLOCK_SIZE))
             self.assertEqual((2, 3), 
                     testIOProxy.blockInfo(testCache.IO_BLOCK_SIZE * 2, 
                     testCache.IO_BLOCK_SIZE * 3))
-            self.assertEqual((2, 3), 
+            self.assertEqual((2, 4), 
                     testIOProxy.blockInfo(100 + testCache.IO_BLOCK_SIZE * 2, 
                     testCache.IO_BLOCK_SIZE * 3 + 100))
 
@@ -158,7 +166,7 @@ class TestIOProxy(unittest.TestCase):
     def test_readFromCache(self):
         """ Test the readFromCache method.
         """
-        with vos.Cache(testDir, 100, True) as testCache:
+        with Cache(testDir, 100, True) as testCache:
             # read from the start of the file.
             testIOProxy = IOProxyForTest()
             testIOProxy.cacheFileStream = io.BufferedIOBase()
@@ -189,13 +197,13 @@ class TestIOProxy(unittest.TestCase):
 class TestCacheError(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = vos.CacheError("a string")
+        e = CacheError("a string")
         self.assertEqual("'a string'", str(e))
 
 class TestCacheRetry(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = vos.CacheRetry("a string")
+        e = CacheRetry("a string")
         self.assertEqual("'a string'", str(e))
 
 
@@ -316,13 +324,13 @@ class TestSharedLock(unittest.TestCase):
         lock.acquire(shared=False)
         self.assertTrue(lock.exclusiveLock is not None)
         self.assertEqual(0, len(lock.lockersList))
-	t1.join()
+        t1.join()
         lock.release()
         self.assertEqual(0, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
 
         # Get an exclusive lock and then attempt to get an exclusive lock 
-	# without a timeout.
+        # without a timeout.
         t1 = threading.Thread(target=self.getExclusive, args=[lock])
         t1.start()
         time.sleep(1)
@@ -331,7 +339,7 @@ class TestSharedLock(unittest.TestCase):
         lock.acquire(shared=False)
         self.assertTrue(lock.exclusiveLock is not None)
         self.assertEqual(0, len(lock.lockersList))
-	t1.join()
+        t1.join()
         lock.release()
         self.assertEqual(0, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
@@ -348,17 +356,17 @@ class TestSharedLock(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_with(self):
-	"""Test the with construct.
-	"""
+        """Test the with construct.
+        """
 
-	lock = SharedLock.SharedLock()
-	with lock(shared=True):
-	    self.assertTrue(lock.exclusiveLock is None)
-	    self.assertEqual(1,len(lock.lockersList))
+        lock = SharedLock.SharedLock()
+        with lock(shared=True):
+            self.assertTrue(lock.exclusiveLock is None)
+            self.assertEqual(1,len(lock.lockersList))
 
-	with lock(shared=False):
-	    self.assertTrue(lock.exclusiveLock is not None)
-	    self.assertEqual(0,len(lock.lockersList))
+        with lock(shared=False):
+            self.assertTrue(lock.exclusiveLock is not None)
+            self.assertEqual(0,len(lock.lockersList))
 
 
 class TestCadcCache(unittest.TestCase):
@@ -386,7 +394,7 @@ class TestCadcCache(unittest.TestCase):
         """
         testIOProxy = IOProxyForTest()
         testIOProxy = IOProxyForTest()
-        with vos.Cache(testDir, 100, True) as testCache:
+        with Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
             self.assertEqual(1, testFile.refCount)
@@ -402,39 +410,39 @@ class TestCadcCache(unittest.TestCase):
             testFile.release()
             self.assertEqual(0, testFile.refCount)
 
-	    # Relative path should cause an error.
-	    with self.assertRaises(ValueError):
-		testCache.open("dir1/dir2/file", False, testIOProxy)
+            # Relative path should cause an error.
+            with self.assertRaises(ValueError):
+                testCache.open("dir1/dir2/file", False, testIOProxy)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor1(self):
         # Constructor with a non-existing cache directory.
-        testObject = vos.Cache(testDir, 100)
+        testObject = Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
         # Constructor with an existing cache directory.
-        testObject = vos.Cache(testDir, 100)
+        testObject = Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
         self.setUp_testDirectory()
 
-        testObject = vos.Cache(testDir, 100)
+        testObject = Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor2(self):
         # Constructor with an existing cache directory and bad permissions.
-        testObject = vos.Cache(testDir, 100)
+        testObject = Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
         os.chmod(testDir, stat.S_IRUSR)
         try:
-            with self.assertRaises(vos.CacheError) as cm:
-                vos.Cache(testDir, 100)
+            with self.assertRaises(CacheError) as cm:
+                Cache(testDir, 100)
         finally:
             os.chmod(testDir, stat.S_IRWXU)
 
@@ -445,8 +453,8 @@ class TestCadcCache(unittest.TestCase):
         # create the file
         open(testDir, 'a').close()
 
-        with self.assertRaises(vos.CacheError) as cm:
-            vos.Cache(testDir, 100)
+        with self.assertRaises(CacheError) as cm:
+            Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
@@ -456,8 +464,8 @@ class TestCadcCache(unittest.TestCase):
         os.mkdir(testDir)
         open(testDir + "/data", 'a').close()
 
-        with self.assertRaises(vos.CacheError) as cm:
-            vos.Cache(testDir, 100)
+        with self.assertRaises(CacheError) as cm:
+            Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
@@ -469,8 +477,8 @@ class TestCadcCache(unittest.TestCase):
         os.chmod(testDir + "/data", stat.S_IRUSR)
 
         try:
-            with self.assertRaises(vos.CacheError) as cm:
-                vos.Cache(testDir, 100)
+            with self.assertRaises(CacheError) as cm:
+                Cache(testDir, 100)
 
             self.assertTrue(str(cm.exception).find("permission") > 0)
         finally:
@@ -479,27 +487,27 @@ class TestCadcCache(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor6(self):
         """ Constructor with a file where the cache meta data directory 
-	    should be.
-	"""
+            should be.
+        """
         os.mkdir(testDir)
         open(testDir + "/metaData", 'a').close()
 
-        with self.assertRaises(vos.CacheError) as cm:
-            vos.Cache(testDir, 100)
+        with self.assertRaises(CacheError) as cm:
+            Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor7(self):
         """ Constructor with a read-only directory where the cache meta data 
-	    directory should be."""
+            directory should be."""
         os.mkdir(testDir)
         os.mkdir(testDir + "/metaData")
         os.chmod(testDir + "/metaData", stat.S_IRUSR)
 
         try:
-            with self.assertRaises(vos.CacheError) as cm:
-                vos.Cache(testDir, 100)
+            with self.assertRaises(CacheError) as cm:
+                Cache(testDir, 100)
 
             self.assertTrue(str(cm.exception).find("permission") > 0)
         finally:
@@ -525,53 +533,55 @@ class TestCadcCache(unittest.TestCase):
                 e.errno = errno.ENOENT
                 raise e
 
-        # IOProxy - getMD5 fails with IO
-        class IOProxy_getMD5_EIO(IOProxyForTest):
-            def getMD5(self):
-                e = OSError("test failure")
-                e.errno = errno.EIO
-                raise e
-
-
-        with vos.Cache(testDir, 100) as testObject:
+        with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             fd = testObject.open("/dir1/dir2/file", False, ioObject)
+            self.assertFalse(fd.fullyCached)
+            self.assertFalse(fd.fileModified)
             fd.release()
 
             ioObject = IOProxy_getMD5_ENOENT()
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.release()
-
-            ioObject = IOProxy_getMD5_ENOENT()
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.release()
-
-            ioObject = IOProxy_getMD5_EIO()
-            with self.assertRaises(vos.fuse.FuseOSError) as cm:
+            with self.assertRaises(OSError):
                 fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            self.assertEqual(cm.exception.errno, errno.EIO)
+            fd.release()
 
     #@unittest.skipIf(skipTests, "Individual tests")
-    def test_getmd5(self):
-        with vos.Cache(testDir, 100) as testCache:
+    def test_open2(self):
+        """ Open a new file"""
+        with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
+            ioObject2 = IOProxyForTest()
+            fd = testObject.open("/dir1/dir2/file", True, ioObject)
+            self.assertTrue(fd.fullyCached)
+            self.assertTrue(fd.fileModified)
+            fd.release()
+
+            fd = testObject.open("/dir1/dir2/file", False, ioObject)
+            fd2 = testObject.open("/dir1/dir2/file", True, ioObject2)
+            fd.release()
+            fd2.release()
+
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_getmd5(self):
+        with Cache(testDir, 100) as testCache:
+            ioObject = IOProxyForTest()
+            self.makeTestFile(os.path.join(testCache.dataDir, 
+                    "dir1/dir2/file"), self.testSize)
             fd = testCache.open("/dir1/dir2/file", False, ioObject)
-	    fileName = fd.cacheDataFile
-	    fd.release()
-	    self.makeTestFile(fileName, self.testSize)
-            fd = testCache.open("/dir1/dir2/file", False, ioObject)
-	    result = fd.getmd5()
-	    # Check the md5sum and size are correct, and the modification
-	    # time is roughly nowish.
-	    self.assertEqual((self.testMD5, self.testSize), result[0:2])
-	    self.assertTrue(abs(result[2] - time.time()) < 10)
+            result = fd.getmd5()
+            # Check the md5sum and size are correct, and the modification
+            # time is roughly nowish.
+            self.assertEqual((self.testMD5, self.testSize), result[0:2])
+            self.assertTrue(abs(result[2] - time.time()) < 10)
 
             fd.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release1(self):
-	"""Fails getting md5."""
-        with vos.Cache(testDir, 100) as testObject:
+        """Fails getting md5."""
+        with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
             fd = testObject.open("/dir1/dir2/file", False, ioObject)
@@ -581,20 +591,20 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
             fd = testObject.open("/dir1/dir2/file", False, ioObject)
-	    fd.fileModified = True
+            fd.fileModified = True
             fd.getmd5 = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
                 fd.release()
 
     def makeTestFile(self, name, size):
-	try:
-	    os.makedirs(os.path.dirname(name))
-	except OSError:
-	    pass
-	with nested(open(name, 'w'), open('/dev/zero')) as (w,r):
-	    buff = r.read(size)
-	    self.assertEqual(len(buff), size)
-	    w.write(buff)
+        try:
+            os.makedirs(os.path.dirname(name))
+        except OSError:
+            pass
+        with nested(open(name, 'w'), open('/dev/zero')) as (w,r):
+            buff = r.read(size)
+            self.assertEqual(len(buff), size)
+            w.write(buff)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -609,7 +619,7 @@ class TestCadcCache(unittest.TestCase):
                 return
 
 
-        with vos.Cache(testDir, 100) as testObject:
+        with Cache(testDir, 100) as testObject:
             # Release a slow to write file.
             ioObject = IOProxy_writeToBacking_slow()
             thread.start_new_thread(self.release2_sub1, 
@@ -629,32 +639,41 @@ class TestCadcCache(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release3(self):
-	"""Successful write to backing"""
+        """Successful write to backing"""
 
-        with vos.Cache(testDir, 100) as testObject:
+        with Cache(testDir, 100) as testObject:
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock()
+            self.makeTestFile(os.path.join(testObject.dataDir, 
+                    "dir1/dir2/file"), self.testSize)
             fd = testObject.open("/dir1/dir2/file", False, ioObject)
-	    self.makeTestFile(fd.cacheDataFile, self.testSize)
-	    fd.fileModified = True
-	    info = os.stat(fd.cacheDataFile)
-	    fd.release()
+            fd.fileModified = True
+            info = os.stat(fd.cacheDataFile)
+            fd.release()
             ioObject.writeToBacking.assert_called_once_with(self.testMD5,
-		    self.testSize, info.st_mtime)
+                    self.testSize, info.st_mtime)
 
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_read1(self):
+        """Test reading from a file which is not cached."""
+
+	with CadcCache.Cache(testDir, 100) as testCache:
+	    ioObject = IOProxyForTest()
+	    fd = testCache.open("/dir1/dir2/file", False, ioObject)
+	    data = fd.read(100,0)
+	    fd.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_determineCacheSize(self):
-	"""Test checking the cache size."""
-
+        """Test checking the cache size."""
 	self.assertTrue(False)
     
     def test_determineCacheSize(self):
         """ Test checking the cache space """
         if os.path.exists(testDir):
             os.rmdir(testDir)
-        cache = vos.Cache(cacheDir = testDir, maxCacheSize = 4)
+        cache = Cache(cacheDir = testDir, maxCacheSize = 4)
         testVospaceFile1 = "/dir1/dir2/file1";
         testVospaceFile2 = "/dir1/dir2/file2";
         testFile1 = cache.dataDir +"/dir1/dir2/file1"
@@ -681,7 +700,7 @@ class TestCadcCache(unittest.TestCase):
         """ Test cache cleanup """
         if os.path.exists(testDir):
             os.rmdir(testDir)
-        cache = vos.Cache(cacheDir = testDir, maxCacheSize = 4)
+        cache = Cache(cacheDir = testDir, maxCacheSize = 4)
         testVospaceFile1 = "/dir1/dir2/file1";
         testVospaceFile2 = "/dir1/dir2/file2";
         testFile1 = cache.dataDir +"/dir1/dir2/file1"
@@ -715,7 +734,7 @@ class TestCadcCache(unittest.TestCase):
         cache.checkCacheSpace()
         # no files deleted as all of them are in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
-        
+
 #    @unittest.skipIf(skipTests, "Individual tests")
 #    def test_release3(self):
 #        with CadcCache(self.testDir, 100, readonly = True) as testObject:
@@ -957,7 +976,6 @@ class TestCadcCache(unittest.TestCase):
 #
 #    #@unittest.skipIf(skipTests, "Individual tests")
 #    def test_write1(self):
-#        print "one"
 #        # Do a simple write To a read-only cache. Should return 0 bytes.
 #        with CadcCache(self.testDir, 100, readonly = True) as testObject:
 #            ioObject = TestCadcCache.IOProxyForTest()
@@ -970,7 +988,6 @@ class TestCadcCache(unittest.TestCase):
 #
 #        # Do a simple write To a read-only cache. Should return 4 bytes.
 #        # This file looks like it doesn't exist
-#        print "two"
 #        with CadcCache(self.testDir, 100, readonly = False) as testObject:
 #            ioObject = TestCadcCache.IOProxyForTest()
 #            fd = testObject.open("dir1/dir1/file", False, ioObject)
@@ -985,7 +1002,6 @@ class TestCadcCache(unittest.TestCase):
 #
 #        # Do a simple write To a read-only cache. Should return 4 bytes.
 #        # This file looks like it does exist.
-#        print "three"
 #        with CadcCache(self.testDir, 100, readonly = False) as testObject:
 #            ioObject = TestCadcCache.IOProxyForTest()
 #            fd = testObject.open("dir1/dir1/file2", False, ioObject)

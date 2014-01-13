@@ -9,8 +9,6 @@ else
     endif
 endif
 
-setenv PYTHONPATH $thisDir/CadcCache
+setenv PYTHONPATH $thisDir/vos
 python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
-    --ignore-module=test_cadcCache CadcCache/test/TestCadcCache2.py
-#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
-#    --ignore-module=test_cadcCache CadcCache/test/TestCadcCache.py
+    --ignore-module=test_cadcCache vos/test/TestCadcCache.py
