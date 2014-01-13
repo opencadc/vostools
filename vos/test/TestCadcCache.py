@@ -24,7 +24,7 @@ from vos import CadcCache, SharedLock, IOProxy, CacheError, Cache
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
-skipTests = True
+skipTests = False
 testDir = "/tmp/testcache"
 
 class IOProxyForTest(IOProxy):
@@ -51,6 +51,33 @@ class IOProxyForTest(IOProxy):
 
     def readFromBacking(self, offset = None, size = None):
         return
+
+class IOProxyFor100K(CadcCache.IOProxy):
+    """
+    Subclass of the CadcCache.IOProxy class. Used for both testing the
+    IOProxy class and as an IOProxy object when testing the Cache class.
+    """
+
+    def getMD5(self):
+        return '4c6426ac7ef186464ecbb0d81cbfcb1e'
+
+    def getSize(self):
+        return 102400
+
+    def delNode(self, force = False):
+        return
+
+    def verifyMetaData(self, md5sum):
+        """Generic test returns true"""
+        return True
+
+    def writeToBacking(self, md5, size, mtime):
+        return
+
+    def readFromBacking(self, offset = None, size = None):
+	if offset > 102400 or offset + size > 102400:
+	    raise CacheError("Attempt to read beyond the end of file.")
+        return ['\0'] * size
         
 
 class TestIOProxy(unittest.TestCase):
@@ -659,7 +686,7 @@ class TestCadcCache(unittest.TestCase):
         """Test reading from a file which is not cached."""
 
 	with CadcCache.Cache(testDir, 100) as testCache:
-	    ioObject = IOProxyForTest()
+	    ioObject = IOProxyFor100K()
 	    fd = testCache.open("/dir1/dir2/file", False, ioObject)
 	    data = fd.read(100,0)
 	    fd.release()

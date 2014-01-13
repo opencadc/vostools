@@ -110,8 +110,8 @@ class Cache(object):
             if fileHandle.metaData is not None:
                 fileHandle.metaData.delete()
         else:
-            size = ioObject.getSize()
-            blocks,blocks = ioObject.blockInfo(size, 0)
+            fileHandle.fileSize = ioObject.getSize()
+            blocks,numBlock = ioObject.blockInfo(fileHandle.fileSize, 0)
             fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
                     blocks, ioObject.getMD5())
             fileHandle.fullyCached = False
@@ -474,8 +474,6 @@ class FileHandle(object):
                 blocks,blocks = self.ioObject.blockInfo(size, 0)
                 self.metaData = CacheMetaData(self.cacheMetaDataFile, blocks, 
                         md5)
-
-                self.metaData = CacheMetaData(self.cacheMetaDataFile,size, md5)
                 self.metaData.md5sum = md5
                 self.metaData.persist()
 
@@ -522,6 +520,9 @@ class FileHandle(object):
         than the timeout.
         """
 
+        if offset > self.fileSize or size + offset > self.fileSize:
+            raise CacheError("Attempt to read beyond the end of file.")
+
         # Ensure the required blocks are in the cache
         firstBlock,numBlocks = self.ioObject.blockInfo(offset, size)
         self.makeCached(firstBlock,numBlocks)
@@ -545,7 +546,6 @@ class FileHandle(object):
         if self.fullyCached:
             return
 
-        print "blocks: ", firstBlock, firstBlock + numBlock - 1
         requiredRange = self.metaData.getRange(firstBlock, firstBlock +
                 numBlock - 1)
 
@@ -553,12 +553,19 @@ class FileHandle(object):
         if requiredRange == (None,None):
             return
 
+        # There is a current read thread and it will "soon" get to the required
+        # data, modify the mandatory read range of the read thread.
+
+        with self.fileLock:
+            if self.readThread is not None:
+                shouldWait = self.readThread.checkProgress(
+                        requiredRange[0] * Cache.IO_BLOCK_SIZE,
+                        min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
+                            self.fileSize))
         raise NotImplementedError("TODO")
         # TODO worry about race conditions with other reads and writes.
 
 
-        # There is a current read thread and it will "soon" get to the required
-        # data, modify the mandatory read range of the read thread.
 
         # There is a current read thread and it will not soon get to the
         # required data. 
@@ -584,7 +591,10 @@ class CacheReadThread:
 
 
     def checkProgress(self, firstByte, lastByte):
-        pass
+        #determine if the file is nearly there. If it is adjust the mandatoryEnd
+        #and return true. Otherwise return False. Must be called with the
+        #fileLock acquired
+        return False
 
     def execute(self, ioobject):
         ioObject.read(self.start, self.opitonalEnd)
