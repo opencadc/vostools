@@ -372,6 +372,7 @@ class FileHandle(object):
         # Is the file being flushed out to vospace right now?
         self.flushThread = None
         self.flushException = None
+        self.readThread = None
 
     def release(self):
         """Close the file.

@@ -13,7 +13,8 @@ import shutil
 import unittest
 from mock import Mock, MagicMock, patch
 
-from vos import CadcCache, SharedLock, IOProxy, CacheError, Cache
+from vos import CadcCache
+from vos.SharedLock import SharedLock, TimeoutError, RecursionError
 
 ###import vos.fuse
 
@@ -27,9 +28,9 @@ from vos import CadcCache, SharedLock, IOProxy, CacheError, Cache
 skipTests = False
 testDir = "/tmp/testcache"
 
-class IOProxyForTest(IOProxy):
+class IOProxyForTest(CadcCache.IOProxy):
     """
-    Subclass of the vos.IOProxy class. Used for both testing the
+    Subclass of the IOProxy class. Used for both testing the
     IOProxy class and as an IOProxy object when testing the Cache class.
     """
 
@@ -55,7 +56,7 @@ class IOProxyForTest(IOProxy):
 class IOProxyFor100K(CadcCache.IOProxy):
     """
     Subclass of the CadcCache.IOProxy class. Used for both testing the
-    IOProxy class and as an IOProxy object when testing the Cache class.
+    IOProxy class and as an IOProxy object when testing the CadcCache.Cache class.
     """
 
     def getMD5(self):
@@ -76,7 +77,7 @@ class IOProxyFor100K(CadcCache.IOProxy):
 
     def readFromBacking(self, offset = None, size = None):
 	if offset > 102400 or offset + size > 102400:
-	    raise CacheError("Attempt to read beyond the end of file.")
+	    raise CadcCache.CacheError("Attempt to read beyond the end of file.")
         return ['\0'] * size
         
 
@@ -102,8 +103,8 @@ class TestIOProxy(unittest.TestCase):
     def test_basic(self):
         """Test the IOProxy abstract methods
         """
-        with Cache(testDir, 100, True) as testCache:
-            testIOProxy = vos.IOProxy()
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+            testIOProxy = CadcCache.IOProxy()
             with self.assertRaises(NotImplementedError):
                 testIOProxy.getMD5()
             with self.assertRaises(NotImplementedError):
@@ -118,8 +119,8 @@ class TestIOProxy(unittest.TestCase):
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
-        with Cache(testDir, 100, True) as testCache:
-            testIOProxy = IOProxy()
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+            testIOProxy = CadcCache.IOProxy()
 
             # Write to beginning of the output
             testIOProxy.cacheFileStream = io.BufferedIOBase()
@@ -141,7 +142,7 @@ class TestIOProxy(unittest.TestCase):
             testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
             testIOProxy.cacheFileStream.write = Mock(return_value = 3)
             testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            with self.assertRaises(CacheError) as cm:
+            with self.assertRaises(CadcCache.CacheError) as cm:
                 testIOProxy.writeToCache("abc", 3)
 
             # Test a completed block write
@@ -165,7 +166,7 @@ class TestIOProxy(unittest.TestCase):
     #@unittest.skipIf(skipTests, "Individual tests")
     def test_blockInfo(self):
         testIOProxy = IOProxyForTest()
-        with Cache(testDir, 100, True) as testCache:
+        with CadcCache.Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
             self.assertEqual((0, 0), testIOProxy.blockInfo(0, 0))
@@ -193,7 +194,7 @@ class TestIOProxy(unittest.TestCase):
     def test_readFromCache(self):
         """ Test the readFromCache method.
         """
-        with Cache(testDir, 100, True) as testCache:
+        with CadcCache.Cache(testDir, 100, True) as testCache:
             # read from the start of the file.
             testIOProxy = IOProxyForTest()
             testIOProxy.cacheFileStream = io.BufferedIOBase()
@@ -224,13 +225,13 @@ class TestIOProxy(unittest.TestCase):
 class TestCacheError(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = CacheError("a string")
+        e = CadcCache.CacheError("a string")
         self.assertEqual("'a string'", str(e))
 
 class TestCacheRetry(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = CacheRetry("a string")
+        e = CadcCache.CacheRetry("a string")
         self.assertEqual("'a string'", str(e))
 
 
@@ -240,10 +241,10 @@ class TestSharedLock(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_Exceptions(self):
-        e = SharedLock.TimeoutError("timeout")
+        e = TimeoutError("timeout")
         self.assertEqual(str(e), "'timeout'")
 
-        e = SharedLock.RecursionError("recursion")
+        e = RecursionError("recursion")
         self.assertEqual(str(e), "'recursion'")
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -252,7 +253,7 @@ class TestSharedLock(unittest.TestCase):
         """
 
         # no argument test.
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         self.assertEqual(0, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
         lock.acquire()
@@ -268,7 +269,7 @@ class TestSharedLock(unittest.TestCase):
         self.assertTrue(lock.exclusiveLock is None)
 
         # Try to acquire a lock twice. Should fail.
-        with self.assertRaises(SharedLock.RecursionError) as e:
+        with self.assertRaises(RecursionError) as e:
             lock.acquire(timeout=5)
         self.assertTrue(lock.exclusiveLock is None)
         lock.release()
@@ -282,7 +283,7 @@ class TestSharedLock(unittest.TestCase):
         """
 
         mock_current_thread.return_value = 'thread1'
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         lock.acquire()
         self.assertEqual(1, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
@@ -307,7 +308,7 @@ class TestSharedLock(unittest.TestCase):
 
         # Try to acquire an exclusive lock.
         mock_current_thread.return_value = 'thread1'
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         lock.acquire(shared=False)
         self.assertEqual(lock.exclusiveLock, 'thread1')
         self.assertEqual(0, len(lock.lockersList))
@@ -317,9 +318,9 @@ class TestSharedLock(unittest.TestCase):
 
         # Get an exclusive lock and then attempt to get a shared lock with a
         # timeout.
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         lock.acquire(shared=False)
-        with self.assertRaises(SharedLock.TimeoutError):
+        with self.assertRaises(TimeoutError):
             lock.acquire(shared=True, timeout=1)
         self.assertEqual(lock.exclusiveLock, 'thread1')
         self.assertEqual(0, len(lock.lockersList))
@@ -332,7 +333,7 @@ class TestSharedLock(unittest.TestCase):
         lock.acquire(shared=True)
         self.assertEqual(1, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
-        with self.assertRaises(SharedLock.TimeoutError):
+        with self.assertRaises(TimeoutError):
             lock.acquire(shared=False, timeout=1)
 
 
@@ -340,7 +341,7 @@ class TestSharedLock(unittest.TestCase):
     def test_no_timeout(self):
         """Test acquiring shared locks from a different thread without a wait.
         """
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         # Get a shared lock and then attempt to get an exclusive lock without
         # a timeout.
         t1 = threading.Thread(target=self.getShared, args=[lock])
@@ -386,7 +387,7 @@ class TestSharedLock(unittest.TestCase):
         """Test the with construct.
         """
 
-        lock = SharedLock.SharedLock()
+        lock = SharedLock()
         with lock(shared=True):
             self.assertTrue(lock.exclusiveLock is None)
             self.assertEqual(1,len(lock.lockersList))
@@ -397,7 +398,7 @@ class TestSharedLock(unittest.TestCase):
 
 
 class TestCadcCache(unittest.TestCase):
-    """Test the CadcCache class
+    """Test the CadcCache.CadcCache class
     """
 
     testMD5="0dfbe8aa4c20b52e1b8bf3cb6cbdf193"
@@ -421,7 +422,7 @@ class TestCadcCache(unittest.TestCase):
         """
         testIOProxy = IOProxyForTest()
         testIOProxy = IOProxyForTest()
-        with Cache(testDir, 100, True) as testCache:
+        with CadcCache.Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
             self.assertEqual(1, testFile.refCount)
@@ -445,31 +446,31 @@ class TestCadcCache(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor1(self):
         # Constructor with a non-existing cache directory.
-        testObject = Cache(testDir, 100)
+        testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
         # Constructor with an existing cache directory.
-        testObject = Cache(testDir, 100)
+        testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
         self.setUp_testDirectory()
 
-        testObject = Cache(testDir, 100)
+        testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_constructor2(self):
         # Constructor with an existing cache directory and bad permissions.
-        testObject = Cache(testDir, 100)
+        testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
         os.chmod(testDir, stat.S_IRUSR)
         try:
-            with self.assertRaises(CacheError) as cm:
-                Cache(testDir, 100)
+            with self.assertRaises(CadcCache.CacheError) as cm:
+                CadcCache.Cache(testDir, 100)
         finally:
             os.chmod(testDir, stat.S_IRWXU)
 
@@ -480,8 +481,8 @@ class TestCadcCache(unittest.TestCase):
         # create the file
         open(testDir, 'a').close()
 
-        with self.assertRaises(CacheError) as cm:
-            Cache(testDir, 100)
+        with self.assertRaises(CadcCache.CacheError) as cm:
+            CadcCache.Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
@@ -491,8 +492,8 @@ class TestCadcCache(unittest.TestCase):
         os.mkdir(testDir)
         open(testDir + "/data", 'a').close()
 
-        with self.assertRaises(CacheError) as cm:
-            Cache(testDir, 100)
+        with self.assertRaises(CadcCache.CacheError) as cm:
+            CadcCache.Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
@@ -504,8 +505,8 @@ class TestCadcCache(unittest.TestCase):
         os.chmod(testDir + "/data", stat.S_IRUSR)
 
         try:
-            with self.assertRaises(CacheError) as cm:
-                Cache(testDir, 100)
+            with self.assertRaises(CadcCache.CacheError) as cm:
+                CadcCache.Cache(testDir, 100)
 
             self.assertTrue(str(cm.exception).find("permission") > 0)
         finally:
@@ -519,8 +520,8 @@ class TestCadcCache(unittest.TestCase):
         os.mkdir(testDir)
         open(testDir + "/metaData", 'a').close()
 
-        with self.assertRaises(CacheError) as cm:
-            Cache(testDir, 100)
+        with self.assertRaises(CadcCache.CacheError) as cm:
+            CadcCache.Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
@@ -533,8 +534,8 @@ class TestCadcCache(unittest.TestCase):
         os.chmod(testDir + "/metaData", stat.S_IRUSR)
 
         try:
-            with self.assertRaises(CacheError) as cm:
-                Cache(testDir, 100)
+            with self.assertRaises(CadcCache.CacheError) as cm:
+                CadcCache.Cache(testDir, 100)
 
             self.assertTrue(str(cm.exception).find("permission") > 0)
         finally:
@@ -592,7 +593,7 @@ class TestCadcCache(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_getmd5(self):
-        with Cache(testDir, 100) as testCache:
+        with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyForTest()
             self.makeTestFile(os.path.join(testCache.dataDir, 
                     "dir1/dir2/file"), self.testSize)
@@ -646,7 +647,7 @@ class TestCadcCache(unittest.TestCase):
                 return
 
 
-        with Cache(testDir, 100) as testObject:
+        with CadcCache.Cache(testDir, 100) as testObject:
             # Release a slow to write file.
             ioObject = IOProxy_writeToBacking_slow()
             thread.start_new_thread(self.release2_sub1, 
@@ -668,7 +669,7 @@ class TestCadcCache(unittest.TestCase):
     def test_release3(self):
         """Successful write to backing"""
 
-        with Cache(testDir, 100) as testObject:
+        with CadcCache.Cache(testDir, 100) as testObject:
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock()
@@ -700,7 +701,7 @@ class TestCadcCache(unittest.TestCase):
         """ Test checking the cache space """
         if os.path.exists(testDir):
             os.rmdir(testDir)
-        cache = Cache(cacheDir = testDir, maxCacheSize = 4)
+        cache = CadcCache.Cache(cacheDir = testDir, maxCacheSize = 4)
         testVospaceFile1 = "/dir1/dir2/file1";
         testVospaceFile2 = "/dir1/dir2/file2";
         testFile1 = cache.dataDir +"/dir1/dir2/file1"
@@ -727,7 +728,7 @@ class TestCadcCache(unittest.TestCase):
         """ Test cache cleanup """
         if os.path.exists(testDir):
             os.rmdir(testDir)
-        cache = Cache(cacheDir = testDir, maxCacheSize = 4)
+        cache = CadcCache.Cache(cacheDir = testDir, maxCacheSize = 4)
         testVospaceFile1 = "/dir1/dir2/file1";
         testVospaceFile2 = "/dir1/dir2/file2";
         testFile1 = cache.dataDir +"/dir1/dir2/file1"
