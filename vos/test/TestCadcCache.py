@@ -8,6 +8,7 @@ import stat
 import threading
 import thread
 import time
+import copy
 from contextlib import nested
 import shutil
 import unittest
@@ -163,7 +164,7 @@ class TestIOProxy(unittest.TestCase):
             self.assertEqual(testIOProxy.getMD5(),
                     "d41d8cd98f00b204e9800998ecf8427e")
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_blockInfo(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -396,6 +397,56 @@ class TestSharedLock(unittest.TestCase):
             self.assertTrue(lock.exclusiveLock is not None)
             self.assertEqual(0,len(lock.lockersList))
 
+class TestCacheCondtion(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_all(self):
+	lock = threading.Lock()
+	cond = CadcCache.CacheCondition(lock, 1)
+	self.assertEqual(cond.timeout,1)
+	self.assertTrue(cond.threadSpecificData.endTime is None)
+	self.assertTrue(cond.acquire())
+	self.assertFalse(cond.acquire(False))
+	cond.release()
+	self.assertTrue(cond.acquire(blocking=0))
+	cond.release()
+	cond.setTimeout()
+	self.assertTrue(cond.threadSpecificData.endTime is not None)
+	with cond:
+	    self.assertFalse(cond.acquire(False))
+            with self.assertRaises(CadcCache.CacheRetry):
+		print "waiting"
+		cond.wait()
+		cond.wait()
+
+	cond.clearTimeout()
+	self.assertTrue(cond.threadSpecificData.endTime is None)
+
+	# A wait without a timeout set.
+	cond = CadcCache.CacheCondition(lock, 30)
+	self.assertTrue(cond.threadSpecificData.endTime is None)
+	with cond:
+	    t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
+	    t1.start()
+	    cond.wait()
+
+	# A wait with a timeout set.
+	cond = CadcCache.CacheCondition(lock, 30)
+	cond.setTimeout()
+	self.assertTrue(cond.threadSpecificData.endTime is not None)
+	with cond:
+	    t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
+	    t1.start()
+	    cond.wait()
+
+    def notifyAfter1S(self,cond):
+	time.sleep(1)
+	with cond:
+	    cond.notify_all()
+
+
+
+
+	
 
 class TestCadcCache(unittest.TestCase):
     """Test the CadcCache class
@@ -573,7 +624,7 @@ class TestCadcCache(unittest.TestCase):
                 fd = testObject.open("/dir1/dir2/file", False, ioObject)
             fd.release()
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -682,7 +733,7 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking.assert_called_once_with(self.testMD5,
                     self.testSize, info.st_mtime)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_read1(self):
         """Test reading from a file which is not cached."""
 
@@ -692,12 +743,84 @@ class TestCadcCache(unittest.TestCase):
 	    data = fd.read(100,0)
 	    fd.release()
 
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_makeCached(self):
+        """initializing the cached file
+	"""
+	def sideEffectTrue(firstByte, lastByte):
+	    fd.readThread.checkProgress.side_effect = sideEffectFalse
+	    self.assertEqual(firstByte,0)
+	    self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
+	    return True
+
+	def sideEffectFalse(firstByte, lastByte):
+	    self.assertEqual(firstByte,0)
+	    self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
+	    return False
+
+	with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+	    ioObject = IOProxyFor100K()
+	    # Fully cached, makeCached does mostly nothing.
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
+		fd.fullyCached = True
+		oldMetaData = copy.deepcopy(fd.metaData)
+		fd.metaData.getRange = Mock()
+		fd.metaData.persist = Mock()
+		fd.makeCached(0,1)
+		self.assertEqual(fd.metaData.getRange.call_count, 0)
+		fd.metaData = oldMetaData
+		fd.fullyCached = False
+
+	    # Check that the block range correctly maps to bytes when
+	    # checkProgress is called. The call exits with a timeout.
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
+		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
+		fd.readThread.checkProgress = Mock()
+		fd.readThread.checkProgress.side_effect = sideEffectTrue
+		fd.fileCondition.setTimeout()
+		with self.assertRaises(CadcCache.CacheRetry):
+		    fd.makeCached(0,1)
+		self.assertEqual(fd.readThread.checkProgress.call_count, 1)
+
+	    # The required range is cached. The fn exists after calling
+	    # getRange.
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
+		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
+		oldMetaData = fd.metaData
+		fd.metaData = copy.deepcopy(oldMetaData)
+		fd.readThread.checkProgress = Mock()
+		fd.metaData.getRange = Mock(return_value=(None,None))
+		fd.makeCached(0,1)
+		self.assertEqual(fd.metaData.getRange.call_count, 1)
+		self.assertEqual(fd.readThread.checkProgress.call_count, 0)
+		fd.metaData = oldMetaData
+
+	    # Check that the block range correctly maps to bytes when
+	    # checkProgress is called. The call exits when data is available.
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
+		oldMetaData = copy.deepcopy(fd.metaData)
+		fd.metaData.persist = Mock()
+		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
+		fd.readThread.checkProgress = Mock()
+		fd.readThread.checkProgress.side_effect = sideEffectTrue
+		fd.fileCondition.setTimeout()
+		t1 = threading.Thread(target=self.notifyAfter1S,
+			args=[fd.fileCondition,fd])
+		t1.start()
+		fd.makeCached(0,1)
+		fd.metaData = oldMetaData
+
+    def notifyAfter1S(self,cond,fd):
+	time.sleep(1)
+	# Make getRange return None,None
+	with cond:
+	    fd.metaData.getRange = Mock(return_value=(None,None))
+	    cond.notify_all()
+
     @unittest.skipIf(skipTests, "Individual tests")
     def test_determineCacheSize(self):
         """Test checking the cache size."""
-
         self.assertTrue(False)
-
 
 
 #    @unittest.skipIf(skipTests, "Individual tests")
@@ -987,6 +1110,7 @@ suite2 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
 suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
 suite5 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
-alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5])
+suite6 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
+alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 

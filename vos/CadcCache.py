@@ -18,6 +18,61 @@ from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
 
 
+class CacheCondition(object):
+    """This extends threading.condtion (or it would if it were a class):
+       There is an optional timeout associated with the condition.
+       The timout starts runing when the condition lock is acquired.
+       The timeout throws the CacheTimeout exception.
+    """
+    def __init__(self, lock, timeout=None):
+        self.timeout = timeout
+        self.myCondition = threading.Condition(lock)
+        self.threadSpecificData = threading.local()
+        self.threadSpecificData.endTime = None
+
+    def __enter__(self):
+        """To support the with construct. 
+        """
+
+        self.acquire()
+        return self
+
+    def __exit__(self, a1, a2, a3):
+        """To support the with construct. 
+        """
+
+        self.release()
+        return
+
+    def setTimeout(self):
+        self.threadSpecificData.endTime = time.time() + self.timeout
+
+    def clearTimeout(self):
+        self.threadSpecificData.endTime = None
+
+    def acquire(self, blocking=True):
+        return self.myCondition.acquire(blocking)
+
+    def release(self):
+        self.myCondition.release()
+
+    def wait(self):
+        """Wait for the condition:"""
+
+        if self.threadSpecificData.endTime is None:
+            self.myCondition.wait()
+        else:
+            timeLeft = self.threadSpecificData.endTime - time.time()
+            if timeLeft < 0:
+                self.threadSpecificData.endTime = None
+                raise CacheRetry("Condition varible timeout")
+            else:
+                self.myCondition.wait(timeLeft)
+
+    def notify_all(self):
+        self.myCondition.notify_all()
+
+
 class Cache(object):
     """ 
     This class manages the cache for the vofs. 
@@ -359,7 +414,7 @@ class FileHandle(object):
         # always acquire the cache lock first.
         # Lock for modifing the FileHandle object.
         self.fileLock = threading.RLock()
-        self.fileCondition = threading.Condition(self.fileLock)
+        self.fileCondition = CacheCondition(self.fileLock, timeout=cache.timeout)
         # Lock for modifying content of a file. A shared lock should be acquired
         # whenever the data is modified. An exclusive lock should be acquired
         # when data is flushed to the backing store.
@@ -372,6 +427,13 @@ class FileHandle(object):
         # Is the file being flushed out to vospace right now?
         self.flushThread = None
         self.flushException = None
+        self.readThread = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self,a1,a2,a3):
+        self.release()
 
     def release(self):
         """Close the file.
@@ -385,7 +447,9 @@ class FileHandle(object):
 
         logging.debug("releasing node %s: refcount %d: modified %s" % 
                 (self.path, self.refCount, self.fileModified))
-        with self.fileLock:
+        self.fileCondition.setTimeout()
+        # using the condition lock acquires the fileLock
+        with self.fileCondition:
             # If flushing is not already in progress, wait for it to finish.
             if (self.flushThread is None and self.refCount == 1 and 
                     self.fileModified and not self.obsolete):
@@ -397,20 +461,10 @@ class FileHandle(object):
                 self.flushThread = threading.Thread(target=self.flushNode,
                         args=[])
                 self.flushThread.start()
-            startTime = time.time()
-            now = time.time()
-            while self.flushThread != None and (self.cache.timeout is None or 
-                    (now - startTime) < self.cache.timeout):
-                # Wait for the flush to complete but no more than the total time
-                if self.cache.timeout is None:
-                    self.fileCondition.wait()
-                else:
-                    self.fileCondition.wait(self.cache.timeout - 
-                            (now - startTime))
-                now = time.time()
-
-            if self.flushThread != None:
-                raise CacheRetry
+            while self.flushThread != None:
+                # Wait for the flush to complete. This will throw a CacheRetry
+                # exception if the timeout is exeeded.
+                self.fileCondition.wait()
 
             # Look for write failures.
             if self.flushException is not None:
@@ -520,6 +574,8 @@ class FileHandle(object):
         than the timeout.
         """
 
+        self.fileCondition.setTimeout()
+
         if offset > self.fileSize or size + offset > self.fileSize:
             raise CacheError("Attempt to read beyond the end of file.")
 
@@ -553,41 +609,70 @@ class FileHandle(object):
         if requiredRange == (None,None):
             return
 
-        # There is a current read thread and it will "soon" get to the required
-        # data, modify the mandatory read range of the read thread.
+        ## There is a current read thread and it will "soon" get to the required
+        ## data, modify the mandatory read range of the read thread.
 
-        with self.fileLock:
-            if self.readThread is not None:
+        # Acquiring self.fileCondition acquires self.fileLock
+        with self.fileCondition:
+            while self.readThread is not None:
+                requiredRange = self.metaData.getRange(firstBlock, firstBlock +
+                        numBlock - 1)
                 shouldWait = self.readThread.checkProgress(
                         requiredRange[0] * Cache.IO_BLOCK_SIZE,
                         min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
                             self.fileSize))
-        raise NotImplementedError("TODO")
-        # TODO worry about race conditions with other reads and writes.
+                if shouldWait:
+                    while (self.metaData.getRange(firstBlock, firstBlock +
+                            numBlock - 1) != (None,None) and
+                            self.readThread is not None):
+                        self.fileCondition.wait()
+                else:
+                    # abort the thread
+                    self.readThread.aborted = True
+
+                    # wait for the existing thread to exit. This may time out
+                    self.fileCondition.wait()
+
+                if (self.metaData.getRange(firstBlock, firstBlock +
+                        numBlock - 1) == (None,None)):
+                    return
+
+            # Make sure the required range hasn't changed
+            requiredRange = self.metaData.getRange(firstBlock, firstBlock +
+                    numBlock - 1)
+
+            # Figure out where the optional end of the read should be.
+            nextRead = self.metaData.getNextReadBlock(requiredRange[1])
+            if nextRead == -1:
+                optionalEnd = self.fileSize
+            else:
+                optionalEnd = nextRead * Cache.IO_BLOCK_SIZE
+
+            # No read thread running, start one.
+            self.readThread = CacheReadThread( self,
+                    requiredRange[0] * Cache.IO_BLOCK_SIZE,
+                    min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
+                    self.fileSize), optionalEnd)
+            self.readThread.start()
+
+            # Wait for the data be be available.
+            while (self.metaData.getRange(firstBlock, firstBlock +
+                    numBlock - 1) != (None,None) and
+                    self.readThread is not None):
+                self.fileCondition.wait()
 
 
-
-        # There is a current read thread and it will not soon get to the
-        # required data. 
-            # Abort the read thread
-            # Wait for the read thread to terminate
-
-        # If there is no current read thread, start a read for the new data 
-        # range with mandatory and optional ranges. Other threads may be 
-        # competing for the read thread.
-
-        # Wait for the required blocks to be available.
-
-
-class CacheReadThread:
-    def __init__(self ):
-        self.start = something
-        self.mandatoryEnd = something
-        self.optionEnd = something
+class CacheReadThread(threading.Thread):
+    def __init__(self, fileHandle, start, mandatoryEnd, optionalEnd):
+        
+        threading.Thread.__init__(self, target=self.execute)
+        self.start = start
+        self.mandatoryEnd = mandatoryEnd
+        self.optionalEnd = optionalEnd
         self.aborted = False
-        self.currentByte = something
-        self.downloadSpeed = something
-
+        self.currentByte = None
+        self.downloadSpeed = None
+        self.fileHandle = fileHandle
 
 
     def checkProgress(self, firstByte, lastByte):
@@ -596,5 +681,12 @@ class CacheReadThread:
         #fileLock acquired
         return False
 
-    def execute(self, ioobject):
-        ioObject.read(self.start, self.opitonalEnd)
+    def execute(self):
+        with self.fd.fileLock:
+            self.fd.metaData.set
+            self.fd.fileCondition.notify_all()
+            self.fd.readThread = None
+
+    def readFromBacking(self, size = None, offset = 0, 
+            blockSize = Cache.IO_BLOCK_SIZE):
+        pass
