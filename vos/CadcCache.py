@@ -617,24 +617,24 @@ class FileHandle(object):
 
         # Acquiring self.fileCondition acquires self.fileLock
         with self.fileCondition:
+            if self.readThread is not None:
+                start = requiredRange[0] * Cache.IO_BLOCK_SIZE
+                size = ((requiredRange[1] - requiredRange[0] + 1) *
+                        Cache.IO_BLOCK_SIZE)
+                startNewThread = self.readThread.isNewReadBest(start, size)
+
             while self.readThread is not None:
-                requiredRange = self.metaData.getRange(firstBlock, firstBlock +
-                        numBlock - 1)
-                shouldWait = self.readThread.checkProgress(
-                        requiredRange[0] * Cache.IO_BLOCK_SIZE,
-                        min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
-                            self.fileSize))
-                if shouldWait:
-                    while (self.metaData.getRange(firstBlock, firstBlock +
-                            numBlock - 1) != (None,None) and
-                            self.readThread is not None):
-                        self.fileCondition.wait()
-                else:
+                if startNewThread:
                     # abort the thread
                     self.readThread.aborted = True
 
                     # wait for the existing thread to exit. This may time out
                     self.fileCondition.wait()
+                else:
+                    while (self.metaData.getRange(firstBlock, firstBlock +
+                            numBlock - 1) != (None,None) and
+                            self.readThread is not None):
+                        self.fileCondition.wait()
 
                 if (self.metaData.getRange(firstBlock, firstBlock +
                         numBlock - 1) == (None,None)):
@@ -644,18 +644,20 @@ class FileHandle(object):
             requiredRange = self.metaData.getRange(firstBlock, firstBlock +
                     numBlock - 1)
 
+            # No read thread running, start one.
+            startByte = requiredRange[0] * Cache.IO_BLOCK_SIZE
+            mandatorySize = min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
+                    self.fileSize) - startByte
+
             # Figure out where the optional end of the read should be.
             nextRead = self.metaData.getNextReadBlock(requiredRange[1])
             if nextRead == -1:
-                optionalEnd = self.fileSize
+                optionalSize = self.fileSize - startByte
             else:
-                optionalEnd = nextRead * Cache.IO_BLOCK_SIZE
+                optionalSize = (nextRead * Cache.IO_BLOCK_SIZE) - startByte
 
-            # No read thread running, start one.
-            self.readThread = CacheReadThread( self,
-                    requiredRange[0] * Cache.IO_BLOCK_SIZE,
-                    min((requiredRange[1] + 1) * Cache.IO_BLOCK_SIZE,
-                    self.fileSize), optionalEnd)
+            self.readThread = CacheReadThread(startByte, mandatorySize,
+                    optionalSize, self)
             self.readThread.start()
 
             # Wait for the data be be available.
@@ -666,33 +668,50 @@ class FileHandle(object):
 
 
 class CacheReadThread(threading.Thread):
-    def __init__(self, fileHandle, start, mandatoryEnd, optionalEnd):
-        
-        threading.Thread.__init__(self, target=self.execute)
+    CONTINUE_MAX_SIZE = 1024*1024
+    
+    def __init__(self, start, mandatorySize, optionSize, fileHandle):
+        """ CacheReadThread class is used to start data transfer from the back end
+            in a separate thread. It also decides whether it can accommodate new 
+            requests or new CacheReadThreads is required.
+            
+            start - start reading position
+            mandatorySize - mandatory size that needs to be read
+            optionSize - optional size that can be read beyond the mandatory
+            fileHandle - file handle """
+        threading.Thread.__init__(self,target=self.execute)
         self.startByte = start
-        self.mandatoryEnd = mandatoryEnd
-        self.optionalEnd = optionalEnd
+        self.mandatoryEnd = start + mandatorySize
+        self.optionSize = optionSize
+        self.optionEnd = start + optionSize
         self.aborted = False
-        self.currentByte = None
-        self.downloadSpeed = None
         self.fileHandle = fileHandle
+        self.currentByte = start
+
+    def setCurrentByte(self, byte):
+        """ To set the current byte being successfully cached"""
+        self.currentByte = byte
 
 
-    def checkProgress(self, firstByte, lastByte):
-        #determine if the file is nearly there. If it is adjust the mandatoryEnd
-        #and return true. Otherwise return False. Must be called with the
-        #fileLock acquired
-        return False
+    def isNewReadBest(self, start, size):
+        """To determine if a new read request can be satisfied with the existing
+           thread or a new thread is required. It returns true if a new read is
+           required or false otherwise.
+           Must be called with the #fileLock acquired"""
+        if start < self.startByte:
+            return True
+        if (start + size) > (self.optionEnd):
+            self.mandatoryEnd = self.optionEnd
+            return True
+        readRef = max(self.mandatoryEnd, self.currentByte)
+        if (start <= readRef) or ((start - readRef) 
+                                      <= CacheReadThread.CONTINUE_MAX_SIZE):
+            self.mandatoryEnd = max(self.mandatoryEnd, start + size)
+            return False       
+        return True
 
     def execute(self):
-        ## all of the following is temporary
-        with self.fileHandle.fileLock:
-            firstBlock, numBlocks = self.fileHandle.ioObject.blockInfo(
-                    self.startByte, self.optionalEnd - self.startByte - 1)
-            self.fileHandle.metaData.setReadBlocks(0,6)
+        self.fileHandle.ioObject.readFromBacking(self.startByte, self.optionSize)
+        with self.fileHandle.fileCondition:
             self.fileHandle.readThread = None
             self.fileHandle.fileCondition.notify_all()
-
-    def readFromBacking(self, size = None, offset = 0, 
-            blockSize = Cache.IO_BLOCK_SIZE):
-        pass

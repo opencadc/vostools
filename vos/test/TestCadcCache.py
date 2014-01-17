@@ -598,10 +598,10 @@ class TestCadcCache(unittest.TestCase):
         for dir in directories:
             os.mkdir("/".join([ testDir , dir ]))
             for f in files:
-                fd = open("/".join([ testDir, dir, f ]),  'a')
-                fd.seek(1000)
-                fd.write ("a")
-                fd.close()
+                fh = open("/".join([ testDir, dir, f ]),  'a')
+                fh.seek(1000)
+                fh.write ("a")
+                fh.close()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_open1(self):
@@ -614,15 +614,15 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            self.assertFalse(fd.fullyCached)
-            self.assertFalse(fd.fileModified)
-            fd.release()
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            self.assertFalse(fh.fullyCached)
+            self.assertFalse(fh.fileModified)
+            fh.release()
 
             ioObject = IOProxy_getMD5_ENOENT()
             with self.assertRaises(OSError):
-                fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.release()
+                fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_open2(self):
@@ -630,14 +630,14 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
-            fd = testObject.open("/dir1/dir2/file", True, ioObject)
-            self.assertTrue(fd.fullyCached)
-            self.assertTrue(fd.fileModified)
-            fd.release()
+            fh = testObject.open("/dir1/dir2/file", True, ioObject)
+            self.assertTrue(fh.fullyCached)
+            self.assertTrue(fh.fileModified)
+            fh.release()
 
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
             fd2 = testObject.open("/dir1/dir2/file", True, ioObject2)
-            fd.release()
+            fh.release()
             fd2.release()
 
 
@@ -648,14 +648,14 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyForTest()
             self.makeTestFile(os.path.join(testCache.dataDir, 
                     "dir1/dir2/file"), self.testSize)
-            fd = testCache.open("/dir1/dir2/file", False, ioObject)
-            result = fd.getmd5()
+            fh = testCache.open("/dir1/dir2/file", False, ioObject)
+            result = fh.getmd5()
             # Check the md5sum and size are correct, and the modification
             # time is roughly nowish.
             self.assertEqual((self.testMD5, self.testSize), result[0:2])
             self.assertTrue(abs(result[2] - time.time()) < 10)
 
-            fd.release()
+            fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release1(self):
@@ -663,17 +663,17 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.release()
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh.release()
 
             # Test flushnode raising an exception
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.fileModified = True
-            fd.getmd5 = Mock(side_effect=Exception("failed"))
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh.fileModified = True
+            fh.getmd5 = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
-                fd.release()
+                fh.release()
 
     def makeTestFile(self, name, size):
         try:
@@ -693,7 +693,7 @@ class TestCadcCache(unittest.TestCase):
                 """ test returns False """
                 return False
 
-            def writeToBacking(self, fd, mtime):
+            def writeToBacking(self, fh, mtime):
                 time.sleep(4)
                 return
 
@@ -707,14 +707,14 @@ class TestCadcCache(unittest.TestCase):
 
             ioObject2 = IOProxyForTest()
             ioObject2.writeToBacking = MagicMock()
-            fd = testObject.open("/dir1/dir2/file", False, ioObject2)
-            fd.release()
+            fh = testObject.open("/dir1/dir2/file", False, ioObject2)
+            fh.release()
             assert not ioObject2.writeToBacking.called, \
                     'writeToBacking was called and should not have been'
 
     def release2_sub1(self, testObject, ioObject):
-        fd = testObject.open("/dir1/dir2/file", False, ioObject)
-        fd.release()
+        fh = testObject.open("/dir1/dir2/file", False, ioObject)
+        fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release3(self):
@@ -726,22 +726,22 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking = MagicMock()
             self.makeTestFile(os.path.join(testObject.dataDir, 
                     "dir1/dir2/file"), self.testSize)
-            fd = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd.fileModified = True
-            info = os.stat(fd.cacheDataFile)
-            fd.release()
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh.fileModified = True
+            info = os.stat(fh.cacheDataFile)
+            fh.release()
             ioObject.writeToBacking.assert_called_once_with(self.testMD5,
                     self.testSize, info.st_mtime)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_read1(self):
         """Test reading from a file which is not cached."""
 
 	with CadcCache.Cache(testDir, 100) as testCache:
 	    ioObject = IOProxyFor100K()
-	    fd = testCache.open("/dir1/dir2/file", False, ioObject)
-	    data = fd.read(100,0)
-	    fd.release()
+	    fh = testCache.open("/dir1/dir2/file", False, ioObject)
+	    data = fh.read(100,0)
+	    fh.release()
 
     #@unittest.skipIf(skipTests, "Individual tests")
     def test_makeCached(self):
@@ -762,11 +762,11 @@ class TestCadcCache(unittest.TestCase):
 		    self.fileHandle.metaData.setReadBlocks(0,6)
 		    self.fileHandle.readThread = None
 
-	    def checkProgress(self, first, last):
+	    def isNewReadBest(self, first, last):
 		return False
 
 	def sideEffectTrue(firstByte, lastByte):
-	    fd.readThread.checkProgress.side_effect = sideEffectFalse
+	    fh.readThread.isNewReadBest.side_effect = sideEffectFalse
 	    self.assertEqual(firstByte,0)
 	    self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
 	    return True
@@ -784,121 +784,123 @@ class TestCadcCache(unittest.TestCase):
 	with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
 	    ioObject = IOProxyFor100K()
 	    # Fully cached, makeCached does mostly nothing.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		fd.fullyCached = True
-		oldMetaData = copy.deepcopy(fd.metaData)
-		fd.metaData.getRange = Mock()
-		fd.metaData.persist = Mock()
-		fd.makeCached(0,1)
-		self.assertEqual(fd.metaData.getRange.call_count, 0)
-		fd.metaData = oldMetaData
-		fd.fullyCached = False
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		fh.fullyCached = True
+		oldMetaData = copy.deepcopy(fh.metaData)
+		fh.metaData.getRange = Mock()
+		fh.metaData.persist = Mock()
+		fh.makeCached(0,1)
+		self.assertEqual(fh.metaData.getRange.call_count, 0)
+		fh.metaData = oldMetaData
+		fh.fullyCached = False
 
 	    # Check that the block range correctly maps to bytes when
-	    # checkProgress is called. The call exits with a timeout.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
-		fd.readThread.checkProgress = Mock()
-		fd.readThread.checkProgress.side_effect = sideEffectTrue
-		fd.fileCondition.setTimeout()
-		fd.metaData.delete()
-		with self.assertRaises(CadcCache.CacheRetry):
-		    fd.makeCached(0,1)
-		self.assertEqual(fd.readThread.checkProgress.call_count, 1)
-		fd.readThread=None
+	    # isNewReadBest is called. The call exits with a timeout.
+	    #with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+	    fh = testCache.open("/dir1/dir2/file", False, ioObject)
+            fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+            fh.readThread.isNewReadBest = Mock()
+            fh.readThread.isNewReadBest.side_effect = sideEffectTrue
+            fh.fileCondition.setTimeout()
+            fh.metaData.delete()
+            with self.assertRaises(CadcCache.CacheRetry):
+                fh.makeCached(0,1)
+            self.assertEqual(fh.readThread.isNewReadBest.call_count, 1)
+            fh.readThread=None
+            fh.release()
 
 	    # The required range is cached. The fn exists after calling
 	    # getRange.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
-		oldMetaData = fd.metaData
-		fd.metaData = copy.deepcopy(oldMetaData)
-		fd.readThread.checkProgress = Mock()
-		fd.metaData.getRange = Mock(return_value=(None,None))
-		fd.makeCached(0,1)
-		self.assertEqual(fd.metaData.getRange.call_count, 1)
-		self.assertEqual(fd.readThread.checkProgress.call_count, 0)
-		fd.metaData = oldMetaData
-		fd.readThread=None
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+		oldMetaData = fh.metaData
+		fh.metaData = copy.deepcopy(oldMetaData)
+		fh.readThread.isNewReadBest = Mock()
+		fh.metaData.getRange = Mock(return_value=(None,None))
+		fh.makeCached(0,1)
+		self.assertEqual(fh.metaData.getRange.call_count, 1)
+		self.assertEqual(fh.readThread.isNewReadBest.call_count, 0)
+		fh.metaData = oldMetaData
+		fh.readThread=None
 
 	    # Check that the block range correctly maps to bytes when
-	    # checkProgress is called. The call exits when data is available.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		oldMetaData = copy.deepcopy(fd.metaData)
-		fd.metaData.persist = Mock()
-		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
-		fd.readThread.checkProgress = Mock()
-		fd.readThread.checkProgress.side_effect = sideEffectTrue
-		fd.fileCondition.setTimeout()
-		fd.metaData.delete()
+	    # isNewReadBest is called. The call exits when data is available.
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		oldMetaData = copy.deepcopy(fh.metaData)
+		fh.metaData.persist = Mock()
+		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+		fh.readThread.isNewReadBest = Mock()
+		fh.readThread.isNewReadBest.side_effect = sideEffectTrue
+		fh.fileCondition.setTimeout()
+		fh.metaData.delete()
 		t1 = threading.Thread(target=self.notifyReMockRange,
-			args=[fd.fileCondition,fd])
+			args=[fh.fileCondition,fh])
 		t1.start()
-		fd.makeCached(0,1)
-		fd.metaData = oldMetaData
-		fd.readThread=None
+		fh.makeCached(0,1)
+		fh.metaData = oldMetaData
+		fh.readThread=None
 
 	    # This call will cause the existing thread be be aborted, and a new
 	    # thread to be started. This will look like the data is available
 	    # immediately after the thread aborts, and so no new thread will
 	    # start. This test fails by timing out in the condition wait, 
 	    # which throws an exception.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		oldMetaData = copy.deepcopy(fd.metaData)
-		fd.readThread=CadcCache.CacheReadThread(fd,0,0,0)
-		fd.readThread.checkProgress = Mock()
-		fd.readThread.checkProgress.side_effect = sideEffectFalse
-		fd.fileCondition.setTimeout()
-		fd.metaData.delete()
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		oldMetaData = copy.deepcopy(fh.metaData)
+		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+		fh.readThread.isNewReadBest = Mock()
+		fh.readThread.isNewReadBest.side_effect = sideEffectFalse
+		fh.fileCondition.setTimeout()
+		fh.metaData.delete()
 		t1 = threading.Thread(target=self.notifyReMockRange,
-			args=[fd.fileCondition,fd])
+			args=[fh.fileCondition,fh])
 		t1.start()
-		fd.makeCached(0,1)
-		fd.metaData = oldMetaData
-		fd.readThread=None
+		fh.makeCached(0,1)
+		fh.metaData = oldMetaData
+		fh.readThread=None
 
 	    # This call will cause the existing thread be be aborted, and a new
 	    # thread to be started. The data will not seem to be availble, so a
 	    # new thread will be started. This test fails by timing out in the
 	    # condition wait, which throws an exception.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		fd.fileCondition.setTimeout()
-		fd.metaData.delete()
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		fh.fileCondition.setTimeout()
+		fh.metaData.delete()
 		t1 = threading.Thread(target=self.notifyAfter1S,
-			args=[fd.fileCondition,fd])
+			args=[fh.fileCondition,fh])
 		t1.start()
 		with patch('CadcCache.CacheReadThread') as mockedClass:
-		    mockedClass.return_value = CacheReadThreadMock(fd)
-		    fd.makeCached(0,1)
+		    mockedClass.return_value = CacheReadThreadMock(fh)
+		    fh.makeCached(0,1)
 
 	    # This call will cause the optional end to be before the end of the
 	    # file because some data near the end of the file has been cached.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fd:
-		fd.fileCondition.setTimeout()
-		fd.metaData.delete()
+	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+		fh.fileCondition.setTimeout()
+		fh.metaData.delete()
 		t1 = threading.Thread(target=self.notifyAfter1S,
-			args=[fd.fileCondition,fd])
+			args=[fh.fileCondition,fh])
 		t1.start()
 		with patch('CadcCache.CacheReadThread') as mockedClass:
 		    realClass = mockedClass.returnValue
-		    mockedClass.return_value = CacheReadThreadMock(fd)
-		    fd.metaData.setReadBlocks(6, 6)
-		    fd.metaData.md5sum = 12345
-		    fd.makeCached(0,1)
+		    mockedClass.return_value = CacheReadThreadMock(fh)
+		    fh.metaData.setReadBlocks(6, 6)
+		    fh.metaData.md5sum = 12345
+		    fh.makeCached(0,1)
 		    # TODO figure out a way to test the result. The init method
 		    # of CacheReadThreadMock should be with arguments which get
 		    # the first block as mandatory, and everything except the
 		    # last block as optional
 
 
-    def notifyReMockRange(self,cond,fd):
+    def notifyReMockRange(self,cond,fh):
 	time.sleep(1)
 	# Make getRange return None,None
 	with cond:
-	    fd.metaData.getRange = Mock(return_value=(None,None))
+	    fh.metaData.getRange = Mock(return_value=(None,None))
 	    cond.notify_all()
 
-    def notifyAfter1S(self,cond,fd):
+    def notifyAfter1S(self,cond,fh):
 	time.sleep(1)
 	# Make getRange return None,None
 	with cond:
@@ -971,6 +973,132 @@ class TestCadcCache(unittest.TestCase):
         cache.checkCacheSpace()
         # no files deleted as all of them are in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
+        
+
+class TestCadcCacheReadThread(unittest.TestCase):
+    """Test the CadcCache.CacheTreadThread class
+    """
+    class MyIoObject(CadcCache.IOProxy):
+        def readFromBacking(self, size = None, offset = 0, 
+            blockSize = CadcCache.Cache.IO_BLOCK_SIZE):
+            pass
+    
+    class MyFileHandle(CadcCache.FileHandle):
+        def __init__(self, path, cache, ioObject):
+            self.ioObject = ioObject
+            pass
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+    
+    
+    def test_isNewReadBest(self):
+        dataBlock = 64*1024
+        CadcCache.CacheReadThread.CONTINUE_MAX_SIZE = dataBlock
+        start = dataBlock
+        mandatoryEnd = 4 * dataBlock
+        optionEnd = 7 * dataBlock
+        ioObject = TestCadcCacheReadThread.MyIoObject()
+        fh = TestCadcCacheReadThread.MyFileHandle(None, None, ioObject)
+        crt = CadcCache.CacheReadThread(start = start, 
+                                        mandatorySize = mandatoryEnd - start, 
+                                        optionSize = optionEnd - start, 
+                                        fileHandler = fh)
+        crt.execute()
+        
+        # test when either start or end or requested interval is outside 
+        # [start, start + optionSize)
+        self.assertTrue(crt.isNewReadBest(0, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        
+        self.assertTrue(crt.isNewReadBest(start + dataBlock, optionEnd + dataBlock))
+        # mandatoryEnd becomes optionEnd in this case
+        self.assertEquals(optionEnd, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #current byte between current start and mandatory
+        #requested start between current start and currentByte
+        crt.setCurrentByte(3*dataBlock)
+        #requested end between current start and current byte
+        self.assertFalse(crt.isNewReadBest(dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        #requested end between current byte and current mandatory
+        self.assertFalse(crt.isNewReadBest(dataBlock, 3 * dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        #requested end between current mandatory and current optional
+        self.assertFalse(crt.isNewReadBest(dataBlock, 5 * dataBlock))
+        #requested end becomes the current mandatory
+        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #requested start between currentByte and current mandatory
+        #requested end between current byte and current mandatory
+        self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        #requested end between current mandatory and current optional
+        self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
+        #requested end becomes the current mandatory
+        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #requested start between currentByte and current mandatory
+        #requested end between current byte and current mandatory
+        self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        #requested end between current mandatory and current optional
+        self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
+        #requested end becomes the current mandatory
+        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #requested start between mandatoryEnd and optionalEnd
+        #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
+        self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd + 2 * dataBlock, crt.mandatoryEnd) 
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
+        self.assertTrue(crt.isNewReadBest(mandatoryEnd + 2 * dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        
+        
+        #current byte between mandatory and optional
+        crt.setCurrentByte(5 * dataBlock)
+        #request start and end between start and mandatory
+        self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        
+        #request end between mandatory and current byte
+        self.assertFalse(crt.isNewReadBest(start + dataBlock, 4 * dataBlock))
+        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+    
+        # request end after mandatory
+        self.assertFalse(crt.isNewReadBest(start + dataBlock, 5 * dataBlock))
+        self.assertEquals(7 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #start between mandatory and current byte
+        # end between mandatory and current byte
+        self.assertFalse(crt.isNewReadBest(mandatoryEnd, dataBlock))
+        self.assertEquals(5 * dataBlock, crt.mandatoryEnd)
+        #end between current byte and optional byte
+        self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
+        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        #start after current byte but with less then CONTINUE_MAX_SIZE
+        self.assertFalse(crt.isNewReadBest(5 * dataBlock, dataBlock))
+        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+        crt.mandatoryEnd = mandatoryEnd #reset for next tests
+        
+        # start after current byte but with more then  CONTINUE_MAX_SIZE
+        self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
+        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+        
 
 logging.getLogger('CadcCache').setLevel(logging.DEBUG)
 logging.getLogger('CadcCache').addHandler(logging.StreamHandler())
