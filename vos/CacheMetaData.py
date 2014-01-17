@@ -49,7 +49,8 @@ class CacheMetaData(object):
         if end < 0:
             endBlock = self.bitmap.length() + end
         if startBlock > endBlock:
-            raise ValueError('''Incorrect interval''')
+            raise ValueError('''Incorrect interval, max is %d > %d''' %
+                    (startBlock, endBlock))
         for i in range(startBlock, endBlock + 1):
             self.setReadBlock(i)
         

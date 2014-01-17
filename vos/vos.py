@@ -608,6 +608,10 @@ class VOFile:
     maxRetryTime - maximum time to retry for when transient errors are encountered
     """
    
+    errnos = { 404: errno.ENOENT,
+               401: errno.EACCES,
+               409: errno.EEXIST,
+               408: errno.EAGAIN }
     ### if we get one of these codes, retry the command... ;-(
     retryCodes = (503, 408, 504, 412) 
 
@@ -680,10 +684,6 @@ class VOFile:
                  401: "Not Authorized",
                  409: "Conflict",
                  408: "Connection Timeout"}
-        errnos = { 404: errno.ENOENT,
-                   401: errno.EACCES,
-                   409: errno.EEXIST,
-                   408: errno.EAGAIN }
         logger.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
             logger.debug("Got status code: %s for %s" % (self.resp.status, self.url))
@@ -691,7 +691,7 @@ class VOFile:
             if msg is not None:
                 msg = html2text.html2text(msg, self.url).strip()
             logger.debug("Error message: %s" % (msg))
-            if self.resp.status in errnos.keys():
+            if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.certfile is None:
@@ -780,8 +780,6 @@ class VOFile:
             self._fpos += len(buff)
             #logger.debug("left file pointer at: %d" % (self._fpos))
             return buff
-        elif self.resp.status == 404:
-            raise IOError(errnos[self.resp.status], self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location', None)
             logger.debug("Got redirect URL: %s" % (URL))
@@ -797,6 +795,13 @@ class VOFile:
                 #logger.debug("Got url:%s from redirect but not following" % (self.url))
                 return self.url
         elif self.resp.status in VOFile.retryCodes:
+            # Note: 404 (File Not Found) might be returned when:
+            # 1. file deleted or replaced
+            # 2. file migrated from cache
+            # 3. hardware failure on storage node
+            # For 3. it is necessary to try the other URLs in the list otherwise this the
+            # failed URL might show up even after the caller tries to re-negotiate the transfer.
+            # For 1. and 2., calls to the other URLs in the list might or might not succed. 
             if self.urlIndex < len(self.URLs)-1:
                 # go to the next URL
                 self.urlIndex += 1

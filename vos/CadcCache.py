@@ -166,9 +166,9 @@ class Cache(object):
                 fileHandle.metaData.delete()
         else:
             fileHandle.fileSize = ioObject.getSize()
-            blocks,numBlock = ioObject.blockInfo(fileHandle.fileSize, 0)
+            blocks, numBlock = ioObject.blockInfo(0, fileHandle.fileSize)
             fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
-                    blocks, ioObject.getMD5())
+                    numBlock, ioObject.getMD5())
             fileHandle.fullyCached = False
 
         self.checkCacheSpace()
@@ -242,7 +242,7 @@ class Cache(object):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 with self.cacheLock:
-                    inFileHandleDict = (f[len(self.dataDir):] not in 
+                    inFileHandleDict = (fp[len(self.dataDir):] not in 
                             self.fileHandleDict)
                 if (inFileHandleDict and oldest_time > os.stat(fp).st_atime):
                     oldest_time = os.stat(fp).st_atime
@@ -461,7 +461,10 @@ class FileHandle(object):
                 self.flushThread = threading.Thread(target=self.flushNode,
                         args=[])
                 self.flushThread.start()
-            while self.flushThread != None:
+            # Tell any running read thread to exit
+            if self.readThread != None:
+                self.readThread.aborted = True
+            while self.flushThread != None or self.readThread != None:
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
                 self.fileCondition.wait()
@@ -494,7 +497,7 @@ class FileHandle(object):
         md5 = hashlib.md5()
         size = 0
 
-        #TODO Don't open by file name
+        # Don't open by file name, the file may have been deleted.
         with os.fdopen(os.dup(self.ioObject.cacheFileDescriptor),'r') as r:
             while True:
                 buff=r.read(Cache.IO_BLOCK_SIZE)
@@ -525,7 +528,7 @@ class FileHandle(object):
                 self.ioObject.writeToBacking(md5, size, mtime)
 
                 # Update the meta data md5
-                blocks,blocks = self.ioObject.blockInfo(size, 0)
+                blocks,blocks = self.ioObject.blockInfo(0, size)
                 self.metaData = CacheMetaData(self.cacheMetaDataFile, blocks, 
                         md5)
                 self.metaData.md5sum = md5
@@ -666,7 +669,7 @@ class CacheReadThread(threading.Thread):
     def __init__(self, fileHandle, start, mandatoryEnd, optionalEnd):
         
         threading.Thread.__init__(self, target=self.execute)
-        self.start = start
+        self.startByte = start
         self.mandatoryEnd = mandatoryEnd
         self.optionalEnd = optionalEnd
         self.aborted = False
@@ -682,10 +685,13 @@ class CacheReadThread(threading.Thread):
         return False
 
     def execute(self):
-        with self.fd.fileLock:
-            self.fd.metaData.set
-            self.fd.fileCondition.notify_all()
-            self.fd.readThread = None
+        ## all of the following is temporary
+        with self.fileHandle.fileLock:
+            firstBlock, numBlocks = self.fileHandle.ioObject.blockInfo(
+                    self.startByte, self.optionalEnd - self.startByte - 1)
+            self.fileHandle.metaData.setReadBlocks(0,6)
+            self.fileHandle.readThread = None
+            self.fileHandle.fileCondition.notify_all()
 
     def readFromBacking(self, size = None, offset = 0, 
             blockSize = Cache.IO_BLOCK_SIZE):
