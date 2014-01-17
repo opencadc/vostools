@@ -581,21 +581,46 @@ class FileHandle(object):
 
 
 class CacheReadThread:
-    def __init__(self ):
-        self.start = something
-        self.mandatoryEnd = something
-        self.optionEnd = something
+    CONTINUE_MAX_SIZE = 1024*1024
+    
+    def __init__(self, start, mandatorySize, optionSize, fileHandler):
+        """ CacheReadThread class is used to start data transfer from the back end
+            in a separate thread. It also decides whether it can accommodate new 
+            requests or new CacheReadThreads is required.
+            
+            start - start reading position
+            mandatorySize - mandatory size that needs to be read
+            optionSize - optional size that can be read beyond the mandatory
+            fileHandler - file handler """
+        self.start = start
+        self.mandatoryEnd = start + mandatorySize
+        self.optionSize = optionSize
+        self.optionEnd = start + optionSize
         self.aborted = False
-        self.currentByte = something
-        self.downloadSpeed = something
+        self.fileHandler = fileHandler
+        self.currentByte = start
+
+    def setCurrentByte(self, byte):
+        """ To set the current byte being successfully cached"""
+        self.currentByte = byte
 
 
+    def isNewReadBest(self, start, size):
+        """To determine if a new read request can be satisfied with the existing
+           thread or a new thread is required. It returns true if a new read is
+           required or false otherwise.
+           Must be called with the #fileLock acquired"""
+        if start < self.start:
+            return True
+        if (start + size) > (self.optionEnd):
+            self.mandatoryEnd = self.optionEnd
+            return True
+        readRef = max(self.mandatoryEnd, self.currentByte)
+        if (start <= readRef) or ((start - readRef) 
+                                      <= CacheReadThread.CONTINUE_MAX_SIZE):
+            self.mandatoryEnd = max(self.mandatoryEnd, start + size)
+            return False       
+        return True
 
-    def checkProgress(self, firstByte, lastByte):
-        #determine if the file is nearly there. If it is adjust the mandatoryEnd
-        #and return true. Otherwise return False. Must be called with the
-        #fileLock acquired
-        return False
-
-    def execute(self, ioobject):
-        ioObject.read(self.start, self.opitonalEnd)
+    def execute(self):
+        self.fileHandler.ioObject.readFromBacking(self.start, self.optionSize)
