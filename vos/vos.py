@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 from __version__ import version
 
 logger = logging.getLogger('vos')
-#logger.addHandler(logging.NullHandler())
+logger.addHandler(logging.NullHandler())
 
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
@@ -1058,8 +1058,24 @@ class Client:
         logger.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
         URL = None
         if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
+
             ## only get here if cadc_short_cut == True
             # find out the URL to the CADC data server
+
+            if view == "cutout":
+                if cutout is None:
+                    raise ValueError("For view=cutout, must specify a cutout "
+                                     "value of the form"
+                                     "[extension number][x1:x2,y1:y2]")
+
+                parts = urlparse(self.fixURI(uri))
+                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
+                ext = "&" if "?" in URL else "?"
+                URL += ext + "cutout=" + cutout
+
+                logger.debug("Sending short cuturl: %s" %( URL))
+                return URL
+
             direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
             transProtocol = ''
             if self.protocol == 'http':
@@ -1093,18 +1109,6 @@ class Client:
             finally: 
                 httpCon.close()          
   
-            if view == "cutout":
-                if cutout is None:
-                    raise ValueError("For view=cutout, must specify a cutout "
-                                     "value of the form"
-                                     "[extension number][x1:x2,y1:y2]")
-
-                parts = urlparse(uri)
-                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
-                ext = "&" if "?" in URL else "?"
-                URL += ext + "cutout=" + cutout
-
-            sys.stderr.write(URL)
             logger.debug("Sending short cuturl: %s" %( URL))
             return URL
 
