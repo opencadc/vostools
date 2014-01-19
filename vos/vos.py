@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 from __version__ import version
 
 logger = logging.getLogger('vos')
-logger.addHandler(logging.NullHandler())
+#logger.addHandler(logging.NullHandler())
 
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
@@ -763,6 +763,10 @@ class VOFile:
                 logger.info("Error on URL: %s" % (self.url) )
                 # gets might have other URLs to try on, so keep going ...
         bytes = None
+        errnos = { 404: errno.ENOENT,
+                   401: errno.EACCES,
+                   409: errno.EEXIST,
+                   408: errno.EAGAIN }
         #if size != None:
         #    bytes = "bytes=%d-" % ( self._fpos)
         #    bytes = "%s%d" % (bytes,self._fpos+size)
@@ -1095,22 +1099,27 @@ class Client:
                                      "value of the form"
                                      "[extension number][x1:x2,y1:y2]")
 
+                parts = urlparse(uri)
+                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
                 ext = "&" if "?" in URL else "?"
                 URL += ext + "cutout=" + cutout
 
+            sys.stderr.write(URL)
             logger.debug("Sending short cuturl: %s" %( URL))
             return URL
 
         if view == "cutout":
+
             if cutout is None:
                 raise ValueError("For view=cutout, must specify a cutout "
                                 "value of the form"
                                 "[extension number][x1:x2,y1:y2]")
 
-            urlbase = self._get(uri)
+            urlbase = self._get(uri)[0]
+            
             basepath = urlparse(urlbase).path
             ext = "&" if "?" in basepath else "?"
-            return urlbase + ext + "cutout=" + cutout
+            return [urlbase + ext + "cutout=" + cutout]
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
