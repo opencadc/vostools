@@ -14,8 +14,8 @@ import shutil
 import unittest
 from mock import Mock, MagicMock, patch
 
-import CadcCache
-from SharedLock import SharedLock, TimeoutError, RecursionError
+from vos import CadcCache
+from vos.SharedLock import SharedLock, TimeoutError, RecursionError
 
 ###import vos.fuse
 
@@ -869,7 +869,7 @@ class TestCadcCache(unittest.TestCase):
 		t1 = threading.Thread(target=self.notifyAfter1S,
 			args=[fh.fileCondition,fh])
 		t1.start()
-		with patch('CadcCache.CacheReadThread') as mockedClass:
+		with patch('vos.CadcCache.CacheReadThread') as mockedClass:
 		    mockedClass.return_value = CacheReadThreadMock(fh)
 		    fh.makeCached(0,1)
 
@@ -881,12 +881,13 @@ class TestCadcCache(unittest.TestCase):
 		t1 = threading.Thread(target=self.notifyAfter1S,
 			args=[fh.fileCondition,fh])
 		t1.start()
-		with patch('CadcCache.CacheReadThread') as mockedClass:
+		with patch('vos.CadcCache.CacheReadThread') as mockedClass:
 		    realClass = mockedClass.returnValue
 		    mockedClass.return_value = CacheReadThreadMock(fh)
 		    fh.metaData.setReadBlocks(6, 6)
 		    fh.metaData.md5sum = 12345
 		    fh.makeCached(0,1)
+            mockedClass.assert_called_with(0, CadcCache.Cache.IO_BLOCK_SIZE, 6 * CadcCache.Cache.IO_BLOCK_SIZE, fh)
 		    # TODO figure out a way to test the result. The init method
 		    # of CacheReadThreadMock should be with arguments which get
 		    # the first block as mandatory, and everything except the
@@ -986,6 +987,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
     class MyFileHandle(CadcCache.FileHandle):
         def __init__(self, path, cache, ioObject):
             self.ioObject = ioObject
+            self.fileCondition = threading.Condition()
             pass
 
     def setUp(self):
@@ -1006,7 +1008,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
         crt = CadcCache.CacheReadThread(start = start, 
                                         mandatorySize = mandatoryEnd - start, 
                                         optionSize = optionEnd - start, 
-                                        fileHandler = fh)
+                                        fileHandle = fh)
         crt.execute()
         
         # test when either start or end or requested interval is outside 
@@ -1109,6 +1111,7 @@ suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
 suite5 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
 suite6 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6])
+suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6, suite7])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 
