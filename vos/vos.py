@@ -27,7 +27,7 @@ from __version__ import version
 
 logger = logging.getLogger('vos')
 logger.addHandler(logging.NullHandler())
-
+logger.error
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
 
@@ -939,7 +939,7 @@ class Client:
                 md5.update(buf)
                 destSize += len(buf)
         except IOError as e:
-            logger.error(str(e))
+            logger.debug(str(e))
             return self.copy(src,dest,sendMD5=sendMD5)
         finally:
             fout.close()
