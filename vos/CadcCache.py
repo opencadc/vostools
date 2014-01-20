@@ -586,11 +586,16 @@ class FileHandle(object):
         firstBlock,numBlocks = self.ioObject.blockInfo(offset, size)
         self.makeCached(firstBlock,numBlocks)
 
-        raise NotImplementedError("TODO")
-
-        # Duplicate the file descriptor just in case
-
-        # seek and read.
+        # Duplicate the file descriptor just in case another thread is doing
+        # a read at the same time.
+        # TODO Replace with a thread specific fd opened once.
+        r = os.dup(self.ioObject.cacheFileDescriptor)
+        try:
+            # seek and read.
+            os.lseek(r, offset, os.SEEK_SET)
+            buffer = os.read(r, size)
+        finally:
+            os.close(r)
 
         return buffer
 

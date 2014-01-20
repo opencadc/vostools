@@ -77,8 +77,8 @@ class IOProxyFor100K(CadcCache.IOProxy):
         return
 
     def readFromBacking(self, offset = None, size = None):
-	if offset > 102400 or offset + size > 102400:
-	    raise CadcCache.CacheError("Attempt to read beyond the end of file.")
+        if offset > 102400 or offset + size > 102400:
+            raise CadcCache.CacheError("Attempt to read beyond the end of file.")
         return ['\0'] * size
         
 
@@ -175,9 +175,9 @@ class TestIOProxy(unittest.TestCase):
             self.assertEqual((0, 1), testIOProxy.blockInfo(0, 1))
             self.assertEqual((0, 1), testIOProxy.blockInfo(1, 1))
             self.assertEqual((0, 1), 
-		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE - 1, 1))
+                    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE - 1, 1))
             self.assertEqual((1, 1), 
-		    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE, 1))
+                    testIOProxy.blockInfo( testCache.IO_BLOCK_SIZE, 1))
             self.assertEqual((0, 1), 
                     testIOProxy.blockInfo(0, testCache.IO_BLOCK_SIZE))
             self.assertEqual((0, 2), 
@@ -401,52 +401,52 @@ class TestSharedLock(unittest.TestCase):
 class TestCacheCondtion(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_all(self):
-	lock = threading.Lock()
-	cond = CadcCache.CacheCondition(lock, 1)
-	self.assertEqual(cond.timeout,1)
-	self.assertTrue(cond.threadSpecificData.endTime is None)
-	self.assertTrue(cond.acquire())
-	self.assertFalse(cond.acquire(False))
-	cond.release()
-	self.assertTrue(cond.acquire(blocking=0))
-	cond.release()
-	cond.setTimeout()
-	self.assertTrue(cond.threadSpecificData.endTime is not None)
-	with cond:
-	    self.assertFalse(cond.acquire(False))
+        lock = threading.Lock()
+        cond = CadcCache.CacheCondition(lock, 1)
+        self.assertEqual(cond.timeout,1)
+        self.assertTrue(cond.threadSpecificData.endTime is None)
+        self.assertTrue(cond.acquire())
+        self.assertFalse(cond.acquire(False))
+        cond.release()
+        self.assertTrue(cond.acquire(blocking=0))
+        cond.release()
+        cond.setTimeout()
+        self.assertTrue(cond.threadSpecificData.endTime is not None)
+        with cond:
+            self.assertFalse(cond.acquire(False))
             with self.assertRaises(CadcCache.CacheRetry):
-		cond.wait()
-		cond.wait()
+                cond.wait()
+                cond.wait()
 
-	cond.clearTimeout()
-	self.assertTrue(cond.threadSpecificData.endTime is None)
+        cond.clearTimeout()
+        self.assertTrue(cond.threadSpecificData.endTime is None)
 
-	# A wait without a timeout set.
-	cond = CadcCache.CacheCondition(lock, 30)
-	self.assertTrue(cond.threadSpecificData.endTime is None)
-	with cond:
-	    t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
-	    t1.start()
-	    cond.wait()
+        # A wait without a timeout set.
+        cond = CadcCache.CacheCondition(lock, 30)
+        self.assertTrue(cond.threadSpecificData.endTime is None)
+        with cond:
+            t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
+            t1.start()
+            cond.wait()
 
-	# A wait with a timeout set.
-	cond = CadcCache.CacheCondition(lock, 30)
-	cond.setTimeout()
-	self.assertTrue(cond.threadSpecificData.endTime is not None)
-	with cond:
-	    t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
-	    t1.start()
-	    cond.wait()
+        # A wait with a timeout set.
+        cond = CadcCache.CacheCondition(lock, 30)
+        cond.setTimeout()
+        self.assertTrue(cond.threadSpecificData.endTime is not None)
+        with cond:
+            t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
+            t1.start()
+            cond.wait()
 
     def notifyAfter1S(self,cond):
-	time.sleep(1)
-	with cond:
-	    cond.notify_all()
+        time.sleep(1)
+        with cond:
+            cond.notify_all()
 
 
 
 
-	
+        
 
 class TestCadcCache(unittest.TestCase):
     """Test the CadcCache.CadcCache class
@@ -593,8 +593,8 @@ class TestCadcCache(unittest.TestCase):
             os.chmod(testDir + "/metaData/", stat.S_IRWXU)
 
     def setUp_testDirectory(self):
-        directories = { "dir1", "dir2", "dir3" }
-        files = { "f1", "f2", "f3" }
+        directories = [ "dir1", "dir2", "dir3" ]
+        files = [ "f1", "f2", "f3" ]
         for dir in directories:
             os.mkdir("/".join([ testDir , dir ]))
             for f in files:
@@ -737,67 +737,67 @@ class TestCadcCache(unittest.TestCase):
     def test_read1(self):
         """Test reading from a file which is not cached."""
 
-	with CadcCache.Cache(testDir, 100) as testCache:
-	    ioObject = IOProxyFor100K()
-	    fh = testCache.open("/dir1/dir2/file", False, ioObject)
-	    data = fh.read(100,0)
-	    fh.release()
+        with CadcCache.Cache(testDir, 100) as testCache:
+            ioObject = IOProxyFor100K()
+            fh = testCache.open("/dir1/dir2/file", False, ioObject)
+            data = fh.read(100,0)
+            fh.release()
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_makeCached(self):
         """initializing the cached file
-	"""
+        """
 
-	class CacheReadThreadMock(threading.Thread):
-	    """ Mock class for the CachedReadThread class defined in CadcCache.
-	    """
+        class CacheReadThreadMock(threading.Thread):
+            """ Mock class for the CachedReadThread class defined in CadcCache.
+            """
 
-	    def __init__(self, fileHandle):
-		threading.Thread.__init__(self, target=self.execute)
-		self.fileHandle = fileHandle
+            def __init__(self, fileHandle):
+                threading.Thread.__init__(self, target=self.execute)
+                self.fileHandle = fileHandle
 
-	    def execute(self):
-		with self.fileHandle.fileCondition:
-		    self.fileHandle.fileCondition.notify_all()
-		    self.fileHandle.metaData.setReadBlocks(0,6)
-		    self.fileHandle.readThread = None
+            def execute(self):
+                with self.fileHandle.fileCondition:
+                    self.fileHandle.fileCondition.notify_all()
+                    self.fileHandle.metaData.setReadBlocks(0,6)
+                    self.fileHandle.readThread = None
 
-	    def isNewReadBest(self, first, last):
-		return False
+            def isNewReadBest(self, first, last):
+                return False
 
-	def sideEffectTrue(firstByte, lastByte):
-	    fh.readThread.isNewReadBest.side_effect = sideEffectFalse
-	    self.assertEqual(firstByte,0)
-	    self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
-	    return True
+        def sideEffectTrue(firstByte, lastByte):
+            fh.readThread.isNewReadBest.side_effect = sideEffectFalse
+            self.assertEqual(firstByte,0)
+            self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
+            return True
 
-	def sideEffectFalse(firstByte, lastByte):
-	    self.assertEqual(firstByte,0)
-	    self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
-	    return False
+        def sideEffectFalse(firstByte, lastByte):
+            self.assertEqual(firstByte,0)
+            self.assertEqual(lastByte,testCache.IO_BLOCK_SIZE)
+            return False
 
-	def threadExecuteMock(thread):
-	    thread.fileHandle.readThread = None
-	    thread.fileHandle.fileCondition.notify_all()
-	    thread.fileHandle.metaData.setReadBlocks(0,6)
+        def threadExecuteMock(thread):
+            thread.fileHandle.readThread = None
+            thread.fileHandle.fileCondition.notify_all()
+            thread.fileHandle.metaData.setReadBlocks(0,6)
 
-	with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
-	    ioObject = IOProxyFor100K()
-	    # Fully cached, makeCached does mostly nothing.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		fh.fullyCached = True
-		oldMetaData = copy.deepcopy(fh.metaData)
-		fh.metaData.getRange = Mock()
-		fh.metaData.persist = Mock()
-		fh.makeCached(0,1)
-		self.assertEqual(fh.metaData.getRange.call_count, 0)
-		fh.metaData = oldMetaData
-		fh.fullyCached = False
+        with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+            ioObject = IOProxyFor100K()
+            # Fully cached, makeCached does mostly nothing.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                fh.fullyCached = True
+                oldMetaData = copy.deepcopy(fh.metaData)
+                fh.metaData.getRange = Mock()
+                fh.metaData.persist = Mock()
+                fh.makeCached(0,1)
+                self.assertEqual(fh.metaData.getRange.call_count, 0)
+                fh.metaData = oldMetaData
+                fh.fullyCached = False
 
-	    # Check that the block range correctly maps to bytes when
-	    # isNewReadBest is called. The call exits with a timeout.
-	    #with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-	    fh = testCache.open("/dir1/dir2/file", False, ioObject)
+            # Check that the block range correctly maps to bytes when
+            # isNewReadBest is called. The call exits with a timeout.
+            #with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+            fh = testCache.open("/dir1/dir2/file", False, ioObject)
             fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
             fh.readThread.isNewReadBest = Mock()
             fh.readThread.isNewReadBest.side_effect = sideEffectTrue
@@ -809,102 +809,102 @@ class TestCadcCache(unittest.TestCase):
             fh.readThread=None
             fh.release()
 
-	    # The required range is cached. The fn exists after calling
-	    # getRange.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
-		oldMetaData = fh.metaData
-		fh.metaData = copy.deepcopy(oldMetaData)
-		fh.readThread.isNewReadBest = Mock()
-		fh.metaData.getRange = Mock(return_value=(None,None))
-		fh.makeCached(0,1)
-		self.assertEqual(fh.metaData.getRange.call_count, 1)
-		self.assertEqual(fh.readThread.isNewReadBest.call_count, 0)
-		fh.metaData = oldMetaData
-		fh.readThread=None
+            # The required range is cached. The fn exists after calling
+            # getRange.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+                oldMetaData = fh.metaData
+                fh.metaData = copy.deepcopy(oldMetaData)
+                fh.readThread.isNewReadBest = Mock()
+                fh.metaData.getRange = Mock(return_value=(None,None))
+                fh.makeCached(0,1)
+                self.assertEqual(fh.metaData.getRange.call_count, 1)
+                self.assertEqual(fh.readThread.isNewReadBest.call_count, 0)
+                fh.metaData = oldMetaData
+                fh.readThread=None
 
-	    # Check that the block range correctly maps to bytes when
-	    # isNewReadBest is called. The call exits when data is available.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		oldMetaData = copy.deepcopy(fh.metaData)
-		fh.metaData.persist = Mock()
-		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
-		fh.readThread.isNewReadBest = Mock()
-		fh.readThread.isNewReadBest.side_effect = sideEffectTrue
-		fh.fileCondition.setTimeout()
-		fh.metaData.delete()
-		t1 = threading.Thread(target=self.notifyReMockRange,
-			args=[fh.fileCondition,fh])
-		t1.start()
-		fh.makeCached(0,1)
-		fh.metaData = oldMetaData
-		fh.readThread=None
+            # Check that the block range correctly maps to bytes when
+            # isNewReadBest is called. The call exits when data is available.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                oldMetaData = copy.deepcopy(fh.metaData)
+                fh.metaData.persist = Mock()
+                fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+                fh.readThread.isNewReadBest = Mock()
+                fh.readThread.isNewReadBest.side_effect = sideEffectTrue
+                fh.fileCondition.setTimeout()
+                fh.metaData.delete()
+                t1 = threading.Thread(target=self.notifyReMockRange,
+                        args=[fh.fileCondition,fh])
+                t1.start()
+                fh.makeCached(0,1)
+                fh.metaData = oldMetaData
+                fh.readThread=None
 
-	    # This call will cause the existing thread be be aborted, and a new
-	    # thread to be started. This will look like the data is available
-	    # immediately after the thread aborts, and so no new thread will
-	    # start. This test fails by timing out in the condition wait, 
-	    # which throws an exception.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		oldMetaData = copy.deepcopy(fh.metaData)
-		fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
-		fh.readThread.isNewReadBest = Mock()
-		fh.readThread.isNewReadBest.side_effect = sideEffectFalse
-		fh.fileCondition.setTimeout()
-		fh.metaData.delete()
-		t1 = threading.Thread(target=self.notifyReMockRange,
-			args=[fh.fileCondition,fh])
-		t1.start()
-		fh.makeCached(0,1)
-		fh.metaData = oldMetaData
-		fh.readThread=None
+            # This call will cause the existing thread be be aborted, and a new
+            # thread to be started. This will look like the data is available
+            # immediately after the thread aborts, and so no new thread will
+            # start. This test fails by timing out in the condition wait, 
+            # which throws an exception.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                oldMetaData = copy.deepcopy(fh.metaData)
+                fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
+                fh.readThread.isNewReadBest = Mock()
+                fh.readThread.isNewReadBest.side_effect = sideEffectFalse
+                fh.fileCondition.setTimeout()
+                fh.metaData.delete()
+                t1 = threading.Thread(target=self.notifyReMockRange,
+                        args=[fh.fileCondition,fh])
+                t1.start()
+                fh.makeCached(0,1)
+                fh.metaData = oldMetaData
+                fh.readThread=None
 
-	    # This call will cause the existing thread be be aborted, and a new
-	    # thread to be started. The data will not seem to be availble, so a
-	    # new thread will be started. This test fails by timing out in the
-	    # condition wait, which throws an exception.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		fh.fileCondition.setTimeout()
-		fh.metaData.delete()
-		t1 = threading.Thread(target=self.notifyAfter1S,
-			args=[fh.fileCondition,fh])
-		t1.start()
-		with patch('CadcCache.CacheReadThread') as mockedClass:
-		    mockedClass.return_value = CacheReadThreadMock(fh)
-		    fh.makeCached(0,1)
+            # This call will cause the existing thread be be aborted, and a new
+            # thread to be started. The data will not seem to be availble, so a
+            # new thread will be started. This test fails by timing out in the
+            # condition wait, which throws an exception.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                fh.fileCondition.setTimeout()
+                fh.metaData.delete()
+                t1 = threading.Thread(target=self.notifyAfter1S,
+                        args=[fh.fileCondition,fh])
+                t1.start()
+                with patch('CadcCache.CacheReadThread') as mockedClass:
+                    mockedClass.return_value = CacheReadThreadMock(fh)
+                    fh.makeCached(0,1)
 
-	    # This call will cause the optional end to be before the end of the
-	    # file because some data near the end of the file has been cached.
-	    with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-		fh.fileCondition.setTimeout()
-		fh.metaData.delete()
-		t1 = threading.Thread(target=self.notifyAfter1S,
-			args=[fh.fileCondition,fh])
-		t1.start()
-		with patch('CadcCache.CacheReadThread') as mockedClass:
-		    realClass = mockedClass.returnValue
-		    mockedClass.return_value = CacheReadThreadMock(fh)
-		    fh.metaData.setReadBlocks(6, 6)
-		    fh.metaData.md5sum = 12345
-		    fh.makeCached(0,1)
-		    # TODO figure out a way to test the result. The init method
-		    # of CacheReadThreadMock should be with arguments which get
-		    # the first block as mandatory, and everything except the
-		    # last block as optional
+            # This call will cause the optional end to be before the end of the
+            # file because some data near the end of the file has been cached.
+            with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
+                fh.fileCondition.setTimeout()
+                fh.metaData.delete()
+                t1 = threading.Thread(target=self.notifyAfter1S,
+                        args=[fh.fileCondition,fh])
+                t1.start()
+                with patch('CadcCache.CacheReadThread') as mockedClass:
+                    realClass = mockedClass.returnValue
+                    mockedClass.return_value = CacheReadThreadMock(fh)
+                    fh.metaData.setReadBlocks(6, 6)
+                    fh.metaData.md5sum = 12345
+                    fh.makeCached(0,1)
+                    # TODO figure out a way to test the result. The init method
+                    # of CacheReadThreadMock should be with arguments which get
+                    # the first block as mandatory, and everything except the
+                    # last block as optional
 
 
     def notifyReMockRange(self,cond,fh):
-	time.sleep(1)
-	# Make getRange return None,None
-	with cond:
-	    fh.metaData.getRange = Mock(return_value=(None,None))
-	    cond.notify_all()
+        time.sleep(1)
+        # Make getRange return None,None
+        with cond:
+            fh.metaData.getRange = Mock(return_value=(None,None))
+            cond.notify_all()
 
     def notifyAfter1S(self,cond,fh):
-	time.sleep(1)
-	# Make getRange return None,None
-	with cond:
-	    cond.notify_all()
+        time.sleep(1)
+        # Make getRange return None,None
+        with cond:
+            cond.notify_all()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_determineCacheSize(self):
