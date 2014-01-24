@@ -1,7 +1,10 @@
 #!/bin/tcsh -f
 
+
 echo
 echo "*** start all tests ***"
+echo "vospace-getcert.tcsh"
+./vospace-getcert.tcsh || echo "FAIL vospace-getcert.tcsh" && exit -1 
 echo "vospace-mountvospace-atest.tcsh"
 ./vospace-mountvospace-atest.tcsh || echo "FAIL vospace-mountvospace-atest.tcsh" && exit -1 
 echo "vospace-client-atest.tcsh"
