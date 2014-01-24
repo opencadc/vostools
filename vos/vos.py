@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 from __version__ import version
 
 logger = logging.getLogger('vos')
-if sys.hexversion > 0x02070000:
+if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
 
