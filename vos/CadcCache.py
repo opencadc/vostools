@@ -11,6 +11,7 @@ import threading
 import logging
 import hashlib
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
+import errno
 from contextlib import nested
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
         EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
@@ -76,6 +77,9 @@ class CacheCondition(object):
 class Cache(object):
     """ 
     This class manages the cache for the vofs. 
+
+    TODO: Clean up empty directories after unlink. Difficult with race
+    conditions.
     """
     IO_BLOCK_SIZE = 2**14
     def __init__(self, cacheDir, maxCacheSize, readOnly = False, timeout = 60):
@@ -161,9 +165,8 @@ class Cache(object):
         if new:
             fileHandle.fileModified = True
             fileHandle.fullyCached = True
+            fileHandle.fileSize = 0
             os.ftruncate(ioObject.cacheFileDescriptor, 0)
-            if fileHandle.metaData is not None:
-                fileHandle.metaData.delete()
         else:
             fileHandle.fileSize = ioObject.getSize()
             blocks, numBlock = ioObject.blockInfo(0, fileHandle.fileSize)
@@ -194,11 +197,11 @@ class Cache(object):
                     # file handle.
                     with newFileHandle.fileLock:
                         newFileHandle.obsolete = True
+                        if newFileHandle.metaData is not None:
+                            os.remove(newFileHandle.metaData.metaDataFile)
                     newFileHandle = FileHandle(path, self, ioObject)
                     del self.fileHandleDict[path]
                     self.fileHandleDict[path] = newFileHandle
-                    if newFileHandle.metaData is not None:
-                        newFileHandle.metaData.delete()
 
                 newFileHandle.refCount += 1
         return newFileHandle
@@ -249,6 +252,162 @@ class Cache(object):
                     oldest_file = fp
                 total_size += os.path.getsize(fp)
         return (oldest_file, total_size)
+
+
+    def unlinkFile(self, path):
+        """Remove a file from the cache."""
+
+        if not os.path.isabs(path):
+            raise ValueError("Path '%s' is not an absolute path." % path )
+
+        with self.cacheLock:
+            try:
+                existingFileHandle = self.fileHandleDict[path]
+            except KeyError:
+                existingFileHandle = None
+
+            if existingFileHandle is not None:
+                with existingFileHandle.fileLock:
+                    existingFileHandle.obsolete = True
+                    del self.fileHandleDict[path]
+
+        # Ignore errors that the file does not exist
+        try:
+            os.remove(self.metaDataDir + path)
+        except OSError:
+            pass
+        try:
+            os.remove(self.dataDir + path)
+        except OSError:
+            pass
+
+    def renameFile(self, oldPath, newPath):
+        """Rename a file in the cache."""
+
+        if not os.path.isabs(oldPath):
+            raise ValueError("Path '%s' is not an absolute path." % oldPath )
+        if not os.path.isabs(newPath):
+            raise ValueError("Path '%s' is not an absolute path." % newPath )
+        newDataPath = self.dataDir + newPath
+        newMetaDataPath = self.metaDataDir + newPath
+        oldDataPath = self.dataDir + oldPath
+        oldMetaDataPath = self.metaDataDir + oldPath
+        if os.path.isdir(oldDataPath):
+            raise ValueError("Path '%s' is a directory." % oldDataPath )
+        if os.path.isdir(oldMetaDataPath):
+            raise ValueError("Path '%s' is a directory." % oldMetaDataPath )
+
+        # Make sure the new directory exists.
+        try:
+            os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
+        except OSError:
+            pass
+        try:
+            os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
+        except OSError:
+            pass
+
+        with self.cacheLock:
+            try:
+                existingFileHandle = self.fileHandleDict[oldPath]
+                # If the file is active, rename its files with the lock held.
+                with existingFileHandle.fileLock:
+                    self.atomicRename((oldDataPath,newDataPath),
+                            (oldMetaDataPath, newMetaDataPath))
+                    existingFileHandle.cacheDataFile = \
+                            os.path.abspath(newDataPath)
+                    existingFileHandle.cacheMetaDataFile = \
+                            os.path.abspath(newMetaDataPath)
+            except KeyError:
+                # The file is not active, rename the files but there is no
+                # data structure to lock or fix.
+                self.atomicRename((oldDataPath,newDataPath),
+                        (oldMetaDataPath, newMetaDataPath))
+
+    @staticmethod
+    def atomicRename(*renames):
+        """Atomically rename multiple paths. It isn't an error if one of the
+           paths doesn't exist.
+        """
+        renamedList = []
+        try:
+            for pair in renames:
+                if Cache.pathExists(pair[0]):
+                    os.rename(pair[0], pair[1])
+                    renamedList.append(pair)
+        except:
+            for pair in renamedList:
+                os.rename(pair[1], pair[0])
+            raise
+
+
+    def renameDir(self, oldPath, newPath):
+        """Rename a directory in the cache."""
+
+        if not os.path.isabs(oldPath):
+            raise ValueError("Path '%s' is not an absolute path." % oldPath )
+        if not os.path.isabs(newPath):
+            raise ValueError("Path '%s' is not an absolute path." % newPath )
+        newDataPath = os.path.abspath(self.dataDir + newPath)
+        newMetaDataPath = os.path.abspath(self.metaDataDir + newPath)
+        oldDataPath = os.path.abspath(self.dataDir + oldPath)
+        oldMetaDataPath = os.path.abspath(self.metaDataDir + oldPath)
+        if os.path.isfile(oldDataPath):
+            raise ValueError("Path '%s' is not a directory." % oldDataPath )
+        if os.path.isfile(oldMetaDataPath):
+            raise ValueError("Path '%s' is not a directory." % oldMetaDataPath )
+
+        # Make sure the new directory exists.
+        try:
+            os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
+        except OSError:
+            pass
+        try:
+            os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
+        except OSError:
+            pass
+
+        with self.cacheLock:
+            # Lock any active file in the cache. Lock them all so nothing tries
+            # to open a file, do then rename, and then unlock them all. A happy
+            # hunging ground for deadlocks.
+            try:
+                renamed = False
+                lockedList = []
+                for path in self.fileHandleDict:
+                    if path.startswith(oldPath):
+                        fh = self.fileHandleDict[path]
+                        fh.fileLock.acquire()
+                        lockedList.append(fh)
+                self.atomicRename((oldDataPath, newDataPath), 
+                        (oldMetaDataPath, newMetaDataPath))
+                renamed = True
+            finally:
+                for fh in lockedList:
+                    if renamed:
+                        # Change the data file name and meta data file name in
+                        # the file handle.
+                        start = len(oldDataPath)
+                        fh.cacheDataFile = os.path.abspath(self.dataDir + 
+                                newPath + fh.cacheDataFile[start:])
+                        start = len(oldMetaDataPath)
+                        fh.cacheMetaDataFile = os.path.abspath(self.metaDataDir + 
+                                newPath + fh.cacheMetaDataFile[start:])
+                    fh.fileLock.release()
+
+    @staticmethod
+    def pathExists(path):
+        """Return true if the file exists"""
+
+        try:
+            os.stat(path)
+        except Exception as e:
+            if isinstance(e, OSError) and ( e.errno == errno.EEXIST or 
+                    e.errno == errno.ENOENT):
+                return False
+            else:
+                raise
+        return True
 
 
 class CacheError(Exception):
@@ -399,8 +558,8 @@ class FileHandle(object):
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path )
         #TODO don't overwrite meta data file with an out of date file
-        self.cacheDataFile = cache.dataDir + path
-        self.cacheMetaDataFile = cache.metaDataDir + path
+        self.cacheDataFile = os.path.abspath(cache.dataDir + path)
+        self.cacheMetaDataFile = os.path.abspath(cache.metaDataDir + path)
         self.metaData = None
         self.ioObject = ioObject
         try:
@@ -461,10 +620,12 @@ class FileHandle(object):
                 self.flushThread = threading.Thread(target=self.flushNode,
                         args=[])
                 self.flushThread.start()
+
             # Tell any running read thread to exit
-            if self.readThread != None:
+            if self.refCount == 1 and self.readThread != None:
                 self.readThread.aborted = True
-            while self.flushThread != None or self.readThread != None:
+            while (self.refCount == 1 and self.flushThread != None or 
+                    self.readThread != None):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
                 self.fileCondition.wait()
@@ -483,10 +644,7 @@ class FileHandle(object):
                     # The entry in fileHandleDict may have been removed by 
                     # unlink, so don't panic
                     self.metaData.persist()
-                    try:
-                        del self.cache.fileHandleDict[self.path]
-                    except KeyError:
-                        pass
+                    del self.cache.fileHandleDict[self.path]
 
         self.cache.checkCacheSpace()
 
@@ -550,31 +708,38 @@ class FileHandle(object):
         This method will raise a CacheRetry error if the response takes longer
         than the timeout.
         """
-        raise NotImplementedError("TODO")
 
         # Acquire a shared lock on the file
+        with self.writerLock(shared=True):
 
-        # Ensure the entire file is in cache.
-        firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
-        self.makeCached(0, numBlocks)
+            # Ensure the entire file is in cache.
+            firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
+            self.makeCached(0, numBlocks)
 
-        # Duplicate the file descriptor just in case
+            # Duplicate the file descriptor just in case another thread is doing
+            # something.
+            r = os.dup(self.ioObject.cacheFileDescriptor)
+            try:
+                # seek and write.
+                os.lseek(r, offset, os.SEEK_SET)
+                buffer = os.write(r, data[0:size])
+            finally:
+                os.close(r)
 
-        # Seek and write.
-
-
-        # Update file size if it changed
-        with self.fileLock:
-            if offset + size > self.fileSize:
-                self.fileSize = offset + size
-            self.fileModified = True
-
+            # Update file size if it changed
+            with self.fileLock:
+                if offset + size > self.fileSize:
+                    self.fileSize = offset + size
+                self.fileModified = True
 
 
     def read( self, size, offset):
         """Read data from the file.
         This method will raise a CacheRetry error if the response takes longer
         than the timeout.
+
+        TODO: Figure out a way to add a buffer to the parameters so the buffer
+        isn't allocated for each read.
         """
 
         self.fileCondition.setTimeout()

@@ -13,9 +13,11 @@ from contextlib import nested
 import shutil
 import unittest
 from mock import Mock, MagicMock, patch
+import functools
+import pdb
 
-import CadcCache
-from SharedLock import SharedLock, TimeoutError, RecursionError
+from vos import CadcCache
+from vos.SharedLock import SharedLock, TimeoutError, RecursionError
 
 ###import vos.fuse
 
@@ -467,11 +469,240 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
+    def test_unlink(self):
+        testIOProxy = IOProxyForTest()
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+            # Unlink a non existing file. Should do nothing and not cause an 
+            # error.
+            testCache.unlinkFile("/dir1/dir2/nosuchfile")
+
+            # Unlink a file which is open
+            with testCache.open("/dir1/dir2/file", False, testIOProxy):
+                with patch('os.remove') as mockedRemove:
+                    testCache.unlinkFile("/dir1/dir2/file")
+                self.assertEqual(mockedRemove.call_count, 2)
+
+            #unlink a relative path, which should throw an exception.
+            with self.assertRaises(ValueError):
+                testCache.unlinkFile("dir1/file")
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_renameFile(self):
+        testIOProxy = IOProxyForTest()
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+            # Rename a non-existing file. Should do nothing as this could be an
+            # existing file which is not cached. Not failing is the only
+            # requirement.
+            testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file")
+
+            # Rename an existing but inactive file. 
+            dataFile = os.path.join(testCache.dataDir, "dir1/dir2/file")
+            metaDataFile = os.path.join(testCache.metaDataDir, "dir1/dir2/file")
+            newDataFile = os.path.join(testCache.dataDir, "dir1/dir3/file")
+            newMetaDataFile = os.path.join(testCache.metaDataDir, "dir1/dir3/file")
+            self.makeTestFile(dataFile, self.testSize)
+            self.makeTestFile(metaDataFile, 0)
+            self.assertTrue(os.path.exists(dataFile))
+            self.assertTrue(os.path.exists(metaDataFile))
+            testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file")
+            self.assertFalse(os.path.exists(dataFile))
+            self.assertFalse(os.path.exists(metaDataFile))
+            self.assertTrue(os.path.exists(newDataFile))
+            self.assertTrue(os.path.exists(newMetaDataFile))
+    
+            # Rename an existing active file.
+            with testCache.open("/dir1/dir2/file2", True, testIOProxy) as fh:
+                testCache.renameFile("/dir1/dir2/file2", "/dir1/dir3/file3")
+                self.assertEqual(fh.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir1/dir3/file3"))
+                self.assertEqual(fh.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir1/dir3/file3"))
+
+            # Rename an existing active file. This time there should be a meta
+            # data file because of the initial open.
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as fh:
+                pass
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as fh:
+                testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file3")
+                self.assertEqual(fh.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir1/dir3/file3"))
+                self.assertEqual(fh.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir1/dir3/file3"))
+            self.assertFalse(os.path.exists(dataFile))
+            self.assertFalse(os.path.exists(metaDataFile))
+            self.assertTrue(os.path.exists(newDataFile))
+            self.assertTrue(os.path.exists(newMetaDataFile))
+
+            # Rename into the same file again to test overwrite
+            self.assertTrue(os.path.exists(newDataFile))
+            self.assertTrue(os.path.exists(newMetaDataFile))
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as fh:
+                testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file3")
+                self.assertEqual(fh.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir1/dir3/file3"))
+                self.assertEqual(fh.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir1/dir3/file3"))
+            self.assertFalse(os.path.exists(dataFile))
+            self.assertFalse(os.path.exists(metaDataFile))
+            self.assertTrue(os.path.exists(newDataFile))
+            self.assertTrue(os.path.exists(newMetaDataFile))
+
+
+
+            # Rename a file with relative paths. Should fail.
+            with self.assertRaises(ValueError):
+                testCache.renameFile("dir1/file", "/dir2/file")
+            with self.assertRaises(ValueError):
+                testCache.renameFile("/dir1/file", "dir2/file")
+
+            # Rename a directory. Should fail.
+            with self.assertRaises(ValueError):
+                testCache.renameFile("/dir1/dir2", "/dir3")
+
+
+            # Cause an error when the meta data file is rename. This should
+            # raise an exception and not rename either file.
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as fh:
+                try:
+                    newMetaDataFile = os.path.join(testCache.metaDataDir, 
+                            "dir1/dir3/file4")
+                    newDataFile = os.path.join(testCache.dataDir, 
+                            "dir1/dir3/file4")
+                    self.makeTestFile(dataFile, self.testSize)
+                    self.makeTestFile(metaDataFile, 0)
+                    self.assertTrue(os.path.exists(dataFile))
+                    self.assertTrue(os.path.exists(metaDataFile))
+                    self.assertFalse(os.path.exists(newDataFile))
+                    self.assertFalse(os.path.exists(newMetaDataFile))
+                    # Make the directory where the meta-data is non-writeable.
+                    os.chmod(os.path.dirname(metaDataFile), stat.S_IRUSR)
+
+                    with self.assertRaises(OSError):
+                        testCache.renameFile("/dir1/dir2/file", 
+                                "/dir1/dir3/file4")
+                    self.assertEqual(fh.cacheDataFile, os.path.join(
+                            testCache.dataDir, "dir1/dir2/file"))
+                    self.assertEqual(fh.cacheMetaDataFile, os.path.join(
+                            testCache.metaDataDir, "dir1/dir2/file"))
+                    os.chmod(os.path.dirname(metaDataFile), stat.S_IRWXU)
+                    self.assertTrue(os.path.exists(dataFile))
+                    self.assertTrue(os.path.exists(metaDataFile))
+                    self.assertFalse(os.path.exists(newDataFile))
+                    self.assertFalse(os.path.exists(newMetaDataFile))
+                finally:
+                    try:
+                        os.chmod(os.path.dirname(metaDataFile), stat.S_IRWXU)
+                        os.remove(dataFile)
+                        os.remove(metaDataFile)
+                        fh.release()
+                    except:
+                        pass
+
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_renameFile2(self):
+
+        testIOProxy = IOProxyForTest()
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+
+            # Rename an existing but inactive file. renaming the meta data file
+            # will cause an error
+            dataFile = os.path.join(testCache.dataDir, "dir1/dir2/file")
+            metaDataFile = os.path.join(testCache.metaDataDir, "dir1/dir2/file")
+            newDataFile = os.path.join(testCache.dataDir, "dir1/dir5/file")
+            newMetaDataFile = os.path.join(testCache.metaDataDir, "dir1/dir5/file")
+            self.makeTestFile(dataFile, self.testSize)
+            self.makeTestFile(metaDataFile, 0)
+            self.assertTrue(os.path.exists(dataFile))
+            self.assertTrue(os.path.exists(metaDataFile))
+            try:
+                os.chmod(os.path.dirname(metaDataFile), stat.S_IRUSR)
+                with self.assertRaises(OSError):
+                    testCache.renameFile("/dir1/dir2/file", "/dir1/dir5/file")
+            finally:
+                os.chmod(os.path.dirname(metaDataFile), stat.S_IRWXU)
+            self.assertTrue(os.path.exists(dataFile))
+            self.assertTrue(os.path.exists(metaDataFile))
+            self.assertFalse(os.path.exists(newDataFile))
+            self.assertFalse(os.path.exists(newMetaDataFile))
+
+            # Rename a file to a directory. Should cause an error.
+            with self.assertRaises(ValueError):
+                testCache.renameFile("/dir1/dir2", "/")
+
+            # Rename a file to a directory. For this one the meta data file is
+            # a directory.
+            with patch('os.path.isdir') as mockedisdir:
+                def returnFalse(arg):
+                    mockedisdir.side_effect = returnTrue
+                    return False
+
+                def returnTrue(arg):
+                    return True
+
+                mockedisdir.side_effect = returnFalse
+                with self.assertRaises(ValueError):
+                    testCache.renameFile("/something", "/something")
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_renameDir(self):
+        """Rename a whole directory.
+        """
+        testIOProxy1 = IOProxyForTest()
+        testIOProxy2 = IOProxyForTest()
+        testIOProxy3 = IOProxyForTest()
+
+        with CadcCache.Cache(testDir, 100, True) as testCache:
+            with self.assertRaises(ValueError):
+                testCache.renameDir("adir", "anotherDir")
+            with self.assertRaises(ValueError):
+                testCache.renameDir("/adir", "anotherDir")
+
+            with testCache.open("/dir1/dir2/file1", True, testIOProxy1) as fh1:
+             with testCache.open("/dir1/dir2/file2", True, testIOProxy2) as fh2:
+              with testCache.open("/dir2/dir2/file1", True, testIOProxy3) as fh3:
+                with self.assertRaises(ValueError):
+                    testCache.renameDir("/dir1/dir2/file1", "/dir1/dir3")
+                testCache.renameDir("/dir1/dir2", "/dir1/dir3")
+                self.assertEqual(fh1.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir1/dir3/file1"))
+                self.assertEqual(fh1.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir1/dir3/file1"))
+                self.assertEqual(fh2.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir1/dir3/file2"))
+                self.assertEqual(fh2.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir1/dir3/file2"))
+                self.assertEqual(fh3.cacheDataFile, os.path.join(
+                        testCache.dataDir, "dir2/dir2/file1"))
+                self.assertEqual(fh3.cacheMetaDataFile, os.path.join(
+                        testCache.metaDataDir, "dir2/dir2/file1"))
+                self.assertTrue(os.path.exists(fh1.cacheDataFile))
+                self.assertTrue(os.path.exists(fh2.cacheDataFile))
+                self.assertTrue(os.path.exists(fh3.cacheDataFile))
+             with testCache.open("/dir1/dir2/file2", True, testIOProxy2) as fh2:
+                with self.assertRaises(OSError):
+                    testCache.renameDir("/dir1/dir2", "/dir1/dir3")
+
+            # Rename a directory to a file. For this one, the meta data dir
+            # shows up as a file.
+            with patch('os.path.isfile') as mockedisfile:
+                def returnFalse(arg):
+                    mockedisfile.side_effect = returnTrue
+                    return False
+
+                def returnTrue(arg):
+                    return True
+
+                mockedisfile.side_effect = returnFalse
+                with self.assertRaises(ValueError):
+                    testCache.renameDir("/something", "/something")
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
         """
-        testIOProxy = IOProxyForTest()
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
@@ -636,10 +867,27 @@ class TestCadcCache(unittest.TestCase):
             fh.release()
 
             fh = testObject.open("/dir1/dir2/file", False, ioObject)
-            fd2 = testObject.open("/dir1/dir2/file", True, ioObject2)
+            #existing meta data should be there 
+            fh2 = testObject.open("/dir1/dir2/file", True, ioObject2)
+            #meta data deleted.
             fh.release()
-            fd2.release()
+            fh2.release()
 
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_open3(self):
+        """ Open a new file"""
+        with CadcCache.Cache(testDir, 100) as testObject:
+            ioObject = IOProxyForTest()
+            ioObject2 = IOProxyForTest()
+            fh = testObject.open("/dir1/dir2/file", True, ioObject)
+            self.assertTrue(fh.fullyCached)
+            self.assertTrue(fh.fileModified)
+            fh.release()
+
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            fh2 = testObject.open("/dir1/dir2/file", True, ioObject2)
+            fh.release()
+            fh2.release()
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -674,6 +922,7 @@ class TestCadcCache(unittest.TestCase):
             fh.getmd5 = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
                 fh.release()
+
 
     def makeTestFile(self, name, size):
         try:
@@ -712,6 +961,7 @@ class TestCadcCache(unittest.TestCase):
             assert not ioObject2.writeToBacking.called, \
                     'writeToBacking was called and should not have been'
 
+
     def release2_sub1(self, testObject, ioObject):
         fh = testObject.open("/dir1/dir2/file", False, ioObject)
         fh.release()
@@ -733,7 +983,26 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking.assert_called_once_with(self.testMD5,
                     self.testSize, info.st_mtime)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_release4(self):
+        """Test aborting an in-progress cache read thread when a file is
+           closed."""
+
+        with CadcCache.Cache(testDir, 100, timeout=1) as testObject:
+            # This should really flush the data to the backing
+            ioObject = IOProxyForTest()
+            fh = testObject.open("/dir1/dir2/file", True, ioObject)
+            fh.readThread = CadcCache.CacheReadThread(0,0,0,fh)
+
+            # This release should timeout, but the aborted flag should be set.
+            self.assertFalse(fh.readThread.aborted)
+            with self.assertRaises(CadcCache.CacheRetry):
+                fh.release()
+            self.assertTrue(fh.readThread.aborted)
+            fh.readThread = None
+            fh.release()
+
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_read1(self):
         """Test reading from a file which is not cached."""
 
@@ -741,7 +1010,24 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyFor100K()
             fh = testCache.open("/dir1/dir2/file", False, ioObject)
             data = fh.read(100,0)
+
+            # Read beyond the end of the file.
+            with self.assertRaises(CadcCache.CacheError):
+                data = fh.read(100, 1024*1024)
             fh.release()
+
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_write1(self):
+        """Test writing to a file which is not cached."""
+
+        with CadcCache.Cache(testDir, 100) as testCache:
+            ioObject = IOProxyFor100K()
+            with testCache.open("/dir1/dir2/file", True, ioObject) as fh:
+                fh.write( "abcd", 4, 30000)
+                data = fh.read( 4, 30000)
+                self.assertEqual(data, "abcd")
+
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_makeCached(self):
@@ -869,7 +1155,7 @@ class TestCadcCache(unittest.TestCase):
                 t1 = threading.Thread(target=self.notifyAfter1S,
                         args=[fh.fileCondition,fh])
                 t1.start()
-                with patch('CadcCache.CacheReadThread') as mockedClass:
+                with patch('vos.CadcCache.CacheReadThread') as mockedClass:
                     mockedClass.return_value = CacheReadThreadMock(fh)
                     fh.makeCached(0,1)
 
@@ -881,7 +1167,7 @@ class TestCadcCache(unittest.TestCase):
                 t1 = threading.Thread(target=self.notifyAfter1S,
                         args=[fh.fileCondition,fh])
                 t1.start()
-                with patch('CadcCache.CacheReadThread') as mockedClass:
+                with patch('vos.CadcCache.CacheReadThread') as mockedClass:
                     realClass = mockedClass.returnValue
                     mockedClass.return_value = CacheReadThreadMock(fh)
                     fh.metaData.setReadBlocks(6, 6)
@@ -891,7 +1177,6 @@ class TestCadcCache(unittest.TestCase):
                     # of CacheReadThreadMock should be with arguments which get
                     # the first block as mandatory, and everything except the
                     # last block as optional
-
 
     def notifyReMockRange(self,cond,fh):
         time.sleep(1)
@@ -986,6 +1271,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
     class MyFileHandle(CadcCache.FileHandle):
         def __init__(self, path, cache, ioObject):
             self.ioObject = ioObject
+            self.fileCondition = threading.Condition()
             pass
 
     def setUp(self):
@@ -1006,7 +1292,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
         crt = CadcCache.CacheReadThread(start = start, 
                                         mandatorySize = mandatoryEnd - start, 
                                         optionSize = optionEnd - start, 
-                                        fileHandler = fh)
+                                        fileHandle = fh)
         crt.execute()
         
         # test when either start or end or requested interval is outside 
@@ -1109,6 +1395,7 @@ suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
 suite5 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
 suite6 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6])
+suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6, suite7])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 

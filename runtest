@@ -9,6 +9,11 @@ else
     endif
 endif
 
-setenv PYTHONPATH $thisDir/vos
+if ($?PYTHONPATH) then
+    setenv PYTHONPATH "${PYTHONPATH}:${thisDir}"
+else
+    setenv PYTHONPATH "$thisDir"
+endif
+
 python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
     --ignore-module=test_cadcCache vos/test/TestCadcCache.py
