@@ -144,7 +144,7 @@ class Cache(object):
         pass
 
 
-    def open(self, path, new, ioObject):
+    def open(self, path, isNew, ioObject):
         """Open file with the desired modes
 
         Here we return a handle to the cached version of the file
@@ -152,53 +152,62 @@ class Cache(object):
 
         path - the path to the file.
 
-        new - should be True if this is a completely new file, and False if reads 
-            should access the bytes from the file in the backing store.
+        isNew - should be True if this is a completely new file, and False if 
+            reads should access the bytes from the file in the backing store.
 
         ioObject - the object that provides access to the backing store
         """
 
-        fileHandle = self.getFileHandle(path, new, ioObject)
-        ioObject.setCacheFile(fileHandle)
+        fileHandle = self.getFileHandle(path, isNew, ioObject)
 
         
-        if new:
+        if isNew:
             fileHandle.fileModified = True
             fileHandle.fullyCached = True
             fileHandle.fileSize = 0
-            os.ftruncate(ioObject.cacheFileDescriptor, 0)
         else:
-            fileHandle.fileSize = ioObject.getSize()
-            blocks, numBlock = ioObject.blockInfo(0, fileHandle.fileSize)
+            fileHandle.fileSize = fileHandle.ioObject.getSize()
+            blocks, numBlock = fileHandle.ioObject.blockInfo(0, 
+                    fileHandle.fileSize)
             fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
-                    numBlock, ioObject.getMD5())
+                    numBlock, fileHandle.ioObject.getMD5())
             fileHandle.fullyCached = False
+
+        if (fileHandle.metaData is None or 
+                fileHandle.metaData.getNumReadBlocks() == 0):
+            # If the cache file should be empty, empty it.
+            os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
+            os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
         self.checkCacheSpace()
 
         return fileHandle
 
 
-    def getFileHandle(self, path, new, ioObject):
+    def getFileHandle(self, path, createFile, ioObject):
         """Find an existing file handle, or create one if necessary.
         """
         with self.cacheLock:
             try:
                 newFileHandle = self.fileHandleDict[path]
-                isNew = False
+                isNewFileHandle = False
             except KeyError:
-                isNew = True
+                isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
             with newFileHandle.fileLock:
-                if not isNew and new:
+                if not isNewFileHandle and createFile:
                     # We got an old file handle, but are creating a new file.
                     # Mark the old file handle as obsolete and create a new
                     # file handle.
                     with newFileHandle.fileLock:
                         newFileHandle.obsolete = True
                         if newFileHandle.metaData is not None:
-                            os.remove(newFileHandle.metaData.metaDataFile)
+                            try:
+                                os.remove(newFileHandle.metaData.metaDataFile)
+                            except OSError as e:
+                                if e.errno != ENOENT:
+                                    raise
                     newFileHandle = FileHandle(path, self, ioObject)
                     del self.fileHandleDict[path]
                     self.fileHandleDict[path] = newFileHandle
@@ -215,20 +224,43 @@ class Cache(object):
         # threads do this is bad. It should also be done on a schedule to allow
         # for files which grow.
         (oldest_file, cacheSize) = self.determineCacheSize()
-        while ( cacheSize/1024/1024 > self.maxCacheSize and oldest_file != None ) :
+        while ( cacheSize/1024/1024 > self.maxCacheSize and 
+                oldest_file != None ) :
             with self.cacheLock:
                 if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
                     logging.debug("Removing file %s from the local cache" % 
                             oldest_file)
                     try:
                         os.unlink(oldest_file)
-                        os.unlink(self.metaDataDir + oldest_file[len(self.dataDir):])
+                        os.unlink(self.metaDataDir + 
+                                oldest_file[len(self.dataDir):])
                     except OSError:
                         pass
+                    self.removeEmptyDirs(os.path.dirname(oldest_file))
+                    self.removeEmptyDirs(os.path.dirname(self.metaDataDir + 
+                                oldest_file[len(self.dataDir):]))
             # TODO - Tricky - have to get a path to the meta data given
             # the path to the data. metaData.remove(oldest_file)
             (oldest_file, cacheSize) = self.determineCacheSize()
 
+
+    def removeEmptyDirs(self, dirName):
+        if os.path.commonprefix((dirName, self.cacheDir)) != self.cacheDir:
+            raise ValueError("Path '%s' is not in the cache." % dirName )
+
+        thisDir = dirName
+        while thisDir != self.cacheDir:
+            try:
+                os.rmdir(thisDir)
+            except OSError as e:
+                if e.errno == ENOTEMPTY:
+                    return
+                elif e.errno == ENOENT:
+                    pass
+                else:
+                    raise
+
+            thisDir = os.path.dirname(thisDir)
 
     def determineCacheSize(self):
         """Determine how much disk space is being used by the local cache"""
@@ -271,15 +303,19 @@ class Cache(object):
                     existingFileHandle.obsolete = True
                     del self.fileHandleDict[path]
 
-        # Ignore errors that the file does not exist
-        try:
-            os.remove(self.metaDataDir + path)
-        except OSError:
-            pass
-        try:
-            os.remove(self.dataDir + path)
-        except OSError:
-            pass
+            # Ignore errors that the file does not exist
+            try:
+                os.remove(self.metaDataDir + path)
+            except OSError:
+                pass
+            try:
+                os.remove(self.dataDir + path)
+            except OSError:
+                pass
+
+            self.removeEmptyDirs(os.path.dirname(self.metaDataDir + path))
+            self.removeEmptyDirs(os.path.dirname(self.dataDir + path))
+
 
     def renameFile(self, oldPath, newPath):
         """Rename a file in the cache."""
@@ -297,17 +333,18 @@ class Cache(object):
         if os.path.isdir(oldMetaDataPath):
             raise ValueError("Path '%s' is a directory." % oldMetaDataPath )
 
-        # Make sure the new directory exists.
-        try:
-            os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
-        except OSError:
-            pass
-        try:
-            os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
-        except OSError:
-            pass
 
         with self.cacheLock:
+            # Make sure the new directory exists.
+            try:
+                os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
+            except OSError:
+                pass
+            try:
+                os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
+            except OSError:
+                pass
+
             try:
                 existingFileHandle = self.fileHandleDict[oldPath]
                 # If the file is active, rename its files with the lock held.
@@ -357,17 +394,17 @@ class Cache(object):
         if os.path.isfile(oldMetaDataPath):
             raise ValueError("Path '%s' is not a directory." % oldMetaDataPath )
 
-        # Make sure the new directory exists.
-        try:
-            os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
-        except OSError:
-            pass
-        try:
-            os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
-        except OSError:
-            pass
-
         with self.cacheLock:
+            # Make sure the new directory exists.
+            try:
+                os.makedirs(os.path.dirname(newDataPath), stat.S_IRWXU)
+            except OSError:
+                pass
+            try:
+                os.makedirs(os.path.dirname(newMetaDataPath), stat.S_IRWXU)
+            except OSError:
+                pass
+
             # Lock any active file in the cache. Lock them all so nothing tries
             # to open a file, do then rename, and then unlock them all. A happy
             # hunging ground for deadlocks.
@@ -515,10 +552,8 @@ class IOProxy(object):
         if numBlocks > 0:
             with self.condition:
                 self.condition.acquire()
-                #TODO self.metaData.setBlocksRead(firstBlock, numBLocks)
+                self.cacheFile.metaData.setBlocksRead(firstBlock, numBlocks)
 
-                #TODO If the whole file has been read, set the fully cached
-                # flag.
                 self.condition.notify()
 
 
@@ -557,11 +592,11 @@ class FileHandle(object):
         self.cache = cache
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path )
-        #TODO don't overwrite meta data file with an out of date file
         self.cacheDataFile = os.path.abspath(cache.dataDir + path)
         self.cacheMetaDataFile = os.path.abspath(cache.metaDataDir + path)
         self.metaData = None
         self.ioObject = ioObject
+        ioObject.setCacheFile(self)
         try:
             os.makedirs(os.path.dirname(self.cacheDataFile), stat.S_IRWXU)
         except OSError:
@@ -884,4 +919,10 @@ class CacheReadThread(threading.Thread):
         self.fileHandle.ioObject.readFromBacking(self.startByte, self.optionSize)
         with self.fileHandle.fileCondition:
             self.fileHandle.readThread = None
+            firstBlock,numBlocks = self.fileHandle.ioObject.blockInfo(0,
+                    self.fileHandle.fileSize)
+            requiredRange = self.fileHandle.metaData.getRange(firstBlock, 
+                    firstBlock + numBlocks - 1)
+            if requiredRange == (None, None):
+                self.fileHandle.fullyCached = True
             self.fileHandle.fileCondition.notify_all()

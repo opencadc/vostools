@@ -31,6 +31,9 @@ from vos.SharedLock import SharedLock, TimeoutError, RecursionError
 skipTests = False
 testDir = "/tmp/testcache"
 
+class Object(object):
+    pass
+
 class IOProxyForTest(CadcCache.IOProxy):
     """
     Subclass of the IOProxy class. Used for both testing the
@@ -131,7 +134,11 @@ class TestIOProxy(unittest.TestCase):
             testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
             testIOProxy.cacheFileStream.write = Mock(return_value = 3)
             testIOProxy.cache = testCache
+            testIOProxy.cacheFile = Object()
+            testIOProxy.cacheFile.metaData = Object()
+            testIOProxy.cacheFile.metaData.setBlocksRead = Mock()
             self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
+            testIOProxy.cacheFile.metaData.setBlocksRead.assert_once_with(0,1)
 
             # Write to after the beginning of the output
             testIOProxy.cacheFileStream = io.BufferedIOBase()
@@ -468,7 +475,7 @@ class TestCadcCache(unittest.TestCase):
         self.setUp()
 
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_unlink(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -486,7 +493,7 @@ class TestCadcCache(unittest.TestCase):
             with self.assertRaises(ValueError):
                 testCache.unlinkFile("dir1/file")
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_renameFile(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -599,7 +606,7 @@ class TestCadcCache(unittest.TestCase):
                         pass
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_renameFile2(self):
 
         testIOProxy = IOProxyForTest()
@@ -644,7 +651,7 @@ class TestCadcCache(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     testCache.renameFile("/something", "/something")
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_renameDir(self):
         """Rename a whole directory.
         """
@@ -698,12 +705,13 @@ class TestCadcCache(unittest.TestCase):
                     testCache.renameDir("/something", "/something")
 
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
         """
         testIOProxy = IOProxyForTest()
+        testIOProxy2 = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testFile = testCache.open("/dir1/dir2/file", False, 
                 testIOProxy)
@@ -717,12 +725,33 @@ class TestCadcCache(unittest.TestCase):
             testFile2.release()
             self.assertEqual(1, testFile.refCount)
 
+            # Replace an already open file.
+            self.assertFalse(testFile.obsolete)
+            testFile2 = testCache.open("/dir1/dir2/file", True, testIOProxy2)
+            self.assertTrue(testFile.obsolete)
+            self.assertFalse(testFile2.obsolete)
+            self.assertEqual(1, testFile.refCount)
+            self.assertEqual(1, testFile2.refCount)
+            self.assertFalse(testFile2 == testFile)
+
+
             testFile.release()
             self.assertEqual(0, testFile.refCount)
 
             # Relative path should cause an error.
             with self.assertRaises(ValueError):
                 testCache.open("dir1/dir2/file", False, testIOProxy)
+
+            # Replace an already open file, this time cleaning up the meta data
+            # file throws an error.
+            testFile = testCache.open("/dir1/dir2/file", False, 
+                testIOProxy)
+            with patch("os.remove") as mockedRemove:
+                mockedRemove.side_effect = OSError(-1,-1)
+                with self.assertRaises(OSError):
+                    testFile2 = testCache.open("/dir1/dir2/file", True, 
+                            testIOProxy2)
+
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -894,9 +923,9 @@ class TestCadcCache(unittest.TestCase):
     def test_getmd5(self):
         with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyForTest()
+            fh = testCache.open("/dir1/dir2/file", False, ioObject)
             self.makeTestFile(os.path.join(testCache.dataDir, 
                     "dir1/dir2/file"), self.testSize)
-            fh = testCache.open("/dir1/dir2/file", False, ioObject)
             result = fh.getmd5()
             # Check the md5sum and size are correct, and the modification
             # time is roughly nowish.
@@ -974,9 +1003,9 @@ class TestCadcCache(unittest.TestCase):
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock()
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
             self.makeTestFile(os.path.join(testObject.dataDir, 
                     "dir1/dir2/file"), self.testSize)
-            fh = testObject.open("/dir1/dir2/file", False, ioObject)
             fh.fileModified = True
             info = os.stat(fh.cacheDataFile)
             fh.release()
@@ -1017,7 +1046,7 @@ class TestCadcCache(unittest.TestCase):
             fh.release()
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_write1(self):
         """Test writing to a file which is not cached."""
 
@@ -1219,7 +1248,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
         
     
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_checkCacheSpace(self):
         """ Test cache cleanup """
         if os.path.exists(testDir):
@@ -1258,6 +1287,32 @@ class TestCadcCache(unittest.TestCase):
         cache.checkCacheSpace()
         # no files deleted as all of them are in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_removeEmptyDirs(self):
+        """ Test cache cleanup """
+
+        with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+            # Remove directories that are not in the cache.
+            with self.assertRaises(ValueError):
+                testCache.removeEmptyDirs("/tmp/noshuchdir")
+
+            os.makedirs(testDir + "/dir1/dir2/dir3")
+            os.makedirs(testDir + "/dir1/dir2/dir4")
+            testCache.removeEmptyDirs(testDir + "/dir1/dir2/dir3")
+            self.assertFalse(os.path.exists(testDir + "/dir1/dir2/dir3"))
+            self.assertTrue(os.path.exists(testDir + "/dir1/dir2"))
+            self.assertTrue(os.path.exists(testDir + "/dir1/dir2/dir4"))
+            testCache.removeEmptyDirs(testDir + "/dir1/dir2/dir4")
+            self.assertFalse(os.path.exists(testDir + "/dir1"))
+            self.assertTrue(os.path.exists(testDir))
+
+            # Have os.rmdir throw an error other than ENOTEMPTY and ENOENT
+            os.makedirs(testDir + "/dir1/dir2/dir3")
+            with patch('os.rmdir') as rmdir:
+                rmdir.side_effect = OSError(-1,-1)
+                with self.assertRaises(OSError):
+                    testCache.removeEmptyDirs(testDir + "/dir1/dir2/dir4")
         
 
 class TestCadcCacheReadThread(unittest.TestCase):
@@ -1270,8 +1325,10 @@ class TestCadcCacheReadThread(unittest.TestCase):
     
     class MyFileHandle(CadcCache.FileHandle):
         def __init__(self, path, cache, ioObject):
+            CadcCache.FileHandle.__init__(self, path, cache, ioObject)
             self.ioObject = ioObject
             self.fileCondition = threading.Condition()
+            self.fileSize = 0
             pass
 
     def setUp(self):
@@ -1281,109 +1338,115 @@ class TestCadcCacheReadThread(unittest.TestCase):
         pass
     
     
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_isNewReadBest(self):
-        dataBlock = 64*1024
-        CadcCache.CacheReadThread.CONTINUE_MAX_SIZE = dataBlock
-        start = dataBlock
-        mandatoryEnd = 4 * dataBlock
-        optionEnd = 7 * dataBlock
-        ioObject = TestCadcCacheReadThread.MyIoObject()
-        fh = TestCadcCacheReadThread.MyFileHandle(None, None, ioObject)
-        crt = CadcCache.CacheReadThread(start = start, 
-                                        mandatorySize = mandatoryEnd - start, 
-                                        optionSize = optionEnd - start, 
-                                        fileHandle = fh)
-        crt.execute()
+        with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+            dataBlock = 64*1024
+            CadcCache.CacheReadThread.CONTINUE_MAX_SIZE = dataBlock
+            start = dataBlock
+            mandatoryEnd = 4 * dataBlock
+            optionEnd = 7 * dataBlock
+            ioObject = TestCadcCacheReadThread.MyIoObject()
+            fh = TestCadcCacheReadThread.MyFileHandle("/dir1/dir2/file", 
+                    testCache, ioObject)
+            fh.metaData = Object()
+            fh.metaData.getRange = Mock(return_value=(None,None))
+            ioObject.setCacheFile(fh)
+            crt = CadcCache.CacheReadThread(start = start, 
+                                            mandatorySize = mandatoryEnd - start, 
+                                            optionSize = optionEnd - start, 
+                                            fileHandle = fh)
+            crt.execute()
+            
+            # test when either start or end or requested interval is outside 
+            # [start, start + optionSize)
+            self.assertTrue(crt.isNewReadBest(0, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            
+            self.assertTrue(crt.isNewReadBest(start + dataBlock, optionEnd + dataBlock))
+            # mandatoryEnd becomes optionEnd in this case
+            self.assertEquals(optionEnd, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #current byte between current start and mandatory
+            #requested start between current start and currentByte
+            crt.setCurrentByte(3*dataBlock)
+            #requested end between current start and current byte
+            self.assertFalse(crt.isNewReadBest(dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            #requested end between current byte and current mandatory
+            self.assertFalse(crt.isNewReadBest(dataBlock, 3 * dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            #requested end between current mandatory and current optional
+            self.assertFalse(crt.isNewReadBest(dataBlock, 5 * dataBlock))
+            #requested end becomes the current mandatory
+            self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #requested start between currentByte and current mandatory
+            #requested end between current byte and current mandatory
+            self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            #requested end between current mandatory and current optional
+            self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
+            #requested end becomes the current mandatory
+            self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #requested start between currentByte and current mandatory
+            #requested end between current byte and current mandatory
+            self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            #requested end between current mandatory and current optional
+            self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
+            #requested end becomes the current mandatory
+            self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #requested start between mandatoryEnd and optionalEnd
+            #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
+            self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd + 2 * dataBlock, crt.mandatoryEnd) 
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
+            self.assertTrue(crt.isNewReadBest(mandatoryEnd + 2 * dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            
+            
+            #current byte between mandatory and optional
+            crt.setCurrentByte(5 * dataBlock)
+            #request start and end between start and mandatory
+            self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            
+            #request end between mandatory and current byte
+            self.assertFalse(crt.isNewReadBest(start + dataBlock, 4 * dataBlock))
+            self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
         
-        # test when either start or end or requested interval is outside 
-        # [start, start + optionSize)
-        self.assertTrue(crt.isNewReadBest(0, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        
-        self.assertTrue(crt.isNewReadBest(start + dataBlock, optionEnd + dataBlock))
-        # mandatoryEnd becomes optionEnd in this case
-        self.assertEquals(optionEnd, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #current byte between current start and mandatory
-        #requested start between current start and currentByte
-        crt.setCurrentByte(3*dataBlock)
-        #requested end between current start and current byte
-        self.assertFalse(crt.isNewReadBest(dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        #requested end between current byte and current mandatory
-        self.assertFalse(crt.isNewReadBest(dataBlock, 3 * dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        #requested end between current mandatory and current optional
-        self.assertFalse(crt.isNewReadBest(dataBlock, 5 * dataBlock))
-        #requested end becomes the current mandatory
-        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #requested start between currentByte and current mandatory
-        #requested end between current byte and current mandatory
-        self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        #requested end between current mandatory and current optional
-        self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
-        #requested end becomes the current mandatory
-        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #requested start between currentByte and current mandatory
-        #requested end between current byte and current mandatory
-        self.assertFalse(crt.isNewReadBest(3 * dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        #requested end between current mandatory and current optional
-        self.assertFalse(crt.isNewReadBest(4 * dataBlock, 2 * dataBlock))
-        #requested end becomes the current mandatory
-        self.assertEquals(start + 5 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #requested start between mandatoryEnd and optionalEnd
-        #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
-        self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd + 2 * dataBlock, crt.mandatoryEnd) 
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #distance between mandatoryEnd and star is less than CONTINUE_MAX_SIZE
-        self.assertTrue(crt.isNewReadBest(mandatoryEnd + 2 * dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        
-        
-        #current byte between mandatory and optional
-        crt.setCurrentByte(5 * dataBlock)
-        #request start and end between start and mandatory
-        self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
-        
-        #request end between mandatory and current byte
-        self.assertFalse(crt.isNewReadBest(start + dataBlock, 4 * dataBlock))
-        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-    
-        # request end after mandatory
-        self.assertFalse(crt.isNewReadBest(start + dataBlock, 5 * dataBlock))
-        self.assertEquals(7 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #start between mandatory and current byte
-        # end between mandatory and current byte
-        self.assertFalse(crt.isNewReadBest(mandatoryEnd, dataBlock))
-        self.assertEquals(5 * dataBlock, crt.mandatoryEnd)
-        #end between current byte and optional byte
-        self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
-        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        #start after current byte but with less then CONTINUE_MAX_SIZE
-        self.assertFalse(crt.isNewReadBest(5 * dataBlock, dataBlock))
-        self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
-        crt.mandatoryEnd = mandatoryEnd #reset for next tests
-        
-        # start after current byte but with more then  CONTINUE_MAX_SIZE
-        self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
-        self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
+            # request end after mandatory
+            self.assertFalse(crt.isNewReadBest(start + dataBlock, 5 * dataBlock))
+            self.assertEquals(7 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #start between mandatory and current byte
+            # end between mandatory and current byte
+            self.assertFalse(crt.isNewReadBest(mandatoryEnd, dataBlock))
+            self.assertEquals(5 * dataBlock, crt.mandatoryEnd)
+            #end between current byte and optional byte
+            self.assertFalse(crt.isNewReadBest(mandatoryEnd + dataBlock, dataBlock))
+            self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            #start after current byte but with less then CONTINUE_MAX_SIZE
+            self.assertFalse(crt.isNewReadBest(5 * dataBlock, dataBlock))
+            self.assertEquals(6 * dataBlock, crt.mandatoryEnd)
+            crt.mandatoryEnd = mandatoryEnd #reset for next tests
+            
+            # start after current byte but with more then  CONTINUE_MAX_SIZE
+            self.assertFalse(crt.isNewReadBest(start + dataBlock, dataBlock))
+            self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
         
 
 logging.getLogger('CadcCache').setLevel(logging.DEBUG)
