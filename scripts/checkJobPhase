@@ -11,27 +11,26 @@ This script is used to retrieve the state of a job using X509 authentication.
 
 
 import sys
-from OpenSSL.rand import status
 import vos
-import argparse
+import optparse
 import os
 import logging
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="Get the status of a UWS job.")
+    usage = """ Get the status of a UWS job. Syntax: 
+               
+                 checkJobPhase --cert=<certfile> <JOBURL>/phase """
 
-    parser.add_argument("--certfile",
-                        help="location of your CADC security certificate file",
-                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_argument("-v", "--verbose", action='store_const', const=True,
-                        help="print some diagnostics")
-    parser.add_argument("-d", "--debug", action='store_const', const=True,
-                        help="print all diagnositics")
-    parser.add_argument("jobURL", action='store', help="The URL of the job to test")
+    parser=optparse.OptionParser(usage)
+
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
+    parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
 
 
-    opt = parser.parse_args()
+    (opt,args)=parser.parse_args()
+
 
     if opt.verbose:
         log_level = logging.INFO
@@ -43,9 +42,13 @@ if __name__ == '__main__':
     logging.getLogger('vos').setLevel(log_level)
     logging.getLogger('vos').addHandler(logging.StreamHandler())
 
+    if len(args) !=  1:
+        parser.error("You must specifiy a job url")
+        sys.exit(-1)
+
     try:
         client = vos.Client(certFile=opt.certfile)
-        sys.stdout.write("%s\n" % client.getJobStatus(opt.jobURL))
+        sys.stdout.write("%s\n" % client.getJobStatus(args[0]))
     except KeyboardInterrupt:
         sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(-1)

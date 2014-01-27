@@ -26,7 +26,9 @@ import xml.etree.ElementTree as ET
 from __version__ import version
 
 logger = logging.getLogger('vos')
-logger.addHandler(logging.NullHandler())
+if sys.version_info[1] > 6:
+    logger.addHandler(logging.NullHandler())
+
 
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
@@ -763,6 +765,10 @@ class VOFile:
                 logger.info("Error on URL: %s" % (self.url) )
                 # gets might have other URLs to try on, so keep going ...
         bytes = None
+        errnos = { 404: errno.ENOENT,
+                   401: errno.EACCES,
+                   409: errno.EEXIST,
+                   408: errno.EAGAIN }
         #if size != None:
         #    bytes = "bytes=%d-" % ( self._fpos)
         #    bytes = "%s%d" % (bytes,self._fpos+size)
@@ -940,7 +946,7 @@ class Client:
                 md5.update(buf)
                 destSize += len(buf)
         except IOError as e:
-            logger.error(str(e))
+            logger.debug(str(e))
             return self.copy(src,dest,sendMD5=sendMD5)
         finally:
             fout.close()
@@ -1059,8 +1065,24 @@ class Client:
         logger.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
         URL = None
         if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
+
             ## only get here if cadc_short_cut == True
             # find out the URL to the CADC data server
+
+            if view == "cutout":
+                if cutout is None:
+                    raise ValueError("For view=cutout, must specify a cutout "
+                                     "value of the form"
+                                     "[extension number][x1:x2,y1:y2]")
+
+                parts = urlparse(self.fixURI(uri))
+                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
+                ext = "&" if "?" in URL else "?"
+                URL += ext + "cutout=" + cutout
+
+                logger.debug("Sending short cuturl: %s" %( URL))
+                return URL
+
             direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
             transProtocol = ''
             if self.protocol == 'http':
@@ -1094,28 +1116,21 @@ class Client:
             finally: 
                 httpCon.close()          
   
-            if view == "cutout":
-                if cutout is None:
-                    raise ValueError("For view=cutout, must specify a cutout "
-                                     "value of the form"
-                                     "[extension number][x1:x2,y1:y2]")
-
-                ext = "&" if "?" in URL else "?"
-                URL += ext + "cutout=" + cutout
-
             logger.debug("Sending short cuturl: %s" %( URL))
             return URL
 
         if view == "cutout":
+
             if cutout is None:
                 raise ValueError("For view=cutout, must specify a cutout "
                                 "value of the form"
                                 "[extension number][x1:x2,y1:y2]")
 
-            urlbase = self._get(uri)
+            urlbase = self._get(uri)[0]
+            
             basepath = urlparse(urlbase).path
             ext = "&" if "?" in basepath else "?"
-            return urlbase + ext + "cutout=" + cutout
+            return [urlbase + ext + "cutout=" + cutout]
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
