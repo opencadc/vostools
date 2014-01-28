@@ -5,8 +5,8 @@
 from sys import argv, exit, platform
 import time
 import vos
-import vos.fuse
-from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
+import fuse
+from fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import tempfile
 from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
@@ -16,10 +16,11 @@ import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
 import sqlite3
-from vos.__version__ import version
+from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse 
+from CadcCache import Cache, CacheRetry
 libcPath = find_library('c')
 libc = cdll.LoadLibrary(libcPath)
 
@@ -35,6 +36,13 @@ def flag2mode(flags):
         m = m.replace('w', 'a', 1)
 
     return m
+
+
+class FileHandle(object):
+    def __init__(self, cacheFileHandle):
+        self.cacheFileHandle = cacheFileHandle
+        self.readOnly = False
+        self.locked = False
 
 
 class VOFS(LoggingMixIn, Operations):
@@ -55,9 +63,11 @@ class VOFS(LoggingMixIn, Operations):
     setxattr = None
 
 
-    def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024, cache_nodes=False):
+    def __init__(self, root, cache_dir, options, conn=None, 
+            cache_limit=1024, cache_nodes=False):
         """Initialize the VOFS.  
-
+        
+        cache_limit is in MB.
         The style here is to use dictionaries to contain information
         about the Node.  The full VOSpace path is used as the Key for
         most of these dictionaries."""
@@ -66,37 +76,17 @@ class VOFS(LoggingMixIn, Operations):
         self.node = {}
         # Standard attribtutes of the Node
         # Where in the file system this Node is currently located
-        self.cache={}
         self.loading_dir={}
-        # How old is a given reference
-        self.cache_nodes=cache_nodes
 
-        # These next dictionaries keep track of pointers 
-
-        # A dictionary or properties about the cached version of the
-        # file.  the name of the dictionary should be something else
-        # but I started calling this fh for other reasons.
-        # Refactoring would help here.
-        self.fh={'None': False}
+        # Command line options.
+        self.opt = options
 
         # What is the 'root' of the VOSpace? (eg vos:MyVOSpace) 
         self.root = root
+
         # VOSpace is a bit slow so we do some cahcing.
-        self.cache_limit=cache_limit
-        self.cache_dir = os.path.abspath(os.path.normpath(os.path.join(cache_dir,root)))
-        self.cache_db = os.path.abspath(os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#")))
+        self.cache = Cache(cache_dir, cache_limit, False, 60)
         
-        if not os.access(self.cache_dir,os.F_OK):
-            os.makedirs(self.cache_dir)
-
-        ## initialize the md5Cache db
-        sqlConn = sqlite3.connect(self.cache_db)
-        sqlConn.execute("create table if not exists md5_cache (fname text, md5 text, st_mtime int)")
-        sqlConn.commit()
-        sqlConn.close()
-        ## build cache lookup if doesn't already exists
-
-
         ## All communication with the VOSpace goes through this client connection.
         try:
            self.client = vos.Client(rootNode=root,conn=conn)
@@ -116,55 +106,14 @@ class VOFS(LoggingMixIn, Operations):
         self.node=None
 
     def add_to_cache(self,path):
-        """Add path to the cache reference.
+        """Add path to the cache reference."""
 
-        path: the vofs location of the file (str)."""
-
-        fname = os.path.normpath(self.cache_dir+path)
-        if path not in self.cache:
-            self.cache[path] = {'fname': fname,
-                                'cached': False,
-                                'writing': False}
-
-        ## build the path to this cache, if needed
-        ## doing as an error fall through is more efficient
-        try:
-            dir_path = os.path.dirname(fname)
-            os.makedirs(dir_path)
-        except OSError as exc: 
-            if exc.errno == EEXIST and os.path.isdir(dir_path):
-                pass
-            else: 
-                logging.error("Failed to create cache directory: %s" %( dir_path))
-                logging.error(str(exc))
-                raise FuseOSError(exc.errno)
-
-        ## Create the cache file, if it doesn't already exist
-        ## or open for RDWR if the file already exists
-        try:
-            fh=os.open(fname,os.O_CREAT | os.O_RDWR)
-        except OSError as e:
-            e=FuseOSError(e.errno)
-            e.strerror=getattr(e,'strerror','failed on open of %s' % ( path))
-            e.message="Not able to write cache (Permission denied: %s)" % ( fname) 
-            raise e
-        finally:
-            os.close(fh)
-
-        return
-
-    def get_cache_filename(self, path):
-        """Return the name of the file associated with a given vofs path.
-
-        path: vofs location (str)."""
-        return self.cache.get('fname',None)
+        raise NotImplementedError("removed")
 
     def list_cache(self):
         """Get a list of the cache files that are in active use"""
-        activeCache=[]
-        for path in self.cache:
-            activeCache.append(self.cache[path]['fname'])
-        return activeCache
+
+        raise NotImplementedError("removed")
 
     def delNode(self,path,force=False):
         """Delete the references associated with this Node"""
@@ -276,7 +225,7 @@ class VOFS(LoggingMixIn, Operations):
             logging.debug("file was not opened for writing")
             return 
 
-        if opt.readonly:
+        if self.opt.readonly:
             logging.debug("File system is readonly... no flushnode allowed")
             return 
 
@@ -296,7 +245,7 @@ class VOFS(LoggingMixIn, Operations):
         which we do on close of the file."""
         
 
-        if opt.readonly:
+        if self.opt.readonly:
             logging.debug("File system is readonly, no sync allowed")
             return
 
@@ -304,7 +253,7 @@ class VOFS(LoggingMixIn, Operations):
 
   
     def fsync(self,path,datasync,fh):
-        if opt.readonly:
+        if self.opt.readonly:
             logging.debug("File system is readonly, no sync allowed")
             return 
         mode=''
@@ -366,7 +315,7 @@ class VOFS(LoggingMixIn, Operations):
         return self.node[path]
 
     def is_cached(self,path):
-    	return self.cache.get(path,{'cached': False}).get('cached', False)
+        raise NotImplementedError("removed")
 
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
@@ -498,67 +447,19 @@ class VOFS(LoggingMixIn, Operations):
         return fh
 
     def read(self, path, size=0, offset=0, fh=None):
-        """ Read the entire file from the VOSpace server, place in a temporary file and then offset
-        and return size bytes  
-
+        """ Read the required bytes from the file and return a buffer containing
+        the bytes.
         """
 
         ## Read from the requested filehandle, which was set during 'open'
         if fh is None:
             raise FuseOSError(EIO)
 
-        ## raise an error if cache structure doens't exist
-        if path not in self.cache:
-            logging.error("Tried to read but cached wasn't initialied for %s" % ( path))
-            raise FuseOSError(EIO)
+        try:
+            return fh.cacheFileHandle.read(size, offset)
+        except CacheRetry:
+            raise FuseOSError(EAGAIN)
 
-        import os
-        from ctypes import create_string_buffer    
-
-        with self.rwlock:
-            if self.cache[path]['writing'] :
-                ## the cache is currently being written to... so wait for bytes to arrive
-                logging.debug("checking if cache writing has gotten far enought")
-                st_size = os.stat(self.cache[path]['fname']).st_size
-                waited = 0
-                logging.debug("loop until %s + %s < %s or read from vospace reaches EOF." % ( str(size), str(offset), str(st_size)))
-                while ( st_size < offset + size and self.cache[path]['writing'] ):
-                    logging.debug("sleeping for %d ..." % (READ_SLEEP))
-                    time.sleep(READ_SLEEP)
-                    logging.debug("wake up ")
-                    waited += READ_SLEEP
-                    if waited > DAEMON_TIMEOUT - 3:
-                        logging.debug("Slept for %d, data not ready" % (waited))
-                        raise FuseOSError(EAGAIN)
-                    st_size = os.stat(self.cache[path]['fname']).st_size
-                logging.debug("Done waiting. %s + %s < %s or reached EOF" % ( str(size), str(offset), str(st_size)))
-                os.lseek(fh,offset,os.SEEK_SET)
-                logging.debug("sending back %s for %s" % ( str(fh), str(size)))
-                buf = create_string_buffer(size)
-                retsize = libc.read(fh,buf,size)
-                return buf
-
-
-            logging.debug("%s is in data cache: %s " % ( path, self.is_cached(path)))
-                
-            vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            cacheMD5 = self.get_md5_db(self.cache[path]['fname'])
-            if cacheMD5['md5'] == vosMD5 :
-                ## return a libc.read buffer
-                fs = self.fh[fh]['fs']
-                fs.seek(offset,os.SEEK_SET)
-                logging.debug("returning bytes %s starting at  %s" % ( offset, fs.tell()))
-                buf = fs.read(size)
-                retsize = len(buf)
-                return create_string_buffer( buf[:retsize], retsize )
-
-            ## get a copy from VOSpace if the version we have is not currnet or cached.
-            import thread
-            if not self.cache[path]['writing']:
-                self.cache[path]['writing'] = True
-                thread.start_new_thread( self.load_into_cache, (path, int(fh)))
-
-        return self.read(path, size, offset, fh)
         
     def readlink(self, path):
         """Return a string representing the path to which the symbolic link points.
@@ -571,106 +472,19 @@ class VOFS(LoggingMixIn, Operations):
         """
         return self.getNode(path).target
         
-    def load_into_cache(self, path, fh ):
-        """Load path from VOSpace and store into fh"""
-        logging.debug("fh: %d" % ( fh))
-        logging.debug("self: %s" % ( str(self.fh)))
-        try:
-            os.fsync(fh)
-            os.ftruncate(fh,0)
-            wh = os.open(self.cache[path]['fname'],os.O_WRONLY)
-            r = self.client.open(path,mode=os.O_RDONLY,view="data")
-            logging.debug("writing to %s" % ( self.cache[path]['fname']))
-            logging.debug("reading from %s" % ( str(r)))
-            wrote = 0
-            while True:
-                buf = r.read(READBUF)
-                if not buf:
-                    break
-                if os.write(wh,buf)!=len(buf):
-                    raise FuseOSError(EIO)
-                wrote = wrote + len(buf)
-            os.fsync(wh)
-            logging.debug("Wrote: %d" % (wrote))
-            vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            cacheMD5 = self.get_md5_db(self.cache[path]['fname'])
-            if vosMD5 != cacheMD5['md5']:
-                logging.debug("vosMD5: %s cacheMD5: %s" % ( vosMD5, cacheMD5['md5']))
-                raise FuseOSError(EIO)
-            self.cache[path]['cached'] = True
-            logging.debug("Finished caching file %s" %  ( str(self.fh)))
-        except Exception as e:
-            logging.error("ERROR: %s" % (str(e)))
-            ex = FuseOSError(e.errno)
-            ex.strerror = getattr(e,'strerror','failed while reading from %s' %(path))
-            raise ex
-        finally:
-            r.close()
-            os.close(wh)
-            self.cache[path]['writing'] = False
-        return 
-
 
     def get_md5_db(self,fname):
         """Get the MD5 for this fname from the SQL cache"""
-        if not os.access(fname,os.R_OK):
-            raise FuseOSError(EACCES)
-        sqlConn=sqlite3.connect(self.cache_db)
-        sqlConn.row_factory = sqlite3.Row
-        cursor= sqlConn.cursor()
-        cursor.execute("SELECT * FROM md5_cache WHERE fname = ?", (fname,))
-        md5Row=cursor.fetchone()
-        cursor.close()
-        sqlConn.close()
-	if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
-            self.update_md5_db(fname)
-            return self.get_md5_db(fname)
-        if md5Row is None:
-            md5Row={}
-        return md5Row
+        raise NotImplementedError("removed")
 
     def delete_md5_db(self,fname):
         """Delete a record from the cache MD5 database"""
-        sqlConn=sqlite3.connect(self.cache_db)
-        sqlConn.row_factory =  sqlite3.Row
-        cursor = sqlConn.cursor()
-        cursor.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
-        sqlConn.commit()
-        cursor.close()
-        sqlConn.close()
-        return 
+        raise NotImplementedError("removed")
         
 
     def update_md5_db(self,fname):
         """Update a record in the cache MD5 database"""
-        import hashlib
-	st_mtime_end = None
-	st_mtime_start = os.stat(fname).st_mtime
-        ## make sure the file doesn't change while were computing the MD5
-	while st_mtime_end != st_mtime_start:
-            md5 = hashlib.md5()  
-	    ### get the modifcation time prior to reading the file
-            st_mtime_start = os.stat(fname).st_mtime
-            r=open(fname,'r')
-            while True:
-                buf=r.read(READBUF)
-                if len(buf)==0:
-                    break
-                md5.update(buf)
-            r.close()
-	    ### now get mtime again
-            st_mtime_end = os.stat(fname).st_mtime
-        ## UPDATE the MD5 database
-        sqlConn=sqlite3.connect(self.cache_db)
-        sqlConn.row_factory = sqlite3.Row
-        cursor=sqlConn.cursor()
-        cursor.execute("DELETE FROM md5_cache WHERE fname = ?", (fname,))
-        if md5 is not None:
-            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5.hexdigest(), st_mtime_end))
-        sqlConn.commit()
-        cursor.close()
-        sqlConn.close()
-        return 
+        raise NotImplementedError("removed")
 
 
     def readdir(self, path, fh):
@@ -695,7 +509,7 @@ class VOFS(LoggingMixIn, Operations):
     def load_dir(self,path):
         """Load the dirlist from VOSpace"""
         logging.debug("Starting getNodeList thread")
-        self.getNode(path,force=not opt.cache_nodes,limit=None).getNodeList()
+        self.getNode(path,force=not self.opt.cache_nodes,limit=None).getNodeList()
         self.loading_dir[path] = False
         logging.debug("Got listing for %s" %(path))
         return 
@@ -811,26 +625,11 @@ class VOFS(LoggingMixIn, Operations):
 
     def cache_size(self):
         """Determine how much disk space is being used by the local cache"""
-        import os
-        start_path = self.cache_dir
-        total_size = 0
-        self.atimes={}
-        oldest_time=time.time()
-        for dirpath, dirnames, filenames in os.walk(start_path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                if oldest_time > os.stat(fp).st_atime and fp not in self.list_cache():
-                    oldest_time = os.stat(fp).st_atime
-                    self.oldest_file = fp
-                total_size += os.path.getsize(fp)
-        return total_size
+        raise NotImplementedError("removed")
 
     def clear_cache(self):
         """Clear the oldest files until cache_size < cache_limit"""
-        while ( self.cache_size() > self.cache_limit) :
-            logging.debug("Removing file %s from the local cache" % ( self.oldest_file))
-            os.unlink(self.oldest_file)
-            self.oldest_file=None
+        raise NotImplementedError("removed")
 
     def rmdir(self,path):
         node=self.getNode(path)
@@ -971,118 +770,23 @@ class VOFS(LoggingMixIn, Operations):
     def write(self, path, data, size, offset, fh=None):
         import ctypes
 
-        if opt.readonly:
+        if self.opt.readonly:
             logging.debug("File system is readonly.. so writing 0 bytes\n")
             return 0
 
 
-        mode = flag2mode(self.fh[fh]['flags'])
-        if not ('w' in mode or 'a' in mode ):
+        if fh.readOnly:
             logging.debug("file was not opened for writing")
             return 0
 
-        locked = self.fh[fh].get('locked',False)
-        if locked:
+        if fh.locked:
             logging.debug("file %s is locked, no write allowed" % ( path ) )
             raise FuseOSError(EPERM)
 
         logging.debug("%s -> %s" % ( path,fh))
-        if not self.cache[path]['cached'] and offset > 0 :
-            ## we are writing but never cached the original file, do that now
-            try:
-                logging.debug("Getting data from VOSpace cause the cache is empty")
-                self.read(path,fh=fh)
-            except IOError as e:
-                f=FuseOSError(e.errno)
-                f.strerror=getattr(e,'strerror','failed during write of %s' %(path))
-                raise f
-        ## Update the access/mod times and delete the md5 from the cache db
-        ## self.utimens(path)
         logging.debug("%d --> %d" % ( offset, offset+size))
-        self.delete_md5_db(self.cache[path]['fname'])
-        self.cache[path]['cached']=True
-        os.lseek(fh, offset, os.SEEK_SET)
-        return libc.write(fh, data, size)
 
-
-if __name__ == "__main__":
-
-    import optparse
-
-    #usage="%prog <root> <mountpoint>"
-
-
-    parser = optparse.OptionParser(description='mount vospace as a filesystem.')
-
-    parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
-    parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
-    parser.add_option("--version",action="store_true",default=False,help="Print the version (%s)" % ( version))
-    parser.add_option("-d","--debug",action="store_true")
-    parser.add_option("-v","--verbose",action="store_true")
-    parser.add_option("--warning",action="store_true",default=False,help="Print warning level log messages" )
-    parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
-    parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
-    parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
-    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-    parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
-    parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
-    parser.add_option("--allow_other",action="store_true",default=False,help="Allow all users access to this mountpoint")
-
-    parser.version = version
-    (opt,args)=parser.parse_args()
-    import sys
-    if opt.version:
-        parser.print_version()
-        sys.exit(0)
-
-
-
-    if opt.verbose:
-        log_level = logging.INFO
-    elif opt.debug:
-        log_level = logging.DEBUG
-    elif opt.warning:
-        log_level = logging.WARNING
-    else:
-        log_level = logging.ERROR
-
-    format = "%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s"
-    logging.basicConfig(level=log_level, format=format, filename=opt.log)
-
-    logging.getLogger('vos').addHandler(logging.StreamHandler())
-
-    logging.debug("Checking connection to VOSpace ")
-    if not os.access(opt.certfile,os.F_OK):
-        certfile=None
-    else:
-        certfile=opt.certfile
-    conn=vos.Connection(certfile=certfile)
-    logging.debug("Got a certificate, connections should work")
-
-    root = opt.vospace
-    mount = opt.mountpoint
-    if opt.cache_dir is None:
-        opt.cache_dir=os.path.normpath(os.path.join(os.getenv('HOME',default='.'),root.replace(":","_")))
-    if not os.access(mount,os.F_OK):
-        os.makedirs(mount)
-    if platform=="darwin":
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount,
-                    fsname=root,
-                    volname=root,
-                    defer_permissions=True,
-                    daemon_timeout=DAEMON_TIMEOUT,
-                    readonly=opt.readonly,
-                    #auto_cache=True,
-                    allow_other=opt.allow_other,
-                    noapplexattr=True,
-                    noappledouble=True,
-                    foreground=opt.foreground)
-    else:
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount,
-                    fsname=root,
-                    readonly=opt.readonly,
-                    allow_other=opt.allow_other,
-                    #auto_cache=True,
-                    foreground=opt.foreground)
-
+        try:
+            return fh.cacheFileHandle.write(data, size, offset)
+        except CacheRetry:
+            raise FuseOSError(EAGAIN)

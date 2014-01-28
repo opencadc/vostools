@@ -475,7 +475,7 @@ class TestCadcCache(unittest.TestCase):
         self.setUp()
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_unlink(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -705,7 +705,7 @@ class TestCadcCache(unittest.TestCase):
                     testCache.renameDir("/something", "/something")
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
@@ -1248,7 +1248,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
         
     
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_checkCacheSpace(self):
         """ Test cache cleanup """
         if os.path.exists(testDir):
@@ -1288,7 +1288,7 @@ class TestCadcCache(unittest.TestCase):
         # no files deleted as all of them are in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_removeEmptyDirs(self):
         """ Test cache cleanup """
 
