@@ -122,51 +122,88 @@ class TestIOProxy(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 testIOProxy.readFromBacking();
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testIOProxy = CadcCache.IOProxy()
 
-            # Write to beginning of the output
-            testIOProxy.cacheFileStream = io.BufferedIOBase()
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
-            testIOProxy.cacheFileStream.write = Mock(return_value = 3)
             testIOProxy.cache = testCache
             testIOProxy.cacheFile = Object()
             testIOProxy.cacheFile.metaData = Object()
             testIOProxy.cacheFile.metaData.setBlocksRead = Mock()
-            self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
-            testIOProxy.cacheFile.metaData.setBlocksRead.assert_once_with(0,1)
+
+            # Write to beginning of the file
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_write = mocks[1]
+                mock_lseek.return_value = 0
+                mock_write.return_value = 3
+                testIOProxy.cacheFile.fileSize = 3
+                self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
+                testIOProxy.cacheFile.metaData.setBlocksRead.\
+                        assert_called_once_with(0,1)
+                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
+                mock_write.assert_called_once_with(None, "abc")
 
             # Write to after the beginning of the output
-            testIOProxy.cacheFileStream = io.BufferedIOBase()
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 3)
-            testIOProxy.cacheFileStream.write = Mock(return_value = 3)
-            testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            self.assertEqual(3, testIOProxy.writeToCache("abc",
-                testCache.IO_BLOCK_SIZE))
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_write = mocks[1]
+                mock_lseek.return_value = 0
+                mock_write.return_value = 3
+                testIOProxy.cacheFile.fileSize = testCache.IO_BLOCK_SIZE + 3
+                self.assertEqual(3, testIOProxy.writeToCache("abc",
+                    testCache.IO_BLOCK_SIZE))
+                mock_lseek.assert_called_with(None, testCache.IO_BLOCK_SIZE, 
+                        os.SEEK_SET)
+                self.assertEqual(mock_lseek.call_count, 2)
 
             # Test an erroneous seek to the middle of a block
-            testIOProxy.cacheFileStream = io.BufferedIOBase()
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
-            testIOProxy.cacheFileStream.write = Mock(return_value = 3)
-            testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            with self.assertRaises(CadcCache.CacheError) as cm:
-                testIOProxy.writeToCache("abc", 3)
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_lseek.return_value = 0
+                with self.assertRaises(CadcCache.CacheError) as cm:
+                    testIOProxy.writeToCache("abc", 3)
 
-            # Test a completed block write
-            testIOProxy.cacheFileStream = io.BufferedIOBase()
-            testIOProxy.cacheFileStream.tell = Mock(return_value=0)
-            testIOProxy.cacheFileStream.write = Mock(
-                    return_value = testCache.IO_BLOCK_SIZE * 2)
-            testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            buffer = bytearray(testCache.IO_BLOCK_SIZE * 2)
-            self.assertEqual(testCache.IO_BLOCK_SIZE * 2, 
-                    testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE))
-            # TODO assert the bitmap changed correctly - bit 0 not changed, bit
-            # 1 & 2 changed.
+            # Test an attempt to write past the end fo the file.
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_lseek.return_value = 0
+                testIOProxy.cacheFile.fileSize = 3
+                with self.assertRaises(CadcCache.CacheError) as cm:
+                    testIOProxy.writeToCache("abcdef", 0)
+
+            # Test a seek when the last block write to the end of the file.
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_write = mocks[1]
+                testIOProxy.cacheFile.fileSize = \
+                        testCache.IO_BLOCK_SIZE * 2 + 10
+                mock_lseek.return_value = testIOProxy.cacheFile.fileSize
+                mock_write.return_value = 6
+                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                self.assertEqual(testIOProxy.writeToCache("abcdef", 0), 6)
+                self.assertEqual( testIOProxy.cacheFile.metaData.
+                        setBlocksRead.call_count, 0)
+
+            # Write the second block, and the first 10 bytes of the third block
+            # (to the nd of file). This should result in the second and third
+            # blocks being marked complete.
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_write = mocks[1]
+                testIOProxy.cacheFile.fileSize = \
+                        (testCache.IO_BLOCK_SIZE * 2) + 10
+                mock_lseek.return_value = 0
+                mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
+                buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
+                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                self.assertEqual(testCache.IO_BLOCK_SIZE + 10, 
+                        testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE))
+                testIOProxy.cacheFile.metaData.setBlocksRead.\
+                        assert_called_once_with(1,2)
 
 
             # test a subclass
@@ -208,29 +245,37 @@ class TestIOProxy(unittest.TestCase):
         with CadcCache.Cache(testDir, 100, True) as testCache:
             # read from the start of the file.
             testIOProxy = IOProxyForTest()
-            testIOProxy.cacheFileStream = io.BufferedIOBase()
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 0)
-            testIOProxy.cacheFileStream.read = Mock(return_value = "abc")
-            testIOProxy.cacheFileStream.seek = Mock(return_value = 1)
-            testIOProxy.cache = testCache
-            buffer = testIOProxy.readFromCache(0, 10)
-            self.assertEqual("abc", buffer)
-            self.assertFalse(testIOProxy.cacheFileStream.seek.called)
+            with nested( patch('os.lseek'), patch('os.read')) as mocks:
+                mock_lseek = mocks[0]
+                mock_read = mocks[1]
+                mock_lseek.return_value = 0
+                mock_read.return_value = "abc"
+                testIOProxy.cache = testCache
+                buffer = testIOProxy.readFromCache(0, 10)
+                self.assertEqual("abc", buffer)
+                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
 
             # Read from the current position in the file
-            testIOProxy.cacheFileStream.read = Mock(return_value = "def")
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 3)
-            buffer = testIOProxy.readFromCache(3, 10)
-            self.assertEqual("def", buffer)
-            self.assertFalse(testIOProxy.cacheFileStream.seek.called)
+            with nested( patch('os.lseek'), patch('os.read')) as mocks:
+                mock_lseek = mocks[0]
+                mock_read = mocks[1]
+                mock_lseek.return_value = 3
+                mock_read.return_value = "def"
+                buffer = testIOProxy.readFromCache(3, 10)
+                self.assertEqual("def", buffer)
+                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
 
             # Read from a different position in the file
-            testIOProxy.cacheFileStream.read = Mock(return_value = "ghi")
-            testIOProxy.cacheFileStream.tell = Mock(return_value = 3)
-            buffer = testIOProxy.readFromCache(0, 10)
-            self.assertEqual("ghi", buffer)
-            testIOProxy.cacheFileStream.seek.assert_called_once_with(0)
-
+            with nested( patch('os.lseek'), patch('os.read')) as mocks:
+                mock_lseek = mocks[0]
+                mock_read = mocks[1]
+                mock_lseek.return_value = 3
+                mock_read.return_value = "ghi"
+                buffer = testIOProxy.readFromCache(10, 10)
+                self.assertEqual("ghi", buffer)
+                mock_lseek.assert_called_with(None, 10, os.SEEK_SET)
+                mock_read.assert_once_called_with(None, 10)
+                self.assertEqual(mock_lseek.call_count, 2)
 
 
 class TestCacheError(unittest.TestCase):
@@ -1041,7 +1086,7 @@ class TestCadcCache(unittest.TestCase):
             data = fh.read(100,0)
 
             # Read beyond the end of the file.
-            with self.assertRaises(CadcCache.CacheError):
+            with self.assertRaises(ValueError):
                 data = fh.read(100, 1024*1024)
             fh.release()
 

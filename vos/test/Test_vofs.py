@@ -104,16 +104,17 @@ class TestVOFS(unittest.TestCase):
                 "abcd")
 
 
+class TestMyIOProxy(unittest.TestCase):
+    def testWriteToBacking(self):
+        pass
 
-
-
-
-
-
+    def testReadFromBacking(self):
+        pass
 
 
 suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
-alltests = unittest.TestSuite([suite1])
+suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
+alltests = unittest.TestSuite([suite1, suite2])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 
 

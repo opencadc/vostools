@@ -20,13 +20,7 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse 
-from CadcCache import Cache, CacheRetry
-libcPath = find_library('c')
-libc = cdll.LoadLibrary(libcPath)
-
-READBUF=2**20
-DAEMON_TIMEOUT = 60
-READ_SLEEP = 1
+from CadcCache import Cache, CacheRetry, IOProxy
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -36,6 +30,51 @@ def flag2mode(flags):
         m = m.replace('w', 'a', 1)
 
     return m
+
+class myIOProxy(IOProxy):
+    def __init__(self):
+        IOProxy.__init__(self, path, client)
+        self.path = path
+        self.client = client
+
+    def writeToBacking(self, md5, size, mtime):
+        """ 
+        Write a file in the cache to the remote file. 
+        
+        The implementation of this method must use the readFromCache method 
+        to get data from the cache file.
+        """
+        raise NotImplementedError("IOProxy.writeToBacking")
+
+    def readFromBacking(self, size = None, offset = 0, 
+            blockSize = Cache.IO_BLOCK_SIZE):
+        """ 
+        Read from VOSpace into cache
+        """
+
+        # TODO read a range
+        if size is not None or offset != 0:
+            range = (size, offset)
+        else:
+            range = None
+
+        r = self.client.open(self.path,mode=os.O_RDONLY, view="data", size=size,
+                range=range)
+        try:
+            logging.debug("reading from %s" % ( str(r)))
+            while True:
+                buff = r.read(r.blockSize)
+                if not buf:
+                    break
+                self.writeToCache(buff, offset)
+                offset = offset + size(buff)
+                # If the read is aborted in the middle, 
+                if self.cacheFile.readThread.aborted:
+                    break
+        finally:
+            r.close()
+
+        logging.debug("Wrote: %d bytes to cache for %s" % (offset, self.path))
 
 
 class FileHandle(object):
