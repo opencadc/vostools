@@ -20,7 +20,7 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse 
-from CadcCache import Cache, CacheRetry, IOProxy
+from CadcCache import Cache, CacheRetry, CacheAborted, IOProxy
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -31,20 +31,22 @@ def flag2mode(flags):
 
     return m
 
-class myIOProxy(IOProxy):
-    def __init__(self):
-        IOProxy.__init__(self, path, client)
-        self.path = path
+class MyIOProxy(IOProxy):
+    def __init__(self, client, vofs):
+        IOProxy.__init__(self)
         self.client = client
+        self.vofs = vofs
 
-    def writeToBacking(self, md5, size, mtime):
+    def writeToBacking(self):
         """ 
         Write a file in the cache to the remote file. 
-        
-        The implementation of this method must use the readFromCache method 
-        to get data from the cache file.
         """
-        raise NotImplementedError("IOProxy.writeToBacking")
+        logging.debug("PUSHING contents of %s to VOSpace location %s " % 
+                (self.cacheFile.cacheDataFile, self.cacheFile.path))
+
+        self.client.copy(self.cacheFile.cacheDataFile, 
+                self.vofs.getNode(self.cacheFile.path).uri)
+        return self.vofs.getNode(self.cacheFile.path).props.get("MD5")
 
     def readFromBacking(self, size = None, offset = 0, 
             blockSize = Cache.IO_BLOCK_SIZE):
@@ -58,23 +60,25 @@ class myIOProxy(IOProxy):
         else:
             range = None
 
-        r = self.client.open(self.path,mode=os.O_RDONLY, view="data", size=size,
-                range=range)
+        r = self.client.open(self.cacheFile.path, mode=os.O_RDONLY, 
+                view="data", size=size, range=range)
         try:
             logging.debug("reading from %s" % ( str(r)))
             while True:
-                buff = r.read(r.blockSize)
-                if not buf:
+                buff = r.read(blockSize)
+                if not buff:
                     break
-                self.writeToCache(buff, offset)
-                offset = offset + size(buff)
-                # If the read is aborted in the middle, 
-                if self.cacheFile.readThread.aborted:
+                try:
+                    self.writeToCache(buff, offset)
+                except CacheAborted:
+                    # The transfer was aborted.
                     break
+                offset += len(buff)
         finally:
             r.close()
 
-        logging.debug("Wrote: %d bytes to cache for %s" % (offset, self.path))
+        logging.debug("Wrote: %d bytes to cache for %s" % (offset,
+                self.cacheFile.path))
 
 
 class FileHandle(object):
@@ -816,10 +820,6 @@ class VOFS(LoggingMixIn, Operations):
 
         if fh.readOnly:
             logging.debug("file was not opened for writing")
-            return 0
-
-        if fh.locked:
-            logging.debug("file %s is locked, no write allowed" % ( path ) )
             raise FuseOSError(EPERM)
 
         logging.debug("%s -> %s" % ( path,fh))

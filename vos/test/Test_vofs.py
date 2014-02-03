@@ -4,7 +4,7 @@ import unittest
 from vos import vofs
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
-from vos.CadcCache import CacheRetry
+from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO
 
 
@@ -35,14 +35,9 @@ class TestVOFS(unittest.TestCase):
         fileHandle.readOnly = True
         # Write some data at the start of the file. File is read only so it
         # returns 0
-        self.assertEqual( testfs.write( "/dir1/dir2/file", "abcd", 4, 0,
-                fileHandle), 0)
-
-        """Write to a locked file"""
-        fileHandle.readOnly = False
-        fileHandle.locked = True
         with self.assertRaises(FuseOSError):
-                testfs.write( "/dir1/dir2/file", "abcd", 4, 0, fileHandle)
+            testfs.write( "/dir1/dir2/file", "abcd", 4, 0, fileHandle)
+
 
     def testWrite2(self):
         """ Write to a read-only file system"""
@@ -106,10 +101,81 @@ class TestVOFS(unittest.TestCase):
 
 class TestMyIOProxy(unittest.TestCase):
     def testWriteToBacking(self):
-        pass
+        # Submit a write request for the whole file.
+        with Cache(TestVOFS.testCacheDir, 100, timeout=1) as testCache:
+            client = Object
+            client.copy = Mock()
+            vofsObj = Object
+            node = Object
+            node.uri = "vos:/dir1/dir2/file"
+            node.props={"MD5": 12345}
+            vofsObj.getNode = Mock(return_value=node)
+            testProxy = vofs.MyIOProxy(client, vofsObj)
+            path = "/dir1/dir2/file"
+            with FileHandle(path, testCache, testProxy) as \
+                    testFileHandle:
+                testProxy.cacheFile = testFileHandle
+                self.assertEqual(testProxy.writeToBacking(), 12345)
+            client.copy.assert_called_once_with( testCache.dataDir + 
+                    "/dir1/dir2/file", node.uri)
 
     def testReadFromBacking(self):
-        pass
+        callCount = [0]
+        def mock_read(block_size):
+            callCount[0] += 1
+            if callCount[0] == 1:
+                return "1234"
+            else:
+                return None
+
+        with Cache(TestVOFS.testCacheDir, 100, timeout=1) as testCache:
+            client = Object
+            streamyThing = Object()
+            client.open = Mock(return_value = streamyThing)
+            client.close = Mock()
+            client.read = Mock(side_effect = mock_read)
+            testProxy = vofs.MyIOProxy(client, None)
+            path = "/dir1/dir2/file"
+            with FileHandle(path, testCache, testProxy) as \
+                    testFileHandle:
+                testProxy.writeToCache = Mock(return_value = 4)
+                testProxy.cacheFile = testFileHandle
+                testProxy.cacheFile.readThread = Object()
+                testProxy.cacheFile.readThread.aborted = False
+                try:
+
+                    # Submit a request for the whole file
+                    testProxy.readFromBacking()
+                    client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
+                            view="data", size=None, range=None)
+                    self.assertEqual(client.close.call_count, 1)
+                    self.assertEqual(client.read.call_count, 2)
+
+                    # Submit a range request
+                    client.open.reset_mock()
+                    client.close.reset_mock()
+                    client.read.reset_mock()
+                    callCount[0] = 0
+                    testProxy.readFromBacking(100,200)
+                    client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
+                            view="data", size=100, range=(100,200))
+                    self.assertEqual(client.close.call_count, 1)
+                    self.assertEqual(client.read.call_count, 2)
+
+                    # Submit a request which gets aborted.
+                    client.open.reset_mock()
+                    client.close.reset_mock()
+                    client.read.reset_mock()
+                    callCount[0] = 0
+                    testProxy.writeToCache.side_effect = CacheAborted("aborted")
+                    testProxy.readFromBacking(100,200)
+                    client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
+                            view="data", size=100, range=(100,200))
+                    self.assertEqual(client.close.call_count, 1)
+                    self.assertEqual(client.read.call_count, 1)
+
+                finally:
+                    testProxy.cacheFile.readThread = None
 
 
 suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)

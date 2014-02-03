@@ -465,6 +465,13 @@ class CacheRetry(Exception):
     def __str__(self):
         return repr(self.value)
 
+class CacheAborted(Exception):
+    # Thrown when a cache operation should be aborted.
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 
 class IOProxy(object):
     """ 
@@ -509,12 +516,11 @@ class IOProxy(object):
         raise NotImplementedError("IOProxy.delNode")
 
 
-    def writeToBacking(self, md5, size, mtime):
+    def writeToBacking(self):
         """ 
         Write a file in the cache to the remote file. 
         
-        The implementation of this method must use the readFromCache method 
-        to get data from the cache file.
+        Return the md5sum of the file written.
         """
         raise NotImplementedError("IOProxy.writeToBacking")
 
@@ -537,6 +543,9 @@ class IOProxy(object):
         """ 
         Function to write data to a the cache. This method should only be used
         by the implementation of the readFromBacking method.
+
+        The method raises a CacheAborted exception if the preload should be
+        aborted.
         """
 
         currentOffset = os.lseek(self.cacheFileDescriptor, 0, os.SEEK_CUR)
@@ -578,6 +587,14 @@ class IOProxy(object):
 
 
         self.currentByte = nextByte
+
+        # Check to see if the current read has been aborted, and if it has, thow
+        # and exception
+
+        if (self.cacheFile.readThread.aborted and 
+                nextByte > self.cacheFile.readThread.mandatoryEnd and
+                nextByte <= self.cacheFile.fileSize):
+            raise CacheAborted("Read to cache aborted.")
 
         return nextByte 
 
@@ -704,22 +721,11 @@ class FileHandle(object):
 
         return
 
-    def getmd5(self):
+    def getFileInfo(self):
         """Get the current md5sum of the file."""
-        md5 = hashlib.md5()
-        size = 0
-
-        # Don't open by file name, the file may have been deleted.
-        with os.fdopen(os.dup(self.ioObject.cacheFileDescriptor),'r') as r:
-            while True:
-                buff=r.read(Cache.IO_BLOCK_SIZE)
-                if len(buff) == 0:
-                    break
-                md5.update(buff)
-                size += len(buff)
 
         info = os.fstat(self.ioObject.cacheFileDescriptor)
-        return md5.hexdigest(), size, info.st_mtime
+        return info.st_size, info.st_mtime
 
     def flushNode(self):
         """Flush the file to the backing store.
@@ -733,11 +739,12 @@ class FileHandle(object):
         with self.writerLock(shared=False):
             try:
                 # Get the md5sum of the cached file
-                md5, size, mtime = self.getmd5()
+                size, mtime = self.getFileInfo()
 
                 # Write the file to vospace.
 
-                self.ioObject.writeToBacking(md5, size, mtime)
+                os.fsync(self.ioObject.cacheFileDescriptor)
+                md5 = self.ioObject.writeToBacking()
 
                 # Update the meta data md5
                 blocks,blocks = self.ioObject.blockInfo(0, size)
