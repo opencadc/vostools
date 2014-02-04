@@ -363,26 +363,15 @@ class VOFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 
-        import os
         logging.debug("getting attributes of %s" % ( path))
 
-        if self.is_cached(path):
-            f = os.stat(self.cache[path]['fname'])
-            return dict((name, getattr(f, name)) for name in dir(f) if not name.startswith('__'))
+        # Try to get the attributes from the cache first. This will only return
+        # a result if the files has been modified and not flushed to vospace.
+        cacheFileAttrs = self.cache.getAttr(path)
+        if cacheFileAttrs is not None:
+            return cacheFileAttrs
 
-        ## not in cache -> add to dictionary of Node attributes if need be
-        attr = self.getNode(path).attr
-
-        atime=attr.get('st_atime',time.time())
-        mtime=attr.get('st_mtime',atime)
-        ctime=attr.get('st_ctime',atime)
-
-        if mtime > atime or ctime > atime:
-            ### the modification/change times are after the last access
-            ### so we should access this VOSpace node again.
-            logging.debug("Getting node details for stale node %s" % ( path))
-            attr=self.getNode(path,limit=0,force=True).attr
-        return attr
+        return self.getNode(path, limit=0, force=True).attr
 
     def dead_getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""

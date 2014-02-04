@@ -99,6 +99,31 @@ class TestVOFS(unittest.TestCase):
                 "abcd")
 
 
+    def testgetattr(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
+        # Get the attributes from vospace.
+        node = Object()
+        testfs.cache.getAttr = Mock(return_value=None)
+        node.attr="attributes"
+        testfs.getNode = Mock(return_value=node)
+        self.assertEqual(testfs.getattr("/a/file/path"), "attributes")
+        testfs.getNode.assert_called_once_with("/a/file/path", limit=0,
+                force=True)
+        testfs.cache.getAttr.assert_called_once_with("/a/file/path")
+
+        # Get attributes from a file modified in the cache.
+        testfs.cache.getAttr.reset_mock()
+        testfs.getNode.reset_mock()
+        self.assertFalse(testfs.getNode.called)
+        testfs.cache.getAttr = Mock(return_value="different")
+        self.assertEqual(testfs.getattr("/a/file/path2"), "different")
+        testfs.cache.getAttr.assert_called_once_with("/a/file/path2")
+        help(testfs.getNode)
+        self.assertFalse(testfs.getNode.called)
+
+
+
 class TestMyIOProxy(unittest.TestCase):
     def testWriteToBacking(self):
         # Submit a write request for the whole file.
