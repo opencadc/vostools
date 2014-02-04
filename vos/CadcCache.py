@@ -438,6 +438,31 @@ class Cache(object):
                                 newPath + fh.cacheMetaDataFile[start:])
                     fh.fileLock.release()
 
+    def getAttr(self, path):
+        """Get the attributes of a cached file. 
+
+        This method will only return attributes if the cached file's attributes 
+        are better than the backing store's attributes. I.e. if the file is open
+        and has been modified.
+        """
+
+        with self.cacheLock:
+            # Make sure the file state doesn't change in the middle.
+            try:
+                fileHandle = self.fileHandleDict[path]
+            except KeyError:
+                return None
+            with fileHandle.fileLock:
+                if fileHandle.fileModified:
+                    f = os.stat(fileHandle.cacheDataFile )
+                    return dict((name, getattr(f, name)) 
+                            for name in dir(f) 
+                            if not name.startswith('__'))
+                else:
+                    return None
+
+            
+
     @staticmethod
     def pathExists(path):
         """Return true if the file exists"""
