@@ -5,6 +5,7 @@ import logging
 import os
 import errno
 import stat
+import sys
 import threading
 import thread
 import time
@@ -53,8 +54,8 @@ class IOProxyForTest(CadcCache.IOProxy):
         """Generic test returns true"""
         return True
 
-    def writeToBacking(self, md5, size, mtime):
-        return
+    def writeToBacking(self):
+        return 0xabcdef
 
     def readFromBacking(self, offset = None, size = None):
         return
@@ -78,8 +79,8 @@ class IOProxyFor100K(CadcCache.IOProxy):
         """Generic test returns true"""
         return True
 
-    def writeToBacking(self, md5, size, mtime):
-        return
+    def writeToBacking(self):
+        return 0xabcdef
 
     def readFromBacking(self, offset = None, size = None):
         if offset > 102400 or offset + size > 102400:
@@ -118,11 +119,11 @@ class TestIOProxy(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 testIOProxy.delNode()
             with self.assertRaises(NotImplementedError):
-                testIOProxy.writeToBacking("a", 1, 1.);
+                testIOProxy.writeToBacking();
             with self.assertRaises(NotImplementedError):
                 testIOProxy.readFromBacking();
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
@@ -131,6 +132,10 @@ class TestIOProxy(unittest.TestCase):
 
             testIOProxy.cache = testCache
             testIOProxy.cacheFile = Object()
+            testIOProxy.cacheFile.readThread = Object()
+            testIOProxy.cacheFile.readThread.aborted = False
+            testIOProxy.cacheFile.readThread.mandatoryEnd = \
+                    testCache.IO_BLOCK_SIZE
             testIOProxy.cacheFile.metaData = Object()
             testIOProxy.cacheFile.metaData.setBlocksRead = Mock()
 
@@ -204,6 +209,23 @@ class TestIOProxy(unittest.TestCase):
                         testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE))
                 testIOProxy.cacheFile.metaData.setBlocksRead.\
                         assert_called_once_with(1,2)
+
+            # do a write which gets aborted
+            testIOProxy.cacheFile.readThread.aborted = True
+            with nested( patch('os.lseek'), patch('os.write')) as mocks:
+                mock_lseek = mocks[0]
+                mock_write = mocks[1]
+                testIOProxy.cacheFile.fileSize = \
+                        (testCache.IO_BLOCK_SIZE * 2) + 10
+                mock_lseek.return_value = 0
+                mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
+                buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
+                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                with self.assertRaises(CadcCache.CacheAborted):
+                        testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE)
+                testIOProxy.cacheFile.metaData.setBlocksRead.\
+                        assert_called_once_with(1,2)
+
 
 
             # test a subclass
@@ -288,6 +310,12 @@ class TestCacheRetry(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
         e = CadcCache.CacheRetry("a string")
+        self.assertEqual("'a string'", str(e))
+
+class TestCacheAborted(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_str(self):
+        e = CadcCache.CacheAborted("a string")
         self.assertEqual("'a string'", str(e))
 
 
@@ -453,7 +481,7 @@ class TestSharedLock(unittest.TestCase):
             self.assertEqual(0,len(lock.lockersList))
 
 class TestCacheCondtion(unittest.TestCase):
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_all(self):
         lock = threading.Lock()
         cond = CadcCache.CacheCondition(lock, 1)
@@ -492,15 +520,12 @@ class TestCacheCondtion(unittest.TestCase):
             t1.start()
             cond.wait()
 
+
     def notifyAfter1S(self,cond):
         time.sleep(1)
         with cond:
             cond.notify_all()
 
-
-
-
-        
 
 class TestCadcCache(unittest.TestCase):
     """Test the CadcCache.CadcCache class
@@ -965,21 +990,6 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_getmd5(self):
-        with CadcCache.Cache(testDir, 100) as testCache:
-            ioObject = IOProxyForTest()
-            fh = testCache.open("/dir1/dir2/file", False, ioObject)
-            self.makeTestFile(os.path.join(testCache.dataDir, 
-                    "dir1/dir2/file"), self.testSize)
-            result = fh.getmd5()
-            # Check the md5sum and size are correct, and the modification
-            # time is roughly nowish.
-            self.assertEqual((self.testMD5, self.testSize), result[0:2])
-            self.assertTrue(abs(result[2] - time.time()) < 10)
-
-            fh.release()
-
-    @unittest.skipIf(skipTests, "Individual tests")
     def test_release1(self):
         """Fails getting md5."""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -993,7 +1003,7 @@ class TestCadcCache(unittest.TestCase):
             ioObject.verifyMetaData = Mock(return_value=False)
             fh = testObject.open("/dir1/dir2/file", False, ioObject)
             fh.fileModified = True
-            fh.getmd5 = Mock(side_effect=Exception("failed"))
+            fh.fileCondition.setTimeout = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
                 fh.release()
 
@@ -1047,15 +1057,14 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100) as testObject:
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
-            ioObject.writeToBacking = MagicMock()
+            ioObject.writeToBacking = MagicMock(return_value="1234")
             fh = testObject.open("/dir1/dir2/file", False, ioObject)
             self.makeTestFile(os.path.join(testObject.dataDir, 
                     "dir1/dir2/file"), self.testSize)
             fh.fileModified = True
             info = os.stat(fh.cacheDataFile)
             fh.release()
-            ioObject.writeToBacking.assert_called_once_with(self.testMD5,
-                    self.testSize, info.st_mtime)
+            ioObject.writeToBacking.assert_called_once_with()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release4(self):
@@ -1075,6 +1084,27 @@ class TestCadcCache(unittest.TestCase):
             self.assertTrue(fh.readThread.aborted)
             fh.readThread = None
             fh.release()
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_release5(self):
+        """Flush returns an error.
+        """
+
+        with CadcCache.Cache(testDir, 100) as testObject:
+            # This should really flush the data to the backing
+            ioObject = IOProxyForTest()
+            ioObject.writeToBacking = MagicMock(
+                    side_effect=Exception("message"))
+            fh = testObject.open("/dir1/dir2/file", False, ioObject)
+            self.makeTestFile(os.path.join(testObject.dataDir, 
+                    "dir1/dir2/file"), self.testSize)
+            fh.fileModified = True
+            info = os.stat(fh.cacheDataFile)
+            with self.assertRaises(Exception):
+                fh.release()
+
+
+
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_read1(self):
@@ -1501,9 +1531,11 @@ suite1 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
 suite2 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
 suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
-suite5 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
-suite6 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
-alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, suite6, suite7])
+suite5 = unittest.TestLoader().loadTestsFromTestCase(TestCacheAborted)
+suite6 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
+suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
+suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, 
+        suite6, suite7, suite8])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 
