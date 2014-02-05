@@ -113,10 +113,12 @@ class TestVOFS(unittest.TestCase):
         with self.assertRaises(FuseOSError):
             myVofs.open(file, os.O_RDWR, None)
             
-        # test with mocks so we can assert other parts of the file
+        # test with mocks so we can assert other parts of the function
         with patch('vos.vofs.MyIOProxy') as mock1:
             with patch('vos.CadcCache.Cache') as mock2:
                 myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
+                myVofs.getNode = Mock()
+                myVofs.getNode.side_effect = FuseOSError(404)
                 #myVofs.cache = mock2
                 fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
                 mock1.assert_called_with(myVofs, None)
