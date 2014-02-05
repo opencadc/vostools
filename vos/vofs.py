@@ -12,6 +12,7 @@ from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 ENOATTR=93
 import os
+import io
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
@@ -32,10 +33,9 @@ def flag2mode(flags):
     return m
 
 class MyIOProxy(IOProxy):
-    def __init__(self, client, vofs):
-        IOProxy.__init__(self)
-        self.client = client
+    def __init__(self, vofs, node):
         self.vofs = vofs
+        self.node = node
 
     def writeToBacking(self):
         """ 
@@ -44,7 +44,7 @@ class MyIOProxy(IOProxy):
         logging.debug("PUSHING contents of %s to VOSpace location %s " % 
                 (self.cacheFile.cacheDataFile, self.cacheFile.path))
 
-        self.client.copy(self.cacheFile.cacheDataFile, 
+        self.vofs.client.copy(self.cacheFile.cacheDataFile, 
                 self.vofs.getNode(self.cacheFile.path).uri)
         return self.vofs.getNode(self.cacheFile.path).props.get("MD5")
 
@@ -60,7 +60,7 @@ class MyIOProxy(IOProxy):
         else:
             range = None
 
-        r = self.client.open(self.cacheFile.path, mode=os.O_RDONLY, 
+        r = self.vofs.client.open(self.cacheFile.path, mode=os.O_RDONLY, 
                 view="data", size=size, range=range)
         try:
             logging.debug("reading from %s" % ( str(r)))
@@ -76,16 +76,29 @@ class MyIOProxy(IOProxy):
                 offset += len(buff)
         finally:
             r.close()
-
+            
         logging.debug("Wrote: %d bytes to cache for %s" % (offset,
                 self.cacheFile.path))
+ 
+    def getMD5(self):
+        if self.node is None:
+            return None
+        else:
+            return self.node.props.get('MD5')
+    
+    def getSize(self):
+        if self.node is None:
+            return None
+        else:
+            return self.node.props.get('length')
 
 
-class FileHandle(object):
-    def __init__(self, cacheFileHandle):
+class HandleWrapper(object):
+    """ Wrapper for cache file handlers. Each wrapper represents an open request.
+    Multiple wrappers of the same file share the same cache file handler. """
+    def __init__(self, cacheFileHandle, readOnly = False):
         self.cacheFileHandle = cacheFileHandle
-        self.readOnly = False
-        self.locked = False
+        self.readOnly = readOnly
 
 
 class VOFS(LoggingMixIn, Operations):
@@ -164,7 +177,7 @@ class VOFS(LoggingMixIn, Operations):
         """Delete the references associated with this Node"""
         if not self.cache_nodes or force :
             self.node.pop(path,None)
-        
+        add_to_cache
 
     def access(self, path, mode):
         """Check if path is accessible.  
@@ -201,7 +214,7 @@ class VOFS(LoggingMixIn, Operations):
         # The 'node' object returned by getNode has a chmod method
         # that we now call to set the mod, since we set the group(s)
         # above.  NOTE: If the parrent doesn't have group then NONE is
-        # passed up and the groupwrite and groupread will be set to
+        # passed up and the groupwrite and groupread will be set tovos:
         # the string NONE.
         if node.chmod(mode):
             # Now set the time of change/modification on the path...
@@ -263,7 +276,7 @@ class VOFS(LoggingMixIn, Operations):
         in VOSpace.
         
         Flushing the VOSpace object involves pushing the entire file
-        back over the network. This should only be done when really
+        back over the network. This should onladd_to_cachey be done when really
         needed as the network connection can be slow."""
         mode = flag2mode(self.fh[fh]['flags'])
         if not ('w' in mode or 'a' in mode ):
@@ -281,21 +294,6 @@ class VOFS(LoggingMixIn, Operations):
         self.cache[path]['writing']=False
 
         return        
-
-    def flush(self,path,fh):
-        """Flush the cached version of the file.
-
-        This could be a problem since users expect the file in VOSpace
-        to be updated too.  But we only do that with a flushnode call
-        which we do on close of the file."""
-        
-
-        if self.opt.readonly:
-            logging.debug("File system is readonly, no sync allowed")
-            return
-
-        return os.fsync(fh) 
-
   
     def fsync(self,path,datasync,fh):
         if self.opt.readonly:
@@ -366,7 +364,6 @@ class VOFS(LoggingMixIn, Operations):
         """Build some attributes for this file, we have to make-up some stuff"""
 
         logging.debug("getting attributes of %s" % ( path))
-
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         cacheFileAttrs = self.cache.getAttr(path)
@@ -408,7 +405,7 @@ class VOFS(LoggingMixIn, Operations):
         #   raise ex
         return
 
-
+    
     def open(self, path, flags, *mode):
         """Open file with the desired modes
 
@@ -416,23 +413,25 @@ class VOFS(LoggingMixIn, Operations):
         which is updated if older and out of synce with VOSpace.
 
         """
-        import io
 
         logging.debug("Opening %s with flags %s" % ( path, flag2mode(flags)))
-
-        ## see if this node exists
-        try:
-            node = self.getNode(path)
-        except Exception as e:
-            if e.errno == ENOENT:
-                if flags | os.O_RDONLY:
-                    # file openned for readonly doens't exist
-                    FuseOSError(ENOENT)
+        node = None
+        
+        
+        cacheFileAttrs = self.cache.getAttr(path)
+        if cacheFileAttrs is None:
+            # file in the cache not in the process of being modified. 
+            # see if this node already exists in the cache; if not get info from vospace 
+            try:
+                node = self.getNode(path)
+            except Exception as e:
+                if e.errno == 404:
+                    # file does not exist
+                    if not flags & os.O_CREAT:
+                        # file doesn't exist unless created
+                        raise FuseOSError(ENOENT)
                 else:
-                    ## no problem, maybe we should have created first... 
-                    pass
-            else:
-                raise FuseOSError(e.errno)
+                    raise FuseOSError(e.errno)
             
         ### check if this file is locked, if locked on vospace then don't open
         locked=False
@@ -441,15 +440,16 @@ class VOFS(LoggingMixIn, Operations):
              logging.info("%s is locked." % path)
              locked = True
 
-        if not locked:
+
+        if node and not locked:
              if node.type == "vos:DataNode":
                   parentNode = self.getNode(os.path.dirname(path),force=False,limit=1)
                   if parentNode.props.get('islocked', False):
                        logging.info("%s is locked by parent node." % path)
                        locked=True
              elif node.type == "vos:LinkNode":
-	          try:
-		     ## sometimes targetNodes aren't internall... so then not locked
+                 try:
+                     ## sometimes targetNodes aren't internall... so then not locked
                       targetNode = self.getNode(node.target,force=False,limit=1)  
                       if targetNode.props.get('islocked', False):
                           logging.info("%s target node is locked." % path)
@@ -459,26 +459,16 @@ class VOFS(LoggingMixIn, Operations):
                           if targetParentNode.props.get('islocked', False):
                               logging.info("%s is locked by target parent node." % path)
                               locked=True
-                  except Exception as e:
+                 except Exception as e:
                       logging.error("Got an error while checking for lock: "+str(e))
                       pass
 
-
-
-        ## setup the data cache structure, which returns a 
-        self.add_to_cache(path)
-
-        ## open the cache file, return that handle to fuse layer.
-        fh = os.open(self.cache[path]['fname'], os.O_RDWR )
-
-        ## also open a direct io path to this handle, use that for file write operations 
-        fs = io.open(fh,mode='r+b')
-        os.lseek(fh,0,os.SEEK_SET)
-
-        ## the fh dictionary provides lookups to some critical info... 
-        self.fh[fh]={'flags': flags, 'fs': fs, 'locked': locked}
-
-        return fh
+        if locked & flags & os.O_WRONLY:
+            # file is locked, cannot write
+            FuseOSError(ENOENT)
+        
+        myProxy = MyIOProxy(self, node)
+        return HandleWrapper(self.cache.open(path, node == None, myProxy), flags & os.O_RDONLY)
 
     def read(self, path, size=0, offset=0, fh=None):
         """ Read the required bytes from the file and return a buffer containing
@@ -548,59 +538,20 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("Got listing for %s" %(path))
         return 
 
-    def release(self, path, fh):
-        """Close the file, but if this was a holding spot for writes, then write the file to the node"""
-        import os
-
-        ## get the MODE of the original open, if 'w/a/w+/a+' we should write to VOSpace
-        ## we do that here before closing the filehandle since we delete the reference to 
-        ## the file handle at this point.
-        mode = os.O_RDONLY
-        if self.fh.get(fh,None) is not None:
-            mode = self.fh[fh]['flags']
-
-        ## remove references to this file handle.
-        writing_wait = 0
-        while self.cache[path]['writing'] :
-            time.sleep(READ_SLEEP) 
-            writing_wait += READ_SLEEP
-            if writing_wait > DAEMON_TIMEOUT -3 :
-                raise FuseOSError(EAGAIN)
-
-        ## On close, if this was a WRITE opperation then update VOSpace
-        ## unless the VOSpace is actually newer than this cache file.
-        ### copy the staging file to VOSpace if needed
-        logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
-        if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ):
-            ## check if the cache MD5 is up-to-date
-            md5Row = self.get_md5_db(self.cache[path]['fname'])
-            voMD5 = self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            if md5Row['md5'] != voMD5:
-                logging.debug("cache MD5 %s",md5Row['md5'])
-                logging.debug("VOSpace MD5 %s",voMD5)
-                logging.debug("PUSHING contents of %s to VOSpace location %s " % (self.cache[path]['fname'],path))
-                ## replace VOSpace copy with cache version.
-                self.fsync(path,False,fh)
-                if not self.cache[path]['writing']:
-                    import thread
-                    self.cache[path]['writing']=True
-                    thread.start_new_thread(self.flushnode,(path,fh))
-                    return self.release(path,fh)
-
-        ##  now close the fh
+    def release(self, fh):
+        """Close the file"""
         try:
-            os.close(fh)
-        except Exception as e:
-            ex = FuseOSError(getattr(e,'errno',EIO))
-            ex.strerror = getattr(ex,'strerror','failed while closing %s' %(path))
-            logging.debug(str(e))
-            raise ex
-        finally:
-            self.fh.pop(fh,None)
-            self.delNode(path)
-            #self.cache.pop(path,None)
-        ## clear up the cache
-        self.clear_cache()
+            
+            if (fh.fileModified) and (path in self.node):
+                #local copy modified. remove from list
+                del self.node[path]
+            fh.release()
+        except CacheRetry, e:
+            #it's taking too long. Notify FUSE
+            raise FuseOSError(EAGAIN)
+        except Exception, e:
+            #unexpected problem
+            raise FuseOSError(EIO)
         return 
 
 
@@ -817,3 +768,5 @@ class VOFS(LoggingMixIn, Operations):
             return fh.cacheFileHandle.write(data, size, offset)
         except CacheRetry:
             raise FuseOSError(EAGAIN)
+        
+        

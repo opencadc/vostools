@@ -1,12 +1,11 @@
 import os
 import shutil
 import unittest
-from vos import vofs
+from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
-from errno import EIO
-
+from errno import EIO, EAGAIN
 
 class Object(object):
     pass
@@ -31,20 +30,18 @@ class TestVOFS(unittest.TestCase):
     def testWrite1(self):
         """ Write to a read-only or locked file"""
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        fileHandle = vofs.FileHandle(None)
-        fileHandle.readOnly = True
+        fileHandle = vofs.HandleWrapper(None, True)
         # Write some data at the start of the file. File is read only so it
         # returns 0
+
         with self.assertRaises(FuseOSError):
             testfs.write( "/dir1/dir2/file", "abcd", 4, 0, fileHandle)
-
 
     def testWrite2(self):
         """ Write to a read-only file system"""
         opt.readonly = True
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        fileHandle = vofs.FileHandle(None)
-        fileHandle.readOnly = False
+        fileHandle = vofs.HandleWrapper(None, False)
         # Write some data at the start of the file.
         self.assertEqual(testfs.write( "/dir1/dir2/file", "abcd", 4, 0,
                 fileHandle), 0)
@@ -53,7 +50,7 @@ class TestVOFS(unittest.TestCase):
         """Test a successfull write."""
 
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        fileHandle = vofs.FileHandle(Object())
+        fileHandle = vofs.HandleWrapper(Object(), False)
         fileHandle.cacheFileHandle.write = Mock()
         fileHandle.cacheFileHandle.write.return_value = 4
         self.assertEqual(testfs.write( "/dir1/dir2/file", "abcd", 4, 0,
@@ -71,7 +68,7 @@ class TestVOFS(unittest.TestCase):
         """Test a timout during write"""
 
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        fileHandle = vofs.FileHandle(Object())
+        fileHandle = vofs.HandleWrapper(Object(), False)
         fileHandle.cacheFileHandle.write = Mock()
         fileHandle.cacheFileHandle.write.side_effect = CacheRetry("fake")
         with self.assertRaises(FuseOSError):
@@ -85,18 +82,61 @@ class TestVOFS(unittest.TestCase):
             testfs.read( "/dir1/dir2/file", 4, 2048)
 
         # Read with a timeout.
-        fileHandle = vofs.FileHandle(Object())
+        fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cacheFileHandle.read = Mock()
         fileHandle.cacheFileHandle.read.side_effect = CacheRetry("fake")
         with self.assertRaises(FuseOSError):
             testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle)
 
         # Read with success.
-        fileHandle = vofs.FileHandle(Object())
+        fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cacheFileHandle.read = Mock()
         fileHandle.cacheFileHandle.read.return_value = "abcd"
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
+        
+    
+    def test_open(self):
+        myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
+        file = "/dir1/dir2/file"
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = None
+        
+        # call once without the use of mocks
+        fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+        self.assertEqual(self.testCacheDir + "/data" + file, fh.cacheFileHandle.cacheDataFile)
+        self.assertEqual(self.testCacheDir + "/metaData" + file, fh.cacheFileHandle.cacheMetaDataFile)
+
+        # non existing file open in read/write mode should fail
+        with self.assertRaises(FuseOSError):
+            myVofs.open(file, os.O_RDWR, None)
+            
+        # test with mocks so we can assert other parts of the file
+        with patch('vos.vofs.MyIOProxy') as mock1:
+            with patch('vos.CadcCache.Cache') as mock2:
+                myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
+                #myVofs.cache = mock2
+                fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+                mock1.assert_called_with(myVofs, None)
+                #mock2.open.assert_called_with(file, True, mock1)
+                
+        # test with local attributes
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = Mock()
+        fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+        self.assertEqual(None, fh.cacheFileHandle.ioObject.getMD5())
+        self.assertEqual(None, fh.cacheFileHandle.ioObject.getSize())
+                
+                
+    def test_release(self):
+        file = "/dir1/dir2/file"
+        fh = MagicMock(name="filehandler")
+        fh.release.side_effect=CacheRetry(Exception())
+        myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
+        with self.assertRaises(FuseOSError):
+            myVofs.release(fh)
+            
+        # when file modified locally, release should remove it from the list of  
 
 
     def test_getattr(self):
@@ -182,12 +222,13 @@ class TestMyIOProxy(unittest.TestCase):
         with Cache(TestVOFS.testCacheDir, 100, timeout=1) as testCache:
             client = Object
             client.copy = Mock()
-            vofsObj = Object
+            vofsObj = Mock()
+            vofsObj.client = client
             node = Object
             node.uri = "vos:/dir1/dir2/file"
             node.props={"MD5": 12345}
             vofsObj.getNode = Mock(return_value=node)
-            testProxy = vofs.MyIOProxy(client, vofsObj)
+            testProxy = vofs.MyIOProxy(vofsObj, None)
             path = "/dir1/dir2/file"
             with FileHandle(path, testCache, testProxy) as \
                     testFileHandle:
@@ -211,7 +252,9 @@ class TestMyIOProxy(unittest.TestCase):
             client.open = Mock(return_value = streamyThing)
             client.close = Mock()
             client.read = Mock(side_effect = mock_read)
-            testProxy = vofs.MyIOProxy(client, None)
+            myVofs = Mock()
+            myVofs.client = client
+            testProxy = vofs.MyIOProxy(myVofs, None)
             path = "/dir1/dir2/file"
             with FileHandle(path, testCache, testProxy) as \
                     testFileHandle:
@@ -256,8 +299,7 @@ class TestMyIOProxy(unittest.TestCase):
 
 
 suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
-suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
-alltests = unittest.TestSuite([suite1, suite2])
+alltests = unittest.TestSuite([suite1])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 
 
