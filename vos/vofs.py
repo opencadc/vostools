@@ -163,16 +163,6 @@ class VOFS(LoggingMixIn, Operations):
     def __del__(self):
         self.node=None
 
-    def add_to_cache(self,path):
-        """Add path to the cache reference."""
-
-        raise NotImplementedError("removed")
-
-    def list_cache(self):
-        """Get a list of the cache files that are in active use"""
-
-        raise NotImplementedError("removed")
-
     def delNode(self,path,force=False):
         """Delete the references associated with this Node"""
         if not self.cache_nodes or force :
@@ -274,51 +264,16 @@ class VOFS(LoggingMixIn, Operations):
         ## now we can just open the file in the usual way and return the handle
         return self.open(path,os.O_WRONLY)
 
-    def flushnode(self,path,fh):
-        """Flush the data associated with this fh to the Node at path
-        in VOSpace.
-        
-        Flushing the VOSpace object involves pushing the entire file
-        back over the network. This should onladd_to_cachey be done when really
-        needed as the network connection can be slow."""
-        mode = flag2mode(self.fh[fh]['flags'])
-        if not ('w' in mode or 'a' in mode ):
-            logging.debug("file was not opened for writing")
-            return 
-
-        if self.opt.readonly:
-            logging.debug("File system is readonly... no flushnode allowed")
-            return 
-
-        destination = self.getNode(path).uri
-        source = self.cache[path]['fname']
-        ### if we are writing then we need to wait for writing to finish
-        self.client.copy(source,destination)
-        self.cache[path]['writing']=False
-
-        return        
   
     def fsync(self,path,datasync,fh):
         if self.opt.readonly:
             logging.debug("File system is readonly, no sync allowed")
             return 
-        mode=''
-        if self.fh.get(fh,None) is not None:
-            locked = self.fh[fh].get('locked',False)
-            if locked:
-                logging.info("%s is locked, no sync allowed" % path)
-                raise FuseOSError(EPERM)
-            mode = flag2mode(self.fh[fh]['flags'])
-        if 'w' in mode or 'a' in mode:
-            try:
-                os.fsync(fh)
-                # set the modification time on this node..
-                # if the system asks for information about this node
-                # we need to know that this node was modified.
-                self.getattr(path)['st_mtime']=time.time()
-            except:
-                logging.critical("Failed to sync fh %d?" % ( fh))
-                pass
+
+        if fh.readonly:
+            raise FuseOSError(EPERM)
+
+        fh.cacheFileHandle.fsync()
 
 
     def getNode(self,path,force=False,limit=0):
@@ -360,9 +315,6 @@ class VOFS(LoggingMixIn, Operations):
                self.node[subPath]=node
         return self.node[path]
 
-    def is_cached(self,path):
-        raise NotImplementedError("removed")
-
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 
@@ -375,18 +327,6 @@ class VOFS(LoggingMixIn, Operations):
 
         return self.getNode(path, limit=0, force=True).attr
 
-    def dead_getxattr(self, path, name, position=0):
-        """Get the value of an extended attribute"""
-        value=self.getNode(path).xattr.get(name,None)
-        if value is None:
-            raise FuseOSError(ENOATTR)
-        import binascii
-        return binascii.a2b_base64(value)
-
-    def dead_listxattr(self, path):
-        """Send back the list of extended attributes"""
-        return self.getNode(path).xattr.keys()
-        
 
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
@@ -428,6 +368,7 @@ class VOFS(LoggingMixIn, Operations):
             try:
                 node = self.getNode(path)
             except Exception as e:
+                raise
                 if e.errno == 404:
                     # file does not exist
                     if not flags & os.O_CREAT:
@@ -471,7 +412,8 @@ class VOFS(LoggingMixIn, Operations):
             FuseOSError(ENOENT)
         
         myProxy = MyIOProxy(self, node)
-        return HandleWrapper(self.cache.open(path, node == None, myProxy), flags & os.O_RDONLY)
+        return HandleWrapper(self.cache.open(path, node == None, myProxy), 
+                flags & os.O_RDONLY)
 
     def read(self, path, size=0, offset=0, fh=None):
         """ Read the required bytes from the file and return a buffer containing
@@ -499,20 +441,6 @@ class VOFS(LoggingMixIn, Operations):
         """
         return self.getNode(path).target
         
-
-    def get_md5_db(self,fname):
-        """Get the MD5 for this fname from the SQL cache"""
-        raise NotImplementedError("removed")
-
-    def delete_md5_db(self,fname):
-        """Delete a record from the cache MD5 database"""
-        raise NotImplementedError("removed")
-        
-
-    def update_md5_db(self,fname):
-        """Update a record in the cache MD5 database"""
-        raise NotImplementedError("removed")
-
 
     def readdir(self, path, fh):
         """Send a list of entries in this directory"""
@@ -545,29 +473,19 @@ class VOFS(LoggingMixIn, Operations):
         """Close the file"""
         try:
             
-            if (fh.fileModified) and (fh.path in self.node):
+            if (fh.cacheFileHandle.fileModified) and (fh.path in self.node):
                 #local copy modified. remove from list
                 del self.node[fh.path]
-            fh.release()
+            fh.cacheFileHandle.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE
             raise FuseOSError(EAGAIN)
         except Exception, e:
             #unexpected problem
+            raise
             raise FuseOSError(EIO)
         return 
 
-
-
-    def dead_removexattr(self, path, name):
-        """Remove the named attribute from the xattr dictionary"""
-        node=self.getNode(path)
-        node.changeProp(name,None)
-        try:
-            del self.getNode(path).attr[name]
-        except KeyError:
-            raise FuseOSError(ENOATTR)
-        return 0
 
     def rename(self,src,dest):
         """Rename a data node into a new container"""
@@ -598,26 +516,6 @@ class VOFS(LoggingMixIn, Operations):
                 raise FuseOSError(EPERM)
             return -1
     
-    def dead_setxattr(self, path, name, value, size, options, *args):
-        """Simple xattr setting, ignorring options for now"""
-        node=self.getNode(path)
-        ### call changeProp on the node so that the XML is updated
-        import binascii
-        value=binascii.b2a_base64(value)
-        if node.changeProp(name,value)==1:
-            """The node properties changed so force node update back to VOSpace"""
-            self.client.update(node)
-        return 0
-
-        
-
-    def cache_size(self):
-        """Determine how much disk space is being used by the local cache"""
-        raise NotImplementedError("removed")
-
-    def clear_cache(self):
-        """Clear the oldest files until cache_size < cache_limit"""
-        raise NotImplementedError("removed")
 
     def rmdir(self,path):
         node=self.getNode(path)

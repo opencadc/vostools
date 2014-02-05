@@ -132,6 +132,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual(None, fh.cacheFileHandle.ioObject.getSize())
                 
                 
+    @unittest.skipIf(True, "Individual tests")
     def test_release(self):
         file = "/dir1/dir2/file"
         fh = MagicMock(name="filehandler")
@@ -266,6 +267,67 @@ class TestVOFS(unittest.TestCase):
             testfs.chmod("/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
         self.assertEqual(testfs.getNode.call_count, 3)
+
+    def test_access(self):
+        file = "/a/file/path"
+
+        # File exists.
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        node = Object
+        node.isdir = Mock(return_value=False)
+        testfs.node[file] = node
+
+        self.assertEqual(testfs.access(file, stat.S_IRUSR), 0)
+
+        # File doesn't exist.
+        testfs.getNode = Mock(side_effect=NotImplementedError("an error"))
+        self.assertEqual(testfs.access(file, stat.S_IRUSR), -1)
+
+
+    def test_fsync(self):
+        file = "/dir1/dir2/file"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
+        testfs.client = Object()
+        node = Mock(spec=vos.Node)
+        node.isdir = Mock(return_value = False)
+        node.props = Object
+        node.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): False,
+                ('length',): 10,
+                ('MD5',): 12354,
+                }, name="node.props.get") )
+        node.type = "vos:DataNode"
+        testfs.client.getNode = Mock(return_value = node)
+        fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
+        testfs.fsync(file, False, fh)
+        testfs.release(fh)
+
+
+
+class SideEffect(object):
+    """ The controller is a dictionary with a list as a key and a value. When
+        the arguments to the call match the list, the value is returned.
+    """
+    def __init__(self, controller, name=None, default=None):
+        self.controller = controller
+        self.default = default
+        self.name = name
+
+    def __call__(self, *args, **keywords):
+        if args in self.controller:
+            return self.controller[args]
+        elif self.default is not None:
+            return self.default
+        else:
+            if self.name is None:
+                name = ""
+            else:
+                name = self.name
+            raise ValueError("Mock side effect " + name + " arguments not in Controller: " 
+                    + str(args) + ":" + str(keywords) + ": " + 
+                    str(self.controller) + "***")
+
 
 
 

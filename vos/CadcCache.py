@@ -930,6 +930,11 @@ class FileHandle(object):
                     self.readThread is not None):
                 self.fileCondition.wait()
 
+    def fsync(self):
+        with self.fileLock:
+            if self.ioObject.cacheFileDescriptor is not None:
+                os.fsync(self.ioObject.cacheFileDescriptor)
+
 
 class CacheReadThread(threading.Thread):
     CONTINUE_MAX_SIZE = 1024*1024

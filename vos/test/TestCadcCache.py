@@ -1326,6 +1326,14 @@ class TestCadcCache(unittest.TestCase):
                     # the first block as mandatory, and everything except the
                     # last block as optional
 
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_04_fsync(self):
+        """ Test the fsync method"""
+
+        testCache = CadcCache.Cache(cacheDir = testDir, maxCacheSize = 4)
+
+
     def notifyReMockRange(self,cond,fh):
         time.sleep(1)
         # Make getRange return None,None
@@ -1338,6 +1346,7 @@ class TestCadcCache(unittest.TestCase):
         # Make getRange return None,None
         with cond:
             cond.notify_all()
+
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_determineCacheSize(self):
