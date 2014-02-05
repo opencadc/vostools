@@ -96,6 +96,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
     
+    @unittest.skipIf(True, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -214,6 +215,7 @@ class TestVOFS(unittest.TestCase):
         self.assertFalse(testfs.client.delete.called)
         self.assertFalse(testfs.delNode.called)
 
+    @unittest.skipIf(True, "Individual tests")
     def test_delNode(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         path = "/a/file/path"
@@ -230,13 +232,35 @@ class TestVOFS(unittest.TestCase):
         node=Object
         node.groupread = "group"
         node.groupwrite = "group"
+        node.attr = {'st_ctime': 1}
         testfs.getNode = Mock(return_value = node)
         node.chmod = Mock(return_value = True)
         testfs.client.update = Mock()
-        attrs = {'st_ctime': 1}
-        testfs.getattr = Mock(return_value=attrs)
+        mocks = (testfs.getNode, node.chmod, testfs.client.update)
 
         testfs.chmod("/a/file/path", stat.S_IRUSR)
+        testfs.client.update.assert_called_once_with(node)
+        self.assertEqual(testfs.getNode.call_count, 4)
+
+        # Try again with unknown groups.
+        node.groupread = "NONE"
+        node.groupwrite = "NONE"
+
+        for mock in mocks:
+            mock.reset_mock()
+
+        testfs.chmod("/a/file/path", stat.S_IRUSR)
+        testfs.client.update.assert_called_once_with(node)
+        self.assertEqual(testfs.getNode.call_count, 4)
+
+        # And again with a failure from client update
+        for mock in mocks:
+            mock.reset_mock()
+
+        testfs.client.update.side_effect=NotImplementedError("an error")
+
+        with self.assertRaises(FuseOSError):
+            testfs.chmod("/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
         self.assertEqual(testfs.getNode.call_count, 3)
 
@@ -325,7 +349,8 @@ class TestMyIOProxy(unittest.TestCase):
 
 
 suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
-alltests = unittest.TestSuite([suite1])
+suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
+alltests = unittest.TestSuite([suite1, suite2])
 unittest.TextTestRunner(verbosity=2).run(alltests)
 
 
