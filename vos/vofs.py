@@ -12,6 +12,7 @@ from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 ENOATTR=93
 import os
+import io
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
@@ -360,26 +361,14 @@ class VOFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 
-        import os
-        logging.debug("getting attributes ofadd_to_cache %s" % ( path))
+        logging.debug("getting attributes of %s" % ( path))
+        # Try to get the attributes from the cache first. This will only return
+        # a result if the files has been modified and not flushed to vospace.
+        cacheFileAttrs = self.cache.getAttr(path)
+        if cacheFileAttrs is not None:
+            return cacheFileAttrs
 
-        if self.is_cached(path):
-            f = os.stat(self.cache[path]['fname'])
-            return dict((name, getattr(f, name)) for name in dir(f) if not name.startswith('__'))
-
-        ## not in cache -> add to dictionary of Node attributes if need be
-        attr = self.getNode(path).attr
-
-        atime=attr.get('st_atime',time.time())
-        mtime=attr.get('st_mtime',atime)
-        ctime=attr.get('st_ctime',atime)
-
-        if mtime > atime or ctime > atime:
-            ### the modification/change times are after the last access
-            ### so we should access this VOSpace node again.
-            logging.debug("Getting node details for stale node %s" % ( path))
-            attr=self.getNode(path,limit=0,force=True).attr
-        return attr
+        return self.getNode(path, limit=0, force=True).attr
 
     def dead_getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""
@@ -422,22 +411,25 @@ class VOFS(LoggingMixIn, Operations):
         which is updated if older and out of synce with VOSpace.
 
         """
-        import io
 
         logging.debug("Opening %s with flags %s" % ( path, flag2mode(flags)))
-        uri = self.root + path
         node = None
-        ## see if this node exists
-        try:
-            node = self.getNode(path)
-        except Exception as e:
-            if e.errno == 404:
-                # file does not exist
-                if not flags & os.O_CREAT:
-                    # file doesn't exist unless created
-                    raise FuseOSError(ENOENT)
-            else:
-                raise FuseOSError(e.errno)
+        
+        
+        cacheFileAttrs = self.cache.getAttr(path)
+        if cacheFileAttrs is None:
+            # file in the cache not in the process of being modified. 
+            # see if this node already exists in the cache; if not get info from vospace 
+            try:
+                node = self.getNode(path)
+            except Exception as e:
+                if e.errno == 404:
+                    # file does not exist
+                    if not flags & os.O_CREAT:
+                        # file doesn't exist unless created
+                        raise FuseOSError(ENOENT)
+                else:
+                    raise FuseOSError(e.errno)
             
         ### check if this file is locked, if locked on vospace then don't open
         locked=False
@@ -544,9 +536,13 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("Got listing for %s" %(path))
         return 
 
-    def release(self, path, fh):
+    def release(self, fh):
         """Close the file"""
         try:
+            
+            if (fh.fileModified) and (path in self.node):
+                #local copy modified. remove from list
+                del self.node[path]
             fh.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE

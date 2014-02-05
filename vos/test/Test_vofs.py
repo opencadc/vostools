@@ -99,8 +99,10 @@ class TestVOFS(unittest.TestCase):
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = None
         
-        # call once without the use of mocks<<<<<<< HEAD
+        # call once without the use of mocks
         fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
         self.assertEqual(self.testCacheDir + "/data" + file, fh.cacheFileHandle.cacheDataFile)
         self.assertEqual(self.testCacheDir + "/metaData" + file, fh.cacheFileHandle.cacheMetaDataFile)
@@ -118,14 +120,47 @@ class TestVOFS(unittest.TestCase):
                 mock1.assert_called_with(myVofs, None)
                 #mock2.open.assert_called_with(file, True, mock1)
                 
+        # test with local attributes
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = Mock()
+        fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+        self.assertEqual(None, fh.cacheFileHandle.ioObject.getMD5())
+        self.assertEqual(None, fh.cacheFileHandle.ioObject.getSize())
                 
-    def test_close(self):
+                
+    def test_release(self):
         file = "/dir1/dir2/file"
         fh = MagicMock(name="filehandler")
         fh.release.side_effect=CacheRetry(Exception())
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         with self.assertRaises(FuseOSError):
-            myVofs.release(file, fh)
+            myVofs.release(fh)
+            
+        # when file modified locally, release should remove it from the list of  
+
+
+    def testgetattr(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
+        # Get the attributes from vospace.
+        node = Object()
+        testfs.cache.getAttr = Mock(return_value=None)
+        node.attr="attributes"
+        testfs.getNode = Mock(return_value=node)
+        self.assertEqual(testfs.getattr("/a/file/path"), "attributes")
+        testfs.getNode.assert_called_once_with("/a/file/path", limit=0,
+                force=True)
+        testfs.cache.getAttr.assert_called_once_with("/a/file/path")
+
+        # Get attributes from a file modified in the cache.
+        testfs.cache.getAttr.reset_mock()
+        testfs.getNode.reset_mock()
+        self.assertFalse(testfs.getNode.called)
+        testfs.cache.getAttr = Mock(return_value="different")
+        self.assertEqual(testfs.getattr("/a/file/path2"), "different")
+        testfs.cache.getAttr.assert_called_once_with("/a/file/path2")
+        self.assertFalse(testfs.getNode.called)
+
 
 
 class TestMyIOProxy(unittest.TestCase):

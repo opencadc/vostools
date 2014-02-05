@@ -481,7 +481,7 @@ class TestSharedLock(unittest.TestCase):
             self.assertEqual(0,len(lock.lockersList))
 
 class TestCacheCondtion(unittest.TestCase):
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_all(self):
         lock = threading.Lock()
         cond = CadcCache.CacheCondition(lock, 1)
@@ -527,6 +527,17 @@ class TestCacheCondtion(unittest.TestCase):
             cond.notify_all()
 
 
+# The test method names seem to influence the order, the tests are executed 
+# alphabeticaly. Test failures make a bit more sense if low level stuff 
+# fails first since some of the high level tests depend on low level tests. 
+# To that end I have added the following digits into the test name to force an
+# order:
+# _00_ Very basic stuff with no dependancies and class constructors.
+# _01_ Second level stuff which depends on the _00_ stuff
+# _02_ Open methods - lots of test use open.
+# _03_ release methods - lots of test use release.
+# _04_ high level methods that use open and release as test set up
+
 class TestCadcCache(unittest.TestCase):
     """Test the CadcCache.CadcCache class
     """
@@ -546,7 +557,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_unlink(self):
+    def test__04_unlink(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
             # Unlink a non existing file. Should do nothing and not cause an 
@@ -564,7 +575,7 @@ class TestCadcCache(unittest.TestCase):
                 testCache.unlinkFile("dir1/file")
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_renameFile(self):
+    def test_04_renameFile(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
             # Rename a non-existing file. Should do nothing as this could be an
@@ -677,7 +688,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_renameFile2(self):
+    def test_04_renameFile2(self):
 
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -722,7 +733,7 @@ class TestCadcCache(unittest.TestCase):
                     testCache.renameFile("/something", "/something")
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_renameDir(self):
+    def test_04_renameDir(self):
         """Rename a whole directory.
         """
         testIOProxy1 = IOProxyForTest()
@@ -775,8 +786,41 @@ class TestCadcCache(unittest.TestCase):
                     testCache.renameDir("/something", "/something")
 
 
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_04_getAttr(self):
+        """test the getAttr method."""
+
+        testIOProxy = IOProxyForTest()
+        with CadcCache.Cache(testDir, 100, False) as testCache:
+            # Try to get the attributes for a non-existing file.
+            self.assertEqual(testCache.getAttr("/no/such/file"), None)
+
+            # Try to get the attribute of an existing, open and modified file.
+            # This should return the cache file attributes.
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as fh:
+                self.assertTrue(fh.fileModified)
+                self.assertTrue(os.path.exists(testCache.dataDir + 
+                        "/dir1/dir2/file"))
+                attribs = testCache.getAttr( "/dir1/dir2/file")
+                self.assertTrue(attribs is not None)
+                fsAttribs = os.stat(fh.cacheDataFile )
+                self.assertEqual(fsAttribs.st_ino, attribs["st_ino"])
+            # The file is closed but still exists. Not attribute information
+            # should be returned since VOSpace is the better source.
+            self.assertTrue(os.path.exists(testCache.dataDir + 
+                    "/dir1/dir2/file"))
+            self.assertEqual(testCache.getAttr("/dir1/dir2/file"), None)
+
+            # Test when a file is opened but not modified. Should return none
+            # since vospace is the better source for information.
+            with testCache.open("/dir1/dir2/file", False, testIOProxy) as fh:
+                self.assertFalse(fh.fileModified)
+                self.assertEqual(testCache.getAttr("/dir1/dir2/file"), None)
+
+
+
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_getFileHandle(self):
+    def test_01_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
         """
@@ -825,7 +869,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor1(self):
+    def test_00_constructor1(self):
         # Constructor with a non-existing cache directory.
         testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
@@ -843,7 +887,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor2(self):
+    def test_00_constructor2(self):
         # Constructor with an existing cache directory and bad permissions.
         testObject = CadcCache.Cache(testDir, 100)
         self.assertTrue(os.path.isdir(testDir))
@@ -856,7 +900,7 @@ class TestCadcCache(unittest.TestCase):
             os.chmod(testDir, stat.S_IRWXU)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor3(self):
+    def test_00_constructor3(self):
         """ Constructor with a file where the cache directory should be."""
 
         # create the file
@@ -868,7 +912,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor4(self):
+    def test_00_constructor4(self):
         """ Constructor with a file where the cache data directory should be."""
         os.mkdir(testDir)
         open(testDir + "/data", 'a').close()
@@ -879,7 +923,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor5(self):
+    def test_00_constructor5(self):
         """ Constructor with a read-only directory where the cache data directory should be."""
         os.mkdir(testDir)
         os.mkdir(testDir + "/data")
@@ -894,7 +938,7 @@ class TestCadcCache(unittest.TestCase):
             os.chmod(testDir + "/data/", stat.S_IRWXU)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor6(self):
+    def test_00_constructor6(self):
         """ Constructor with a file where the cache meta data directory 
             should be.
         """
@@ -907,7 +951,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_constructor7(self):
+    def test_00_constructor7(self):
         """ Constructor with a read-only directory where the cache meta data 
             directory should be."""
         os.mkdir(testDir)
@@ -934,7 +978,7 @@ class TestCadcCache(unittest.TestCase):
                 fh.close()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_open1(self):
+    def test_02_open1(self):
         # IOProxy - getMD5 fails with ENOENT
         class IOProxy_getMD5_ENOENT(IOProxyForTest):
             def getMD5(self):
@@ -955,7 +999,7 @@ class TestCadcCache(unittest.TestCase):
             fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_open2(self):
+    def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
@@ -973,7 +1017,7 @@ class TestCadcCache(unittest.TestCase):
             fh2.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_open3(self):
+    def test_02_open3(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
@@ -990,7 +1034,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_release1(self):
+    def test_03_release1(self):
         """Fails getting md5."""
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
@@ -1020,7 +1064,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_release2(self):
+    def test_03_release2(self):
         class IOProxy_writeToBacking_slow(IOProxyForTest):
             def verifyMetaData(self, md5sum):
                 """ test returns False """
@@ -1051,7 +1095,7 @@ class TestCadcCache(unittest.TestCase):
         fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_release3(self):
+    def test_03_release3(self):
         """Successful write to backing"""
 
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -1067,7 +1111,7 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking.assert_called_once_with()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_release4(self):
+    def test_03_release4(self):
         """Test aborting an in-progress cache read thread when a file is
            closed."""
 
@@ -1086,7 +1130,7 @@ class TestCadcCache(unittest.TestCase):
             fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_release5(self):
+    def test_03_release5(self):
         """Flush returns an error.
         """
 
@@ -1107,7 +1151,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_read1(self):
+    def test_04_read1(self):
         """Test reading from a file which is not cached."""
 
         with CadcCache.Cache(testDir, 100) as testCache:
@@ -1122,7 +1166,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_write1(self):
+    def test_04_write1(self):
         """Test writing to a file which is not cached."""
 
         with CadcCache.Cache(testDir, 100) as testCache:
@@ -1134,7 +1178,7 @@ class TestCadcCache(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_makeCached(self):
+    def test_01_makeCached(self):
         """initializing the cached file
         """
 
@@ -1296,7 +1340,7 @@ class TestCadcCache(unittest.TestCase):
             cond.notify_all()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_determineCacheSize(self):
+    def test_00_determineCacheSize(self):
         """ Test checking the cache space """
         if os.path.exists(testDir):
             os.rmdir(testDir)
@@ -1324,7 +1368,7 @@ class TestCadcCache(unittest.TestCase):
         
     
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_checkCacheSpace(self):
+    def test_00_checkCacheSpace(self):
         """ Test cache cleanup """
         if os.path.exists(testDir):
             os.rmdir(testDir)
@@ -1364,7 +1408,7 @@ class TestCadcCache(unittest.TestCase):
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_removeEmptyDirs(self):
+    def test_04_removeEmptyDirs(self):
         """ Test cache cleanup """
 
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
@@ -1527,14 +1571,14 @@ class TestCadcCacheReadThread(unittest.TestCase):
 logging.getLogger('CadcCache').setLevel(logging.DEBUG)
 logging.getLogger('CadcCache').addHandler(logging.StreamHandler())
 
-suite1 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
-suite2 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
+suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
+suite2 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
 suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
 suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
 suite5 = unittest.TestLoader().loadTestsFromTestCase(TestCacheAborted)
-suite6 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
-suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+suite6 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
+suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
 alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, 
         suite6, suite7, suite8])
 unittest.TextTestRunner(verbosity=2).run(alltests)
