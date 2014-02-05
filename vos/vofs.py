@@ -540,9 +540,9 @@ class VOFS(LoggingMixIn, Operations):
         """Close the file"""
         try:
             
-            if (fh.fileModified) and (path in self.node):
+            if (fh.fileModified) and (fh.path in self.node):
                 #local copy modified. remove from list
-                del self.node[path]
+                del self.node[fh.path]
             fh.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE
