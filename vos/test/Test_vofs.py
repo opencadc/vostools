@@ -96,7 +96,6 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
     
-    @unittest.skipIf(True, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
