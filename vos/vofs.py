@@ -218,6 +218,16 @@ class VOFS(LoggingMixIn, Operations):
         # the string NONE.
         if node.chmod(mode):
             # Now set the time of change/modification on the path...
+            # TODO: This has to be broken. Attributes may come from Cache if the
+            # file is modified. Even if they don't come from the cache, 
+            # the getAttr method calls getNode with force=True, which returns 
+            # a different Node object than "node". The st_ctime value will be 
+            # updated on the newly replaced node in self.node[path] but
+            # not in node, then node is pushed to vospace without the st_time
+            # change, and then it is pulled back, overwriting the change that
+            # was made in self.node[path]. Plus modifying the mtime of the file
+            # is not conventional Unix behaviour. The mtime of the parent
+            # directory would be changed.
             self.getattr(path)['st_ctime']=time.time()
             ## if node.chmod returns false then no changes were made.
             try:
@@ -230,13 +240,6 @@ class VOFS(LoggingMixIn, Operations):
                 e.filename=path
                 e.strerror=getattr(e,'strerror','failed to chmod on %s' %(path))
                 raise e
-
-        # may also need to also update the cache properties.
-        if self.is_cached(path):
-            logging.debug("Changing permissions on %s also" % ( self.cache[path]['fname']))
-            os.chmod(self.cache[path]['fname'],mode)
-        
-
 
         
     def create(self, path, flags):

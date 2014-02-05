@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+import stat
 from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
@@ -94,7 +95,6 @@ class TestVOFS(unittest.TestCase):
         fileHandle.cacheFileHandle.read.return_value = "abcd"
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
-        
     
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
@@ -210,10 +210,27 @@ class TestVOFS(unittest.TestCase):
         path = "/a/file/path"
         testfs.delNode(path, force=True)
 
+    @unittest.skipIf(True, "Individual tests")
     def test_mkdir(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         path = "/a/file/path"
-        testfs.mkdir(path, force=True)
+        testfs.mkdir(path, stat.S_IRUSR)
+
+    def test_chmod(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        node=Object
+        node.groupread = "group"
+        node.groupwrite = "group"
+        testfs.getNode = Mock(return_value = node)
+        node.chmod = Mock(return_value = True)
+        testfs.client.update = Mock()
+        attrs = {'st_ctime': 1}
+        testfs.getattr = Mock(return_value=attrs)
+
+        testfs.chmod("/a/file/path", stat.S_IRUSR)
+        testfs.client.update.assert_called_once_with(node)
+        self.assertEqual(testfs.getNode.call_count, 3)
+
 
 
 class TestMyIOProxy(unittest.TestCase):
