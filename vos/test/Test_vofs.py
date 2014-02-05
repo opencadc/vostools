@@ -99,7 +99,7 @@ class TestVOFS(unittest.TestCase):
                 "abcd")
 
 
-    def testgetattr(self):
+    def test_getattr(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
         # Get the attributes from vospace.
@@ -119,9 +119,61 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.getAttr = Mock(return_value="different")
         self.assertEqual(testfs.getattr("/a/file/path2"), "different")
         testfs.cache.getAttr.assert_called_once_with("/a/file/path2")
-        help(testfs.getNode)
         self.assertFalse(testfs.getNode.called)
 
+    def test_unlink(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        path = "/a/file/path"
+
+        # Unlink a file which is not in vospace.
+        testfs.getNode = Mock(return_value = None)
+        testfs.cache.unlink = Mock()
+        testfs.client.delete = Mock()
+        testfs.delNode = Mock()
+        mocks = (testfs.getNode, testfs.cache.unlink, testfs.client.delete,
+                testfs.delNode)
+        testfs.unlink(path)
+        testfs.getNode.assert_called_once_with(path, force=False, limit=1)
+        testfs.cache.unlink.assert_called_once_with(path)
+        self.assertFalse(testfs.client.delete.called)
+        testfs.delNode.assert_called_once_with(path, force=True)
+
+        for mock in mocks:
+            mock.reset_mock()
+
+        # Unlink a file which is in vospace.
+        node = Object
+        node.props = {'islocked': False}
+        testfs.getNode.return_value = node
+        testfs.unlink(path)
+        testfs.getNode.assert_called_once_with(path, force=False, limit=1)
+        testfs.cache.unlink.assert_called_once_with(path)
+        testfs.client.delete.assert_called_once_with(path)
+        testfs.delNode.assert_called_once_with(path, force=True)
+
+        for mock in mocks:
+            mock.reset_mock()
+
+        # Unlink a file which is locked
+        node = Object
+        node.props = {'islocked': True}
+        testfs.getNode.return_value = node
+        with self.assertRaises(FuseOSError):
+            testfs.unlink(path)
+        testfs.getNode.assert_called_once_with(path, force=False, limit=1)
+        self.assertFalse(testfs.cache.unlink.called)
+        self.assertFalse(testfs.client.delete.called)
+        self.assertFalse(testfs.delNode.called)
+
+    def test_delNode(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        path = "/a/file/path"
+        testfs.delNode(path, force=True)
+
+    def test_mkdir(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        path = "/a/file/path"
+        testfs.mkdir(path, force=True)
 
 
 class TestMyIOProxy(unittest.TestCase):

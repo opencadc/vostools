@@ -79,9 +79,6 @@ class CacheCondition(object):
 class Cache(object):
     """ 
     This class manages the cache for the vofs. 
-
-    TODO: Clean up empty directories after unlink. Difficult with race
-    conditions.
     """
     IO_BLOCK_SIZE = 2**14
     def __init__(self, cacheDir, maxCacheSize, readOnly = False, timeout = 60):
@@ -799,6 +796,17 @@ class FileHandle(object):
         with self.writerLock(shared=True):
 
             # Ensure the entire file is in cache.
+            # TODO (optimization) It isn't necessary to always read the file. 
+            #      Only if the write would cause a gap in the written data. If 
+            #      there is never a gap, the file would only need to be read on 
+            #      release in order to fill in the end of the file (only if the 
+            #      last data written is before the end of the old file. However,
+            #      this creates a tricky problem of filling in only the part of 
+            #      the last cache block which has not been written.
+            #      Also, it isn't necessary to wait for the whole file to be
+            #      read. The write could proceed when the blocks being written
+            #      are read. Another argument to makeCached could be the blocks
+            #      to wait for, separate from the last mandatory block.
             firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
             self.makeCached(0, numBlocks)
 

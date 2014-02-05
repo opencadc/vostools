@@ -115,6 +115,8 @@ class VOFS(LoggingMixIn, Operations):
         about the Node.  The full VOSpace path is used as the Key for
         most of these dictionaries."""
 
+        self.cache_nodes = cache_nodes
+
         # This dictionary contains the Node data about the VOSpace node in question
         self.node = {}
         # Standard attribtutes of the Node
@@ -761,16 +763,13 @@ class VOFS(LoggingMixIn, Operations):
 
     def unlink(self,path):
     	node = self.getNode(path, force=False, limit=1)
-        fname=os.path.normpath(self.cache_dir+path)
         if node and node.props.get('islocked', False):
             logging.info("%s is locked." % path)
             raise FuseOSError(EPERM)
-        if os.access(fname,os.F_OK):
-            os.unlink(fname)
+        self.cache.unlink(path)
         if node:
             self.client.delete(path)
         self.delNode(path,force=True)
-        ## update the access times on the parent node
 
 
     def utimens(self, path, times=None):
