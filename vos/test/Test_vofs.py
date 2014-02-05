@@ -102,7 +102,9 @@ class TestVOFS(unittest.TestCase):
         myVofs.cache.getAttr = Mock()
         myVofs.cache.getAttr.return_value = None
         
-        # call once without the use of mocks
+        # getNode return not found
+        myVofs.getNode = Mock()
+        myVofs.getNode.side_effect = FuseOSError(404)
         fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
         self.assertEqual(self.testCacheDir + "/data" + file, fh.cacheFileHandle.cacheDataFile)
         self.assertEqual(self.testCacheDir + "/metaData" + file, fh.cacheFileHandle.cacheMetaDataFile)
