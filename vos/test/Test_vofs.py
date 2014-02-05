@@ -136,7 +136,16 @@ class TestVOFS(unittest.TestCase):
         with self.assertRaises(FuseOSError):
             myVofs.release(fh)
             
-        # when file modified locally, release should remove it from the list of  
+        # when file modified locally, release should remove it from the list of
+        # accessed files in VOFS
+        fh = MagicMock(name="filehandler")
+        fh.path = file
+        myVofs.node[file] = Mock(name="fileInfo")
+        self.assertEqual(1, len(myVofs.node))
+        fh.fileModified = True
+        fh.release.return_value = True
+        myVofs.release(fh)
+        self.assertEqual(0, len(myVofs.node))
 
 
     def test_getattr(self):
