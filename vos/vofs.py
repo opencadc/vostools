@@ -270,7 +270,7 @@ class VOFS(LoggingMixIn, Operations):
             logging.debug("File system is readonly, no sync allowed")
             return 
 
-        if fh.readonly:
+        if fh.readOnly:
             raise FuseOSError(EPERM)
 
         fh.cacheFileHandle.fsync()

@@ -1331,7 +1331,11 @@ class TestCadcCache(unittest.TestCase):
     def test_04_fsync(self):
         """ Test the fsync method"""
 
+        testIOProxy = IOProxyForTest()
+
         testCache = CadcCache.Cache(cacheDir = testDir, maxCacheSize = 4)
+        with testCache.open("/dir1/dir2/file", False, testIOProxy) as testFile:
+            testFile.fsync()
 
 
     def notifyReMockRange(self,cond,fh):

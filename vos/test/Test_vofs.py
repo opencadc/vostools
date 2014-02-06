@@ -2,6 +2,8 @@ import os
 import shutil
 import unittest
 import stat
+import copy
+import pdb
 from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
@@ -108,6 +110,7 @@ class TestVOFS(unittest.TestCase):
         fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
         self.assertEqual(self.testCacheDir + "/data" + file, fh.cacheFileHandle.cacheDataFile)
         self.assertEqual(self.testCacheDir + "/metaData" + file, fh.cacheFileHandle.cacheMetaDataFile)
+        self.assertFalse(fh.readOnly)
 
         # non existing file open in read/write mode should fail
         with self.assertRaises(FuseOSError):
@@ -121,6 +124,7 @@ class TestVOFS(unittest.TestCase):
                 myVofs.getNode.side_effect = FuseOSError(404)
                 #myVofs.cache = mock2
                 fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+                self.assertFalse(fh.readOnly)
                 mock1.assert_called_with(myVofs, None)
                 #mock2.open.assert_called_with(file, True, mock1)
                 
@@ -130,6 +134,13 @@ class TestVOFS(unittest.TestCase):
         fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
         self.assertEqual(None, fh.cacheFileHandle.ioObject.getMD5())
         self.assertEqual(None, fh.cacheFileHandle.ioObject.getSize())
+        self.assertFalse(fh.readOnly)
+
+        # test a read-only file
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = Mock()
+        fh = myVofs.open( file, os.O_RDONLY, None)
+        self.assertTrue(fh.readOnly)
                 
                 
     @unittest.skipIf(True, "Individual tests")
@@ -300,9 +311,30 @@ class TestVOFS(unittest.TestCase):
         node.type = "vos:DataNode"
         testfs.client.getNode = Mock(return_value = node)
         fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
+        fh.cacheFileHandle.fsync = Mock(wraps=fh.cacheFileHandle.fsync)
         testfs.fsync(file, False, fh)
+        fh.cacheFileHandle.fsync.assert_called_once_with()
+        testfs.release(fh)
+        
+        # Try flushing on a read-only file.
+        testfs.client.getNode = Mock(return_value = node)
+        fh = testfs.open( file, os.O_RDONLY, None)
+        fh.cacheFileHandle.fsync = Mock(wraps=fh.cacheFileHandle.fsync)
+        testfs.fsync(file, False, fh)
+        self.assertEqual(fh.cacheFileHandle.fsync.call_count, 0)
         testfs.release(fh)
 
+        # Try flushing on a read-only file system.
+        myopt = copy.copy(opt)
+        myopt.readonly = True
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, myopt)
+        testfs.client = Object()
+        testfs.client.getNode = Mock(return_value = node)
+        fh = testfs.open( file, os.O_RDONLY, None)
+        fh.cacheFileHandle.fsync = Mock(wraps=fh.cacheFileHandle.fsync)
+        testfs.fsync(file, False, fh)
+        self.assertEqual(fh.cacheFileHandle.fsync.call_count, 0)
+        testfs.release(fh)
 
 
 class SideEffect(object):
