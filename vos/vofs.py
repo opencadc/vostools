@@ -16,7 +16,6 @@ import io
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
-import sqlite3
 from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
@@ -575,10 +574,7 @@ class VOFS(LoggingMixIn, Operations):
 
             fh = self.open(path, os.O_RDWR)
             try:
-                print "before"
-                print fh.cacheFileHandle
-                print fh.cacheFileHandle.xtruncate(length)
-                print "after"
+                fh.cacheFileHandle.truncate(length)
             except Exception:
                 raise
             finally:

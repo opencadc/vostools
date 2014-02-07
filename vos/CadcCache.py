@@ -194,28 +194,27 @@ class Cache(object):
                 isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
-            with newFileHandle.fileLock:
-                if not isNewFileHandle and createFile:
-                    # We got an old file handle, but are creating a new file.
-                    # Mark the old file handle as obsolete and create a new
-                    # file handle.
-                    newFileHandle.obsolete = True
-                    if newFileHandle.metaData is not None:
-                        try:
-                            os.remove(newFileHandle.metaData.metaDataFile)
-                        except OSError as e:
-                            if e.errno != ENOENT:
-                                raise
-                    newFileHandle = FileHandle(path, self, ioObject)
-                    del self.fileHandleDict[path]
-                    # Lock the newly acquired file handle to avoid any race
-                    # conditions after it is added to the dictionary and before
-                    # it is incremented.
-                    with newFileHandle.fileLock:
-                        self.fileHandleDict[path] = newFileHandle
-                        newFileHandle.refCount += 1
-                else:
+            if not isNewFileHandle and createFile:
+                # We got an old file handle, but are creating a new file.
+                # Mark the old file handle as obsolete and create a new
+                # file handle.
+                newFileHandle.obsolete = True
+                if newFileHandle.metaData is not None:
+                    try:
+                        os.remove(newFileHandle.metaData.metaDataFile)
+                    except OSError as e:
+                        if e.errno != ENOENT:
+                            raise
+                newFileHandle = FileHandle(path, self, ioObject)
+                del self.fileHandleDict[path]
+                # Lock the newly acquired file handle to avoid any race
+                # conditions after it is added to the dictionary and before
+                # it is incremented.
+                with newFileHandle.fileLock:
+                    self.fileHandleDict[path] = newFileHandle
                     newFileHandle.refCount += 1
+            else:
+                newFileHandle.refCount += 1
         return newFileHandle
 
     def checkCacheSpace(self):
@@ -938,7 +937,16 @@ class FileHandle(object):
 
 
     def truncate(self, length):
-        raise NotImplementedError("IOProxy.getMD5")
+        # Acquire an exclusive lock on the file
+        with self.writerLock(shared=False):
+
+            # Ensure the required part of the file is in cache.
+            firstBlock,numBlocks = self.ioObject.blockInfo(0, length)
+            self.makeCached(0, numBlocks)
+            with self.fileLock:
+                os.ftruncate(self.ioObject.cacheFileDescriptor, length)
+                fileHandle.fileModified = True
+                fileHandle.fullyCached = True
 
 
 class CacheReadThread(threading.Thread):

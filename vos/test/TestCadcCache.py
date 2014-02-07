@@ -819,7 +819,7 @@ class TestCadcCache(unittest.TestCase):
 
 
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_01_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
@@ -1445,6 +1445,11 @@ class TestCadcCache(unittest.TestCase):
                 rmdir.side_effect = OSError(-1,-1)
                 with self.assertRaises(OSError):
                     testCache.removeEmptyDirs(testDir + "/dir1/dir2/dir4")
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_04_truncate(self):
+        """ Test file truncate"""
+
         
 
 class TestCadcCacheReadThread(unittest.TestCase):

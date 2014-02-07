@@ -514,20 +514,14 @@ class TestVOFS(unittest.TestCase):
         testfs.client.getNode = Mock(return_value = node)
 
         # Truncate a non-open file to 0 bytes
-        with nested(patch('vos.CadcCache.Cache', spec_set=Cache),
-                patch('vos.CadcCache.FileHandle', spec_set=FileHandle)) \
-                as mocks:
-            mockCache = mocks[0]
-            mockFileHandle = mocks[1]
+        with patch('vos.CadcCache.Cache', spec=True, create=True,
+                mocksignature=True) as mockCache:
             ###testfs.truncate(file, 0)
             ###self.assertEqual(mockCacheOpen.call_args[0][0], file)
             ###self.assertEqual(mockCacheOpen.call_args[0][1], True)
             # TODO this should cause a bunch of errors as it tries to flush to
             ### VOSpace, but the error in open prevents the errors.
             ###mockFileRelease.assert_called_once_with()
-
-            for mock in mocks:
-                mock.reset_mock()
 
             # Truncate a non-open file past the start of the file.
             #pdb.runcall(testfs.truncate,file, 5)
