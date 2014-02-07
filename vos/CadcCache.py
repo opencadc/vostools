@@ -19,6 +19,8 @@ from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
 
 
+# TODO optionally disable random reads - always read to the end of the file.
+
 class CacheCondition(object):
     """This extends threading.condtion (or it would if it were a class):
        There is an optional timeout associated with the condition.
@@ -77,9 +79,6 @@ class CacheCondition(object):
 class Cache(object):
     """ 
     This class manages the cache for the vofs. 
-
-    TODO: Clean up empty directories after unlink. Difficult with race
-    conditions.
     """
     IO_BLOCK_SIZE = 2**14
     def __init__(self, cacheDir, maxCacheSize, readOnly = False, timeout = 60):
@@ -200,19 +199,23 @@ class Cache(object):
                     # We got an old file handle, but are creating a new file.
                     # Mark the old file handle as obsolete and create a new
                     # file handle.
-                    with newFileHandle.fileLock:
-                        newFileHandle.obsolete = True
-                        if newFileHandle.metaData is not None:
-                            try:
-                                os.remove(newFileHandle.metaData.metaDataFile)
-                            except OSError as e:
-                                if e.errno != ENOENT:
-                                    raise
+                    newFileHandle.obsolete = True
+                    if newFileHandle.metaData is not None:
+                        try:
+                            os.remove(newFileHandle.metaData.metaDataFile)
+                        except OSError as e:
+                            if e.errno != ENOENT:
+                                raise
                     newFileHandle = FileHandle(path, self, ioObject)
                     del self.fileHandleDict[path]
-                    self.fileHandleDict[path] = newFileHandle
-
-                newFileHandle.refCount += 1
+                    # Lock the newly acquired file handle to avoid any race
+                    # conditions after it is added to the dictionary and before
+                    # it is incremented.
+                    with newFileHandle.fileLock:
+                        self.fileHandleDict[path] = newFileHandle
+                        newFileHandle.refCount += 1
+                else:
+                    newFileHandle.refCount += 1
         return newFileHandle
 
     def checkCacheSpace(self):
@@ -349,7 +352,7 @@ class Cache(object):
                 existingFileHandle = self.fileHandleDict[oldPath]
                 # If the file is active, rename its files with the lock held.
                 with existingFileHandle.fileLock:
-                    self.atomicRename((oldDataPath,newDataPath),
+                    Cache.atomicRename((oldDataPath,newDataPath),
                             (oldMetaDataPath, newMetaDataPath))
                     existingFileHandle.cacheDataFile = \
                             os.path.abspath(newDataPath)
@@ -358,7 +361,7 @@ class Cache(object):
             except KeyError:
                 # The file is not active, rename the files but there is no
                 # data structure to lock or fix.
-                self.atomicRename((oldDataPath,newDataPath),
+                Cache.atomicRename((oldDataPath,newDataPath),
                         (oldMetaDataPath, newMetaDataPath))
 
     @staticmethod
@@ -416,7 +419,7 @@ class Cache(object):
                         fh = self.fileHandleDict[path]
                         fh.fileLock.acquire()
                         lockedList.append(fh)
-                self.atomicRename((oldDataPath, newDataPath), 
+                Cache.atomicRename((oldDataPath, newDataPath), 
                         (oldMetaDataPath, newMetaDataPath))
                 renamed = True
             finally:
@@ -431,6 +434,31 @@ class Cache(object):
                         fh.cacheMetaDataFile = os.path.abspath(self.metaDataDir + 
                                 newPath + fh.cacheMetaDataFile[start:])
                     fh.fileLock.release()
+
+    def getAttr(self, path):
+        """Get the attributes of a cached file. 
+
+        This method will only return attributes if the cached file's attributes 
+        are better than the backing store's attributes. I.e. if the file is open
+        and has been modified.
+        """
+
+        with self.cacheLock:
+            # Make sure the file state doesn't change in the middle.
+            try:
+                fileHandle = self.fileHandleDict[path]
+            except KeyError:
+                return None
+            with fileHandle.fileLock:
+                if fileHandle.fileModified:
+                    f = os.stat(fileHandle.cacheDataFile )
+                    return dict((name, getattr(f, name)) 
+                            for name in dir(f) 
+                            if not name.startswith('__'))
+                else:
+                    return None
+
+            
 
     @staticmethod
     def pathExists(path):
@@ -459,6 +487,13 @@ class CacheRetry(Exception):
     def __str__(self):
         return repr(self.value)
 
+class CacheAborted(Exception):
+    # Thrown when a cache operation should be aborted.
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 
 class IOProxy(object):
     """ 
@@ -468,19 +503,18 @@ class IOProxy(object):
     """
 
 
-    def __init__(self, randomRead = False, randomWrite = False):
+    def __init__(self):
         """ 
         The initializer indicates if the IO object supports random read or
         random write.
         """
 
-        self.randomRead = randomRead
-        self.randomWrite = randomWrite
         self.lock = threading.RLock()
         self.condition = threading.Condition(self.lock)
         self.cacheFile = None
         self.cache = None
         self.currentByte = None
+        self.cacheFileDescriptor = None
 
 
     def getMD5(self):
@@ -504,12 +538,11 @@ class IOProxy(object):
         raise NotImplementedError("IOProxy.delNode")
 
 
-    def writeToBacking(self, md5, size, mtime):
+    def writeToBacking(self):
         """ 
         Write a file in the cache to the remote file. 
         
-        The implementation of this method must use the readFromCache method 
-        to get data from the cache file.
+        Return the md5sum of the file written.
         """
         raise NotImplementedError("IOProxy.writeToBacking")
 
@@ -532,23 +565,41 @@ class IOProxy(object):
         """ 
         Function to write data to a the cache. This method should only be used
         by the implementation of the readFromBacking method.
+
+        The method raises a CacheAborted exception if the preload should be
+        aborted.
         """
 
-        if self.cacheFileStream.tell() != offset:
+        currentOffset = os.lseek(self.cacheFileDescriptor, 0, os.SEEK_CUR)
+        if currentOffset != offset:
             # Only allow seeks to block boundaries
-            if (offset % self.cache.IO_BLOCK_SIZE != 0):
+            if (offset % self.cache.IO_BLOCK_SIZE != 0 or (currentOffset %
+                    self.cache.IO_BLOCK_SIZE != 0 and 
+                    currentOffset != self.cacheFile.fileSize)):
                 raise CacheError("Only seeks to block boundaries are "
                     "permitted when writing to cache.")
-            self.cacheFileStream.seek(offset)
+            os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
+            currentOffset = offset
+
+        if offset + len(buffer) > self.cacheFile.fileSize:
+            raise CacheError("Attempt to populate cache past the end " +
+                    "of the known file size.")
+
 
         # Write the data to the data file.
         nextByte = 0
         byteBuffer = bytes(buffer)
         while nextByte < len(byteBuffer):
-            nextByte = nextByte + self.cacheFileStream.write(byteBuffer[nextByte:])
+            nextByte += os.write(self.cacheFileDescriptor, 
+                    byteBuffer[nextByte:])
 
         # Set the mask bits corresponding to any completely read blocks.
-        firstBlock, numBlocks  = self.blockInfo(offset, len(buffer))
+        lastCompleteByte = currentOffset + len(buffer)
+        if lastCompleteByte != self.cacheFile.fileSize:
+            lastCompleteByte = lastCompleteByte - (lastCompleteByte %
+                    self.cache.IO_BLOCK_SIZE)
+        firstBlock, numBlocks  = self.blockInfo(offset, lastCompleteByte -
+                offset) 
         if numBlocks > 0:
             with self.condition:
                 self.condition.acquire()
@@ -558,6 +609,14 @@ class IOProxy(object):
 
 
         self.currentByte = nextByte
+
+        # Check to see if the current read has been aborted, and if it has, thow
+        # and exception
+
+        if (self.cacheFile.readThread.aborted and 
+                nextByte > self.cacheFile.readThread.mandatoryEnd and
+                nextByte <= self.cacheFile.fileSize):
+            raise CacheAborted("Read to cache aborted.")
 
         return nextByte 
 
@@ -580,10 +639,9 @@ class IOProxy(object):
         self.cache = cacheFile.cache
 
     def readFromCache(self, offset, size):
-        if (self.cacheFileStream.tell() != offset):
-            self.cacheFileStream.seek(offset)
-
-        return self.cacheFileStream.read(size)
+        if os.lseek(self.cacheFileDescriptor, 0, os.SEEK_CUR) != offset:
+            os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
+        return os.read(self.cacheFileDescriptor, size)
 
 
 class FileHandle(object):
@@ -685,22 +743,11 @@ class FileHandle(object):
 
         return
 
-    def getmd5(self):
-        """Get the current md5sum of the file."""
-        md5 = hashlib.md5()
-        size = 0
-
-        # Don't open by file name, the file may have been deleted.
-        with os.fdopen(os.dup(self.ioObject.cacheFileDescriptor),'r') as r:
-            while True:
-                buff=r.read(Cache.IO_BLOCK_SIZE)
-                if len(buff) == 0:
-                    break
-                md5.update(buff)
-                size += len(buff)
+    def getFileInfo(self):
+        """Get the current file information for the file."""
 
         info = os.fstat(self.ioObject.cacheFileDescriptor)
-        return md5.hexdigest(), size, info.st_mtime
+        return info.st_size, info.st_mtime
 
     def flushNode(self):
         """Flush the file to the backing store.
@@ -714,11 +761,12 @@ class FileHandle(object):
         with self.writerLock(shared=False):
             try:
                 # Get the md5sum of the cached file
-                md5, size, mtime = self.getmd5()
+                size, mtime = self.getFileInfo()
 
                 # Write the file to vospace.
 
-                self.ioObject.writeToBacking(md5, size, mtime)
+                os.fsync(self.ioObject.cacheFileDescriptor)
+                md5 = self.ioObject.writeToBacking()
 
                 # Update the meta data md5
                 blocks,blocks = self.ioObject.blockInfo(0, size)
@@ -748,6 +796,17 @@ class FileHandle(object):
         with self.writerLock(shared=True):
 
             # Ensure the entire file is in cache.
+            # TODO (optimization) It isn't necessary to always read the file. 
+            #      Only if the write would cause a gap in the written data. If 
+            #      there is never a gap, the file would only need to be read on 
+            #      release in order to fill in the end of the file (only if the 
+            #      last data written is before the end of the old file. However,
+            #      this creates a tricky problem of filling in only the part of 
+            #      the last cache block which has not been written.
+            #      Also, it isn't necessary to wait for the whole file to be
+            #      read. The write could proceed when the blocks being written
+            #      are read. Another argument to makeCached could be the blocks
+            #      to wait for, separate from the last mandatory block.
             firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
             self.makeCached(0, numBlocks)
 
@@ -780,7 +839,7 @@ class FileHandle(object):
         self.fileCondition.setTimeout()
 
         if offset > self.fileSize or size + offset > self.fileSize:
-            raise CacheError("Attempt to read beyond the end of file.")
+            raise ValueError("Attempt to read beyond the end of file.")
 
         # Ensure the required blocks are in the cache
         firstBlock,numBlocks = self.ioObject.blockInfo(offset, size)
@@ -872,6 +931,16 @@ class FileHandle(object):
                 self.fileCondition.wait()
 
 
+    def fsync(self):
+        with self.fileLock:
+            if self.ioObject.cacheFileDescriptor is not None:
+                os.fsync(self.ioObject.cacheFileDescriptor)
+
+
+    def truncate(self, length):
+        raise NotImplementedError("IOProxy.getMD5")
+
+
 class CacheReadThread(threading.Thread):
     CONTINUE_MAX_SIZE = 1024*1024
     
@@ -925,4 +994,9 @@ class CacheReadThread(threading.Thread):
                     firstBlock + numBlocks - 1)
             if requiredRange == (None, None):
                 self.fileHandle.fullyCached = True
+                # TODO - The file is fully cached, verify that the file matches
+                # the vospace content. Is that overly strict - the original VOFS
+                # did this, but it was subject to a much smaller read window.
+                # Also it is not invalid for the file to be replaced in vospace,
+                # and for this client to continue to serve the existing file.
             self.fileHandle.fileCondition.notify_all()
