@@ -194,6 +194,7 @@ class Cache(object):
                 isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
+            print "*************", newFileHandle.fileLock.wraps
             with newFileHandle.fileLock:
                 if not isNewFileHandle and createFile:
                     # We got an old file handle, but are creating a new file.
@@ -744,7 +745,7 @@ class FileHandle(object):
         return
 
     def getFileInfo(self):
-        """Get the current md5sum of the file."""
+        """Get the current file information for the file."""
 
         info = os.fstat(self.ioObject.cacheFileDescriptor)
         return info.st_size, info.st_mtime
@@ -930,10 +931,15 @@ class FileHandle(object):
                     self.readThread is not None):
                 self.fileCondition.wait()
 
+
     def fsync(self):
         with self.fileLock:
             if self.ioObject.cacheFileDescriptor is not None:
                 os.fsync(self.ioObject.cacheFileDescriptor)
+
+
+    def truncate(self, length):
+        raise NotImplementedError("IOProxy.getMD5")
 
 
 class CacheReadThread(threading.Thread):

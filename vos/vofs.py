@@ -21,7 +21,7 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse 
-from CadcCache import Cache, CacheRetry, CacheAborted, IOProxy
+from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -154,7 +154,8 @@ class VOFS(LoggingMixIn, Operations):
            e.strerror=getattr(e,'strerror','failed while making mount')
            raise e
 
-        self.rwlock = Lock()
+        # Create a condition variable to get rid of those nasty sleeps
+        self.condition = CacheCondition(lock=None, timeout=60)
 
 
     def __call__(self, op, path, *args):
@@ -167,7 +168,6 @@ class VOFS(LoggingMixIn, Operations):
         """Delete the references associated with this Node"""
         if not self.cache_nodes or force :
             self.node.pop(path,None)
-        add_to_cache
 
     def access(self, path, mode):
         """Check if path is accessible.  
@@ -334,7 +334,8 @@ class VOFS(LoggingMixIn, Operations):
         set the mode after creation. """
         #try:
         if 1==1:
-            parentNode = self.getNode(os.path.dirname(path), force=False, limit=1)
+            parentNode = self.getNode(os.path.dirname(path), force=False, 
+                    limit=1)
             if parentNode and parentNode.props.get('islocked', False):
                 logging.info("Parent node of %s is locked." % path)
                 raise FuseOSError(EPERM)
@@ -368,7 +369,6 @@ class VOFS(LoggingMixIn, Operations):
             try:
                 node = self.getNode(path)
             except Exception as e:
-                raise
                 if e.errno == 404:
                     # file does not exist
                     if not flags & os.O_CREAT:
@@ -427,7 +427,10 @@ class VOFS(LoggingMixIn, Operations):
         try:
             return fh.cacheFileHandle.read(size, offset)
         except CacheRetry:
-            raise FuseOSError(EAGAIN)
+            e = FuseOSError(EAGAIN)
+            e.strerror = "Timeout waiting for file read"
+            logging.debug("Timeout Waiting for file read: %s", path)
+            raise e
 
         
     def readlink(self, path):
@@ -447,42 +450,54 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("Getting directory list for %s " % ( path))
         ## reading from VOSpace can be slow, we'll do this in a thread
         import thread, time
-        if not self.loading_dir.get(path,False):
-            self.loading_dir[path]=True
-            thread.start_new_thread(self.load_dir,(path, ))
-        thread_wait=0
-        while self.loading_dir.get(path,False):
-            time.sleep(READ_SLEEP)
-            thread_wait += READ_SLEEP
-            logging.error("Waiting ... %ds" % ( thread_wait))
-            if thread_wait > DAEMON_TIMEOUT - 3:
-                e = FuseOSError(EAGAIN)
-                e.strerror = "Timeout waiting for directory listing"
-                raise e
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=False,limit=None).getNodeList() ]
+        with self.condition:
+            if not self.loading_dir.get(path,False):
+                self.loading_dir[path]=True
+                thread.start_new_thread(self.load_dir,(path, ))
+
+            while self.loading_dir.get(path,False):
+                logging.debug("Waiting ... ")
+                try: 
+                    self.condition.wait()
+                except CacheRetry:
+                    e = FuseOSError(EAGAIN)
+                    e.strerror = "Timeout waiting for directory listing"
+                    logging.debug("Timeout Waiting for directory read: %s", path)
+                    raise e
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(
+                path,force=False,limit=None).getNodeList() ]
 
     def load_dir(self,path):
-        """Load the dirlist from VOSpace"""
-        logging.debug("Starting getNodeList thread")
-        self.getNode(path,force=not self.opt.cache_nodes,limit=None).getNodeList()
-        self.loading_dir[path] = False
-        logging.debug("Got listing for %s" %(path))
+        """Load the dirlist from VOSpace. 
+        This should always be run in a thread."""
+        try:
+            logging.debug("Starting getNodeList thread")
+            self.getNode(path,force=not self.opt.cache_nodes,
+                    limit=None).getNodeList()
+            logging.debug("Got listing for %s" %(path))
+        finally:
+            self.loading_dir[path] = False
+            with self.condition:
+                self.condition.notify_all()
         return 
 
     def release(self, fh):
         """Close the file"""
         try:
             
-            if (fh.cacheFileHandle.fileModified) and (fh.path in self.node):
+            if ((fh.cacheFileHandle.fileModified) and 
+                    (fh.cacheFileHandle.path in self.node)):
                 #local copy modified. remove from list
-                del self.node[fh.path]
+                del self.node[fh.cacheFileHandle.path]
             fh.cacheFileHandle.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE
-            raise FuseOSError(EAGAIN)
+            e = FuseOSError(EAGAIN)
+            e.strerror = "Timeout waiting for file release"
+            logging.debug("Timeout Waiting for file release: %s", fh.path)
+            raise e
         except Exception, e:
             #unexpected problem
-            raise
             raise FuseOSError(EIO)
         return 
 
@@ -499,14 +514,7 @@ class VOFS(LoggingMixIn, Operations):
             result=self.client.move(src,dest)
             logging.debug(str(result))
             if result:
-                srcPath=os.path.normpath(self.cache_dir+src)
-                destPath=os.path.normpath(self.cache_dir+dest)
-                if os.access(srcPath,os.F_OK):
-                    # only rename in cache if the source exists
-                    dirs=os.path.dirname(destPath)
-                    if not os.path.exists(dirs):
-                        os.makedirs(dirs)
-                    os.rename(srcPath,destPath)
+                self.cache.renameFile(src, dest)
                 return 0
             return -1
         except Exception, e:
@@ -526,9 +534,6 @@ class VOFS(LoggingMixIn, Operations):
         if node and node.props.get('islocked', False):
             logging.info("%s is locked." % path)
             raise FuseOSError(EPERM)
-        fname=os.path.normpath(self.cache_dir+path)
-        if os.access(fname,os.F_OK):
-            os.rmdir(fname)
         self.client.delete(path)
         self.delNode(path,force=True)
 
@@ -561,56 +566,28 @@ class VOFS(LoggingMixIn, Operations):
         """Perform a file truncation to length bytes"""
         logging.debug("Attempting to truncate %s (%d)" % ( path,length))
 
-
-        ## do we have a fildes?  If so then don't close on truncate
-        close=False
         if fh is None:
-            logging.debug("don't have an open file handle, so creating one")
-            close=True
-            fh=self.open(path,os.O_RDWR)
-	    self.add_to_cache(path)
+            # Ensure the file exists.
+            if length == 0:
+                fh = self.open(path, os.O_RDWR | os.O_TRUNC)
+                self.release(fh)
+                return
 
-        ## Check if we have a valid cached version of this file.
-        ## but don't use standard read since we only want at most 'length' of this file
-        if length > 0 :
-            vosMD5  = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-            cacheMD5 = self.get_md5_db(self.cache[path]['fname'])
-            if not self.is_cached(path) and cacheMD5['md5'] != vosMD5 : 
-                ## cache file  (really we don't need the entire file, just upto length
-                ## TODO:  Fix this loop so it can exit on certain errors.
-                success=False
-                while not success:
-                    os.lseek(fh,0,os.SEEK_SET)
-                    try:
-                        r = self.client.open(path,mode=os.O_RDONLY,view='data')
-                        fpos=0
-                        while fpos < length:
-                            buf=r.read(READBUF)
-                            if not buf :
-                                ## stop reading at end of file.
-                                success=True
-                                break
-                            chunk=min(length-fpos,len(READBUF)) 
-                            if os.write(fh,buf[:chunk])!=chunk:
-                                raise FuseOSError(EIO)
-                            fpos=fpos+chunk
-                            if fpos >= length:
-                                success=True
-                                break
-                    except Exception as e:
-                        logging.error("Failed during truncate cache bulding (%s), trying again"  % ( str(e)))
-                    finally: 
-                        r.close()
-
-        ## now we can truncate the file.
-        os.ftruncate(fh,length)
-        ## set cached true since this version is now the keeper.
-        self.cache[path]['cached'] = True
-        if close :
-            ### fuse normally calls truncate without first opening the file
-            self.release(path,fh)
-        ## Update the access/mod times 
-        self.utimens(path)
+            fh = self.open(path, os.O_RDWR)
+            try:
+                print "before"
+                print fh.cacheFileHandle
+                print fh.cacheFileHandle.xtruncate(length)
+                print "after"
+            except Exception:
+                raise
+            finally:
+                self.release(fh)
+        else:
+            if fh.readOnly:
+                logging.debug("file was not opened for writing")
+                raise FuseOSError(EPERM)
+            fh.cacheFileHandle.truncate(length)
         return
 
     def unlink(self,path):
@@ -623,32 +600,6 @@ class VOFS(LoggingMixIn, Operations):
             self.client.delete(path)
         self.delNode(path,force=True)
 
-
-    def utimens(self, path, times=None):
-        """Set the access and modification times of path"""
-        logging.debug("Setting the access and modification times for %s " % ( path))
-        logging.debug("%s" % (str(times)))
-        if times is None:
-          logging.debug("No times specified so using the current system time for access and modifcation")
-          t=time.time()
-          times = (t,t)
-        else:
-          logging.debug("Setting the access and modification times using times provided")
-        logging.debug("Getting cache file name")
-        fname=os.path.normpath(self.cache_dir+path)
-        logging.debug("Setting access times on cached version at location %s" % ( fname))
-        if os.access(fname,os.W_OK):
-            logging.debug("Setting access times on cached version at location %s" % ( fname))
-            try:
-                os.utime(fname,times)
-            except Exception as e:
-                ex = FuseOSError(getattr(e,'errno',EIO))
-                ex.strerror = getattr(e,'strerror','failed to set times on %s' %(path))
-                raise ex
-        logging.debug("Attempting to set the st_mtime and st_atime attributes")
-        self.getattr(path)['st_mtime']=times[1]
-        self.getattr(path)['st_atime']=times[0]
-        return 
 
     def write(self, path, data, size, offset, fh=None):
         import ctypes
@@ -668,6 +619,9 @@ class VOFS(LoggingMixIn, Operations):
         try:
             return fh.cacheFileHandle.write(data, size, offset)
         except CacheRetry:
-            raise FuseOSError(EAGAIN)
+            e = FuseOSError(EAGAIN)
+            e.strerror = "Timeout waiting for file write"
+            logging.debug("Timeout Waiting for file write: %s", path)
+            raise e
         
         

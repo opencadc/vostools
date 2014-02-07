@@ -4,11 +4,14 @@ import unittest
 import stat
 import copy
 import pdb
+from contextlib import nested
 from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
-from errno import EIO, EAGAIN
+from errno import EIO, EAGAIN, EPERM, ENOENT
+
+skipTests = True
 
 class Object(object):
     pass
@@ -19,6 +22,7 @@ class TestVOFS(unittest.TestCase):
     def initOpt(self):
         opt = Object
         opt.readonly = False
+        opt.cache_nodes = False
         return opt
 
     def setUp(self):
@@ -30,6 +34,7 @@ class TestVOFS(unittest.TestCase):
     def tearDown(self):
         self.setUp()
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWrite1(self):
         """ Write to a read-only or locked file"""
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -37,9 +42,11 @@ class TestVOFS(unittest.TestCase):
         # Write some data at the start of the file. File is read only so it
         # returns 0
 
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.write( "/dir1/dir2/file", "abcd", 4, 0, fileHandle)
+        self.assertEqual(e.exception.errno, EPERM)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWrite2(self):
         """ Write to a read-only file system"""
         opt.readonly = True
@@ -49,6 +56,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual(testfs.write( "/dir1/dir2/file", "abcd", 4, 0,
                 fileHandle), 0)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWrite3(self):
         """Test a successfull write."""
 
@@ -67,6 +75,7 @@ class TestVOFS(unittest.TestCase):
         fileHandle.cacheFileHandle.write.return_value = 4
         fileHandle.cacheFileHandle.write.assert_called_once_with("abcd", 4, 2048)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWrite4(self):
         """Test a timout during write"""
 
@@ -74,22 +83,26 @@ class TestVOFS(unittest.TestCase):
         fileHandle = vofs.HandleWrapper(Object(), False)
         fileHandle.cacheFileHandle.write = Mock()
         fileHandle.cacheFileHandle.write.side_effect = CacheRetry("fake")
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.write( "/dir1/dir2/file", "abcd", 4, 2048, fileHandle)
+        self.assertEqual(e.exception.errno, EAGAIN)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testRead1(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
         # Read with a null file handle.
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.read( "/dir1/dir2/file", 4, 2048)
+        self.assertEqual(e.exception.errno, EIO)
 
         # Read with a timeout.
         fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cacheFileHandle.read = Mock()
         fileHandle.cacheFileHandle.read.side_effect = CacheRetry("fake")
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle)
+        self.assertEqual(e.exception.errno, EAGAIN)
 
         # Read with success.
         fileHandle = vofs.HandleWrapper(Object())
@@ -98,6 +111,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
     
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -113,8 +127,9 @@ class TestVOFS(unittest.TestCase):
         self.assertFalse(fh.readOnly)
 
         # non existing file open in read/write mode should fail
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             myVofs.open(file, os.O_RDWR, None)
+        self.assertEqual(e.exception.errno, ENOENT)
             
         # test with mocks so we can assert other parts of the function
         with patch('vos.vofs.MyIOProxy') as mock1:
@@ -143,19 +158,20 @@ class TestVOFS(unittest.TestCase):
         self.assertTrue(fh.readOnly)
                 
                 
-    @unittest.skipIf(True, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_release(self):
         file = "/dir1/dir2/file"
         fh = MagicMock(name="filehandler")
-        fh.release.side_effect=CacheRetry(Exception())
+        fh.cacheFileHandle.release.side_effect=CacheRetry(Exception())
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             myVofs.release(fh)
+        self.assertEqual(e.exception.errno, EAGAIN)
             
         # when file modified locally, release should remove it from the list of
         # accessed files in VOFS
         fh = MagicMock(name="filehandler")
-        fh.path = file
+        fh.cacheFileHandle.path = file
         myVofs.node[file] = Mock(name="fileInfo")
         self.assertEqual(1, len(myVofs.node))
         fh.fileModified = True
@@ -164,6 +180,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual(0, len(myVofs.node))
 
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_getattr(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
@@ -186,6 +203,7 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.getAttr.assert_called_once_with("/a/file/path2")
         self.assertFalse(testfs.getNode.called)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_unlink(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         path = "/a/file/path"
@@ -223,25 +241,122 @@ class TestVOFS(unittest.TestCase):
         node = Object
         node.props = {'islocked': True}
         testfs.getNode.return_value = node
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.unlink(path)
+        self.assertEqual(e.exception.errno, EPERM)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
         self.assertFalse(testfs.cache.unlink.called)
         self.assertFalse(testfs.client.delete.called)
         self.assertFalse(testfs.delNode.called)
 
-    @unittest.skipIf(True, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_delNode(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         path = "/a/file/path"
         testfs.delNode(path, force=True)
 
-    @unittest.skipIf(True, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_mkdir(self):
-        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         path = "/a/file/path"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.client = Object()
+        testfs.client.mkdir = Mock()
+        testfs.client.update = Mock()
+        testfs.chmod = Mock(wraps=testfs.chmod)
+        node=Object
+        node.groupread = "NONE"
+        node.groupwrite = "NONE"
+        node.attr = {'st_ctime': 1}
+        parentNode=Object
+        parentNode.props = Object
+        parentNode.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): False,
+                }, name="node.props.get") )
+        testfs.getNode = Mock(return_value=parentNode)
+        testfs.getNode = Mock(side_effect=SideEffect({
+                (os.path.dirname(path),): parentNode,
+                (path,): node,
+                }, name="testfs.getNode"))
         testfs.mkdir(path, stat.S_IRUSR)
+        testfs.chmod.assert_called_once_with(path, stat.S_IRUSR)
+        testfs.client.mkdir.assert_called_once_with(path)
 
+        # Try to make a directory in a locked parent.
+        testfs.chmod.reset_mock()
+        testfs.client.mkdir.reset_mock()
+        parentNode.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): True,
+                }, name="node.props.get") )
+        with self.assertRaises(FuseOSError) as e:
+            testfs.mkdir(path, stat.S_IRUSR)
+        self.assertEqual(e.exception.errno, EPERM)
+        self.assertFalse(testfs.chmod.called)
+        self.assertFalse(testfs.client.mkdir.called)
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_rmdir(self):
+        path="/a/file/path"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.delNode = Mock(wraps=testfs.delNode)
+        testfs.client = Object()
+        testfs.client.delete = Mock()
+        node = Object()
+        node.isdir = Mock(return_value = True)
+        node.props = Object()
+        node._nodeList = None
+        node.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): False,
+                }, name="node.props.get") )
+        node.type = "vos:ContainerNode"
+        testfs.client.getNode = Mock(return_value = node)
+        testfs.rmdir(path)
+        testfs.client.delete.assert_called_once_with(path)
+        testfs.delNode.assert_called_once_with(path,force=True)
+        
+        # Try deleting a node which is locked.
+        node.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): True,
+                }, name="node.props.get") )
+        testfs.client.delete.reset_mock()
+        testfs.delNode.reset_mock()
+
+        with self.assertRaises(FuseOSError) as e:
+            testfs.rmdir(path)
+        self.assertEqual(e.exception.errno, EPERM)
+        self.assertFalse(testfs.client.delete.called)
+        self.assertFalse(testfs.delNode.called)
+        testfs.client = Object()
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_readdir(self):
+        path="/a/file/path"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.client = Object()
+        node = Object()
+        node.getNodeList = Mock(return_value = ())
+        testfs.client.getNode = Mock(return_value = node)
+        self.assertEqual(testfs.readdir(path, None), ['.', '..'])
+
+        # Try again with a timeout
+        testfs.condition.wait = Mock(side_effect=CacheRetry("test"))
+        with self.assertRaises(FuseOSError) as e:
+            self.assertEqual(testfs.readdir(path, None), ['.', '..'])
+        self.assertEqual(e.exception.errno, EAGAIN)
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_loaddir(self):
+        path="/a/file/path"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.client = Object()
+        node = Object()
+        node.getNodeList = Mock(return_value = ())
+        testfs.condition.notify_all = Mock(wraps=testfs.condition.notify_all)
+        testfs.client.getNode = Mock(return_value = node)
+        testfs.load_dir(path)
+        testfs.condition.notify_all.assert_called_once_with()
+
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_chmod(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node=Object
@@ -274,11 +389,13 @@ class TestVOFS(unittest.TestCase):
 
         testfs.client.update.side_effect=NotImplementedError("an error")
 
-        with self.assertRaises(FuseOSError):
+        with self.assertRaises(FuseOSError) as e:
             testfs.chmod("/a/file/path", stat.S_IRUSR)
+        self.assertEqual(e.exception.errno, EIO)
         testfs.client.update.assert_called_once_with(node)
         self.assertEqual(testfs.getNode.call_count, 3)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_access(self):
         file = "/a/file/path"
 
@@ -294,7 +411,7 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(side_effect=NotImplementedError("an error"))
         self.assertEqual(testfs.access(file, stat.S_IRUSR), -1)
 
-
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_fsync(self):
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -319,8 +436,11 @@ class TestVOFS(unittest.TestCase):
         # Try flushing on a read-only file.
         testfs.client.getNode = Mock(return_value = node)
         fh = testfs.open( file, os.O_RDONLY, None)
+        fh.readOnly = True
         fh.cacheFileHandle.fsync = Mock(wraps=fh.cacheFileHandle.fsync)
-        testfs.fsync(file, False, fh)
+        with self.assertRaises(FuseOSError) as e:
+            testfs.fsync(file, False, fh)
+        self.assertEqual(e.exception.errno, EPERM)
         self.assertEqual(fh.cacheFileHandle.fsync.call_count, 0)
         testfs.release(fh)
 
@@ -335,6 +455,87 @@ class TestVOFS(unittest.TestCase):
         testfs.fsync(file, False, fh)
         self.assertEqual(fh.cacheFileHandle.fsync.call_count, 0)
         testfs.release(fh)
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_rename(self):
+        src = "/dir1/dir2/file"
+        dest = "/dir3/dir4/file2"
+
+        # Successful rename
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.client = Object()
+        testfs.client.move = Mock(return_value=True)
+        testfs.cache.renameFile = Mock(wraps=testfs.cache.renameFile)
+        self.assertEqual(testfs.rename(src, dest),0)
+        testfs.client.move.assert_called_once_with(src,dest)
+        self.assertEqual(testfs.cache.renameFile.call_count, 1)
+
+        # Rename failes on vopace
+        testfs.client.move.reset_mock()
+        testfs.cache.renameFile.reset_mock()
+        testfs.client.move.return_value=False
+        self.assertEqual(testfs.rename(src, dest),-1)
+        testfs.client.move.assert_called_once_with(src,dest)
+        self.assertEqual(testfs.cache.renameFile.call_count, 0)
+
+        # Rename throws an exception
+        testfs.client.move.reset_mock()
+        testfs.cache.renameFile.reset_mock()
+        testfs.client.move.side_effect=Exception("str")
+        self.assertEqual(testfs.rename(src, dest), -1)
+        testfs.client.move.assert_called_once_with(src,dest)
+        self.assertEqual(testfs.cache.renameFile.call_count, 0)
+
+        # Rename throws an exception because the node is locked.
+        testfs.client.move.reset_mock()
+        testfs.cache.renameFile.reset_mock()
+        testfs.client.move.side_effect=Exception(
+                "the node is NodeLocked so won't work")
+        with self.assertRaises(FuseOSError) as e:
+            self.assertEqual(testfs.rename(src, dest), -1)
+        self.assertEqual(e.exception.errno, EPERM)
+        testfs.client.move.assert_called_once_with(src,dest)
+        self.assertEqual(testfs.cache.renameFile.call_count, 0)
+
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_truncate(self):
+        file = "/dir1/dir2/file"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        node = Mock(spec=vos.Node)
+        node.isdir = Mock(return_value = False)
+        node.props = Object
+        node.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): False,
+                ('length',): 10,
+                ('MD5',): 12354,
+                }, name="node.props.get") )
+        node.type = "vos:DataNode"
+        testfs.client = Object()
+        testfs.client.getNode = Mock(return_value = node)
+
+        # Truncate a non-open file to 0 bytes
+        with nested(patch('vos.CadcCache.Cache', spec_set=Cache),
+                patch('vos.CadcCache.FileHandle', spec_set=FileHandle)) \
+                as mocks:
+            mockCache = mocks[0]
+            mockFileHandle = mocks[1]
+            ###testfs.truncate(file, 0)
+            ###self.assertEqual(mockCacheOpen.call_args[0][0], file)
+            ###self.assertEqual(mockCacheOpen.call_args[0][1], True)
+            # TODO this should cause a bunch of errors as it tries to flush to
+            ### VOSpace, but the error in open prevents the errors.
+            ###mockFileRelease.assert_called_once_with()
+
+            for mock in mocks:
+                mock.reset_mock()
+
+            # Truncate a non-open file past the start of the file.
+            #pdb.runcall(testfs.truncate,file, 5)
+            testfs.truncate(file, 5)
+            self.assertEqual(mockCache.open.call_args[0][0], file)
+            self.assertEqual(mockCache.open.call_args[0][1], False)
+            mockFileHandle.release.assert_called_once_with()
+
 
 
 class SideEffect(object):
@@ -364,6 +565,7 @@ class SideEffect(object):
 
 
 class TestMyIOProxy(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWriteToBacking(self):
         # Submit a write request for the whole file.
         with Cache(TestVOFS.testCacheDir, 100, timeout=1) as testCache:
@@ -384,6 +586,7 @@ class TestMyIOProxy(unittest.TestCase):
             client.copy.assert_called_once_with( testCache.dataDir + 
                     "/dir1/dir2/file", node.uri)
 
+    @unittest.skipIf(skipTests, "Individual tests")
     def testReadFromBacking(self):
         callCount = [0]
         def mock_read(block_size):
