@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 from __version__ import version
 
 logger = logging.getLogger('vos')
-logger.addHandler(logging.NullHandler())
+#logger.addHandler(logging.NullHandler())
 
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small

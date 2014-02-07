@@ -33,7 +33,48 @@
      in /usr/bin.
      <property name="pythonpattern" value="python2.?"/>
      For cadcVOFS, we only want python2.7 -->
-<property name="pythonpattern" value="python2.7"/>
+<property name="pythonpattern" value="python2.?"/>
+
+<target name="tests">
+    <antcall target="test2.6"/>
+    <antcall target="test2.7"/>
+</target>
+
+<target name="test2.6">
+    <foreachversion executablebin="/data/local/yeunga/python-base/python2.6.7/bin"
+                    executablepattern="python2.6"
+                    propertyname="python.executable"
+                    target="test_executable_2.6"/>
+</target>
+
+<target name="test2.7">
+    <foreachversion executablebin="/usr/bin"
+                    executablepattern="python2.7"
+                    propertyname="python.executable"
+                    target="test_executable_2.7"/>
+</target>
+
+<target name="test_executable_2.6" depends="compile">
+    <property name="pythonPath" value="/data/local/yeunga/python-base/python2.6.7/lib/python"/>
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="vos/test"
+           failonerror="true">
+        <env key="PYTHONPATH" value="${build}/lib:${pythonPath}"/>
+        <fileset dir="vos/test" includes="Test*.py"/>
+    </apply>
+</target>
+
+<target name="test_executable_2.7" depends="compile">
+    <property name="pythonPath" value="/data/local/yeunga/python-base/lib/python2.7/site-packages" />
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="vos/test"
+           failonerror="true">
+        <env key="PYTHONPATH" value="${build}/lib:${pythonPath}"/>
+        <fileset dir="vos/test" includes="Test*.py"/>
+    </apply>
+</target>
 
 <target name="test">
     <foreachversion executablebin="${pythonbin}"
@@ -43,12 +84,52 @@
 </target>
 
 <target name="test_executable" depends="compile">
+    <property name="pythonPath" value="/data/local/yeunga/python-base/lib/python2.7/site-packages" />
     <echo message="test ${build}/lib using ${python.executable}"/>
     <apply executable="${python.executable}"
            dir="vos/test"
            failonerror="true">
-        <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
+        <env key="PYTHONPATH" value="${build}/lib:${pythonPath}"/>
         <fileset dir="vos/test" includes="Test*.py"/>
+    </apply>
+</target>
+
+<target name="tests_all">
+    <antcall target="test_all_2.6"/>
+    <antcall target="test_all_2.7"/>
+</target>
+
+<target name="test_all_2.6">
+    <foreachversion executablebin="/data/local/yeunga/python-base/python2.6.7/bin"
+                    executablepattern="python2.6"
+                    propertyname="python.executable"
+                    target="test_all_executable_2.6"/>
+</target>
+
+<target name="test_all_2.7">
+    <foreachversion executablebin="/usr/bin"
+                    executablepattern="python2.7"
+                    propertyname="python.executable"
+                    target="test_all_executable_2.7"/>
+</target>
+
+<target name="test_all_executable_2.6" depends="compile">
+    <property name="pythonPath" value="/data/local/yeunga/python-base/python2.6.7/lib/python"/>
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="test/test_vos">
+        <env key="PYTHONPATH" value="${build}/lib:${pythonPath}"/>
+        <fileset dir="test/test_vos" includes="test*.py"/>
+    </apply>
+</target>
+
+<target name="test_all_executable_2.7" depends="compile">
+    <property name="pythonPath" value="/data/local/yeunga/python-base/lib/python2.7/site-packages:/data/local/yeunga/python-base/lib64/python2.7/site-packages" />
+    <echo message="test ${build}/lib using ${python.executable}"/>
+    <apply executable="${python.executable}"
+           dir="test/test_vos">
+        <env key="PYTHONPATH" value="${build}/lib:${pythonPath}"/>
+        <fileset dir="test/test_vos" includes="test*.py"/>
     </apply>
 </target>
 
@@ -62,9 +143,9 @@
 <target name="test_all_executable" depends="compile">
     <echo message="test ${build}/lib using ${python.executable}"/>
     <apply executable="${python.executable}"
-           dir="test">
+           dir="test/test_vos">
         <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
-        <fileset dir="test" includes="test*.py"/>
+        <fileset dir="test/test_vos" includes="test*.py"/>
     </apply>
 </target>
 

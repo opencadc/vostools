@@ -1,11 +1,11 @@
 # Test the vos module
-import unittest
+import unittest2
 from vos import vos
 import httplib
 from httplib import HTTPResponse
 from mock import Mock, MagicMock
 
-class TestVOFile(unittest.TestCase):
+class TestVOFile(unittest2.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestVOFile, self).__init__(*args, **kwargs)
@@ -182,5 +182,5 @@ class TestVOFile(unittest.TestCase):
         return self.responses.pop(0)
         
         
-suite = unittest.TestLoader().loadTestsFromTestCase(TestVOFile)
-unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest2.TestLoader().loadTestsFromTestCase(TestVOFile)
+unittest2.TextTestRunner(verbosity=2).run(suite)
