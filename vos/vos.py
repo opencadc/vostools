@@ -29,7 +29,6 @@ logger = logging.getLogger('vos')
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
-
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
 
