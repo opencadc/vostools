@@ -194,7 +194,6 @@ class Cache(object):
                 isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
-            print "*************", newFileHandle.fileLock.wraps
             with newFileHandle.fileLock:
                 if not isNewFileHandle and createFile:
                     # We got an old file handle, but are creating a new file.

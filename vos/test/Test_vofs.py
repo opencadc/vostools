@@ -11,7 +11,7 @@ from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = True
+skipTests = False
 
 class Object(object):
     pass
