@@ -11,7 +11,7 @@ from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = False
+skipTests = True
 
 class Object(object):
     pass
@@ -111,7 +111,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
     
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -142,28 +142,35 @@ class TestVOFS(unittest.TestCase):
                 self.assertFalse(fh.readOnly)
                 mock1.assert_called_with(myVofs, None)
                 #mock2.open.assert_called_with(file, True, mock1)
-                
-        # test with local attributes
-        myVofs.cache.getAttr = Mock()
-        myVofs.cache.getAttr.return_value = Mock()
-        fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
-        self.assertEqual(None, fh.cacheFileHandle.ioObject.getMD5())
-        self.assertEqual(None, fh.cacheFileHandle.ioObject.getSize())
-        self.assertFalse(fh.readOnly)
 
-        # test a read-only file
+        # test file in the cache already
         myVofs.cache.getAttr = Mock()
         myVofs.cache.getAttr.return_value = Mock()
-        fh = myVofs.open( file, os.O_RDONLY, None)
-        self.assertTrue(fh.readOnly)
+        fhMock = Mock()
+        myVofs.cache.open = Mock()
+        myVofs.cache.open.return_value = fhMock
+        with patch('vos.vofs.MyIOProxy') as myIOProxyMock:
+            myMock = Object()
+            myIOProxyMock.return_value = myMock
+            fh = myVofs.open( file, os.O_RDWR, None)
+            self.assertTrue(fh.cacheFileHandle.fileModified)
+            self.assertTrue(fh.cacheFileHandle.fullyCached)
+            myVofs.cache.open.assert_called_once_with(file, False, myMock)
+            myVofs.cache.open.reset_mock()
+            
+            # test a read-only file
+            with patch('vos.vofs.HandleWrapper') as handleMock:
+                myVofs.cache.getAttr = Mock()
+                myVofs.cache.getAttr.return_value = Mock()
+                fh = myVofs.open( file, os.O_RDONLY, None)
+                self.assertTrue(fh.readOnly)
+                handleMock.assert_called_once_with(fhMock, True)
+                myVofs.cache.open.reset_mock()
         
-        # test a truncated file
-        myVofs.cache.getAttr = Mock()
-        myVofs.cache.getAttr.return_value = Mock()
-        fh = myVofs.open( file, os.O_TRUNC, None)
-        self.assertTrue(fh.cacheFileHandle.fileModified)
-        self.assertTrue(fh.cacheFileHandle.fullyCached)
-        self.assertEquals(0, fh.cacheFileHandle.fileSize)
+            # test a truncated file
+            fh = myVofs.open( file, os.O_TRUNC, None)
+            myVofs.cache.open.assert_called_once_with(file, True, myMock)
+            myVofs.cache.open.reset_mock()
 
     
     #@unittest.skipIf(skipTests, "Individual tests")

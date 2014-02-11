@@ -71,7 +71,17 @@ class MyIOProxy(IOProxy):
         try:
             logging.debug("reading from %s" % ( str(self.lastVOFile)))
             while True:
-                buff = self.lastVOFile.read(blockSize)
+                try:
+                    buff = self.lastVOFile.read(blockSize)
+                except IOError as e:
+                    # existing URLs do not work anymore. Try another transfer
+                    # negotiation
+                    self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
+                                                            mode=os.O_RDONLY, 
+                                                            view="data", 
+                                                            size=size, 
+                                                            range=range)
+                    buff = self.lastVOFile.read(blockSize)                       
                 if not buff:
                     break
                 try:
@@ -425,7 +435,7 @@ class VOFS(LoggingMixIn, Operations):
         myProxy = MyIOProxy(self, node)
         # new file in cache library if no node information (node not in vospace) or 
         # file is open for truncate
-        isNew = (node == None) or (flags & os.O_TRUNC)
+        isNew = (cacheFileAttrs == None) and (node == None) or ((flags & os.O_TRUNC) != 0)
         
         # according to man for open(2), flags must contain one of O_RDWR, O_WRONLY or
         # O_RDONLY. Since O_RDONLY=0, the only way to detect if it's a read only is
