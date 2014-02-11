@@ -35,6 +35,8 @@ class MyIOProxy(IOProxy):
     def __init__(self, vofs, node):
         self.vofs = vofs
         self.node = node
+        # This is the vofile object last used 
+        self.lastVOFile = None
 
     def writeToBacking(self):
         """ 
@@ -53,18 +55,23 @@ class MyIOProxy(IOProxy):
         Read from VOSpace into cache
         """
 
-        # TODO read a range
+        # Read a range
         if size is not None or offset != 0:
             range = (size, offset)
         else:
             range = None
 
-        r = self.vofs.client.open(self.cacheFile.path, mode=os.O_RDONLY, 
-                view="data", size=size, range=range)
+        if self.lastVOFile is None:
+            self.lastVOFile = self.vofs.client.open(self.cacheFile.path, 
+                    mode=os.O_RDONLY, view="data", size=size, range=range)
+        else:
+            self.lastVOFile.open(
+                    self.lastVOFile.URLs[self.lastVOFile.urlIndex], 
+                    bytes=range)
         try:
-            logging.debug("reading from %s" % ( str(r)))
+            logging.debug("reading from %s" % ( str(self.lastVOFile)))
             while True:
-                buff = r.read(blockSize)
+                buff = self.lastVOFile.read(blockSize)
                 if not buff:
                     break
                 try:
@@ -74,7 +81,7 @@ class MyIOProxy(IOProxy):
                     break
                 offset += len(buff)
         finally:
-            r.close()
+            self.lastVOFile.close()
             
         logging.debug("Wrote: %d bytes to cache for %s" % (offset,
                 self.cacheFile.path))
@@ -497,6 +504,7 @@ class VOFS(LoggingMixIn, Operations):
             raise e
         except Exception, e:
             #unexpected problem
+            raise
             raise FuseOSError(EIO)
         return 
 

@@ -12,7 +12,7 @@ import time
 import copy
 from contextlib import nested
 import shutil
-import unittest2
+import unittest
 from mock import Mock, MagicMock, patch
 import functools
 import pdb
@@ -40,12 +40,16 @@ class IOProxyForTest(CadcCache.IOProxy):
     Subclass of the IOProxy class. Used for both testing the
     IOProxy class and as an IOProxy object when testing the Cache class.
     """
+    def __init__(self):
+        CadcCache.IOProxy.__init__(self)
+        self.size = 0
+        self.md5 = 'd41d8cd98f00b204e9800998ecf8427e'
 
     def getMD5(self):
-        return 'd41d8cd98f00b204e9800998ecf8427e'
+        return self.md5
 
     def getSize(self):
-        return 0
+        return self.size
 
     def delNode(self, force = False):
         return
@@ -55,7 +59,7 @@ class IOProxyForTest(CadcCache.IOProxy):
         return True
 
     def writeToBacking(self):
-        return 0xabcdef
+        return '0xabcdef'
 
     def readFromBacking(self, offset = None, size = None):
         return
@@ -88,7 +92,7 @@ class IOProxyFor100K(CadcCache.IOProxy):
         return ['\0'] * size
         
 
-class TestIOProxy(unittest2.TestCase):
+class TestIOProxy(unittest.TestCase):
     """Test the IOProxy class.
     """
 
@@ -106,7 +110,7 @@ class TestIOProxy(unittest2.TestCase):
     """
     Test the IOProxy class.
     """
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_basic(self):
         """Test the IOProxy abstract methods
         """
@@ -123,7 +127,7 @@ class TestIOProxy(unittest2.TestCase):
             with self.assertRaises(NotImplementedError):
                 testIOProxy.readFromBacking();
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
@@ -233,7 +237,7 @@ class TestIOProxy(unittest2.TestCase):
             self.assertEqual(testIOProxy.getMD5(),
                     "d41d8cd98f00b204e9800998ecf8427e")
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_blockInfo(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -260,7 +264,7 @@ class TestIOProxy(unittest2.TestCase):
                     testCache.IO_BLOCK_SIZE * 3 + 100))
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_readFromCache(self):
         """ Test the readFromCache method.
         """
@@ -300,30 +304,30 @@ class TestIOProxy(unittest2.TestCase):
                 self.assertEqual(mock_lseek.call_count, 2)
 
 
-class TestCacheError(unittest2.TestCase):
-    @unittest2.skipIf(skipTests, "Individual tests")
+class TestCacheError(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
         e = CadcCache.CacheError("a string")
         self.assertEqual("'a string'", str(e))
 
-class TestCacheRetry(unittest2.TestCase):
-    @unittest2.skipIf(skipTests, "Individual tests")
+class TestCacheRetry(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
         e = CadcCache.CacheRetry("a string")
         self.assertEqual("'a string'", str(e))
 
-class TestCacheAborted(unittest2.TestCase):
-    @unittest2.skipIf(skipTests, "Individual tests")
+class TestCacheAborted(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
         e = CadcCache.CacheAborted("a string")
         self.assertEqual("'a string'", str(e))
 
 
-class TestSharedLock(unittest2.TestCase):
+class TestSharedLock(unittest.TestCase):
     """Test the SharedLock class.
     """
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_Exceptions(self):
         e = TimeoutError("timeout")
         self.assertEqual(str(e), "'timeout'")
@@ -331,7 +335,7 @@ class TestSharedLock(unittest2.TestCase):
         e = RecursionError("recursion")
         self.assertEqual(str(e), "'recursion'")
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_simpleLock(self):
         """Test a simple lock release sequence
         """
@@ -360,7 +364,7 @@ class TestSharedLock(unittest2.TestCase):
 
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     @patch('threading.current_thread')
     def test_simpleLock2(self,mock_current_thread):
         """Test acquiring shared locks from a different thread.
@@ -386,7 +390,7 @@ class TestSharedLock(unittest2.TestCase):
         self.assertTrue(lock.exclusiveLock is None)
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     @patch('threading.current_thread')
     def test_exclusiveLock(self,mock_current_thread):
 
@@ -421,7 +425,7 @@ class TestSharedLock(unittest2.TestCase):
             lock.acquire(shared=False, timeout=1)
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_no_timeout(self):
         """Test acquiring shared locks from a different thread without a wait.
         """
@@ -466,7 +470,7 @@ class TestSharedLock(unittest2.TestCase):
         time.sleep(5)
         lock.release()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_with(self):
         """Test the with construct.
         """
@@ -480,8 +484,8 @@ class TestSharedLock(unittest2.TestCase):
             self.assertTrue(lock.exclusiveLock is not None)
             self.assertEqual(0,len(lock.lockersList))
 
-class TestCacheCondtion(unittest2.TestCase):
-    @unittest2.skipIf(skipTests, "Individual tests")
+class TestCacheCondtion(unittest.TestCase):
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_all(self):
         lock = threading.Lock()
         cond = CadcCache.CacheCondition(lock, 1)
@@ -538,7 +542,7 @@ class TestCacheCondtion(unittest2.TestCase):
 # _03_ release methods - lots of test use release.
 # _04_ high level methods that use open and release as test set up
 
-class TestCadcCache(unittest2.TestCase):
+class TestCadcCache(unittest.TestCase):
     """Test the CadcCache.CadcCache class
     """
 
@@ -556,7 +560,7 @@ class TestCadcCache(unittest2.TestCase):
         self.setUp()
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test__04_unlink(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -574,7 +578,7 @@ class TestCadcCache(unittest2.TestCase):
             with self.assertRaises(ValueError):
                 testCache.unlinkFile("dir1/file")
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_renameFile(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
@@ -687,7 +691,7 @@ class TestCadcCache(unittest2.TestCase):
                         pass
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_renameFile2(self):
 
         testIOProxy = IOProxyForTest()
@@ -732,7 +736,7 @@ class TestCadcCache(unittest2.TestCase):
                 with self.assertRaises(ValueError):
                     testCache.renameFile("/something", "/something")
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_renameDir(self):
         """Rename a whole directory.
         """
@@ -786,7 +790,7 @@ class TestCadcCache(unittest2.TestCase):
                     testCache.renameDir("/something", "/something")
 
 
-    #@unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_getAttr(self):
         """test the getAttr method."""
 
@@ -819,7 +823,7 @@ class TestCadcCache(unittest2.TestCase):
 
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_01_getFileHandle(self):
         """Test the getFileHandle method returns the same file handle for
            a file which is opened multiple times.
@@ -868,7 +872,7 @@ class TestCadcCache(unittest2.TestCase):
 
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor1(self):
         # Constructor with a non-existing cache directory.
         testObject = CadcCache.Cache(testDir, 100)
@@ -886,7 +890,7 @@ class TestCadcCache(unittest2.TestCase):
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor2(self):
         # Constructor with an existing cache directory and bad permissions.
         testObject = CadcCache.Cache(testDir, 100)
@@ -899,7 +903,7 @@ class TestCadcCache(unittest2.TestCase):
         finally:
             os.chmod(testDir, stat.S_IRWXU)
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor3(self):
         """ Constructor with a file where the cache directory should be."""
 
@@ -911,7 +915,7 @@ class TestCadcCache(unittest2.TestCase):
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor4(self):
         """ Constructor with a file where the cache data directory should be."""
         os.mkdir(testDir)
@@ -922,7 +926,7 @@ class TestCadcCache(unittest2.TestCase):
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor5(self):
         """ Constructor with a read-only directory where the cache data directory should be."""
         os.mkdir(testDir)
@@ -937,7 +941,7 @@ class TestCadcCache(unittest2.TestCase):
         finally:
             os.chmod(testDir + "/data/", stat.S_IRWXU)
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor6(self):
         """ Constructor with a file where the cache meta data directory 
             should be.
@@ -950,7 +954,7 @@ class TestCadcCache(unittest2.TestCase):
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor7(self):
         """ Constructor with a read-only directory where the cache meta data 
             directory should be."""
@@ -977,7 +981,7 @@ class TestCadcCache(unittest2.TestCase):
                 fh.write ("a")
                 fh.close()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_02_open1(self):
         # IOProxy - getMD5 fails with ENOENT
         class IOProxy_getMD5_ENOENT(IOProxyForTest):
@@ -987,7 +991,7 @@ class TestCadcCache(unittest2.TestCase):
                 raise e
 
         with CadcCache.Cache(testDir, 100) as testObject:
-            ioObject = IOProxyForTest()
+            ioObject = IOProxyFor100K()
             fh = testObject.open("/dir1/dir2/file", False, ioObject)
             self.assertFalse(fh.fullyCached)
             self.assertFalse(fh.fileModified)
@@ -998,7 +1002,7 @@ class TestCadcCache(unittest2.TestCase):
                 fh = testObject.open("/dir1/dir2/file", False, ioObject)
             fh.release()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -1011,12 +1015,16 @@ class TestCadcCache(unittest2.TestCase):
 
             fh = testObject.open("/dir1/dir2/file", False, ioObject)
             #existing meta data should be there 
+            self.assertTrue(fh.fullyCached)
+            self.assertFalse(fh.fileModified)
             fh2 = testObject.open("/dir1/dir2/file", True, ioObject2)
+            self.assertTrue(fh2.fullyCached)
+            self.assertTrue(fh2.fileModified)
             #meta data deleted.
             fh.release()
             fh2.release()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_02_open3(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -1033,7 +1041,7 @@ class TestCadcCache(unittest2.TestCase):
             fh2.release()
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release1(self):
         """Fails getting md5."""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -1063,7 +1071,7 @@ class TestCadcCache(unittest2.TestCase):
             w.write(buff)
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release2(self):
         class IOProxy_writeToBacking_slow(IOProxyForTest):
             def verifyMetaData(self, md5sum):
@@ -1094,7 +1102,7 @@ class TestCadcCache(unittest2.TestCase):
         fh = testObject.open("/dir1/dir2/file", False, ioObject)
         fh.release()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release3(self):
         """Successful write to backing"""
 
@@ -1110,7 +1118,7 @@ class TestCadcCache(unittest2.TestCase):
             fh.release()
             ioObject.writeToBacking.assert_called_once_with()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release4(self):
         """Test aborting an in-progress cache read thread when a file is
            closed."""
@@ -1129,7 +1137,7 @@ class TestCadcCache(unittest2.TestCase):
             fh.readThread = None
             fh.release()
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release5(self):
         """Flush returns an error.
         """
@@ -1150,7 +1158,7 @@ class TestCadcCache(unittest2.TestCase):
 
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_read1(self):
         """Test reading from a file which is not cached."""
 
@@ -1165,7 +1173,7 @@ class TestCadcCache(unittest2.TestCase):
             fh.release()
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_write1(self):
         """Test writing to a file which is not cached."""
 
@@ -1177,7 +1185,7 @@ class TestCadcCache(unittest2.TestCase):
                 self.assertEqual(data, "abcd")
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_01_makeCached(self):
         """initializing the cached file
         """
@@ -1320,6 +1328,7 @@ class TestCadcCache(unittest2.TestCase):
                     mockedClass.return_value = CacheReadThreadMock(fh)
                     fh.metaData.setReadBlocks(6, 6)
                     fh.metaData.md5sum = 12345
+                    fh.fullyCached = False
                     fh.makeCached(0,1)
                     # TODO figure out a way to test the result. The init method
                     # of CacheReadThreadMock should be with arguments which get
@@ -1327,7 +1336,7 @@ class TestCadcCache(unittest2.TestCase):
                     # last block as optional
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_fsync(self):
         """ Test the fsync method"""
 
@@ -1352,7 +1361,7 @@ class TestCadcCache(unittest2.TestCase):
             cond.notify_all()
 
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_determineCacheSize(self):
         """ Test checking the cache space """
         if os.path.exists(testDir):
@@ -1380,7 +1389,7 @@ class TestCadcCache(unittest2.TestCase):
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
         
     
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_checkCacheSpace(self):
         """ Test cache cleanup """
         if os.path.exists(testDir):
@@ -1420,7 +1429,7 @@ class TestCadcCache(unittest2.TestCase):
         # no files deleted as all of them are in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
 
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_removeEmptyDirs(self):
         """ Test cache cleanup """
 
@@ -1449,10 +1458,77 @@ class TestCadcCache(unittest2.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_04_truncate(self):
         """ Test file truncate"""
+        testIOProxy = IOProxyForTest()
+        testIOProxy.writeToBacking = Mock(wraps=testIOProxy.writeToBacking)
+        testIOProxy.readFromBacking = Mock(wraps=testIOProxy.readFromBacking)
+        with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+            # Expand a new file
+            with testCache.open("/dir1/dir2/file", True, testIOProxy) as \
+                    testFile:
+                testFile.truncate(10)
+                self.assertTrue(testFile.fileModified)
+                self.assertTrue(testFile.fullyCached)
+                self.assertEqual(os.path.getsize(testFile.cacheDataFile), 10)
+            testIOProxy.writeToBacking.assert_called_once_with()
+            self.assertEqual(testIOProxy.readFromBacking.call_count, 0)
+            testIOProxy.size  = 10
 
+            # Set a file to its current size
+            testIOProxy.writeToBacking.reset_mock()
+            testIOProxy.readFromBacking.reset_mock()
+            self.assertEqual(os.path.getsize(testFile.cacheDataFile), 10)
+            with testCache.open("/dir1/dir2/file", False, testIOProxy) as \
+                    testFile:
+                testFile.truncate(10)
+                self.assertFalse(testFile.fileModified)
+                self.assertFalse(testFile.fullyCached)
+            # This first assert is odd - testIOProxy returns zero bytes from
+            # readFromBacking, so the file gets set to 0 size and not changed
+            # because truncate thinks it isn't changing the file size of 10
+            # bytes.
+            self.assertEqual(os.path.getsize(testFile.cacheDataFile), 0)
+            self.assertEqual(testIOProxy.writeToBacking.call_count, 0)
+            self.assertEqual(testIOProxy.readFromBacking.call_count, 0)
+
+            # Expand a file from 10 bytes
+            testIOProxy.writeToBacking.reset_mock()
+            testIOProxy.readFromBacking.reset_mock()
+            with testCache.open("/dir1/dir2/file", False, testIOProxy) as \
+                    testFile:
+                testFile.truncate(testCache.IO_BLOCK_SIZE * 2 + 20)
+                self.assertTrue(testFile.fileModified)
+                self.assertTrue(testFile.fullyCached)
+                self.assertEqual(os.path.getsize(testFile.cacheDataFile),
+                    testCache.IO_BLOCK_SIZE * 2 + 20)
+            testIOProxy.writeToBacking.assert_called_once_with()
+            self.assertEqual(testIOProxy.readFromBacking.call_count, 1)
+            testIOProxy.size  = testCache.IO_BLOCK_SIZE * 2 + 20
+            testIOProxy.md5 = '0xabcdef'
+
+
+            # Shrink a big file down. The file should be cached locally and not
+            # read from backing.
+            testIOProxy.writeToBacking.reset_mock()
+            testIOProxy.readFromBacking.reset_mock()
+            with testCache.open("/dir1/dir2/file", False, testIOProxy) as \
+                    testFile:
+                self.assertFalse(testFile.fileModified)
+                testFile.truncate(testCache.IO_BLOCK_SIZE * 2 + 21)
+                self.assertTrue(testFile.fullyCached)
+                self.assertEqual(os.path.getsize(testFile.cacheDataFile),
+                        testCache.IO_BLOCK_SIZE * 2 + 21)
+                # Set up for the shrink test
+                testIOProxy.writeToBacking.reset_mock()
+                testIOProxy.readFromBacking.reset_mock()
+                testFile.truncate(10)
+                self.assertTrue(testFile.fileModified)
+                self.assertTrue(testFile.fullyCached)
+                self.assertEqual(os.path.getsize(testFile.cacheDataFile), 10)
+            testIOProxy.writeToBacking.assert_called_once_with()
+            self.assertEqual(testIOProxy.readFromBacking.call_count, 0)
         
 
-class TestCadcCacheReadThread(unittest2.TestCase):
+class TestCadcCacheReadThread(unittest.TestCase):
     """Test the CadcCache.CacheTreadThread class
     """
     class MyIoObject(CadcCache.IOProxy):
@@ -1475,7 +1551,7 @@ class TestCadcCacheReadThread(unittest2.TestCase):
         pass
     
     
-    @unittest2.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_isNewReadBest(self):
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
             dataBlock = 64*1024
@@ -1589,15 +1665,15 @@ class TestCadcCacheReadThread(unittest2.TestCase):
 logging.getLogger('CadcCache').setLevel(logging.DEBUG)
 logging.getLogger('CadcCache').addHandler(logging.StreamHandler())
 
-suite1 = unittest2.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-suite2 = unittest2.TestLoader().loadTestsFromTestCase(TestSharedLock)
-suite3 = unittest2.TestLoader().loadTestsFromTestCase(TestCacheError)
-suite4 = unittest2.TestLoader().loadTestsFromTestCase(TestCacheRetry)
-suite5 = unittest2.TestLoader().loadTestsFromTestCase(TestCacheAborted)
-suite6 = unittest2.TestLoader().loadTestsFromTestCase(TestIOProxy)
-suite7 = unittest2.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
-suite8 = unittest2.TestLoader().loadTestsFromTestCase(TestCadcCache)
-alltests = unittest2.TestSuite([suite1, suite2, suite3, suite4, suite5, 
+suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
+suite2 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
+suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
+suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
+suite5 = unittest.TestLoader().loadTestsFromTestCase(TestCacheAborted)
+suite6 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
+suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
+alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, 
         suite6, suite7, suite8])
-unittest2.TextTestRunner(verbosity=2).run(alltests)
+unittest.TextTestRunner(verbosity=2).run(alltests)
 

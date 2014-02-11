@@ -170,7 +170,10 @@ class Cache(object):
                     fileHandle.fileSize)
             fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
                     numBlock, fileHandle.ioObject.getMD5())
-            fileHandle.fullyCached = False
+            if fileHandle.metaData.getNumReadBlocks() == numBlock:
+                fileHandle.fullyCached = True
+            else:
+                fileHandle.fullyCached = False
 
         if (fileHandle.metaData is None or 
                 fileHandle.metaData.getNumReadBlocks() == 0):
@@ -576,7 +579,7 @@ class IOProxy(object):
                     self.cache.IO_BLOCK_SIZE != 0 and 
                     currentOffset != self.cacheFile.fileSize)):
                 raise CacheError("Only seeks to block boundaries are "
-                    "permitted when writing to cache.")
+                    "permitted when writing to cache: " + str(offset))
             os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
             currentOffset = offset
 
@@ -865,7 +868,7 @@ class FileHandle(object):
         """
 
         # If the whole file is cached, return
-        if self.fullyCached:
+        if self.fullyCached or numBlock == 0:
             return
 
         requiredRange = self.metaData.getRange(firstBlock, firstBlock +
@@ -915,8 +918,10 @@ class FileHandle(object):
             # Figure out where the optional end of the read should be.
             nextRead = self.metaData.getNextReadBlock(requiredRange[1])
             if nextRead == -1:
+                # Reading right to the end of the file.
                 optionalSize = self.fileSize - startByte
             else:
+                # Reading to an intermediate end point.
                 optionalSize = (nextRead * Cache.IO_BLOCK_SIZE) - startByte
 
             self.readThread = CacheReadThread(startByte, mandatorySize,
@@ -939,14 +944,18 @@ class FileHandle(object):
     def truncate(self, length):
         # Acquire an exclusive lock on the file
         with self.writerLock(shared=False):
+            with self.fileLock:
+                if length == self.ioObject.getSize():
+                    return
 
             # Ensure the required part of the file is in cache.
-            firstBlock,numBlocks = self.ioObject.blockInfo(0, length)
+            firstBlock,numBlocks = self.ioObject.blockInfo(0,
+                    min(length,self.ioObject.getSize()))
             self.makeCached(0, numBlocks)
             with self.fileLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
-                fileHandle.fileModified = True
-                fileHandle.fullyCached = True
+                self.fileModified = True
+                self.fullyCached = True
 
 
 class CacheReadThread(threading.Thread):
@@ -993,7 +1002,8 @@ class CacheReadThread(threading.Thread):
         return True
 
     def execute(self):
-        self.fileHandle.ioObject.readFromBacking(self.startByte, self.optionSize)
+        self.fileHandle.ioObject.readFromBacking(self.optionSize, 
+                self.startByte)
         with self.fileHandle.fileCondition:
             self.fileHandle.readThread = None
             firstBlock,numBlocks = self.fileHandle.ioObject.blockInfo(0,

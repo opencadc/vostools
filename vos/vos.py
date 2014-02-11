@@ -616,7 +616,8 @@ class VOFile:
     ### if we get one of these codes, retry the command... ;-(
     retryCodes = (503, 408, 504, 412) 
 
-    def __init__(self, URLs, connector, method, size=None, followRedirect=True):
+    def __init__(self, URLs, connector, method, size=None, followRedirect=True,
+            range=None):
         self.closed = True
         self.resp = 503
         self.connector = connector
@@ -636,7 +637,7 @@ class VOFile:
         self.urlIndex = 0
         self.followRedirect = followRedirect
         self._fpos = 0
-        self.open(self.URLs[self.urlIndex], method)
+        self.open(self.URLs[self.urlIndex], method, bytes=range)
         # initial values for retry parameters
         self.currentRetryDelay = DEFAULT_RETRY_DELAY
         self.totalRetryDelay = 0
@@ -1276,11 +1277,13 @@ class Client:
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None, cutout=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, 
+            limit=None, nextURI=None, size=None, cutout=None, range=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
-        ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
+        ### really that's an error, but I thought I'd just accept those are 
+        ### os.O_RDONLY
 
         logger.debug("URI: %s" % ( uri))
         logger.debug("URL: %s" %(URL))
@@ -1326,7 +1329,7 @@ class Client:
                     #logger.debug("Opening %s with urllib2" % (target))
                     return urllib2.urlopen(target)
         else:
-            return VOFile(URL, self.conn, method=method, size=size)
+            return VOFile(URL, self.conn, method=method, size=size, range=range)
         return None
 
 

@@ -499,6 +499,13 @@ class TestVOFS(unittest.TestCase):
 
     #@unittest.skipIf(skipTests, "Individual tests")
     def test_truncate(self):
+        callCount = [0]
+        def mock_read(block_size):
+            callCount[0] += 1
+            if callCount[0] == 1:
+                return "1234"
+            else:
+                return None
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node = Mock(spec=vos.Node)
@@ -510,26 +517,82 @@ class TestVOFS(unittest.TestCase):
                 ('MD5',): 12354,
                 }, name="node.props.get") )
         node.type = "vos:DataNode"
+        node.uri = "vos:/dir1/dir2/file"
         testfs.client = Object()
         testfs.client.getNode = Mock(return_value = node)
+        testfs.client.close = Mock()
+        testfs.client.read = Mock(side_effect = mock_read)
+        testfs.client.copy = Mock()
+        vos_VOFILE = Object()
+        vos_VOFILE.close = Mock()
+        vos_VOFILE.read = Mock(side_effect=mock_read)
+        testfs.client.open = Mock(return_value = vos_VOFILE)
 
         # Truncate a non-open file to 0 bytes
-        with patch('vos.CadcCache.Cache', spec=True, create=True,
-                mocksignature=True) as mockCache:
-            ###testfs.truncate(file, 0)
-            ###self.assertEqual(mockCacheOpen.call_args[0][0], file)
-            ###self.assertEqual(mockCacheOpen.call_args[0][1], True)
-            # TODO this should cause a bunch of errors as it tries to flush to
-            ### VOSpace, but the error in open prevents the errors.
-            ###mockFileRelease.assert_called_once_with()
+        testfs.cache.open = Mock(wraps=testfs.cache.open)
+        ###testfs.truncate(file, 0)
+        ###self.assertEqual(mockCacheOpen.call_args[0][0], file)
+        ###self.assertEqual(mockCacheOpen.call_args[0][1], True)
+        # TODO this should cause a bunch of errors as it tries to flush to
+        ### VOSpace, but the error in open prevents the errors.
+        ###mockFileRelease.assert_called_once_with()
 
-            # Truncate a non-open file past the start of the file.
-            #pdb.runcall(testfs.truncate,file, 5)
-            testfs.truncate(file, 5)
-            self.assertEqual(mockCache.open.call_args[0][0], file)
-            self.assertEqual(mockCache.open.call_args[0][1], False)
-            mockFileHandle.release.assert_called_once_with()
+        # Truncate a non-open file past the start of the file.
+        testfs.cache.open.reset_mock()
+        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+            mockRelease.wraps = FileHandle.release
+            with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                mockTruncate.wraps = FileHandle.truncate
+                testfs.truncate(file, 5)
+                self.assertEqual(testfs.cache.open.call_args[0][0], file)
+                self.assertEqual(testfs.cache.open.call_args[0][1], False)
+                mockTruncate.assert_called_once_with(5)
+            mockRelease.assert_called_once_with()
 
+        # Truncate with an exception returned by the CadcCache truncate
+        testfs.cache.open.reset_mock()
+        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+            mockRelease.wraps = FileHandle.release
+            with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                mockTruncate.side_effect = NotImplementedError("an error")
+                with self.assertRaises(NotImplementedError):
+                    testfs.truncate(file, 5)
+                self.assertEqual(testfs.cache.open.call_args[0][0], file)
+                self.assertEqual(testfs.cache.open.call_args[0][1], False)
+            mockRelease.assert_called_once_with()
+
+        # Truncate an already opened file given the file handle.
+        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+            mockRelease.wraps = FileHandle.release
+            try:
+                fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
+                testfs.cache.open.reset_mock()
+                with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                    mockTruncate.wraps = FileHandle.truncate
+                    testfs.truncate(file, 20, fh)
+                    # Open and release should not be called, truncate should be
+                    # called.
+                    self.assertEqual(testfs.cache.open.call_count, 0)
+                    mockTruncate.assert_called_once_with(20)
+                self.assertEqual(mockRelease.call_count, 0)
+            finally:
+                testfs.release(fh)
+
+        # Truncate aread only file handle.
+        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+            mockRelease.wraps = FileHandle.release
+            try:
+                fh = testfs.open( file, os.O_RDONLY, None)
+                with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                    mockTruncate.wraps = FileHandle.truncate
+                    with self.assertRaises(FuseOSError):
+                        testfs.truncate(file, 20, fh)
+                    # Open, release and truncate should not be called.
+                    self.assertEqual(testfs.cache.open.call_count, 0)
+                    self.assertEqual(mockTruncate.call_count, 0)
+                self.assertEqual(mockRelease.call_count, 0)
+            finally:
+                testfs.release(fh)
 
 
 class SideEffect(object):
@@ -592,10 +655,13 @@ class TestMyIOProxy(unittest.TestCase):
 
         with Cache(TestVOFS.testCacheDir, 100, timeout=1) as testCache:
             client = Object
-            streamyThing = Object()
-            client.open = Mock(return_value = streamyThing)
-            client.close = Mock()
-            client.read = Mock(side_effect = mock_read)
+            vos_VOFILE = Object()
+            vos_VOFILE.URLs = ["url0", "URL1"]
+            vos_VOFILE.urlIndex = 0
+            vos_VOFILE.open = Mock()
+            vos_VOFILE.read = Mock(side_effect=mock_read)
+            vos_VOFILE.close = Mock()
+            client.open = Mock(return_value = vos_VOFILE)
             myVofs = Mock()
             myVofs.client = client
             testProxy = vofs.MyIOProxy(myVofs, None)
@@ -612,31 +678,32 @@ class TestMyIOProxy(unittest.TestCase):
                     testProxy.readFromBacking()
                     client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
                             view="data", size=None, range=None)
-                    self.assertEqual(client.close.call_count, 1)
-                    self.assertEqual(client.read.call_count, 2)
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 2)
 
                     # Submit a range request
-                    client.open.reset_mock()
-                    client.close.reset_mock()
-                    client.read.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
                     callCount[0] = 0
                     testProxy.readFromBacking(100,200)
-                    client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
-                            view="data", size=100, range=(100,200))
-                    self.assertEqual(client.close.call_count, 1)
-                    self.assertEqual(client.read.call_count, 2)
+                    self.assertEqual(client.open.call_count, 1)
+                    vos_VOFILE.open.assert_called_once_with("url0", 
+                            bytes=(100,200))
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 2)
 
                     # Submit a request which gets aborted.
-                    client.open.reset_mock()
-                    client.close.reset_mock()
-                    client.read.reset_mock()
+                    vos_VOFILE.open.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
                     callCount[0] = 0
                     testProxy.writeToCache.side_effect = CacheAborted("aborted")
                     testProxy.readFromBacking(100,200)
-                    client.open.assert_called_once_with(path, mode=os.O_RDONLY, 
-                            view="data", size=100, range=(100,200))
-                    self.assertEqual(client.close.call_count, 1)
-                    self.assertEqual(client.read.call_count, 1)
+                    self.assertEqual(client.open.call_count, 1)
+                    vos_VOFILE.open.assert_called_once_with("url0", 
+                            bytes=(100,200))
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 1)
 
                 finally:
                     testProxy.cacheFile.readThread = None
