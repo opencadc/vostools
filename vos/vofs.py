@@ -240,7 +240,6 @@ class VOFS(LoggingMixIn, Operations):
         
     def create(self, path, flags):
         """Create a node. Currently ignores the ownership mode"""
-        import re,os
 
         logging.debug("Creating a node: %s with flags %s" % (path, str(flags)))
 
@@ -413,13 +412,26 @@ class VOFS(LoggingMixIn, Operations):
                       logging.error("Got an error while checking for lock: "+str(e))
                       pass
 
-        if locked & flags & os.O_WRONLY:
-            # file is locked, cannot write
-            FuseOSError(ENOENT)
+        if locked: 
+            if flags & os.O_WRONLY:
+                # file is locked, cannot write
+                e = FuseOSError(ENOENT)
+                e.strerror = "Cannot create locked file"
+                logging.debug("Cannot create locked file: %s", path)
+                raise e
+                
+
         
         myProxy = MyIOProxy(self, node)
-        return HandleWrapper(self.cache.open(path, node == None, myProxy), 
-                flags & os.O_RDONLY)
+        # new file in cache library if no node information (node not in vospace) or 
+        # file is open for truncate
+        isNew = (node == None) or (flags & os.O_TRUNC)
+        
+        # according to man for open(2), flags must contain one of O_RDWR, O_WRONLY or
+        # O_RDONLY. Since O_RDONLY=0, the only way to detect if it's a read only is
+        # to check whether the other two flags are absent.
+        return HandleWrapper(self.cache.open(path, isNew, myProxy), 
+                (flags & (os.O_RDWR|os.O_WRONLY)) == 0)
 
     def read(self, path, size=0, offset=0, fh=None):
         """ Read the required bytes from the file and return a buffer containing
