@@ -11,7 +11,7 @@ from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = False
+skipTests = True
 
 class Object(object):
     pass
@@ -156,7 +156,51 @@ class TestVOFS(unittest.TestCase):
         myVofs.cache.getAttr.return_value = Mock()
         fh = myVofs.open( file, os.O_RDONLY, None)
         self.assertTrue(fh.readOnly)
-                
+        
+        # test a truncated file
+        myVofs.cache.getAttr = Mock()
+        myVofs.cache.getAttr.return_value = Mock()
+        fh = myVofs.open( file, os.O_TRUNC, None)
+        self.assertTrue(fh.cacheFileHandle.fileModified)
+        self.assertTrue(fh.cacheFileHandle.fullyCached)
+        self.assertEquals(0, fh.cacheFileHandle.fileSize)
+
+    
+    #@unittest.skipIf(skipTests, "Individual tests")
+    def test_create(self):
+        file = "/dir1/dir2/file"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.cache.getAttr = Mock()
+        testfs.cache.getAttr.return_value = None
+        testfs.cache.open = Mock()
+        node = Mock()
+        node.groupread = True
+        node.groupwrite = True
+        node.chmod.return_value = False
+
+        parentNode = Mock()
+        parentNode.groupread = True
+        parentNode.groupwrite = True
+        testfs.client.open = Mock()
+        testfs.getNode = Mock(side_effect=SideEffect({
+                ('/dir1/dir2/file',): node,
+                ('/dir1/dir2',): parentNode }
+                 , name="testfs.getNode")) 
+        with self.assertRaises(FuseOSError) as e:
+            testfs.create(file, os.O_RDWR)     
+        
+        
+        node.props.get = Mock(return_value=False)
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.client.open = Mock()
+        testfs.open = Mock()
+        testfs.getNode = Mock(side_effect=SideEffect({
+                ('/dir1/dir2/file',): node,
+                ('/dir1/dir2',): parentNode }
+                 , name="testfs.getNode"))
+        testfs.create(file, os.O_RDWR)
+        testfs.open.assert_called_once_with(file, os.O_WRONLY)       
+
                 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_release(self):
@@ -497,7 +541,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.move.assert_called_once_with(src,dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_truncate(self):
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
