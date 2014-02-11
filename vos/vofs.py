@@ -75,7 +75,8 @@ class MyIOProxy(IOProxy):
                     buff = self.lastVOFile.read(blockSize)
                 except IOError as e:
                     # existing URLs do not work anymore. Try another transfer
-                    # negotiation
+                    # negotiation. If it still fails let the error propagate
+                    # to client
                     self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
                                                             mode=os.O_RDONLY, 
                                                             view="data", 

@@ -11,7 +11,7 @@ from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = True
+skipTests = False
 
 class Object(object):
     pass
@@ -111,7 +111,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual( testfs.read( "/dir1/dir2/file", 4, 2048, fileHandle),
                 "abcd")
     
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
