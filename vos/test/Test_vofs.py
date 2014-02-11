@@ -11,7 +11,7 @@ from vos.fuse import FuseOSError
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = True
+skipTests = False
 
 class Object(object):
     pass
@@ -574,11 +574,9 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate a non-open file to 0 bytes
         testfs.cache.open = Mock(wraps=testfs.cache.open)
-        ###testfs.truncate(file, 0)
-        ###self.assertEqual(mockCacheOpen.call_args[0][0], file)
-        ###self.assertEqual(mockCacheOpen.call_args[0][1], True)
-        # TODO this should cause a bunch of errors as it tries to flush to
-        ### VOSpace, but the error in open prevents the errors.
+        testfs.truncate(file, 0)
+        self.assertEqual(testfs.cache.open.call_args[0][0], file)
+        ###self.assertEqual(testfs.cache.open.call_args[0][1], True)
         ###mockFileRelease.assert_called_once_with()
 
         # Truncate a non-open file past the start of the file.
