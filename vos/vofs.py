@@ -588,8 +588,10 @@ class VOFS(LoggingMixIn, Operations):
         if fh is None:
             # Ensure the file exists.
             if length == 0:
-                fh = self.open(path, os.O_RDWR | os.O_TRUNC)
-                self.release(fh)
+                try:
+                    fh = self.open(path, os.O_RDWR | os.O_TRUNC)
+                finally:
+                    self.release(fh)
                 return
 
             fh = self.open(path, os.O_RDWR)

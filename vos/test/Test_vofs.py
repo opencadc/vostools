@@ -1,6 +1,6 @@
 import os
 import shutil
-import unittest
+import unittest2 as unittest
 import stat
 import copy
 import pdb
@@ -541,7 +541,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.move.assert_called_once_with(src,dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_truncate(self):
         callCount = [0]
         def mock_read(block_size):
@@ -574,43 +574,58 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate a non-open file to 0 bytes
         testfs.cache.open = Mock(wraps=testfs.cache.open)
-        testfs.truncate(file, 0)
-        self.assertEqual(testfs.cache.open.call_args[0][0], file)
-        ###self.assertEqual(testfs.cache.open.call_args[0][1], True)
-        ###mockFileRelease.assert_called_once_with()
+        origRelease = FileHandle.release
+        origTruncate = FileHandle.truncate
+        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+            mockRelease.wraps = origRelease # TODO This doesn't really work,
+                                            # release is not called and so open
+                                            # files are being leaked
+            testfs.truncate(file, 0)
+            self.assertEqual(testfs.cache.open.call_count, 1)
+            self.assertEqual(testfs.cache.open.call_args[0][0], file)
+            self.assertTrue(testfs.cache.open.call_args[0][1])
+            mockRelease.assert_called_once_with()
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
         with patch('vos.CadcCache.FileHandle.release') as mockRelease:
-            mockRelease.wraps = FileHandle.release
+            mockRelease.wraps = origRelease # TODO This doesn't really work,
+                                            # release is not called and so open
+                                            # files are being leaked
             with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
-                mockTruncate.wraps = FileHandle.truncate
+                mockTruncate.wraps = origTruncate # TODO Same issue as the
+                                                  # mockRelease TODO above.
                 testfs.truncate(file, 5)
                 self.assertEqual(testfs.cache.open.call_args[0][0], file)
-                self.assertEqual(testfs.cache.open.call_args[0][1], False)
+                self.assertFalse(testfs.cache.open.call_args[0][1])
                 mockTruncate.assert_called_once_with(5)
             mockRelease.assert_called_once_with()
 
         # Truncate with an exception returned by the CadcCache truncate
         testfs.cache.open.reset_mock()
         with patch('vos.CadcCache.FileHandle.release') as mockRelease:
-            mockRelease.wraps = FileHandle.release
+            mockRelease.wraps = origRelease # TODO This doesn't really work,
+                                            # release is not called and so open
+                                            # files are being leaked
             with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
                 mockTruncate.side_effect = NotImplementedError("an error")
                 with self.assertRaises(NotImplementedError):
                     testfs.truncate(file, 5)
                 self.assertEqual(testfs.cache.open.call_args[0][0], file)
-                self.assertEqual(testfs.cache.open.call_args[0][1], False)
+                self.assertFalse(testfs.cache.open.call_args[0][1])
             mockRelease.assert_called_once_with()
 
         # Truncate an already opened file given the file handle.
         with patch('vos.CadcCache.FileHandle.release') as mockRelease:
-            mockRelease.wraps = FileHandle.release
+            mockRelease.wraps = origRelease # TODO This doesn't really work,
+                                            # release is not called and so open
+                                            # files are being leaked
             try:
                 fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
                 testfs.cache.open.reset_mock()
                 with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
-                    mockTruncate.wraps = FileHandle.truncate
+                    mockTruncate.wraps = origTruncate # TODO Same issue as the
+                                                      # mockRelease TODO above.
                     testfs.truncate(file, 20, fh)
                     # Open and release should not be called, truncate should be
                     # called.
@@ -620,13 +635,18 @@ class TestVOFS(unittest.TestCase):
             finally:
                 testfs.release(fh)
 
-        # Truncate aread only file handle.
+        # Create a new file system for testing. This is required because of the
+        # leaked file handles from the previous tests.
+
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
+        # Truncate a read only file handle.
         with patch('vos.CadcCache.FileHandle.release') as mockRelease:
-            mockRelease.wraps = FileHandle.release
+            mockRelease.wraps = origRelease
             try:
                 fh = testfs.open( file, os.O_RDONLY, None)
                 with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
-                    mockTruncate.wraps = FileHandle.truncate
+                    mockTruncate.wraps = origTruncate
                     with self.assertRaises(FuseOSError):
                         testfs.truncate(file, 20, fh)
                     # Open, release and truncate should not be called.
