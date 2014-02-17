@@ -34,7 +34,7 @@ def flag2mode(flags):
 
 class MyIOProxy(IOProxy):
     def __init__(self, vofs, node):
-        IOProxy.__init__(self)
+        super(MyIOProxy, self).__init__()
         self.vofs = vofs
         self.node = node
         # This is the vofile object last used 
@@ -71,7 +71,7 @@ class MyIOProxy(IOProxy):
         logging.debug("reading range: %s" % ( str(range)))
 
         if self.lastVOFile is None:
-            self.lastVOFile = self.vofs.client.open(self.cacheFile.path, 
+            self.lastVOFile = self.vofs.client.open(self.vofs.cacheFile.path, 
                     mode=os.O_RDONLY, view="data", size=size, range=range)
         else:
             self.lastVOFile.open(
@@ -87,7 +87,7 @@ class MyIOProxy(IOProxy):
                     # existing URLs do not work anymore. Try another transfer
                     # negotiation. If it still fails let the error propagate
                     # to client
-                    self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
+                    self.lastVOFile = self.vofs.client.open(self.vofs.cacheFile.path,
                                                             mode=os.O_RDONLY, 
                                                             view="data", 
                                                             size=size, 
@@ -112,7 +112,7 @@ class MyIOProxy(IOProxy):
             self.lastVOFile.close()
             
         logging.debug("Wrote: %d bytes to cache for %s" % (offset,
-                self.cacheFile.path))
+                self.vofs.cacheFile.path))
  
     def getMD5(self):
         if self.node is None:

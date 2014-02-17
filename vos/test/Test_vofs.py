@@ -12,7 +12,7 @@ from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from vos.vofs import HandleWrapper
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = False
+skipTests = True
 
 class Object(object):
     pass
@@ -125,7 +125,7 @@ class TestVOFS(unittest.TestCase):
             testfs.read( "/dir1/dir2/file", 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
     
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -768,7 +768,7 @@ class TestMyIOProxy(unittest.TestCase):
             client.copy.assert_called_once_with( testCache.dataDir + 
                     "/dir1/dir2/file", node.uri)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def testReadFromBacking(self):
         callCount = [0]
         def mock_read(block_size):
@@ -787,15 +787,19 @@ class TestMyIOProxy(unittest.TestCase):
             vos_VOFILE.read = Mock(side_effect=mock_read)
             vos_VOFILE.close = Mock()
             client.open = Mock(return_value = vos_VOFILE)
+            path = "/dir1/dir2/file"
             myVofs = Mock()
+            myVofs.cacheFile = Mock()
+            myVofs.cacheFile.path = path
             myVofs.client = client
             testProxy = vofs.MyIOProxy(myVofs, None)
-            path = "/dir1/dir2/file"
+
+
             with FileHandle(path, testCache, testProxy) as \
                     testFileHandle:
                 testProxy.writeToCache = Mock(return_value = 4)
                 testProxy.cacheFile = testFileHandle
-                testProxy.cacheFile.readThread = Object()
+                testProxy.cacheFile.readThread = Mock()
                 testProxy.cacheFile.readThread.aborted = False
                 try:
 
@@ -832,6 +836,31 @@ class TestMyIOProxy(unittest.TestCase):
 
                 finally:
                     testProxy.cacheFile.readThread = None
+
+
+    #@unittest.skipIf(skipTests, "Individual tests")    
+    def test_readFromBackingErrorHandling(self):
+        client = Object
+        vos_VOFILE = Object()
+        vos_VOFILE.URLs = ["url0", "URL1"]
+        vos_VOFILE.urlIndex = 0
+        vos_VOFILE.open = Mock()
+        returns = ["something", ""]
+        def side_effect(*args):
+            return returns.pop(0)
+        vos_VOFILE.read = MagicMock(side_effect=side_effect)
+        vos_VOFILE.close = Mock()
+        client.open = Mock(return_value = vos_VOFILE)
+        myVofs = Mock()
+        myVofs.client = client
+        testProxy = vofs.MyIOProxy(myVofs, None)
+        testProxy.writeToCache = Mock()
+        path = "/dir1/dir2/file"
+        cacheFile = Object()
+        cacheFile.path = path
+        cacheFile.cache = Object()
+        testProxy.setCacheFile(cacheFile)
+        testProxy.readFromBacking()
 
 class TestHandleWrapper(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
