@@ -178,6 +178,9 @@ class Node:
         self.update()
 
     def __eq__(self, node):
+        if not isinstance(node, Node):
+            return False
+
         return self.props == node.props
 
     def update(self):
@@ -817,7 +820,12 @@ class VOFile:
             self.URLs.pop(self.urlIndex) #remove url from list
             if len(self.URLs) == 0:
                 # no more URLs to try...
-                raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+                if self.resp.status == 404:
+                    raise IOError(errno.ENOENT, self.resp.read())
+                else:
+                    raise IOError(errno.EIO, 
+                            "unexpected server response %s (%d)" % 
+                            (self.resp.reason, self.resp.status), self.url)
             if self.urlIndex < len(self.URLs):
                 self.open(self.URLs[self.urlIndex], "GET")
                 return self.read(size)
@@ -849,7 +857,7 @@ class VOFile:
             self.open(self.URLs[self.urlIndex], "GET")
             return self.read(size)
         else:
-            raise IOError(self.resp.status, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+            raise IOError(errno.EIO, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
 
     def write(self, buf):
         """write buffer to the connection"""

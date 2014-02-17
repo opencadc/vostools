@@ -13,6 +13,8 @@ import vos.fuse
 from vos.fuse import FUSE
 from vos.__version__ import version
 from vos.vofs import VOFS
+DAEMON_TIMEOUT = 60
+ 
 
 if __name__ == "__main__":
     #usage="%prog <root> <mountpoint>"
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     if not os.access(mount, os.F_OK):
         os.makedirs(mount)
     if platform=="darwin":
-        fuse = FUSE(VOFS(root, opt.cache_dir, conn=conn, 
+        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
 		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes), 
 		    mount,
                     fsname=root,
@@ -99,15 +101,17 @@ if __name__ == "__main__":
                     readonly=opt.readonly,
                     #auto_cache=True,
                     allow_other=opt.allow_other,
+		    atomic_o_trunc=True,
                     noapplexattr=True,
                     noappledouble=True,
                     foreground=opt.foreground)
     else:
-        fuse = FUSE(VOFS(root, opt.cache_dir, conn=conn, 
+        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
 		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes), mount,
                     fsname=root,
                     readonly=opt.readonly,
                     allow_other=opt.allow_other,
                     #auto_cache=True,
+		    atomic_o_trunc=True,
                     foreground=opt.foreground)
 

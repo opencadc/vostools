@@ -21,6 +21,7 @@ from ctypes import cdll
 from ctypes.util import find_library
 import urlparse 
 from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
+from logExceptions import logExceptions
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -33,11 +34,13 @@ def flag2mode(flags):
 
 class MyIOProxy(IOProxy):
     def __init__(self, vofs, node):
+        IOProxy.__init__(self)
         self.vofs = vofs
         self.node = node
         # This is the vofile object last used 
         self.lastVOFile = None
 
+    #@logExceptions()
     def writeToBacking(self):
         """ 
         Write a file in the cache to the remote file. 
@@ -49,6 +52,7 @@ class MyIOProxy(IOProxy):
                 self.vofs.getNode(self.cacheFile.path).uri)
         return self.vofs.getNode(self.cacheFile.path).props.get("MD5")
 
+    #@logExceptions()
     def readFromBacking(self, size = None, offset = 0, 
             blockSize = Cache.IO_BLOCK_SIZE):
         """ 
@@ -57,9 +61,14 @@ class MyIOProxy(IOProxy):
 
         # Read a range
         if size is not None or offset != 0:
-            range = (size, offset)
+            if size is None:
+                endStr = "" 
+            else:
+                endStr = str(offset + size - 1)
+            range = "bytes=%s-%s" % (str(offset), endStr)
         else:
             range = None
+        logging.debug("reading range: %s" % ( str(range)))
 
         if self.lastVOFile is None:
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path, 
@@ -69,7 +78,8 @@ class MyIOProxy(IOProxy):
                     self.lastVOFile.URLs[self.lastVOFile.urlIndex], 
                     bytes=range)
         try:
-            logging.debug("reading from %s" % ( str(self.lastVOFile)))
+            logging.debug("reading from %s" % (
+                    str(self.lastVOFile.URLs[self.lastVOFile.urlIndex])))
             while True:
                 try:
                     buff = self.lastVOFile.read(blockSize)
@@ -83,6 +93,13 @@ class MyIOProxy(IOProxy):
                                                             size=size, 
                                                             range=range)
                     buff = self.lastVOFile.read(blockSize)                       
+
+                if buff is None:
+                    logging.debug("buffer for %s is None" %
+                            (self.cacheFile.path))
+                else:
+                    logging.debug("Writng: %d bytes at %d to cache for %s" %
+                            (len(buff), offset, self.cacheFile.path))
                 if not buff:
                     break
                 try:
@@ -107,15 +124,33 @@ class MyIOProxy(IOProxy):
         if self.node is None:
             return None
         else:
-            return self.node.props.get('length')
+            return int(self.node.props.get('length'))
 
 
 class HandleWrapper(object):
+    # A list of all file handles
+    handleList = {}
+    myLock = Lock()
     """ Wrapper for cache file handlers. Each wrapper represents an open request.
     Multiple wrappers of the same file share the same cache file handler. """
     def __init__(self, cacheFileHandle, readOnly = False):
         self.cacheFileHandle = cacheFileHandle
         self.readOnly = readOnly
+        with HandleWrapper.myLock:
+            HandleWrapper.handleList[id(self)] = self
+
+    def getId(self):
+        return id(self)
+
+    @staticmethod
+    def findHandle(id):
+        with HandleWrapper.myLock:
+            theHandle = HandleWrapper.handleList[id]
+        return theHandle
+
+    def release(self):
+        with HandleWrapper.myLock:
+            del HandleWrapper.handleList[id(self)]
 
 
 class VOFS(LoggingMixIn, Operations):
@@ -186,6 +221,7 @@ class VOFS(LoggingMixIn, Operations):
         if not self.cache_nodes or force :
             self.node.pop(path,None)
 
+    #@logExceptions()
     def access(self, path, mode):
         """Check if path is accessible.  
 
@@ -198,6 +234,7 @@ class VOFS(LoggingMixIn, Operations):
         return 0
 
 
+    #@logExceptions()
     def chmod(self, path, mode):
         """Set the read/write groups on the VOSpace node based on chmod style modes.
 
@@ -249,6 +286,7 @@ class VOFS(LoggingMixIn, Operations):
                 raise e
 
         
+    #@logExceptions()
     def create(self, path, flags):
         """Create a node. Currently ignores the ownership mode"""
 
@@ -281,10 +319,16 @@ class VOFS(LoggingMixIn, Operations):
         return self.open(path,os.O_WRONLY)
 
   
-    def fsync(self,path,datasync,fh):
+    #@logExceptions()
+    def fsync(self,path,datasync,id):
         if self.opt.readonly:
             logging.debug("File system is readonly, no sync allowed")
             return 
+
+        try:
+            fh = HandleWrapper.findHandle(id)
+        except KeyError:
+            raise FuseOSError(EIO)
 
         if fh.readOnly:
             raise FuseOSError(EPERM)
@@ -323,6 +367,7 @@ class VOFS(LoggingMixIn, Operations):
             ex=FuseOSError(getattr(e,'errno',ENOENT))
             ex.filename=path
             ex.strerror=getattr(e,'strerror','Error getting %s' % (path))
+            logging.debug("failing with errno = %d" % ex.errno)
             raise ex
 
         if self.node[path].isdir() and self.node[path]._nodeList is not None:
@@ -331,7 +376,8 @@ class VOFS(LoggingMixIn, Operations):
                self.node[subPath]=node
         return self.node[path]
 
-    def getattr(self, path, fh=None):
+    #@logExceptions()
+    def getattr(self, path, id=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 
         logging.debug("getting attributes of %s" % ( path))
@@ -344,6 +390,7 @@ class VOFS(LoggingMixIn, Operations):
         return self.getNode(path, limit=0, force=True).attr
 
 
+    #@logExceptions()
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
 
@@ -366,6 +413,7 @@ class VOFS(LoggingMixIn, Operations):
         return
 
     
+    #@logExceptions()
     def open(self, path, flags, *mode):
         """Open file with the desired modes
 
@@ -442,15 +490,22 @@ class VOFS(LoggingMixIn, Operations):
         # O_RDONLY. Since O_RDONLY=0, the only way to detect if it's a read only is
         # to check whether the other two flags are absent.
         return HandleWrapper(self.cache.open(path, isNew, myProxy), 
-                (flags & (os.O_RDWR|os.O_WRONLY)) == 0)
+                (flags & (os.O_RDWR|os.O_WRONLY)) == 0).getId()
 
-    def read(self, path, size=0, offset=0, fh=None):
+    #@logExceptions()
+    def read(self, path, size=0, offset=0, id=None):
         """ Read the required bytes from the file and return a buffer containing
         the bytes.
         """
 
+
         ## Read from the requested filehandle, which was set during 'open'
-        if fh is None:
+        if id is None:
+            raise FuseOSError(EIO)
+
+        try:
+            fh = HandleWrapper.findHandle(id)
+        except KeyError:
             raise FuseOSError(EIO)
 
         try:
@@ -462,6 +517,7 @@ class VOFS(LoggingMixIn, Operations):
             raise e
 
         
+    #@logExceptions()
     def readlink(self, path):
         """Return a string representing the path to which the symbolic link points.
 
@@ -474,7 +530,8 @@ class VOFS(LoggingMixIn, Operations):
         return self.getNode(path).target
         
 
-    def readdir(self, path, fh):
+    #@logExceptions()
+    def readdir(self, path, id):
         """Send a list of entries in this directory"""
         logging.debug("Getting directory list for %s " % ( path))
         ## reading from VOSpace can be slow, we'll do this in a thread
@@ -496,6 +553,7 @@ class VOFS(LoggingMixIn, Operations):
         return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(
                 path,force=False,limit=None).getNodeList() ]
 
+    #@logExceptions()
     def load_dir(self,path):
         """Load the dirlist from VOSpace. 
         This should always be run in a thread."""
@@ -510,28 +568,36 @@ class VOFS(LoggingMixIn, Operations):
                 self.condition.notify_all()
         return 
 
-    def release(self, fh):
+    #@logExceptions()
+    def release(self, path, id):
         """Close the file"""
+        logging.debug("releasing file %d " % id)
         try:
-            
+            fh = HandleWrapper.findHandle(id)
+        except KeyError:
+            raise FuseOSError(EIO)
+
+        try:
             if ((fh.cacheFileHandle.fileModified) and 
                     (fh.cacheFileHandle.path in self.node)):
                 #local copy modified. remove from list
                 del self.node[fh.cacheFileHandle.path]
             fh.cacheFileHandle.release()
+            fh.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE
             e = FuseOSError(EAGAIN)
             e.strerror = "Timeout waiting for file release"
-            logging.debug("Timeout Waiting for file release: %s", fh.path)
+            logging.debug("Timeout Waiting for file release: %s",
+                    fh.cacheFileHandle.path)
             raise e
         except Exception, e:
             #unexpected problem
-            raise
             raise FuseOSError(EIO)
         return 
 
 
+    #@logExceptions()
     def rename(self,src,dest):
         """Rename a data node into a new container"""
         logging.debug("Original %s -> %s" % ( src,dest))
@@ -555,6 +621,7 @@ class VOFS(LoggingMixIn, Operations):
             return -1
     
 
+    #@logExceptions()
     def rmdir(self,path):
         node=self.getNode(path)
         #if not node.isdir():
@@ -568,6 +635,7 @@ class VOFS(LoggingMixIn, Operations):
         self.delNode(path,force=True)
 
         
+    #@logExceptions()
     def statfs(self, path):
         node=self.getNode(path)
         block_size=512
@@ -592,51 +660,62 @@ class VOFS(LoggingMixIn, Operations):
         return sfs
             
     
-    def truncate(self, path, length, fh=None):
+    #@logExceptions()
+    def truncate(self, path, length, id=None):
         """Perform a file truncation to length bytes"""
-        logging.debug("Attempting to truncate %s (%d)" % ( path,length))
+        logging.debug("Attempting to truncate %s : %s (%d)" % ( path, id,length))
 
-        if fh is None:
+        if id is None:
             # Ensure the file exists.
             if length == 0:
                 try:
                     fh = self.open(path, os.O_RDWR | os.O_TRUNC)
                 finally:
-                    self.release(fh)
+                    self.release(path, fh)
                 return
 
             fh = self.open(path, os.O_RDWR)
             try:
-                fh.cacheFileHandle.truncate(length)
+                self.truncate(path, length, fh)
             except Exception:
                 raise
             finally:
-                self.release(fh)
+                self.release(path, fh)
         else:
+            try:
+                fh = HandleWrapper.findHandle(id)
+            except KeyError:
+                raise FuseOSError(EIO)
             if fh.readOnly:
                 logging.debug("file was not opened for writing")
                 raise FuseOSError(EPERM)
             fh.cacheFileHandle.truncate(length)
         return
 
+    #@logExceptions()
     def unlink(self,path):
     	node = self.getNode(path, force=False, limit=1)
         if node and node.props.get('islocked', False):
             logging.info("%s is locked." % path)
             raise FuseOSError(EPERM)
-        self.cache.unlink(path)
+        self.cache.unlinkFile(path)
         if node:
             self.client.delete(path)
         self.delNode(path,force=True)
 
 
-    def write(self, path, data, size, offset, fh=None):
+    #@logExceptions()
+    def write(self, path, data, size, offset, id=None):
         import ctypes
 
         if self.opt.readonly:
             logging.debug("File system is readonly.. so writing 0 bytes\n")
             return 0
 
+        try:
+            fh = HandleWrapper.findHandle(id)
+        except KeyError:
+            raise FuseOSError(EIO)
 
         if fh.readOnly:
             logging.debug("file was not opened for writing")

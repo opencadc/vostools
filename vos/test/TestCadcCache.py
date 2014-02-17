@@ -20,13 +20,6 @@ import pdb
 from vos import CadcCache
 from vos.SharedLock import SharedLock, TimeoutError, RecursionError
 
-###import vos.fuse
-
-###import traceback
-###from vos.fuse import FuseOSError
-###from mock import patch
-###from ctypes import create_string_buffer
-
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
 skipTests = False
@@ -127,7 +120,7 @@ class TestIOProxy(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 testIOProxy.readFromBacking();
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_writeToCache(self):
         """Test the IOProxy writeToCache method
         """
@@ -141,7 +134,11 @@ class TestIOProxy(unittest.TestCase):
             testIOProxy.cacheFile.readThread.mandatoryEnd = \
                     testCache.IO_BLOCK_SIZE
             testIOProxy.cacheFile.metaData = Object()
-            testIOProxy.cacheFile.metaData.setBlocksRead = Mock()
+            testIOProxy.cacheFile.metaData.setReadBlocks = Mock()
+            testIOProxy.cacheFile.fileLock = threading.RLock()
+            testIOProxy.cacheFile.fileCondition = \
+                    CadcCache.CacheCondition(testIOProxy.cacheFile.fileLock)
+            testIOProxy.cacheFile.path = "atestfile"
 
             # Write to beginning of the file
             with nested( patch('os.lseek'), patch('os.write')) as mocks:
@@ -151,8 +148,8 @@ class TestIOProxy(unittest.TestCase):
                 mock_write.return_value = 3
                 testIOProxy.cacheFile.fileSize = 3
                 self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
-                testIOProxy.cacheFile.metaData.setBlocksRead.\
-                        assert_called_once_with(0,1)
+                testIOProxy.cacheFile.metaData.setReadBlocks.\
+                        assert_called_once_with(0,0)
                 mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
                 mock_write.assert_called_once_with(None, "abc")
 
@@ -192,10 +189,10 @@ class TestIOProxy(unittest.TestCase):
                         testCache.IO_BLOCK_SIZE * 2 + 10
                 mock_lseek.return_value = testIOProxy.cacheFile.fileSize
                 mock_write.return_value = 6
-                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 self.assertEqual(testIOProxy.writeToCache("abcdef", 0), 6)
                 self.assertEqual( testIOProxy.cacheFile.metaData.
-                        setBlocksRead.call_count, 0)
+                        setReadBlocks.call_count, 0)
 
             # Write the second block, and the first 10 bytes of the third block
             # (to the nd of file). This should result in the second and third
@@ -208,10 +205,10 @@ class TestIOProxy(unittest.TestCase):
                 mock_lseek.return_value = 0
                 mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
                 buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
-                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 self.assertEqual(testCache.IO_BLOCK_SIZE + 10, 
                         testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE))
-                testIOProxy.cacheFile.metaData.setBlocksRead.\
+                testIOProxy.cacheFile.metaData.setReadBlocks.\
                         assert_called_once_with(1,2)
 
             # do a write which gets aborted
@@ -224,10 +221,10 @@ class TestIOProxy(unittest.TestCase):
                 mock_lseek.return_value = 0
                 mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
                 buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
-                testIOProxy.cacheFile.metaData.setBlocksRead.call_count = 0
+                testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 with self.assertRaises(CadcCache.CacheAborted):
                         testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE)
-                testIOProxy.cacheFile.metaData.setBlocksRead.\
+                testIOProxy.cacheFile.metaData.setReadBlocks.\
                         assert_called_once_with(1,2)
 
 
@@ -1182,7 +1179,7 @@ class TestCadcCache(unittest.TestCase):
             with testCache.open("/dir1/dir2/file", True, ioObject) as fh:
                 fh.write( "abcd", 4, 30000)
                 data = fh.read( 4, 30000)
-                self.assertEqual(data, "abcd")
+                self.assertEqual(data[:], "abcd")
 
 
     @unittest.skipIf(skipTests, "Individual tests")

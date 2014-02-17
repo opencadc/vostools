@@ -1,5 +1,15 @@
 #!/bin/tcsh -f
 
+if ( $0:h == $0 ) then
+    set thisDir=$PWD
+else
+    set thisDir=$0:h
+    if ( $thisDir !~ "/*" ) then
+	set thisDir = $PWD/$thisDir
+    endif
+endif
+
+
 date
 echo "###################"
 if (! ${?CADC_ROOT} ) then
@@ -87,7 +97,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "copy file to existing container and non-existent data node "
-    cp something.png $MCONTAINER || echo " [FAIL]" && exit -1
+    cp $thisDir/something.png $MCONTAINER || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "view existing data node "
@@ -103,12 +113,12 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     echo -n "copy data node to local filesystem "
     cp $MCONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
-    cmp something.png something.png.2 || echo " [FAIL]" && exit -1
+    cmp $thisDir/something.png something.png.2 || echo " [FAIL]" && exit -1
     rm -f something.png.2
     echo " [OK]"
 
     echo -n "copy/overwrite existing data node "
-    cp something.png $MCONTAINER/something.png || echo " [FAIL]" && exit -1
+    cp $thisDir/something.png $MCONTAINER/something.png || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "delete existing data node "
