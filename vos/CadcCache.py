@@ -165,31 +165,33 @@ class Cache(object):
         """
 
         fileHandle = self.getFileHandle(path, isNew, ioObject)
-        logging.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
-                    id(fileHandle)))
+        with fileHandle.fileLock:
+            logging.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
+                        id(fileHandle)))
 
 
-        
-        if isNew:
-            fileHandle.fileModified = True
-            fileHandle.fullyCached = True
-            fileHandle.fileSize = 0
-        else:
-            fileHandle.fileSize = fileHandle.ioObject.getSize()
-            blocks, numBlock = fileHandle.ioObject.blockInfo(0, 
-                    fileHandle.fileSize)
-            fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, 
-                    numBlock, fileHandle.ioObject.getMD5())
-            if fileHandle.metaData.getNumReadBlocks() == numBlock:
+            
+            if isNew:
+                fileHandle.fileModified = True
                 fileHandle.fullyCached = True
+                fileHandle.fileSize = 0
             else:
-                fileHandle.fullyCached = False
+                fileHandle.fileSize = fileHandle.ioObject.getSize()
+                blocks, numBlock = fileHandle.ioObject.blockInfo(0, 
+                        fileHandle.fileSize)
+                fileHandle.metaData = CacheMetaData(
+                        fileHandle.cacheMetaDataFile, 
+                        numBlock, fileHandle.ioObject.getMD5())
+                if fileHandle.metaData.getNumReadBlocks() == numBlock:
+                    fileHandle.fullyCached = True
+                else:
+                    fileHandle.fullyCached = False
 
-        if (fileHandle.metaData is None or 
-                fileHandle.metaData.getNumReadBlocks() == 0):
-            # If the cache file should be empty, empty it.
-            os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
-            os.fsync(fileHandle.ioObject.cacheFileDescriptor)
+            if (fileHandle.metaData is None or 
+                    fileHandle.metaData.getNumReadBlocks() == 0):
+                # If the cache file should be empty, empty it.
+                os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
+                os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
         self.checkCacheSpace()
 
@@ -527,8 +529,8 @@ class IOProxy(object):
         self.lock = threading.RLock()
         self.cacheFile = None
         self.cache = None
-        self.currentByte = None
         self.cacheFileDescriptor = None
+        self.currentWriteOffset = None
 
 
     def getMD5(self):
@@ -584,16 +586,19 @@ class IOProxy(object):
         aborted.
         """
 
-        currentOffset = os.lseek(self.cacheFileDescriptor, 0, os.SEEK_CUR)
-        if currentOffset != offset:
+        #logging.debug("writing %d bytes at %d" % (len(buffer), offset))
+
+        if (self.currentWriteOffset != None and 
+                self.currentWriteOffset != offset):
             # Only allow seeks to block boundaries
-            if (offset % self.cache.IO_BLOCK_SIZE != 0 or (currentOffset %
-                    self.cache.IO_BLOCK_SIZE != 0 and 
-                    currentOffset != self.cacheFile.fileSize)):
+            if (offset % self.cache.IO_BLOCK_SIZE != 0 or
+                    (self.currentWriteOffset % self.cache.IO_BLOCK_SIZE != 0 and
+                    self.currentWriteOffset != self.cacheFile.fileSize)):
                 raise CacheError("Only seeks to block boundaries are "
-                    "permitted when writing to cache: " + str(offset))
-            os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
-            currentOffset = offset
+                    "permitted when writing to cache: %d %d %d %d" % (offset,
+                    self.currentWriteOffset, self.cache.IO_BLOCK_SIZE,
+                    self.cacheFile.fileSize))
+            self.currentWriteOffset = offset
 
         if offset + len(buffer) > self.cacheFile.fileSize:
             raise CacheError("Attempt to populate cache past the end " +
@@ -601,38 +606,41 @@ class IOProxy(object):
                     (offset + len(buffer), self.cacheFile.fileSize))
 
 
-        # Write the data to the data file.
-        nextByte = 0
-        byteBuffer = bytes(buffer)
-        while nextByte < len(byteBuffer):
-            nextByte += os.write(self.cacheFileDescriptor, 
-                    byteBuffer[nextByte:])
+        with self.cacheFile.fileLock:
+            os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
+            # Write the data to the data file.
+            nextByte = 0
+            #byteBuffer = bytes(buffer)
+            while nextByte < len(buffer):
+                nextByte += os.write(self.cacheFileDescriptor, 
+                        buffer[nextByte:])
 
-        # Set the mask bits corresponding to any completely read blocks.
-        lastCompleteByte = currentOffset + len(buffer)
-        if lastCompleteByte != self.cacheFile.fileSize:
-            lastCompleteByte = lastCompleteByte - (lastCompleteByte %
-                    self.cache.IO_BLOCK_SIZE)
-        firstBlock, numBlocks  = self.blockInfo(offset, lastCompleteByte -
-                offset) 
-        if numBlocks > 0:
-            with self.cacheFile.fileCondition:
+            # Set the mask bits corresponding to any completely read blocks.
+            lastCompleteByte = offset + len(buffer)
+            if lastCompleteByte != self.cacheFile.fileSize:
+                lastCompleteByte = lastCompleteByte - (lastCompleteByte %
+                        self.cache.IO_BLOCK_SIZE)
+            firstBlock, numBlocks  = self.blockInfo(offset, lastCompleteByte -
+                    offset) 
+            if numBlocks > 0:
                 self.cacheFile.metaData.setReadBlocks(firstBlock, 
                         firstBlock + numBlocks - 1)
                 self.cacheFile.fileCondition.notify_all()
 
+            self.currentWriteOffset = offset + len(buffer)
+            #logging.debug("self.currentWriteOffset %d " % 
+            #        (self.currentWriteOffset))
 
-        self.currentByte = nextByte
 
-        # Check to see if the current read has been aborted, and if it has, thow
-        # and exception
-
-        if (self.cacheFile.readThread.aborted and 
-                lastCompleteByte >= self.cacheFile.readThread.mandatoryEnd and
-                lastCompleteByte <= self.cacheFile.fileSize):
-            logging.debug("reading to cache aborted for %s" %
-                    self.cacheFile.path)
-            raise CacheAborted("Read to cache aborted.")
+            # Check to see if the current read has been aborted and if it 
+            # has, thow an exception
+            if (self.cacheFile.readThread.aborted and 
+                    lastCompleteByte >= 
+                    self.cacheFile.readThread.mandatoryEnd and
+                    lastCompleteByte <= self.cacheFile.fileSize):
+                logging.debug("reading to cache aborted for %s" %
+                        self.cacheFile.path)
+                raise CacheAborted("Read to cache aborted.")
 
         return nextByte 
 
@@ -736,8 +744,7 @@ class FileHandle(object):
             # Tell any running read thread to exit
             if self.refCount == 1 and self.readThread != None:
                 self.readThread.aborted = True
-            while (self.refCount == 1 and self.flushThread != None or 
-                    self.readThread != None):
+            while (self.flushThread != None or self.readThread != None):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
                 self.fileCondition.wait()
@@ -811,7 +818,7 @@ class FileHandle(object):
         than the timeout.
         """
 
-        logging.debug("writting %d bytes at %d "  % (size, offset))
+        #logging.debug("writting %d bytes at %d "  % (size, offset))
 
         # Acquire a shared lock on the file
         with self.writerLock(shared=True):
@@ -831,18 +838,13 @@ class FileHandle(object):
             firstBlock,numBlocks = self.ioObject.blockInfo(offset, self.fileSize)
             self.makeCached(0, numBlocks)
 
-            # Duplicate the file descriptor just in case another thread is doing
-            # something.
-            r = os.dup(self.ioObject.cacheFileDescriptor)
-            try:
+            r = self.ioObject.cacheFileDescriptor
+            with self.fileCondition:
                 # seek and write.
                 os.lseek(r, offset, os.SEEK_SET)
                 wroteBytes =  libc.write(r, data, size)
-            finally:
-                os.close(r)
 
-            # Update file size if it changed
-            with self.fileLock:
+                # Update file size if it changed
                 if offset + size > self.fileSize:
                     self.fileSize = offset + size
                 self.fileModified = True
@@ -860,6 +862,8 @@ class FileHandle(object):
         isn't allocated for each read.
         """
 
+        #logging.debug("reading %d bytes at %d "  % (size, offset))
+
         self.fileCondition.setTimeout()
 
         #if offset > self.fileSize or size + offset > self.fileSize:
@@ -870,21 +874,16 @@ class FileHandle(object):
         firstBlock,numBlocks = self.ioObject.blockInfo(offset, size)
         self.makeCached(firstBlock,numBlocks)
 
-        # Duplicate the file descriptor just in case another thread is doing
-        # a read at the same time.
-        # TODO Replace with a thread specific fd opened once.
-        r = os.dup(self.ioObject.cacheFileDescriptor)
-        try:
+        r = self.ioObject.cacheFileDescriptor
+        with self.fileLock:
             # seek and read.
             os.lseek(r, offset, os.SEEK_SET)
             cbuffer = ctypes.create_string_buffer(size)
             retsize = libc.read(r, cbuffer, size)
-            if retsize != size:
-                newcbuffer = ctypes.create_string_buffer(cbuffer[0:retsize], 
-                        retsize)
-                cbuffer = newcbuffer
-        finally:
-            os.close(r)
+        if retsize != size:
+            newcbuffer = ctypes.create_string_buffer(cbuffer[0:retsize], 
+                    retsize)
+            cbuffer = newcbuffer
 
         return cbuffer
 
@@ -971,7 +970,8 @@ class FileHandle(object):
     def fsync(self):
         with self.fileLock:
             if self.ioObject.cacheFileDescriptor is not None:
-                os.fsync(self.ioObject.cacheFileDescriptor)
+                with self.fileLock:
+                    os.fsync(self.ioObject.cacheFileDescriptor)
 
 
     def truncate(self, length):

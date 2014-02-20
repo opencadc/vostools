@@ -22,7 +22,6 @@ from ctypes.util import find_library
 import urlparse 
 from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
 from logExceptions import logExceptions
-
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
     m = md[flags & (O_RDONLY | O_WRONLY | O_RDWR)]
@@ -71,9 +70,13 @@ class MyIOProxy(IOProxy):
         logging.debug("reading range: %s" % ( str(range)))
 
         if self.lastVOFile is None:
-            self.lastVOFile = self.vofs.client.open(self.vofs.cacheFile.path, 
+            logging.debug("Opening a new vo file on %s",
+                    self.cacheFile.path)
+            self.lastVOFile = self.vofs.client.open(self.cacheFile.path, 
                     mode=os.O_RDONLY, view="data", size=size, range=range)
         else:
+            logging.debug("Opening a existing vo file on %s",
+                    self.lastVOFile.URLs[self.lastVOFile.urlIndex])
             self.lastVOFile.open(
                     self.lastVOFile.URLs[self.lastVOFile.urlIndex], 
                     bytes=range)
@@ -87,7 +90,7 @@ class MyIOProxy(IOProxy):
                     # existing URLs do not work anymore. Try another transfer
                     # negotiation. If it still fails let the error propagate
                     # to client
-                    self.lastVOFile = self.vofs.client.open(self.vofs.cacheFile.path,
+                    self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
                                                             mode=os.O_RDONLY, 
                                                             view="data", 
                                                             size=size, 
@@ -98,7 +101,7 @@ class MyIOProxy(IOProxy):
                     logging.debug("buffer for %s is None" %
                             (self.cacheFile.path))
                 else:
-                    logging.debug("Writng: %d bytes at %d to cache for %s" %
+                    logging.debug("Writing: %d bytes at %d to cache for %s" %
                             (len(buff), offset, self.cacheFile.path))
                 if not buff:
                     break
@@ -112,7 +115,7 @@ class MyIOProxy(IOProxy):
             self.lastVOFile.close()
             
         logging.debug("Wrote: %d bytes to cache for %s" % (offset,
-                self.vofs.cacheFile.path))
+                self.cacheFile.path))
  
     def getMD5(self):
         if self.node is None:
@@ -387,7 +390,7 @@ class VOFS(LoggingMixIn, Operations):
         if cacheFileAttrs is not None:
             return cacheFileAttrs
 
-        return self.getNode(path, limit=0, force=True).attr
+        return self.getNode(path, limit=0, force=False).attr
 
 
     #@logExceptions()
@@ -424,6 +427,11 @@ class VOFS(LoggingMixIn, Operations):
 
         logging.debug("Opening %s with flags %s" % ( path, flag2mode(flags)))
         node = None
+
+        # according to man for open(2), flags must contain one of O_RDWR, 
+        # O_WRONLY or O_RDONLY. Since O_RDONLY=0, the only way to detect if 
+        # it's a read only is to check whether the other two flags are absent.
+        readOnly = ((flags & (os.O_RDWR|os.O_WRONLY)) == 0)
         
         
         cacheFileAttrs = self.cache.getAttr(path)
@@ -449,7 +457,7 @@ class VOFS(LoggingMixIn, Operations):
              locked = True
 
 
-        if node and not locked:
+        if not readOnly and node and not locked:
              if node.type == "vos:DataNode":
                   parentNode = self.getNode(os.path.dirname(path),force=False,limit=1)
                   if parentNode.props.get('islocked', False):
@@ -471,26 +479,23 @@ class VOFS(LoggingMixIn, Operations):
                       logging.error("Got an error while checking for lock: "+str(e))
                       pass
 
-        if locked: 
-            if flags & os.O_WRONLY:
-                # file is locked, cannot write
-                e = FuseOSError(ENOENT)
-                e.strerror = "Cannot create locked file"
-                logging.debug("Cannot create locked file: %s", path)
-                raise e
+        if locked and not readOnly:
+            # file is locked, cannot write
+            e = FuseOSError(ENOENT)
+            e.strerror = "Cannot create locked file"
+            logging.debug("Cannot create locked file: %s", path)
+            raise e
                 
 
         
         myProxy = MyIOProxy(self, node)
-        # new file in cache library if no node information (node not in vospace) or 
-        # file is open for truncate
-        isNew = (cacheFileAttrs == None) and (node == None) or ((flags & os.O_TRUNC) != 0)
+        # new file in cache library if no node information (node not in 
+        # vospace) or file is open for truncate
+        isNew = ((cacheFileAttrs == None) and (node == None) or 
+                ((flags & os.O_TRUNC) != 0))
         
-        # according to man for open(2), flags must contain one of O_RDWR, O_WRONLY or
-        # O_RDONLY. Since O_RDONLY=0, the only way to detect if it's a read only is
-        # to check whether the other two flags are absent.
         return HandleWrapper(self.cache.open(path, isNew, myProxy), 
-                (flags & (os.O_RDWR|os.O_WRONLY)) == 0).getId()
+                readOnly).getId()
 
     #@logExceptions()
     def read(self, path, size=0, offset=0, id=None):
@@ -502,6 +507,8 @@ class VOFS(LoggingMixIn, Operations):
         ## Read from the requested filehandle, which was set during 'open'
         if id is None:
             raise FuseOSError(EIO)
+
+        logging.debug("reading range: %s %d %d %d" % ( path, size, offset, id))
 
         try:
             fh = HandleWrapper.findHandle(id)

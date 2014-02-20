@@ -150,7 +150,7 @@ class TestIOProxy(unittest.TestCase):
                 self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
                 testIOProxy.cacheFile.metaData.setReadBlocks.\
                         assert_called_once_with(0,0)
-                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
+                mock_lseek.assert_called_once_with(None, 0, os.SEEK_SET)
                 mock_write.assert_called_once_with(None, "abc")
 
             # Write to after the beginning of the output
@@ -160,11 +160,13 @@ class TestIOProxy(unittest.TestCase):
                 mock_lseek.return_value = 0
                 mock_write.return_value = 3
                 testIOProxy.cacheFile.fileSize = testCache.IO_BLOCK_SIZE + 3
+                testIOProxy.currentWriteOffset = 0
                 self.assertEqual(3, testIOProxy.writeToCache("abc",
                     testCache.IO_BLOCK_SIZE))
                 mock_lseek.assert_called_with(None, testCache.IO_BLOCK_SIZE, 
                         os.SEEK_SET)
-                self.assertEqual(mock_lseek.call_count, 2)
+                mock_lseek.assert_called_once_with(None, 
+                        testCache.IO_BLOCK_SIZE, os.SEEK_SET)
 
             # Test an erroneous seek to the middle of a block
             with nested( patch('os.lseek'), patch('os.write')) as mocks:
@@ -173,26 +175,31 @@ class TestIOProxy(unittest.TestCase):
                 with self.assertRaises(CadcCache.CacheError) as cm:
                     testIOProxy.writeToCache("abc", 3)
 
-            # Test an attempt to write past the end fo the file.
+            # Test an attempt to write past the end of the file.
             with nested( patch('os.lseek'), patch('os.write')) as mocks:
                 mock_lseek = mocks[0]
                 mock_lseek.return_value = 0
                 testIOProxy.cacheFile.fileSize = 3
+                testIOProxy.currentWriteOffset = 0
                 with self.assertRaises(CadcCache.CacheError) as cm:
                     testIOProxy.writeToCache("abcdef", 0)
 
-            # Test a seek when the last block write to the end of the file.
+            # Write a partial block of data.
             with nested( patch('os.lseek'), patch('os.write')) as mocks:
                 mock_lseek = mocks[0]
                 mock_write = mocks[1]
+                mock_lseek.return_value = 0
+                testIOProxy.currentWriteOffset = 0
                 testIOProxy.cacheFile.fileSize = \
                         testCache.IO_BLOCK_SIZE * 2 + 10
-                mock_lseek.return_value = testIOProxy.cacheFile.fileSize
+                testIOProxy.currentWriteOffset = 0
                 mock_write.return_value = 6
                 testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 self.assertEqual(testIOProxy.writeToCache("abcdef", 0), 6)
                 self.assertEqual( testIOProxy.cacheFile.metaData.
                         setReadBlocks.call_count, 0)
+                mock_lseek.assert_called_once_with(None, 0, os.SEEK_SET)
+
 
             # Write the second block, and the first 10 bytes of the third block
             # (to the nd of file). This should result in the second and third
@@ -200,6 +207,7 @@ class TestIOProxy(unittest.TestCase):
             with nested( patch('os.lseek'), patch('os.write')) as mocks:
                 mock_lseek = mocks[0]
                 mock_write = mocks[1]
+                testIOProxy.currentWriteOffset = 0
                 testIOProxy.cacheFile.fileSize = \
                         (testCache.IO_BLOCK_SIZE * 2) + 10
                 mock_lseek.return_value = 0

@@ -12,7 +12,7 @@ from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
 from vos.vofs import HandleWrapper
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
-skipTests = True
+skipTests = False
 
 class Object(object):
     pass
@@ -279,7 +279,7 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(return_value=node)
         self.assertEqual(testfs.getattr("/a/file/path"), "attributes")
         testfs.getNode.assert_called_once_with("/a/file/path", limit=0,
-                force=True)
+                force=False)
         testfs.cache.getAttr.assert_called_once_with("/a/file/path")
 
         # Get attributes from a file modified in the cache.
@@ -298,14 +298,14 @@ class TestVOFS(unittest.TestCase):
 
         # Unlink a file which is not in vospace.
         testfs.getNode = Mock(return_value = None)
-        testfs.cache.unlink = Mock()
+        testfs.cache.unlinkFile = Mock()
         testfs.client.delete = Mock()
         testfs.delNode = Mock()
-        mocks = (testfs.getNode, testfs.cache.unlink, testfs.client.delete,
+        mocks = (testfs.getNode, testfs.cache.unlinkFile, testfs.client.delete,
                 testfs.delNode)
         testfs.unlink(path)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
-        testfs.cache.unlink.assert_called_once_with(path)
+        testfs.cache.unlinkFile.assert_called_once_with(path)
         self.assertFalse(testfs.client.delete.called)
         testfs.delNode.assert_called_once_with(path, force=True)
 
@@ -318,7 +318,7 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode.return_value = node
         testfs.unlink(path)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
-        testfs.cache.unlink.assert_called_once_with(path)
+        testfs.cache.unlinkFile.assert_called_once_with(path)
         testfs.client.delete.assert_called_once_with(path)
         testfs.delNode.assert_called_once_with(path, force=True)
 
@@ -333,7 +333,7 @@ class TestVOFS(unittest.TestCase):
             testfs.unlink(path)
         self.assertEqual(e.exception.errno, EPERM)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
-        self.assertFalse(testfs.cache.unlink.called)
+        self.assertFalse(testfs.cache.unlinkFile.called)
         self.assertFalse(testfs.client.delete.called)
         self.assertFalse(testfs.delNode.called)
 
