@@ -49,7 +49,9 @@ class MyIOProxy(IOProxy):
 
         self.vofs.client.copy(self.cacheFile.cacheDataFile, 
                 self.vofs.getNode(self.cacheFile.path).uri)
-        return self.vofs.getNode(self.cacheFile.path).props.get("MD5")
+        node = self.vofs.getNode(self.cacheFile.path, force=True)
+        logging.debug("attributes: %s " % str(node.attr ))
+        return node.props.get("MD5")
 
     #@logExceptions()
     def readFromBacking(self, size = None, offset = 0, 
@@ -585,12 +587,13 @@ class VOFS(LoggingMixIn, Operations):
             raise FuseOSError(EIO)
 
         try:
+            fh.cacheFileHandle.release()
+            fh.release()
             if ((fh.cacheFileHandle.fileModified) and 
                     (fh.cacheFileHandle.path in self.node)):
                 #local copy modified. remove from list
+                logging.debug("deleting old node %s " % path)
                 del self.node[fh.cacheFileHandle.path]
-            fh.cacheFileHandle.release()
-            fh.release()
         except CacheRetry, e:
             #it's taking too long. Notify FUSE
             e = FuseOSError(EAGAIN)

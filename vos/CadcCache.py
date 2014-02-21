@@ -469,6 +469,7 @@ class Cache(object):
             with fileHandle.fileLock:
                 if fileHandle.fileModified:
                     f = os.stat(fileHandle.cacheDataFile )
+                    logging.debug("size = %d:" % f.st_size)
                     return dict((name, getattr(f, name)) 
                             for name in dir(f) 
                             if not name.startswith('__'))
@@ -662,11 +663,6 @@ class IOProxy(object):
         self.cacheFile = cacheFile
         self.cache = cacheFile.cache
 
-    def readFromCache(self, offset, size):
-        if os.lseek(self.cacheFileDescriptor, 0, os.SEEK_CUR) != offset:
-            os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
-        return os.read(self.cacheFileDescriptor, size)
-
 
 class FileHandle(object):
     def __init__(self, path, cache, ioObject):
@@ -756,8 +752,11 @@ class FileHandle(object):
 
         with nested(self.cache.cacheLock, self.fileLock):
             self.refCount -= 1
+            logging.debug("closed file descriptor?")
             if self.refCount == 0:
                 os.close(self.ioObject.cacheFileDescriptor)
+                logging.debug("closed file descriptor %d" %
+                        self.ioObject.cacheFileDescriptor)
                 self.ioObject.cacheFileDescriptor = None
                 if not self.obsolete:
                     # The entry in fileHandleDict may have been removed by 
@@ -791,7 +790,8 @@ class FileHandle(object):
 
                 # Write the file to vospace.
 
-                os.fsync(self.ioObject.cacheFileDescriptor)
+                with self.fileLock:
+                    os.fsync(self.ioObject.cacheFileDescriptor)
                 md5 = self.ioObject.writeToBacking()
 
                 # Update the meta data md5
@@ -818,7 +818,8 @@ class FileHandle(object):
         than the timeout.
         """
 
-        #logging.debug("writting %d bytes at %d "  % (size, offset))
+        logging.debug("writting %d bytes at %d to %d "  % (size, offset,
+                self.ioObject.cacheFileDescriptor))
 
         # Acquire a shared lock on the file
         with self.writerLock(shared=True):
@@ -862,7 +863,7 @@ class FileHandle(object):
         isn't allocated for each read.
         """
 
-        #logging.debug("reading %d bytes at %d "  % (size, offset))
+        logging.debug("reading %d bytes at %d "  % (size, offset))
 
         self.fileCondition.setTimeout()
 
@@ -878,12 +879,20 @@ class FileHandle(object):
         with self.fileLock:
             # seek and read.
             os.lseek(r, offset, os.SEEK_SET)
+            libc.lseek(r, offset, os.SEEK_SET)
+            startoffset = os.lseek(r, 0, os.SEEK_CUR)
             cbuffer = ctypes.create_string_buffer(size)
             retsize = libc.read(r, cbuffer, size)
+            if retsize < 0:
+                raise CacheError("Failed to read from cache file")
+            endoffset = os.lseek(r, 0, os.SEEK_CUR)
         if retsize != size:
             newcbuffer = ctypes.create_string_buffer(cbuffer[0:retsize], 
                     retsize)
             cbuffer = newcbuffer
+
+        logging.debug("read %d %d bytes to %d - %d"  % (r, retsize, 
+                startoffset, endoffset))
 
         return cbuffer
 

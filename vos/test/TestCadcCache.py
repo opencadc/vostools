@@ -269,46 +269,6 @@ class TestIOProxy(unittest.TestCase):
                     testCache.IO_BLOCK_SIZE * 3 + 100))
 
 
-    @unittest.skipIf(skipTests, "Individual tests")
-    def test_readFromCache(self):
-        """ Test the readFromCache method.
-        """
-        with CadcCache.Cache(testDir, 100, True) as testCache:
-            # read from the start of the file.
-            testIOProxy = IOProxyForTest()
-            with nested( patch('os.lseek'), patch('os.read')) as mocks:
-                mock_lseek = mocks[0]
-                mock_read = mocks[1]
-                mock_lseek.return_value = 0
-                mock_read.return_value = "abc"
-                testIOProxy.cache = testCache
-                buffer = testIOProxy.readFromCache(0, 10)
-                self.assertEqual("abc", buffer)
-                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
-
-            # Read from the current position in the file
-            with nested( patch('os.lseek'), patch('os.read')) as mocks:
-                mock_lseek = mocks[0]
-                mock_read = mocks[1]
-                mock_lseek.return_value = 3
-                mock_read.return_value = "def"
-                buffer = testIOProxy.readFromCache(3, 10)
-                self.assertEqual("def", buffer)
-                mock_lseek.assert_called_once_with(None, 0, os.SEEK_CUR)
-
-            # Read from a different position in the file
-            with nested( patch('os.lseek'), patch('os.read')) as mocks:
-                mock_lseek = mocks[0]
-                mock_read = mocks[1]
-                mock_lseek.return_value = 3
-                mock_read.return_value = "ghi"
-                buffer = testIOProxy.readFromCache(10, 10)
-                self.assertEqual("ghi", buffer)
-                mock_lseek.assert_called_with(None, 10, os.SEEK_SET)
-                mock_read.assert_once_called_with(None, 10)
-                self.assertEqual(mock_lseek.call_count, 2)
-
-
 class TestCacheError(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
