@@ -1,25 +1,23 @@
-#!/usr/bin/env python2.7
-
-#TODO this is to be replaced when BitVector library is properly installed
 import sys
-sys.path.append( "/home/cadc/adriand/Download/BitVector-3.3" )
 import os
 import pickle
 
 import BitVector
 
 
-
 class CacheMetaData(object):
 
     def __init__(self, metaDataFile, blocks, md5sum):
-        """ Creates an instance of CacheMetaData for the given file. If the same 
-            file with the same md5sum already exists in the file cache metadata
-            the returned instance is updated with the existing bitmap information
-            otherwise a new corresponding bitmap is created 
-            metaDataFile - name of the metadata file to persist to
-            blocks - number of blocks required to store the entire file
-            md5sum - md5sum of the file"""
+        """
+        Creates an instance of CacheMetaData for the given file. If the same
+        file with the same md5sum already exists in the file cache metadata
+        the returned instance is updated with the existing bitmap information
+        otherwise a new corresponding bitmap is created
+        metaDataFile - name of the metadata file to persist to
+        blocks - number of blocks required to store the entire file
+        md5sum - md5sum of the file
+        """
+
         self.metaDataFile = metaDataFile
         self.md5sum = md5sum
         self.bitmap = None
@@ -31,15 +29,14 @@ class CacheMetaData(object):
                 self.bitmap = persisted.bitmap
             f.close()
         if (self.bitmap is None):
-            self.bitmap = BitVector.BitVector(size = blocks)              
+            self.bitmap = BitVector.BitVector(size=blocks)
 
-        
     def __str__(self):
         """To create a print representation"""
-        # TODO this is pre Python2.6 format style. 
+        # TODO this is pre Python2.6 format style.
         # Do we need to use the new string formatting instead?
         return "%s (%#x, %s)" % (self.metaDataFile, self.md5sum, self.bitmap)
-    
+
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """
         startBlock = start
@@ -53,28 +50,28 @@ class CacheMetaData(object):
                     (startBlock, endBlock))
         for i in range(startBlock, endBlock + 1):
             self.setReadBlock(i)
-        
+
     def setReadBlock(self, block):
         """ To mark a block as read """
         self.bitmap[block] = 1
-        
+
     def getBit(self, position):
         """ To return the value of the bit at position """
         return self.bitmap[position]
-    
+
     def getNumReadBlocks(self):
         """ To return the number of read blocks """
         return self.bitmap.count_bits_sparse()
-    
+
     def getRange(self, start, end):
         """ To return the range of blocks the client needs to download in order
-            to get the given interval of blocks (start and end inclusive) 
-            
+            to get the given interval of blocks (start and end inclusive)
+
             Returned result will be the (start, end) tuple where
             start - start of the range
-            end - end of the range 
-            
-            Note: The returned tuple for when all the blocks in the requested 
+            end - end of the range
+
+            Note: The returned tuple for when all the blocks in the requested
             interval are already downloaded is (None, None)
             """
         startBlock = start
@@ -93,26 +90,28 @@ class CacheMetaData(object):
             if i == endBlock:
                 #all the blocks are cached already
                 return (None, None)
-                
+
         for i in reversed(range(startBlock, endBlock + 1)):
             if self.bitmap[i] == 0:
                 endBlock = i
                 break
 
         return startBlock, endBlock
-    
+
     def getNextReadBlock(self, start):
-        """ To return the next block after start that is already read. Returned value is
-            the first block that is already read or -1 if none of the subsequent blocks
-            is read """
-        return self.bitmap.next_set_bit( start )
-    
+        """
+        To return the next block after start that is already read. Returned
+        value is the first block that is already read or -1 if none of the
+        subsequent blocks is read
+        """
+        return self.bitmap.next_set_bit(start)
+
     def delete(self):
-        """ To delete bitmap information both from persistence layer 
+        """ To delete bitmap information both from persistence layer
             and from current object """
         os.remove(self.metaDataFile)
         self.bitmap.reset(0)
-        
+
     def persist(self):
         """To persist cache file metadata for the current file """
         if not os.path.exists(os.path.dirname(self.metaDataFile)):
@@ -120,10 +119,8 @@ class CacheMetaData(object):
         f = open(self.metaDataFile, 'w+')
         pickle.dump(self, f, -1)
         f.close()
-                    
+
     @staticmethod
     def deleteCacheMetaData(metaDataFile):
         """ To delete an existing cache metadata file """
         os.remove(metaDataFile)
-
-

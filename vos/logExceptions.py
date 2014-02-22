@@ -1,6 +1,7 @@
 import logging
 import traceback
 
+
 def logExceptions():
     """
     A decorator which catches and logs exceptions.

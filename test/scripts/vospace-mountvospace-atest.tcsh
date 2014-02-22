@@ -105,12 +105,6 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     $LSCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
-    #TODO this sleep is to allow the file to be uploaded on the server, since
-    # a bug brings vofs down if the node is busy. To be removed when
-    # the vofs bug is fixed.
-    echo "[TODO] - pause to allow file to get uploaded first" 
-    sleep 5
-
     echo -n "copy data node to local filesystem "
     cp $MCONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
     cmp $thisDir/something.png something.png.2 || echo " [FAIL]" && exit -1

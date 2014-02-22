@@ -125,7 +125,7 @@ class TestVOFS(unittest.TestCase):
             testfs.read( "/dir1/dir2/file", 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
     
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -191,7 +191,7 @@ class TestVOFS(unittest.TestCase):
             myVofs.cache.open.reset_mock()
 
     
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_create(self):
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -227,20 +227,26 @@ class TestVOFS(unittest.TestCase):
         testfs.open.assert_called_once_with(file, os.O_WRONLY)       
 
                 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_release(self):
         file = "/dir1/dir2/file"
 
+        def mockRelease():
+            if mockRelease.callCount == 0:
+                mockRelease.callCount = 1
+                raise CacheRetry("Exception")
+            else:
+                return
+        mockRelease.callCount = 0
+
         # Raise a timeout exception
         basefh = Object
-        basefh.release = Mock(side_effect= CacheRetry("Exception"))
+        basefh.release = Mock(side_effect = mockRelease)
         basefh.fileModified = True
         basefh.path = file
         fh = HandleWrapper(basefh, False)
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
-        with self.assertRaises(FuseOSError) as e:
-            myVofs.release(file, fh.getId())
-        self.assertEqual(e.exception.errno, EAGAIN)
+        myVofs.release(file, fh.getId())
 
         # Raise an IO error.
         basefh.release = Mock(side_effect= Exception("Exception"))
@@ -595,7 +601,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.move.assert_called_once_with(src,dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_truncate(self):
         callCount = [0]
         def mock_read(block_size):
@@ -768,7 +774,7 @@ class TestMyIOProxy(unittest.TestCase):
             client.copy.assert_called_once_with( testCache.dataDir + 
                     "/dir1/dir2/file", node.uri)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def testReadFromBacking(self):
         callCount = [0]
         def mock_read(block_size):
@@ -838,7 +844,7 @@ class TestMyIOProxy(unittest.TestCase):
                     testProxy.cacheFile.readThread = None
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")    
+    @unittest.skipIf(skipTests, "Individual tests")    
     def test_readFromBackingErrorHandling(self):
         client = Object
         vos_VOFILE = Object()

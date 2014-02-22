@@ -100,9 +100,9 @@ class Connection:
 
         try:
             if parts.scheme=="https":
-                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=60)
+                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=600)
             else:
-                connection = httplib.HTTPConnection(parts.netloc,timeout=60)
+                connection = httplib.HTTPConnection(parts.netloc,timeout=600)
         except httplib.NotConnected as e:
             logger.error("HTTP connection to %s failed \n" % (parts.netloc))
             logger.error("%s \n" % (str(e)))
@@ -672,6 +672,7 @@ class VOFile:
             self.resp = self.httpCon.getresponse()
             return self.checkstatus(codes=code)
         except ssl.SSLError as e:
+            raise
             raise IOError(errno.EAGAIN, str(e))
         except IOError as e:
             raise e
