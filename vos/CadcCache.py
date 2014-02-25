@@ -99,9 +99,9 @@ class Cache(object):
         readOnly : boolean - Is the cached data read-only
         """
 
-        self.cacheDir = cacheDir
-        self.dataDir = os.path.join(cacheDir, "data")
-        self.metaDataDir = os.path.join(cacheDir, "metaData")
+        self.cacheDir = os.path.abspath(cacheDir)
+        self.dataDir = os.path.join(self.cacheDir, "data")
+        self.metaDataDir = os.path.join(self.cacheDir, "metaData")
         self.timeout = timeout
         self.maxCacheSize = maxCacheSize
         self.readOnly = readOnly

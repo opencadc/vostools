@@ -1,6 +1,6 @@
 import sys
 import os
-import pickle
+import cPickle as pickle
 
 import BitVector
 
