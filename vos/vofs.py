@@ -104,8 +104,9 @@ class MyIOProxy(IOProxy):
                     vos.logger.debug("buffer for %s is None" %
                             (self.cacheFile.path))
                 else:
-                    vos.logger.debug("Writing: %d bytes at %d to cache for %s" %
-                            (len(buff), offset, self.cacheFile.path))
+                    vos.logger.debug("Writing: %d bytes at %d to cache " +
+                            "for %s" % (len(buff), offset,
+                            self.cacheFile.path))
                 if not buff:
                     break
                 try:
@@ -303,7 +304,8 @@ class VOFS(LoggingMixIn, Operations):
     def create(self, path, flags):
         """Create a node. Currently ignores the ownership mode"""
 
-        vos.logger.debug("Creating a node: %s with flags %s" % (path, str(flags)))
+        vos.logger.debug("Creating a node: %s with flags %s" %
+                (path, str(flags)))
 
         # Create is handle by the client.
         # This should fail if the basepath doesn't exist
@@ -364,7 +366,8 @@ class VOFS(LoggingMixIn, Operations):
                     len(node.getNodeList()) == 0):
                 force = True
             if not force:
-                vos.logger.debug("Sending back cached metadata for %s" % (path))
+                vos.logger.debug("Sending back cached metadata for %s" %
+                        (path))
                 return node
 
         ## Pull the node meta data from VOSpace.
@@ -438,9 +441,9 @@ class VOFS(LoggingMixIn, Operations):
 
         # according to man for open(2), flags must contain one of O_RDWR,
         # O_WRONLY or O_RDONLY. Because O_RDONLY=0 and options other than
-        # O_RDWR, O_WRONLY and O_RDONLY may be present, 
-        # readonly = (flags == O_RDONLY) and readonly = (flags | # O_RDONLY) 
-        # won't work. The only way to detect if it's a read only is to check 
+        # O_RDWR, O_WRONLY and O_RDONLY may be present,
+        # readonly = (flags == O_RDONLY) and readonly = (flags | # O_RDONLY)
+        # won't work. The only way to detect if it's a read only is to check
         # whether the other two flags are absent.
         readOnly = ((flags & (os.O_RDWR | os.O_WRONLY)) == 0)
 
@@ -523,7 +526,8 @@ class VOFS(LoggingMixIn, Operations):
         if id is None:
             raise FuseOSError(EIO)
 
-        vos.logger.debug("reading range: %s %d %d %d" % (path, size, offset, id))
+        vos.logger.debug("reading range: %s %d %d %d" %
+                (path, size, offset, id))
 
         try:
             fh = HandleWrapper.findHandle(id)
