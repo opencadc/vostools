@@ -71,7 +71,8 @@ if __name__ == "__main__":
 
     format = ("%(asctime)s %(thread)d vos-"+str(version)+
 	    " %(module)s.%(funcName)s.%(lineno)d %(message)s")
-    logging.basicConfig(level=log_level, format=format, filename=opt.log)
+    logging.basicConfig(level=log_level, format=format,
+	    filename=os.path.abspath(opt.log))
 
     logging.getLogger('vos').addHandler(logging.StreamHandler())
 
@@ -80,11 +81,11 @@ if __name__ == "__main__":
         certfile=None
     else:
         certfile=opt.certfile
-    conn=vos.Connection(certfile=certfile)
+    conn=vos.Connection(certfile=os.path.abspath(certfile))
     logging.debug("Got a certificate, connections should work")
 
     root = opt.vospace
-    mount = opt.mountpoint
+    mount = os.path.abspath(opt.mountpoint)
     if opt.cache_dir is None:
         opt.cache_dir=os.path.normpath(os.path.join(
 		os.getenv('HOME', default='.'), root.replace(":", "_")))

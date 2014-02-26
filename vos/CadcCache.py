@@ -8,7 +8,7 @@ import io
 import stat
 import time
 import threading
-import logging
+import vos
 import hashlib
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import errno
@@ -171,7 +171,7 @@ class Cache(object):
 
         fileHandle = self.getFileHandle(path, isNew, ioObject)
         with fileHandle.fileLock:
-            logging.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
+            vos.logger.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
                         id(fileHandle)))
             if isNew:
                 fileHandle.fileModified = True
@@ -245,7 +245,7 @@ class Cache(object):
                 oldest_file != None):
             with self.cacheLock:
                 if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
-                    logging.debug("Removing file %s from the local cache" %
+                    vos.logger.debug("Removing file %s from the local cache" %
                             oldest_file)
                     try:
                         os.unlink(oldest_file)
@@ -304,7 +304,7 @@ class Cache(object):
     def unlinkFile(self, path):
         """Remove a file from the cache."""
 
-        logging.debug("unlink %s:" % path)
+        vos.logger.debug("unlink %s:" % path)
 
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path)
@@ -454,7 +454,7 @@ class Cache(object):
         are better than the backing store's attributes. I.e. if the file is
         open and has been modified.
         """
-        logging.debug("gettattr %s:" % path)
+        vos.logger.debug("gettattr %s:" % path)
 
         with self.cacheLock:
             # Make sure the file state doesn't change in the middle.
@@ -465,7 +465,7 @@ class Cache(object):
             with fileHandle.fileLock:
                 if fileHandle.fileModified:
                     f = os.stat(fileHandle.cacheDataFile)
-                    logging.debug("size = %d:" % f.st_size)
+                    vos.logger.debug("size = %d:" % f.st_size)
                     return dict((name, getattr(f, name))
                             for name in dir(f)
                             if not name.startswith('__'))
@@ -580,7 +580,7 @@ class IOProxy(object):
         aborted.
         """
 
-        #logging.debug("writing %d bytes at %d" % (len(buffer), offset))
+        #vos.logger.debug("writing %d bytes at %d" % (len(buffer), offset))
 
         if (self.currentWriteOffset != None and
                 self.currentWriteOffset != offset):
@@ -621,7 +621,7 @@ class IOProxy(object):
                 self.cacheFile.fileCondition.notify_all()
 
             self.currentWriteOffset = offset + len(buffer)
-            #logging.debug("self.currentWriteOffset %d " %
+            #vos.logger.debug("self.currentWriteOffset %d " %
             #        (self.currentWriteOffset))
 
             # Check to see if the current read has been aborted and if it
@@ -630,7 +630,7 @@ class IOProxy(object):
                     lastCompleteByte >=
                     self.cacheFile.readThread.mandatoryEnd and
                     lastCompleteByte <= self.cacheFile.fileSize):
-                logging.debug("reading to cache aborted for %s" %
+                vos.logger.debug("reading to cache aborted for %s" %
                         self.cacheFile.path)
                 raise CacheAborted("Read to cache aborted.")
 
@@ -658,7 +658,7 @@ class FileHandle(object):
     def __init__(self, path, cache, ioObject):
         self.path = path
         self.cache = cache
-        logging.debug("creating a new File Handle for %s" % path)
+        vos.logger.debug("creating a new File Handle for %s" % path)
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path)
         self.cacheDataFile = os.path.abspath(cache.dataDir + path)
@@ -709,7 +709,7 @@ class FileHandle(object):
         requirement.
         """
 
-        logging.debug("releasing node %s: id %d: refcount %d: modified %s: "
+        vos.logger.debug("releasing node %s: id %d: refcount %d: modified %s: "
                 "obsolete: %s" %
                 (self.path, id(self), self.refCount, self.fileModified,
                 self.obsolete))
@@ -724,7 +724,7 @@ class FileHandle(object):
             if (self.flushThread is None and self.refCount == 1 and
                     self.fileModified and not self.obsolete):
 
-                logging.debug("Start flush thread")
+                vos.logger.debug("Start flush thread")
                 self.refCount += 1
                 self.flushThread = threading.Thread(target=self.flushNode,
                         args=[])
@@ -767,7 +767,7 @@ class FileHandle(object):
         """Flush the file to the backing store.
         """
 
-        logging.debug("flushing node %s " % self.path)
+        vos.logger.debug("flushing node %s " % self.path)
         self.flushException = None
 
         # Acquire the writer lock exclusivly. This will prevent the file from
@@ -811,7 +811,7 @@ class FileHandle(object):
         than the timeout.
         """
 
-        logging.debug("writting %d bytes at %d to %d " % (size, offset,
+        vos.logger.debug("writting %d bytes at %d to %d " % (size, offset,
                 self.ioObject.cacheFileDescriptor))
 
         # Acquire a shared lock on the file
@@ -856,7 +856,7 @@ class FileHandle(object):
         isn't allocated for each read.
         """
 
-        logging.debug("reading %d bytes at %d " % (size, offset))
+        vos.logger.debug("reading %d bytes at %d " % (size, offset))
 
         self.fileCondition.setTimeout()
 
@@ -914,7 +914,7 @@ class FileHandle(object):
 
             while self.readThread is not None:
                 if startNewThread:
-                    logging.debug("aborting the read thread for %s" %
+                    vos.logger.debug("aborting the read thread for %s" %
                             self.path)
                     # abort the thread
                     self.readThread.aborted = True
@@ -925,7 +925,7 @@ class FileHandle(object):
                     while (self.metaData.getRange(firstBlock, firstBlock +
                             numBlock - 1) != (None, None) and
                             self.readThread is not None):
-                        #logging.debug("needBlocks %s" %
+                        #vos.logger.debug("needBlocks %s" %
                         #    str(self.metaData.getRange(firstBlock,
                         #    firstBlock + numBlock - 1)))
                         self.fileCondition.wait()
@@ -969,7 +969,7 @@ class FileHandle(object):
                     os.fsync(self.ioObject.cacheFileDescriptor)
 
     def truncate(self, length):
-        logging.debug("Truncate %s" % (self.path, ))
+        vos.logger.debug("Truncate %s" % (self.path, ))
         # Acquire an exclusive lock on the file
         with self.writerLock(shared=False):
             with self.fileLock:

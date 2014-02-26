@@ -48,16 +48,21 @@ python setup.py install
 > getCert
 
   retrieves a certificate from the CADC servers, these certifcates are
-  valid for 2 days (be default) but can be valid for upto 30 days (see
+  valid for 10 days (be default) but can be valid for upto 30 days (see
   the getCert help).  The cerificate is stored in ${HOME}/.ssl by
   default.
 
 3a) For filesystem usage: 
+Depending on your operating system you may be required to be in a sytem user
+group in order to mount FUSE file systems.
 
 > mountvofs
 
   mounts the CADC VOSpace root Container Node at /tmp/vospace and
   initiates a 5GB cache in the users home directory (${HOME}/vos_)
+
+> fusermount -u /tmp/vospace
+  unmounts the file system.
 
   **** Since the VOSpace does not have a mapping of your unix users
        IDs all files appear to be owned by the user who issued the
