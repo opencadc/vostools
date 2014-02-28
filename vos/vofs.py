@@ -42,7 +42,7 @@ class MyIOProxy(IOProxy):
         # This is the vofile object last used
         self.lastVOFile = None
 
-    @logExceptions()
+    #@logExceptions()
     def writeToBacking(self):
         """
         Write a file in the cache to the remote file.
@@ -56,7 +56,7 @@ class MyIOProxy(IOProxy):
         vos.logger.debug("attributes: %s " % str(node.attr))
         return node.props.get("MD5")
 
-    @logExceptions()
+    #@logExceptions()
     def readFromBacking(self, size=None, offset=0,
             blockSize=Cache.IO_BLOCK_SIZE):
         """
@@ -234,7 +234,7 @@ class VOFS(LoggingMixIn, Operations):
         if not self.cache_nodes or force:
             self.node.pop(path, None)
 
-    @logExceptions()
+    #@logExceptions()
     def access(self, path, mode):
         """Check if path is accessible.
 
@@ -246,7 +246,7 @@ class VOFS(LoggingMixIn, Operations):
             return -1
         return 0
 
-    @logExceptions()
+    #@logExceptions()
     def chmod(self, path, mode):
         """
         Set the read/write groups on the VOSpace node based on chmod style
@@ -300,7 +300,7 @@ class VOFS(LoggingMixIn, Operations):
                         (path))
                 raise e
 
-    @logExceptions()
+    #@logExceptions()
     def create(self, path, flags):
         """Create a node. Currently ignores the ownership mode"""
 
@@ -333,7 +333,7 @@ class VOFS(LoggingMixIn, Operations):
         ## now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
-    @logExceptions()
+    #@logExceptions()
     def fsync(self, path, datasync, id):
         if self.opt.readonly:
             vos.logger.debug("File system is readonly, no sync allowed")
@@ -390,7 +390,7 @@ class VOFS(LoggingMixIn, Operations):
                 self.node[subPath] = node
         return self.node[path]
 
-    @logExceptions()
+    #@logExceptions()
     def getattr(self, path, id=None):
         """
         Build some attributes for this file, we have to make-up some stuff
@@ -405,7 +405,7 @@ class VOFS(LoggingMixIn, Operations):
 
         return self.getNode(path, limit=0, force=False).attr
 
-    @logExceptions()
+    #@logExceptions()
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
 
@@ -427,7 +427,7 @@ class VOFS(LoggingMixIn, Operations):
         #   raise ex
         return
 
-    @logExceptions()
+    #@logExceptions()
     def open(self, path, flags, *mode):
         """Open file with the desired modes
 
@@ -515,7 +515,7 @@ class VOFS(LoggingMixIn, Operations):
         return HandleWrapper(self.cache.open(path, isNew, myProxy),
                 readOnly).getId()
 
-    @logExceptions()
+    #@logExceptions()
     def read(self, path, size=0, offset=0, id=None):
         """
         Read the required bytes from the file and return a buffer containing
@@ -542,7 +542,7 @@ class VOFS(LoggingMixIn, Operations):
             vos.logger.debug("Timeout Waiting for file read: %s", path)
             raise e
 
-    @logExceptions()
+    #@logExceptions()
     def readlink(self, path):
         """
         Return a string representing the path to which the symbolic link
@@ -556,7 +556,7 @@ class VOFS(LoggingMixIn, Operations):
         """
         return self.getNode(path).target
 
-    @logExceptions()
+    #@logExceptions()
     def readdir(self, path, id):
         """Send a list of entries in this directory"""
         vos.logger.debug("Getting directory list for %s " % (path))
@@ -580,7 +580,7 @@ class VOFS(LoggingMixIn, Operations):
         return ['.', '..'] + [e.name.encode('utf-8') for e in self.getNode(
                 path, force=False, limit=None).getNodeList()]
 
-    @logExceptions()
+    #@logExceptions()
     def load_dir(self, path):
         """Load the dirlist from VOSpace.
         This should always be run in a thread."""
@@ -595,7 +595,7 @@ class VOFS(LoggingMixIn, Operations):
                 self.condition.notify_all()
         return
 
-    @logExceptions()
+    #@logExceptions()
     def release(self, path, id):
         """Close the file"""
         vos.logger.debug("releasing file %d " % id)
@@ -624,7 +624,7 @@ class VOFS(LoggingMixIn, Operations):
             raise FuseOSError(EIO)
         return
 
-    @logExceptions()
+    #@logExceptions()
     def rename(self, src, dest):
         """Rename a data node into a new container"""
         vos.logger.debug("Original %s -> %s" % (src, dest))
@@ -647,7 +647,7 @@ class VOFS(LoggingMixIn, Operations):
                 raise FuseOSError(EPERM)
             return -1
 
-    @logExceptions()
+    #@logExceptions()
     def rmdir(self, path):
         node = self.getNode(path)
         #if not node.isdir():
@@ -660,7 +660,7 @@ class VOFS(LoggingMixIn, Operations):
         self.client.delete(path)
         self.delNode(path, force=True)
 
-    @logExceptions()
+    #@logExceptions()
     def statfs(self, path):
         node = self.getNode(path)
         block_size = 512
@@ -684,7 +684,7 @@ class VOFS(LoggingMixIn, Operations):
         sfs['f_namemax'] = 256
         return sfs
 
-    @logExceptions()
+    #@logExceptions()
     def truncate(self, path, length, id=None):
         """Perform a file truncation to length bytes"""
         vos.logger.debug("Attempting to truncate %s : %s (%d)" %
@@ -717,7 +717,7 @@ class VOFS(LoggingMixIn, Operations):
             fh.cacheFileHandle.truncate(length)
         return
 
-    @logExceptions()
+    #@logExceptions()
     def unlink(self, path):
         node = self.getNode(path, force=False, limit=1)
         if node and node.props.get('islocked', False):
@@ -728,7 +728,7 @@ class VOFS(LoggingMixIn, Operations):
             self.client.delete(path)
         self.delNode(path, force=True)
 
-    @logExceptions()
+    #@logExceptions()
     def write(self, path, data, size, offset, id=None):
         import ctypes
 

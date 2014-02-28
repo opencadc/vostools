@@ -850,7 +850,7 @@ class FileHandle(object):
 
         return wroteBytes
 
-    @logExceptions()
+    #@logExceptions()
     def read(self, size, offset):
         """Read data from the file.
         This method will raise a CacheRetry error if the response takes longer
@@ -886,7 +886,7 @@ class FileHandle(object):
 
         return cbuffer
 
-    @logExceptions()
+    #@logExceptions()
     def makeCached(self, firstBlock, numBlock):
         """Ensure the specified data is in the cache file.
 
