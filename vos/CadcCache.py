@@ -734,6 +734,8 @@ class FileHandle(object):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
                 # Ignore timeouts. It important to close the file descriptor.
+                vos.logger.debug("flushThread: %s, readThread: %s" %
+                        (self.flushThread, self.readThread))
                 self.fileCondition.wait()
 
             # Look for write failures.
@@ -784,9 +786,11 @@ class FileHandle(object):
                 md5 = self.ioObject.writeToBacking()
 
                 # Update the meta data md5
-                blocks, blocks = self.ioObject.blockInfo(0, size)
-                self.metaData = CacheMetaData(self.cacheMetaDataFile, blocks,
+                blocks, numBlocks = self.ioObject.blockInfo(0, size)
+                self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks,
                         md5)
+                if numBlocks > 0:
+                    self.metaData.setReadBlocks(0, numBlocks - 1)
                 self.metaData.md5sum = md5
                 self.metaData.persist()
 
@@ -794,14 +798,14 @@ class FileHandle(object):
                 self.flushException = sys.exc_info()
             finally:
                 self.flushThread = None
+                self.fileModified = False
+                self.deref()
                 # Wake up any threads waiting for the flush to finish
                 with self.fileCondition:
                     self.fileCondition.notify_all()
 
-        self.deref()
 
-        if self.refCount == 0:
-            self.cache.checkCacheSpace()
+        self.cache.checkCacheSpace()
 
         return
 
@@ -846,7 +850,7 @@ class FileHandle(object):
 
         return wroteBytes
 
-    #@logExceptions()
+    @logExceptions()
     def read(self, size, offset):
         """Read data from the file.
         This method will raise a CacheRetry error if the response takes longer
@@ -882,7 +886,7 @@ class FileHandle(object):
 
         return cbuffer
 
-    #@logExceptions()
+    @logExceptions()
     def makeCached(self, firstBlock, numBlock):
         """Ensure the specified data is in the cache file.
 
@@ -926,8 +930,8 @@ class FileHandle(object):
                             numBlock - 1) != (None, None) and
                             self.readThread is not None):
                         #vos.logger.debug("needBlocks %s" %
-                        #    str(self.metaData.getRange(firstBlock,
-                        #    firstBlock + numBlock - 1)))
+                            #str(self.metaData.getRange(firstBlock,
+                            #firstBlock + numBlock - 1)))
                         self.fileCondition.wait()
 
                 if (self.metaData.getRange(firstBlock, firstBlock +
@@ -952,6 +956,8 @@ class FileHandle(object):
                 # Reading to an intermediate end point.
                 optionalSize = (nextRead * Cache.IO_BLOCK_SIZE) - startByte
 
+            vos.logger.debug(" Starting a cache read thread for %d %d %d" %
+                    (startByte, mandatorySize, optionalSize))
             self.readThread = CacheReadThread(startByte, mandatorySize,
                     optionalSize, self)
             self.readThread.start()
