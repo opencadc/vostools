@@ -628,6 +628,7 @@ class VOFile:
         self.httpCon = None
         self.timeout = -1
         self.size = size
+        self.md5sum = None
         self.maxRetries = 10000
         self.maxRetryTime = MAX_RETRY_TIME
         # this should be redone during a cleanup. Basically, a GET might result in multiple
@@ -646,6 +647,7 @@ class VOFile:
         self.currentRetryDelay = DEFAULT_RETRY_DELAY
         self.totalRetryDelay = 0
         self.retries = 0
+        self.fileSize = None
 
 	#logger.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
 
@@ -705,6 +707,9 @@ class VOFile:
                     msg += " using anonymous access "
             raise IOError(self.resp.status, msg, self.url)
         self.size = self.resp.getheader("Content-Length", 0)
+        if self.resp.status == 200:
+            self.md5sum = self.resp.getheader("Content-MD5", None)
+            self.totalFileSize = self.size
         return True
 
     def open(self, URL, method="GET", bytes=None):
@@ -758,6 +763,10 @@ class VOFile:
         self.httpCon.endheaders()
         #logger.debug("Opening connection for %s to %s" % (URL, method))
         #logger.debug("Done setting headers")
+
+    def getFileInfo(self):
+        """Return information harvested from the HTTP header"""
+        return (self.md5sum, self.totalFileSize)
 
 
     def read(self, size=None):
