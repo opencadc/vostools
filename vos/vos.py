@@ -341,6 +341,7 @@ class Node:
                                     'publicread',
                                     'quota',
                                     'length',
+                                    'MD5',
                                     'mtime',
                                     'ctime',
                                     'ispublic']:

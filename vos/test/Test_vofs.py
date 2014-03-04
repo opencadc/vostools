@@ -36,6 +36,21 @@ class TestVOFS(unittest.TestCase):
         self.setUp()
 
     @unittest.skipIf(skipTests, "Individual tests")
+    def test_init_(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        self.assertTrue(testfs.opt is opt)
+        self.assertEqual(testfs.root, self.testMountPoint)
+
+        # Client connection fails
+        with patch('vos.Client.__init__') as mock1:
+            e = IOError()
+            e.errno = EIO
+            mock1.side_effect = e
+            with self.assertRaises(FuseOSError):
+                testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
     def testWrite1(self):
         """ Write to a read-only or locked file"""
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -840,6 +855,38 @@ class TestMyIOProxy(unittest.TestCase):
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 1)
 
+                    # Submit a request with size = None and offset > 0
+                    vos_VOFILE.open.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
+                    callCount[0] = 0
+                    testProxy.readFromBacking(None, 1)
+                    self.assertEqual(client.open.call_count, 1)
+                    vos_VOFILE.open.assert_called_once_with("url0", 
+                            bytes="bytes=1-")
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 1)
+
+                    # Do a read which fails. This should result in a
+                    # renegotiation.
+                    vos_VOFILE.open.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
+                    callCount[0] = 0
+                    self.assertTrue(testProxy.lastVOFile is not None)
+                    testProxy.lastVOFile.read = Mock(side_effect=IOError())
+                    # This throws an exception because read will be called
+                    # twice, the first is caught and error handling occurs, the
+                    # second is not caught.
+                    with self.assertRaises(IOError):
+                        testProxy.readFromBacking(None, 1)
+                    self.assertEqual(client.open.call_count, 2)
+                    vos_VOFILE.open.assert_called_with("url0", 
+                            bytes="bytes=1-")
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 2)
+
+
                 finally:
                     testProxy.cacheFile.readThread = None
 
@@ -867,6 +914,27 @@ class TestMyIOProxy(unittest.TestCase):
         cacheFile.cache = Object()
         testProxy.setCacheFile(cacheFile)
         testProxy.readFromBacking()
+
+    @unittest.skipIf(skipTests, "Individual tests")    
+    def test_getMD5(self):
+        testProxy = vofs.MyIOProxy(None, None)
+        testProxy.node = vos.Node("vos:/anode", properties = \
+                {"MD5": "1234", "length": "1"})
+        self.assertEqual(testProxy.getMD5(), "1234")
+
+        testProxy.node = None
+        self.assertEqual(testProxy.getMD5(), None)
+
+    @unittest.skipIf(skipTests, "Individual tests")    
+    def test_getSize(self):
+        testProxy = vofs.MyIOProxy(None, None)
+        testProxy.node = vos.Node("vos:/anode", properties = \
+                {"MD5": "1234", "length": "1"})
+        self.assertEqual(testProxy.getSize(), 1)
+
+        testProxy.node = None
+        self.assertEqual(testProxy.getSize(), None)
+
 
 class TestHandleWrapper(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")

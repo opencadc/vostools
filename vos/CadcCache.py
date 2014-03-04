@@ -958,9 +958,7 @@ class FileHandle(object):
 
             vos.logger.debug(" Starting a cache read thread for %d %d %d" %
                     (startByte, mandatorySize, optionalSize))
-            self.readThread = CacheReadThread(startByte, mandatorySize,
-                    optionalSize, self)
-            self.readThread.start()
+            self.readData(startByte, mandatorySize, optionalSize)
 
             # Wait for the data be be available.
             while (self.metaData.getRange(firstBlock, firstBlock +
@@ -990,6 +988,13 @@ class FileHandle(object):
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 self.fileModified = True
                 self.fullyCached = True
+
+    def readData( startByte, mandatorySize, optionalSize):
+        """Read the data range from the backing store in a thread"""
+
+        self.readThread = CacheReadThread(startByte, mandatorySize,
+                optionalSize, self)
+        self.readThread.start()
 
 
 class CacheReadThread(threading.Thread):

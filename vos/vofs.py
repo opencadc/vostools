@@ -215,7 +215,7 @@ class VOFS(LoggingMixIn, Operations):
         try:
             self.client = vos.Client(rootNode=root, conn=conn)
         except Exception as e:
-            e = FuseOSError(e.errno)
+            e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
             e.strerror = getattr(e, 'strerror', 'failed while making mount')
             raise e
@@ -512,8 +512,8 @@ class VOFS(LoggingMixIn, Operations):
         isNew = ((cacheFileAttrs == None) and (node == None) or
                 ((flags & os.O_TRUNC) != 0))
 
-        return HandleWrapper(self.cache.open(path, isNew, myProxy),
-                readOnly).getId()
+        handle = self.cache.open(path, isNew, myProxy)
+        return HandleWrapper(handle, readOnly).getId()
 
     #@logExceptions()
     def read(self, path, size=0, offset=0, id=None):
