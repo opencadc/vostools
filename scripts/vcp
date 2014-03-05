@@ -144,6 +144,7 @@ def copy(source,dest,exclude=None,include=None):
         while not skip:
             try:
                 client.copy(source,dest,sendMD5=True)
+                logging.debug("copied {} to {}".format(source, dest))
                 break
             except Exception as e:
                 if getattr(e,'errno',-1) == 104:
@@ -160,6 +161,7 @@ def copy(source,dest,exclude=None,include=None):
                 else:
                     raise e
     except IOError as e:
+        logging.debug(str(e))
         if getattr(e,'errno',-1) == errno.EINVAL:
             # not a valid uri, just skip those...
             logging.error("%s: Skipping" % ( str(e)))
