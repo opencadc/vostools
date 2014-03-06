@@ -1059,6 +1059,8 @@ class Client:
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
+        logger.debug("shortcut=%i method=%s view=%s" %(self.cadc_short_cut, method, view) )
+
         if not self.cadc_short_cut and method == 'GET' and view == 'data':
             return self._get(uri)
 
@@ -1079,23 +1081,16 @@ class Client:
             ## only get here if cadc_short_cut == True
             # find out the URL to the CADC data server
 
-            direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
-            transProtocol = ''
-            if self.protocol == 'http':
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPPUT_PROTOCOL
-            else:
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPSGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPSPUT_PROTOCOL
+            direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
+            protocol = {'GET': {'https': Client.VO_HTTPSGET_PROTOCOL,
+                                'http': Client.VO_HTTPGET_PROTOCOL},
+                        'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                                'http': Client.VO_HTTPPUT_PROTOCOL}}
  
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
 
-            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction, 'PROTOCOL' : transProtocol})
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction[method], 'PROTOCOL' : protocol[method][self.protocol]})
             headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
             httpCon = self.conn.getConnection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
