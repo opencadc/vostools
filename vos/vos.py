@@ -1068,6 +1068,12 @@ class Client:
             # logger.debug("Using _put")
             return self._put(uri)
 
+        if view == "cutout":
+            if cutout is None:
+                raise ValueError("For view=cutout, must specify a cutout "
+                                 "value of the form"
+                                 "[extension number][x1:x2,y1:y2]")
+
         parts = urlparse(uri)
         path = parts.path.strip('/')
         server = Client.VOServers.get(parts.netloc,None)
@@ -1111,11 +1117,6 @@ class Client:
             return URL
 
         if view == "cutout":
-
-            if cutout is None:
-                raise ValueError("For view=cutout, must specify a cutout "
-                                "value of the form"
-                                "[extension number][x1:x2,y1:y2]")
 
             urlbase = self._get(uri)[0]
             
