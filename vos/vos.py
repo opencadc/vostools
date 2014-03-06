@@ -1102,8 +1102,13 @@ class Client:
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
                 response = httpCon.getresponse()
+
                 if response.status == 303:
+                    # Normal case is a redirect
                     URL = response.getheader('Location', None)
+                elif response.status == 404:
+                    # The file doesn't exist
+                    raise IOError(errno.ENOENT, "No location on redirect", url)
                 else:
                     logger.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
