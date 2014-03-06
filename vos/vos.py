@@ -1055,16 +1055,23 @@ class Client:
         return self.nodeCache[uri]
 
 
-    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None):
+    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None,
+                   fullNegotiation=None):
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
-        logger.debug("shortcut=%i method=%s view=%s" %(self.cadc_short_cut, method, view) )
+        # We can force a full negotiation
+        if fullNegotiation:
+            doShortcut = False;
+        else:
+            doShortcut = self.cadc_short_cut
 
-        if not self.cadc_short_cut and method == 'GET' and view == 'data':
+        logger.debug("doShortcut=%i method=%s view=%s" %(doShortcut, method, view) )
+
+        if not doShortcut and method == 'GET' and view == 'data':
             return self._get(uri)
 
-        if not self.cadc_short_cut and method in ('PUT'):
+        if not doShortcut and method in ('PUT'):
             # logger.debug("Using _put")
             return self._put(uri)
 
@@ -1082,9 +1089,9 @@ class Client:
             return uri
         logger.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
         URL = None
-        if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
+        if doShortcut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
 
-            ## only get here if cadc_short_cut == True
+            ## only get here if doShortcut == True
             # find out the URL to the CADC data server
 
             direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
@@ -1117,8 +1124,8 @@ class Client:
                 logger.error(str(e))
             finally: 
                 httpCon.close()          
-  
-            logger.debug("Sending short cuturl: %s" %( URL))
+
+            logger.debug("Sending short cut url: %s" %( URL))
             return URL
 
         if view == "cutout":
@@ -1275,7 +1282,7 @@ class Client:
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, 
-            limit=None, nextURI=None, size=None, cutout=None, range=None):
+            limit=None, nextURI=None, size=None, cutout=None, range=None, fullNegotiation=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1304,7 +1311,7 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
-            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
+            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout, fullNegotiation=fullNegotiation)
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
