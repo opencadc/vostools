@@ -93,9 +93,11 @@ class MyIOProxy(IOProxy):
                     buff = self.lastVOFile.read(blockSize)
                 except IOError as e:
                     # existing URLs do not work anymore. Try another
-                    # transfer using a full negotiation, regardless of
-                    # the value of cadc_short_cut. If it still fails
-                    # let the error propagate to client
+                    # transfer, forcing a full negotiation. This
+                    # handles the case that we tried a short cut URL
+                    # and it failed, so now we can try the full URL
+                    # list. If it still fails let the error propagate
+                    # to client
                     self.lastVOFile = self.vofs.client.open(
                             self.cacheFile.path, mode=os.O_RDONLY, view="data",
                             size=size, range=range, fullNegotiation=True)
