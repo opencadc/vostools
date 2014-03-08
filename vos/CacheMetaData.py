@@ -7,35 +7,43 @@ import BitVector
 
 class CacheMetaData(object):
 
-    def __init__(self, metaDataFile, blocks, md5sum):
+    def __init__(self, metaDataFile, blocks, md5sum, size):
         """
         Creates an instance of CacheMetaData for the given file. If the same
         file with the same md5sum already exists in the file cache metadata
         the returned instance is updated with the existing bitmap information
         otherwise a new corresponding bitmap is created
         metaDataFile - name of the metadata file to persist to
-        blocks - number of blocks required to store the entire file
-        md5sum - md5sum of the file
+        blocks - number of blocks required to store the entire file. If None,
+                the file must exist.
+        md5sum - md5sum of the file. If None, the file must exist
         """
 
         self.metaDataFile = metaDataFile
         self.md5sum = md5sum
+        self.size = size
         self.bitmap = None
         if os.path.exists(self.metaDataFile):
             f = open(self.metaDataFile, 'rU')
             persisted = pickle.load(f)
-            if(persisted.md5sum == self.md5sum):
+            if(self.md5sum == None or persisted.md5sum == self.md5sum):
                 #persisted bitmap still valid. Used that instead
                 self.bitmap = persisted.bitmap
+                self.size = persisted.size
             f.close()
+
         if (self.bitmap is None):
-            self.bitmap = BitVector.BitVector(size=blocks)
+            if blocks is None:
+                self.bitmap = BitVector.BitVector(size=0)
+            else:
+                self.bitmap = BitVector.BitVector(size=blocks)
 
     def __str__(self):
         """To create a print representation"""
         # TODO this is pre Python2.6 format style.
         # Do we need to use the new string formatting instead?
-        return "%s (%#x, %s)" % (self.metaDataFile, self.md5sum, self.bitmap)
+        return "%s (%#x, %d %s)" % (self.metaDataFile, self.md5sum, self.size, 
+                self.bitmap)
 
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """

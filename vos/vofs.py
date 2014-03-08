@@ -35,12 +35,15 @@ def flag2mode(flags):
 
 
 class MyIOProxy(IOProxy):
-    def __init__(self, vofs, node):
+    def __init__(self, vofs, path):
         super(MyIOProxy, self).__init__()
         self.vofs = vofs
-        self.node = node
         # This is the vofile object last used
         self.lastVOFile = None
+        self.size = None
+        self.md5 = None
+        self.path = path
+        self.condition = CacheCondition(None)
 
     #@logExceptions()
     def writeToBacking(self):
@@ -100,6 +103,9 @@ class MyIOProxy(IOProxy):
                             size=size, range=range)
                     buff = self.lastVOFile.read(blockSize)
 
+                if not self.cacheFile.gotHeader:
+                    self.cacheFile.setHeader(self.vofs.client.getFileInfo())
+
                 if buff is None:
                     vos.logger.debug("buffer for %s is None" %
                             (self.cacheFile.path))
@@ -115,6 +121,8 @@ class MyIOProxy(IOProxy):
                     # The transfer was aborted.
                     break
                 offset += len(buff)
+        except Exception as e:
+            self.exception = e
         finally:
             self.lastVOFile.close()
 
@@ -122,16 +130,25 @@ class MyIOProxy(IOProxy):
                 self.cacheFile.path))
 
     def getMD5(self):
-        if self.node is None:
-            return None
-        else:
-            return self.node.props.get('MD5')
+        if self.md5 == None:
+            node = self.vofs.getNode(self.path)
+            self.setSize(int(node.props.get('length')))
+
+        return self.md5
 
     def getSize(self):
-        if self.node is None:
-            return None
-        else:
-            return int(self.node.props.get('length'))
+        if self.size == None:
+            node = self.vofs.getNode(self.path)
+            self.setSize(int(node.props.get('length')))
+            self.setMD5(node.props.get('MD5'))
+
+        return self.size
+
+    def setMD5(self, md5):
+        self.md5 = md5
+
+    def setSize(self, size):
+        self.size = size
 
 
 class HandleWrapper(object):
@@ -448,7 +465,7 @@ class VOFS(LoggingMixIn, Operations):
         readOnly = ((flags & (os.O_RDWR | os.O_WRONLY)) == 0)
 
         cacheFileAttrs = self.cache.getAttr(path)
-        if cacheFileAttrs is None:
+        if cacheFileAttrs is None and not readOnly:
             # file in the cache not in the process of being modified.
             # see if this node already exists in the cache; if not get info
             # from vospace
@@ -506,13 +523,17 @@ class VOFS(LoggingMixIn, Operations):
             vos.logger.debug("Cannot create locked file: %s", path)
             raise e
 
-        myProxy = MyIOProxy(self, node)
+        myProxy = MyIOProxy(self, path)
+        if node != None:
+            myProxy.setSize(int(node.props.get('length')))
+            myProxy.setMD5(node.props.get('MD5'))
+
         # new file in cache library if no node information (node not in
         # vospace) or file is open for truncate
         isNew = ((cacheFileAttrs == None) and (node == None) or
                 ((flags & os.O_TRUNC) != 0))
 
-        handle = self.cache.open(path, isNew, myProxy)
+        handle = self.cache.open(path, isNew, myProxy, self.cache_nodes)
         return HandleWrapper(handle, readOnly).getId()
 
     #@logExceptions()
