@@ -1208,13 +1208,15 @@ class Client:
         con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
         F = ET.parse(con)
 
-        P = F.find(Node.PROTOCOL)
+        allP = F.findall(Node.PROTOCOL)
         logger.debug("Transfer protocol: %s" % (str(F)))
-        if P is None:
+        if allP is None:
             return self.getTransferError(transURL, uri)
         result = []
-        for node in P.findall(Node.ENDPOINT):
-            result.append(node.text)
+
+        for P in allP:
+            for node in P.findall(Node.ENDPOINT):
+                result.append(node.text)
         return result
 
     def getTransferError(self, url, uri):
