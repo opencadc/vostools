@@ -100,7 +100,7 @@ class MyIOProxy(IOProxy):
                     # to client
                     self.lastVOFile = self.vofs.client.open(
                             self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                            size=size, range=range, fullNegotiation=True)
+                            size=size, range=range, full_negotiation=True)
                     buff = self.lastVOFile.read(blockSize)
 
                 if buff is None:
