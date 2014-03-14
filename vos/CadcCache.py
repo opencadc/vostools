@@ -24,6 +24,7 @@ import pdb
 libcPath = ctypes.util.find_library('c')
 libc = ctypes.cdll.LoadLibrary(libcPath)
 
+_flush_thread_count = 0
 
 # TODO optionally disable random reads - always read to the end of the file.
 
@@ -769,7 +770,10 @@ class FileHandle(object):
         """Flush the file to the backing store.
         """
 
-        vos.logger.debug("flushing node %s " % self.path)
+        global _flush_thread_count
+        _flush_thread_count = _flush_thread_count + 1
+        vos.logger.debug("flushing node %s, thread count is %i " \
+                             % (self.path,_flush_thread_count))
         self.flushException = None
 
         # Acquire the writer lock exclusivly. This will prevent the file from
@@ -807,6 +811,9 @@ class FileHandle(object):
 
         self.cache.checkCacheSpace()
 
+        _flush_thread_count = _flush_thread_count - 1
+        vos.logger.debug("finished flushing node %s, thread count is %i " \
+                             % (self.path,_flush_thread_count))
         return
 
     def write(self, data, size, offset):
