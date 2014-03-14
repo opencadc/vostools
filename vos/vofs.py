@@ -536,7 +536,7 @@ class VOFS(LoggingMixIn, Operations):
         # vospace) or file is open for truncate
         isNew = flags & os.O_TRUNC != 0
 
-        handle = self.cache.open(path, isNew, mustExist, myProxy, 
+        handle = self.cache.open(path, isNew, mustExist, myProxy,
                 self.cache_nodes)
         if (node != None):
             handle.setHeader(myProxy.getSize(), myProxy.getMD5())
