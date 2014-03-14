@@ -208,7 +208,8 @@ class VOFS(LoggingMixIn, Operations):
         self.root = root
 
         # VOSpace is a bit slow so we do some caching.
-        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout)
+        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout, \
+                               maxFlushThreads=5)
 
         # All communication with the VOSpace goes through this client
         # connection.

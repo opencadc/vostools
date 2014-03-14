@@ -8,6 +8,7 @@ import io
 import stat
 import time
 import threading
+from Queue import Queue
 import vos
 import hashlib
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
@@ -90,7 +91,7 @@ class Cache(object):
     """
     IO_BLOCK_SIZE = 2 ** 14
 
-    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60):
+    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60, maxFlushThreads=100):
         """Initialize the Cache Object
 
         Parameters:
@@ -98,6 +99,7 @@ class Cache(object):
         cacheDir : string - The directory for the cache.
         maxCacheSize : int - The maximum cache size in megabytes
         readOnly : boolean - Is the cached data read-only
+        maxFlushThreads : int - Maximum number of nodes to flush simultaneously
         """
 
         self.cacheDir = os.path.abspath(cacheDir)
@@ -110,6 +112,10 @@ class Cache(object):
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
         self.cacheLock = threading.RLock()
+
+        # Create a FlushNodeQueue that will be used by FileHandles
+        self.maxFlushThreads = maxFlushThreads
+        self.flushNodeQueue = FlushNodeQueue(maxFlushThreads=self.maxFlushThreads)
 
         if os.path.exists(self.cacheDir):
             if not os.path.isdir(self.cacheDir):
@@ -721,16 +727,27 @@ class FileHandle(object):
             if self.refCount == 1 and self.readThread != None:
                 self.readThread.aborted = True
 
-            # If flushing is not already in progress, start the thread
+            # If flushing is not already in progress, submit to the thread
+            # queue. What if this one was already placed in the queue???
             if (self.flushThread is None and self.refCount == 1 and
                     self.fileModified and not self.obsolete):
 
-                vos.logger.debug("Start flush thread")
                 self.refCount += 1
-                self.flushThread = threading.Thread(target=self.flushNode,
-                        args=[])
-                self.flushThread.start()
 
+                # Use a thread
+                #vos.logger.debug("Start flush thread")
+                #self.flushThread = threading.Thread(target=self.flushNode,
+                #        args=[])
+                #self.flushThread.start()
+
+                # use a thread queue
+                vos.logger.debug("Submit to flush thread queue")
+                self.flushThread = True; # Now we simply use as a flag
+                self.cache.flushNodeQueue.put(self)
+                vos.logger.debug("queue size now %i" \
+                                     % self.cache.flushNodeQueue.qsize())
+
+            # What do I do here?
             while (self.flushThread != None or self.readThread != None):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
@@ -772,6 +789,7 @@ class FileHandle(object):
 
         global _flush_thread_count
         _flush_thread_count = _flush_thread_count + 1
+
         vos.logger.debug("flushing node %s, thread count is %i " \
                              % (self.path,_flush_thread_count))
         self.flushException = None
@@ -814,6 +832,7 @@ class FileHandle(object):
         _flush_thread_count = _flush_thread_count - 1
         vos.logger.debug("finished flushing node %s, thread count is %i " \
                              % (self.path,_flush_thread_count))
+
         return
 
     def write(self, data, size, offset):
@@ -1062,3 +1081,39 @@ class CacheReadThread(threading.Thread):
                 # in vospace, and for this client to continue to serve the
                 # existing file.
             self.fileHandle.fileCondition.notify_all()
+
+
+class FlushNodeQueue(Queue):
+    """
+    This class implements a thread queue for flushing nodes
+    """
+
+    def __init__(self, maxFlushThreads=100):
+        """Initialize the FlushNodeQueue Object
+
+        Parameters:
+        -----------
+        maxFlushThreads : int - Maximum number of flush threads
+        """
+
+        Queue.__init__(self)
+
+        # Start the worker threads
+        self.maxFlushThreads = maxFlushThreads
+        for i in range(self.maxFlushThreads):
+            t = threading.Thread(target=self.worker)
+            t.daemon = True
+            t.start()
+
+        vos.logger.debug("started a FlushNodeQueue with %i workers" \
+                             % self.maxFlushThreads)
+
+    def worker(self):
+        """A worker is a thin wrapper for FileHandle.flushNode()
+        """
+        vos.logger.debug("Worker has started")
+        while True:
+            fileHandle = self.get()
+            vos.logger.debug("Worker has work")
+            fileHandle.flushNode()
+            self.task_done()
