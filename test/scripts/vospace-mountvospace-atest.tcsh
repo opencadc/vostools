@@ -24,7 +24,7 @@ else
 endif
 
 if (! ${?CADC_PYTHON_TEST_TARGETS} ) then
-    set CADC_PYTHON_TEST_TARGETS = 'python2.6 python2.7'
+    set CADC_PYTHON_TEST_TARGETS = 'python2.7'
 endif
 echo "Testing for targets $CADC_PYTHON_TEST_TARGETS. Set CADC_PYTHON_TEST_TARGETS to change this."
 echo "###################"

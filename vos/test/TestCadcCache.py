@@ -3,7 +3,6 @@
 import io
 import logging
 import os
-import errno
 import stat
 import sys
 import threading
@@ -14,6 +13,8 @@ from contextlib import nested
 import shutil
 import unittest
 from mock import Mock, MagicMock, patch
+import errno
+from errno import EACCES
 import functools
 import pdb
 
@@ -70,6 +71,7 @@ class IOProxyFor100K(CadcCache.IOProxy):
 
     def readFromBacking(self, offset = None, size = None):
         self.cacheFile.setHeader(102400, "1234")
+        self.cacheFile.readThread.aborted = True
         if size is None or offset is None:
             return
         if offset > 102400 or offset + size > 102400:
@@ -101,6 +103,10 @@ class TestIOProxy(unittest.TestCase):
         """
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testIOProxy = CadcCache.IOProxy()
+            with self.assertRaises(NotImplementedError):
+                testIOProxy.getMD5()
+            with self.assertRaises(NotImplementedError):
+                testIOProxy.getSize();
             with self.assertRaises(NotImplementedError):
                 testIOProxy.delNode()
             with self.assertRaises(NotImplementedError):
@@ -250,6 +256,9 @@ class TestIOProxy(unittest.TestCase):
             self.assertEqual((2, 4), 
                     testIOProxy.blockInfo(100 + testCache.IO_BLOCK_SIZE * 2, 
                     testCache.IO_BLOCK_SIZE * 3 + 100))
+            self.assertEqual((None, None), 
+                    testIOProxy.blockInfo(100 + testCache.IO_BLOCK_SIZE * 2,
+                    None))
 
 
 class TestCacheError(unittest.TestCase):
@@ -517,7 +526,8 @@ class TestCadcCache(unittest.TestCase):
             testCache.unlinkFile("/dir1/dir2/nosuchfile")
 
             # Unlink a file which is open
-            with testCache.open("/dir1/dir2/file", True, testIOProxy, False):
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy, 
+                    False):
                 with patch('os.remove') as mockedRemove:
                     testCache.unlinkFile("/dir1/dir2/file")
                 self.assertEqual(mockedRemove.call_count, 2)
@@ -551,7 +561,7 @@ class TestCadcCache(unittest.TestCase):
             self.assertTrue(os.path.exists(newMetaDataFile))
     
             # Rename an existing active file.
-            with testCache.open("/dir1/dir2/file2", True, testIOProxy, 
+            with testCache.open("/dir1/dir2/file2", True, False, testIOProxy, 
                     False) as fh:
                 testCache.renameFile("/dir1/dir2/file2", "/dir1/dir3/file3")
                 self.assertEqual(fh.cacheDataFile, os.path.join(
@@ -561,10 +571,10 @@ class TestCadcCache(unittest.TestCase):
 
             # Rename an existing active file. This time there should be a meta
             # data file because of the initial open.
-            with testCache.open("/dir1/dir2/file", True, testIOProxy,
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy,
                     False) as fh:
                 pass
-            with testCache.open("/dir1/dir2/file", True, testIOProxy,
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy,
                     False) as fh:
                 testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file3")
                 self.assertEqual(fh.cacheDataFile, os.path.join(
@@ -579,7 +589,7 @@ class TestCadcCache(unittest.TestCase):
             # Rename into the same file again to test overwrite
             self.assertTrue(os.path.exists(newDataFile))
             self.assertTrue(os.path.exists(newMetaDataFile))
-            with testCache.open("/dir1/dir2/file", True, testIOProxy,
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy,
                     False) as fh:
                 testCache.renameFile("/dir1/dir2/file", "/dir1/dir3/file3")
                 self.assertEqual(fh.cacheDataFile, os.path.join(
@@ -606,7 +616,7 @@ class TestCadcCache(unittest.TestCase):
 
             # Cause an error when the meta data file is rename. This should
             # raise an exception and not rename either file.
-            with testCache.open("/dir1/dir2/file", True, testIOProxy,
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy,
                     False) as fh:
                 try:
                     newMetaDataFile = os.path.join(testCache.metaDataDir, 
@@ -703,11 +713,11 @@ class TestCadcCache(unittest.TestCase):
             with self.assertRaises(ValueError):
                 testCache.renameDir("/adir", "anotherDir")
 
-            with testCache.open("/dir1/dir2/file1", True, testIOProxy1, 
+            with testCache.open("/dir1/dir2/file1", True, False, testIOProxy1, 
                     False) as fh1:
-             with testCache.open("/dir1/dir2/file2", True, testIOProxy2, 
+             with testCache.open("/dir1/dir2/file2", True, False, testIOProxy2, 
                       False) as fh2:
-              with testCache.open("/dir2/dir2/file1", True, testIOProxy3,
+              with testCache.open("/dir2/dir2/file1", True, False, testIOProxy3,
                         False) as fh3:
                 with self.assertRaises(ValueError):
                     testCache.renameDir("/dir1/dir2/file1", "/dir1/dir3")
@@ -727,7 +737,7 @@ class TestCadcCache(unittest.TestCase):
                 self.assertTrue(os.path.exists(fh1.cacheDataFile))
                 self.assertTrue(os.path.exists(fh2.cacheDataFile))
                 self.assertTrue(os.path.exists(fh3.cacheDataFile))
-             with testCache.open("/dir1/dir2/file2", True, testIOProxy2,
+             with testCache.open("/dir1/dir2/file2", True, False, testIOProxy2,
                     False) as fh2:
                 with self.assertRaises(OSError):
                     testCache.renameDir("/dir1/dir2", "/dir1/dir3")
@@ -758,7 +768,7 @@ class TestCadcCache(unittest.TestCase):
 
             # Try to get the attribute of an existing, open and modified file.
             # This should return the cache file attributes.
-            with testCache.open("/dir1/dir2/file", True, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy, 
                     False) as fh:
                 self.assertTrue(fh.fileModified)
                 self.assertTrue(os.path.exists(testCache.dataDir + 
@@ -775,7 +785,7 @@ class TestCadcCache(unittest.TestCase):
 
             # Test when a file is opened but not modified. Should return none
             # since vospace is the better source for information.
-            with testCache.open("/dir1/dir2/file", False, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, 
                     False) as fh:
                 self.assertFalse(fh.fileModified)
                 self.assertEqual(testCache.getAttr("/dir1/dir2/file"), None)
@@ -790,11 +800,11 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy = IOProxyForTest()
         testIOProxy2 = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
-            testFile = testCache.open("/dir1/dir2/file", False, 
+            testFile = testCache.open("/dir1/dir2/file", False, False,
                 testIOProxy, False)
             self.assertEqual(1, testFile.refCount)
 
-            testFile2 = testCache.open("/dir1/dir2/file", False, 
+            testFile2 = testCache.open("/dir1/dir2/file", False, False,
                 testIOProxy, False)
             self.assertEqual(2, testFile.refCount)
             self.assertTrue(testFile is testFile2)
@@ -804,8 +814,8 @@ class TestCadcCache(unittest.TestCase):
 
             # Replace an already open file.
             self.assertFalse(testFile.obsolete)
-            testFile2 = testCache.open("/dir1/dir2/file", True, testIOProxy2,
-                    False)
+            testFile2 = testCache.open("/dir1/dir2/file", True, False, 
+                    testIOProxy2, False)
             self.assertTrue(testFile.obsolete)
             self.assertFalse(testFile2.obsolete)
             self.assertEqual(1, testFile.refCount)
@@ -815,19 +825,21 @@ class TestCadcCache(unittest.TestCase):
 
             testFile.release()
             self.assertEqual(0, testFile.refCount)
+            testFile2.release()
 
             # Relative path should cause an error.
             with self.assertRaises(ValueError):
-                testCache.open("dir1/dir2/file", False, testIOProxy, False)
+                testCache.open("dir1/dir2/file", False, False, testIOProxy, 
+                        False)
 
             # Replace an already open file, this time cleaning up the meta data
             # file throws an error.
-            testFile = testCache.open("/dir1/dir2/file", False, 
+            testFile = testCache.open("/dir1/dir2/file", False, False,
                 testIOProxy, False)
             with patch("os.remove") as mockedRemove:
                 mockedRemove.side_effect = OSError(-1,-1)
                 with self.assertRaises(OSError):
-                    testFile2 = testCache.open("/dir1/dir2/file", True, 
+                    testFile2 = testCache.open("/dir1/dir2/file", True, False,
                             testIOProxy2, False)
 
 
@@ -943,41 +955,23 @@ class TestCadcCache(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_02_open1(self):
-        # IOProxy - getMD5 fails with ENOENT
-        class IOProxy_getMD5_ENOENT(IOProxyForTest):
-            def getMD5(self):
-                e = OSError("test failure")
-                e.errno = errno.ENOENT
-                raise e
-
-        with CadcCache.Cache(testDir, 100) as testObject:
-            ioObject = IOProxyFor100K()
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
-            self.assertFalse(fh.fullyCached)
-            self.assertFalse(fh.fileModified)
-            fh.release()
-
-            ioObject = IOProxy_getMD5_ENOENT()
-            with self.assertRaises(OSError):
-                fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
-            fh.release()
-
-    @unittest.skipIf(skipTests, "Individual tests")
-    def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
-            fh = testObject.open("/dir1/dir2/file", True, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
+                    False)
             self.assertTrue(fh.fullyCached)
             self.assertTrue(fh.fileModified)
             fh.release()
 
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    True)
             #existing meta data should be there 
             self.assertTrue(fh.fullyCached)
             self.assertFalse(fh.fileModified)
-            fh2 = testObject.open("/dir1/dir2/file", True, ioObject2, False)
+            fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2, 
+                    False)
             self.assertTrue(fh2.fullyCached)
             self.assertTrue(fh2.fileModified)
             #meta data deleted.
@@ -985,20 +979,46 @@ class TestCadcCache(unittest.TestCase):
             fh2.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
-    def test_02_open3(self):
+    def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
-            fh = testObject.open("/dir1/dir2/file", True, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
+                    False)
             self.assertTrue(fh.fullyCached)
             self.assertTrue(fh.fileModified)
             fh.release()
 
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
-            fh2 = testObject.open("/dir1/dir2/file", True, ioObject2, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
+            fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2, 
+                    False)
             fh.release()
             fh2.release()
+
+            # Reading from backing returns an IO EACCES io error.
+            ioObject.readFromBacking = Mock(side_effect=IOError(errno.EACCES,
+                    "Access denied"))
+            with self.assertRaises(IOError) :
+                fh = testObject.open("/dir1/dir2/file", False, False, 
+                        ioObject, False)
+
+            # Reading from backing returns an IO ENOENT io error.
+            ioObject.readFromBacking = Mock(side_effect=IOError(errno.ENOENT,
+                    "No such file"))
+            with self.assertRaises(IOError) :
+                fh = testObject.open("/dir1/dir2/file", False, True, 
+                        ioObject, False)
+
+            # The file doesn't exist and was created.
+            ioObject.readFromBacking = Mock(side_effect=IOError(errno.ENOENT,
+                    "No such file"))
+            fh = testObject.open("/dir1/dir2/file", False, False, 
+                    ioObject, False)
+            self.assertTrue(fh.fullyCached)
+            self.assertEqual(fh.fileSize, 0)
+            self.assertTrue(fh.gotHeader)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1007,13 +1027,15 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100) as testObject:
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             fh.release()
 
             # Test flushnode raising an exception
             ioObject = IOProxyForTest()
             ioObject.verifyMetaData = Mock(return_value=False)
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             fh.fileModified = True
             fh.fileCondition.setTimeout = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
@@ -1052,7 +1074,8 @@ class TestCadcCache(unittest.TestCase):
 
             ioObject2 = IOProxyForTest()
             ioObject2.writeToBacking = MagicMock()
-            fh = testObject.open("/dir1/dir2/file", False, ioObject2, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject2, 
+                    False)
             fh.release()
             assert not ioObject2.writeToBacking.called, \
                     'writeToBacking was called and should not have been'
@@ -1070,7 +1093,8 @@ class TestCadcCache(unittest.TestCase):
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock(return_value="1234")
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             self.makeTestFile(os.path.join(testObject.dataDir, 
                     "dir1/dir2/file"), self.testSize)
             fh.fileModified = True
@@ -1086,7 +1110,8 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100, timeout=1) as testObject:
             # This should really flush the data to the backing
             ioObject = IOProxyForTest()
-            fh = testObject.open("/dir1/dir2/file", True, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
+                    False)
             fh.readThread = CadcCache.CacheReadThread(0,0,0,fh)
 
             # This release should timeout, but the aborted flag should be set.
@@ -1107,7 +1132,8 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock(
                     side_effect=Exception("message"))
-            fh = testObject.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             self.makeTestFile(os.path.join(testObject.dataDir, 
                     "dir1/dir2/file"), self.testSize)
             fh.fileModified = True
@@ -1124,7 +1150,8 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyFor100K()
-            fh = testCache.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testCache.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             data = fh.read(100,0)
 
             # Read beyond the end of the file.
@@ -1138,7 +1165,8 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyFor100K()
-            fh = testCache.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testCache.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             data = fh.read(100,0)
 
             with patch('vos.CadcCache.libc.read') as mockedRead:
@@ -1154,7 +1182,8 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyFor100K()
-            with testCache.open("/dir1/dir2/file", True, ioObject, False) as fh:
+            with testCache.open("/dir1/dir2/file", True, False, ioObject, 
+                    False) as fh:
                 fh.write( "abcd", 4, 30000)
                 data = fh.read( 4, 30000)
                 self.assertEqual(data[:], "abcd")
@@ -1165,7 +1194,8 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testCache:
             ioObject = IOProxyFor100K()
-            with testCache.open("/dir1/dir2/file", True, ioObject, False) as fh:
+            with testCache.open("/dir1/dir2/file", True, False, ioObject, 
+                    False) as fh:
                 with patch('vos.CadcCache.libc.write') as mockedWrite:
                     mockedWrite.return_value = -1
 
@@ -1214,7 +1244,7 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
             ioObject = IOProxyFor100K()
             # Fully cached, makeCached does mostly nothing.
-            with testCache.open("/dir1/dir2/file", False, ioObject,
+            with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
                 fh.fullyCached = True
                 oldMetaData = copy.deepcopy(fh.metaData)
@@ -1228,7 +1258,8 @@ class TestCadcCache(unittest.TestCase):
             # Check that the block range correctly maps to bytes when
             # isNewReadBest is called. The call exits with a timeout.
             #with testCache.open("/dir1/dir2/file", False, ioObject) as fh:
-            fh = testCache.open("/dir1/dir2/file", False, ioObject, False)
+            fh = testCache.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
             fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
             fh.readThread.isNewReadBest = Mock()
             fh.readThread.isNewReadBest.side_effect = sideEffectTrue
@@ -1242,8 +1273,8 @@ class TestCadcCache(unittest.TestCase):
 
             # The required range is cached. The fn exists after calling
             # getRange.
-            with testCache.open("/dir1/dir2/file", False, ioObject, False
-                    ) as fh:
+            with testCache.open("/dir1/dir2/file", False, False, ioObject, 
+                    False) as fh:
                 fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
                 oldMetaData = fh.metaData
                 fh.metaData = copy.deepcopy(oldMetaData)
@@ -1257,7 +1288,7 @@ class TestCadcCache(unittest.TestCase):
 
             # Check that the block range correctly maps to bytes when
             # isNewReadBest is called. The call exits when data is available.
-            with testCache.open("/dir1/dir2/file", False, ioObject,
+            with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
                 oldMetaData = copy.deepcopy(fh.metaData)
                 fh.metaData.persist = Mock()
@@ -1278,7 +1309,7 @@ class TestCadcCache(unittest.TestCase):
             # immediately after the thread aborts, and so no new thread will
             # start. This test fails by timing out in the condition wait, 
             # which throws an exception.
-            with testCache.open("/dir1/dir2/file", False, ioObject,
+            with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
                 oldMetaData = copy.deepcopy(fh.metaData)
                 fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
@@ -1297,7 +1328,7 @@ class TestCadcCache(unittest.TestCase):
             # thread to be started. The data will not seem to be availble, so a
             # new thread will be started. This test fails by timing out in the
             # condition wait, which throws an exception.
-            with testCache.open("/dir1/dir2/file", False, ioObject,
+            with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
                 fh.fileCondition.setTimeout()
                 fh.metaData.delete()
@@ -1310,7 +1341,7 @@ class TestCadcCache(unittest.TestCase):
 
             # This call will cause the optional end to be before the end of the
             # file because some data near the end of the file has been cached.
-            with testCache.open("/dir1/dir2/file", False, ioObject,
+            with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
                 fh.fileCondition.setTimeout()
                 fh.metaData.delete()
@@ -1337,7 +1368,7 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy = IOProxyForTest()
 
         testCache = CadcCache.Cache(cacheDir = testDir, maxCacheSize = 4)
-        with testCache.open("/dir1/dir2/file", False, testIOProxy,
+        with testCache.open("/dir1/dir2/file", False, False, testIOProxy,
                 False) as testFile:
             testFile.fsync()
 
@@ -1458,7 +1489,7 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy.readFromBacking = Mock(wraps=testIOProxy.readFromBacking)
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
             # Expand a new file
-            with testCache.open("/dir1/dir2/file", True, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy, 
                     False) as testFile:
                 testFile.truncate(10)
                 self.assertTrue(testFile.fileModified)
@@ -1472,7 +1503,7 @@ class TestCadcCache(unittest.TestCase):
             testIOProxy.writeToBacking.reset_mock()
             testIOProxy.readFromBacking.reset_mock()
             self.assertEqual(os.path.getsize(testFile.cacheDataFile), 10)
-            with testCache.open("/dir1/dir2/file", False, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, 
                     True) as testFile:
                 testFile.truncate(10)
                 self.assertFalse(testFile.fileModified)
@@ -1483,7 +1514,7 @@ class TestCadcCache(unittest.TestCase):
 
             # Expand a file from 10 bytes
             testIOProxy.writeToBacking.reset_mock()
-            with testCache.open("/dir1/dir2/file", False, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, 
                     False) as testFile:
                 testIOProxy.readFromBacking.reset_mock()
                 testFile.truncate(testCache.IO_BLOCK_SIZE * 2 + 20)
@@ -1501,7 +1532,7 @@ class TestCadcCache(unittest.TestCase):
             # read from backing.
             testIOProxy.writeToBacking.reset_mock()
             testIOProxy.readFromBacking.reset_mock()
-            with testCache.open("/dir1/dir2/file", False, testIOProxy, 
+            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, 
                     False) as testFile:
                 self.assertFalse(testFile.fileModified)
                 testFile.truncate(testCache.IO_BLOCK_SIZE * 2 + 21)
@@ -1558,6 +1589,54 @@ class TestCadcCacheReadThread(unittest.TestCase):
             self.assertEqual(crt.optionEnd, None)
             self.assertEqual(crt.fileHandle, 4)
 
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_execute(self):
+        with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
+            ioObject = TestCadcCacheReadThread.MyIoObject()
+            ioObject.readFromBacking = Mock()
+            fh = TestCadcCacheReadThread.MyFileHandle("/dir1/dir2/file", 
+                    testCache, ioObject)
+            crt = CadcCache.CacheReadThread(0, 0, 1000, fh)
+            fh.fileSize = 0
+            fh.FullyCached = False
+            fh.readThread = Object()
+            fh.fileCondition.notify_all = Mock(
+                    wraps=fh.fileCondition.notify_all)
+            crt.execute()
+            self.assertTrue(fh.fullyCached)
+            fh.fileCondition.notify_all.assert_called_once_with()
+            self.assertEqual(fh.readThread, None)
+
+            ioObject.readFromBacking.side_effect = OSError
+            fh.fileSize = 0
+            fh.fullyCached = False
+            with self.assertRaises(OSError):
+                crt.execute()
+            self.assertFalse(fh.fullyCached)
+
+            fh.fileSize = 0
+            fh.fullyCached = False
+            fh.readThread = Object()
+            fh.fileCondition.notify_all.reset_mock()
+            with self.assertRaises(OSError):
+                crt.execute()
+            self.assertFalse(fh.fullyCached)
+            self.assertEqual(fh.readThread, None)
+            fh.fileCondition.notify_all.assert_called_once_with()
+
+            ioObject.readFromBacking.side_effect = None
+            crt = CadcCache.CacheReadThread(0, 0, 1000, fh)
+            fh.fileSize = 1000
+            fh.FullyCached = False
+            fh.readThread = None
+            fh.fileCondition.notify_all = Mock(
+                    wraps=fh.fileCondition.notify_all)
+            fh.metaData = Object()
+            fh.metaData.getRange = Mock(return_value=(None,None))
+            crt.execute()
+            self.assertTrue(fh.fullyCached)
+            fh.fileCondition.notify_all.assert_called_once_with()
+            self.assertEqual(fh.readThread, None)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1574,11 +1653,12 @@ class TestCadcCacheReadThread(unittest.TestCase):
             fh.metaData = Object()
             fh.metaData.getRange = Mock(return_value=(None,None))
             fh.metaData.md5sum = "1234"
+            fh.metaData.getNumReadBlocks = Mock(return_value=1)
             ioObject.setCacheFile(fh)
             crt = CadcCache.CacheReadThread(start = start, 
-                                            mandatorySize = mandatoryEnd - start, 
-                                            optionSize = optionEnd - start, 
-                                            fileHandle = fh)
+                    mandatorySize = mandatoryEnd - start, 
+                    optionSize = optionEnd - start, 
+                    fileHandle = fh)
             crt.execute()
             
             # test when either start or end or requested interval is outside 

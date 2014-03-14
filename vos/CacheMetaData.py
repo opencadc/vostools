@@ -42,8 +42,12 @@ class CacheMetaData(object):
         """To create a print representation"""
         # TODO this is pre Python2.6 format style.
         # Do we need to use the new string formatting instead?
-        return "%s (%#x, %d %s)" % (self.metaDataFile, self.md5sum, self.size, 
-                self.bitmap)
+        if self.md5sum is None:
+            return "%s (None, %s %s)" % (self.metaDataFile,
+                    self.size, self.bitmap)
+        else:
+            return "%s (%#x, %s %s)" % (self.metaDataFile, self.md5sum, 
+                    self.size, self.bitmap)
 
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """

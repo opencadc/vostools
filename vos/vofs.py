@@ -45,7 +45,7 @@ class MyIOProxy(IOProxy):
         self.path = path
         self.condition = CacheCondition(None)
 
-    #@logExceptions()
+    @logExceptions()
     def writeToBacking(self):
         """
         Write a file in the cache to the remote file.
@@ -104,7 +104,8 @@ class MyIOProxy(IOProxy):
                     buff = self.lastVOFile.read(blockSize)
 
                 if not self.cacheFile.gotHeader:
-                    self.cacheFile.setHeader(self.vofs.client.getFileInfo())
+                    info = self.lastVOFile.getFileInfo()
+                    self.cacheFile.setHeader(info[0], info[1])
 
                 if buff is None:
                     vos.logger.debug("buffer for %s is None" %
@@ -123,6 +124,7 @@ class MyIOProxy(IOProxy):
                 offset += len(buff)
         except Exception as e:
             self.exception = e
+            raise
         finally:
             self.lastVOFile.close()
 
@@ -133,6 +135,7 @@ class MyIOProxy(IOProxy):
         if self.md5 == None:
             node = self.vofs.getNode(self.path)
             self.setSize(int(node.props.get('length')))
+            self.setMD5(node.props.get('MD5'))
 
         return self.md5
 
@@ -464,6 +467,7 @@ class VOFS(LoggingMixIn, Operations):
         # whether the other two flags are absent.
         readOnly = ((flags & (os.O_RDWR | os.O_WRONLY)) == 0)
 
+        mustExist = not ((flags & os.O_CREAT) == os.O_CREAT)
         cacheFileAttrs = self.cache.getAttr(path)
         if cacheFileAttrs is None and not readOnly:
             # file in the cache not in the process of being modified.
@@ -471,7 +475,7 @@ class VOFS(LoggingMixIn, Operations):
             # from vospace
             try:
                 node = self.getNode(path)
-            except Exception as e:
+            except IOError as e:
                 if e.errno == 404:
                     # file does not exist
                     if not flags & os.O_CREAT:
@@ -530,10 +534,12 @@ class VOFS(LoggingMixIn, Operations):
 
         # new file in cache library if no node information (node not in
         # vospace) or file is open for truncate
-        isNew = ((cacheFileAttrs == None) and (node == None) or
-                ((flags & os.O_TRUNC) != 0))
+        isNew = flags & os.O_TRUNC != 0
 
-        handle = self.cache.open(path, isNew, myProxy, self.cache_nodes)
+        handle = self.cache.open(path, isNew, mustExist, myProxy, 
+                self.cache_nodes)
+        if (node != None):
+            handle.setHeader(myProxy.getSize(), myProxy.getMD5())
         return HandleWrapper(handle, readOnly).getId()
 
     #@logExceptions()
@@ -641,7 +647,6 @@ class VOFS(LoggingMixIn, Operations):
                 del self.node[fh.cacheFileHandle.path]
         except Exception, e:
             #unexpected problem
-            raise
             raise FuseOSError(EIO)
         return
 
@@ -714,10 +719,8 @@ class VOFS(LoggingMixIn, Operations):
         if id is None:
             # Ensure the file exists.
             if length == 0:
-                try:
-                    fh = self.open(path, os.O_RDWR | os.O_TRUNC)
-                finally:
-                    self.release(path, fh)
+                fh = self.open(path, os.O_RDWR | os.O_TRUNC)
+                self.release(path, fh)
                 return
 
             fh = self.open(path, os.O_RDWR)

@@ -661,7 +661,7 @@ class VOFile:
         elif loc == os.SEEK_SET:
             self._fpos = offset
         elif loc == os.SEEK_END:
-            self._fpos = self.size - offset
+            self._fpos = int(self.size) - offset
         return
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
@@ -710,7 +710,7 @@ class VOFile:
         self.size = self.resp.getheader("Content-Length", 0)
         if self.resp.status == 200:
             self.md5sum = self.resp.getheader("Content-MD5", None)
-            self.totalFileSize = self.size
+            self.totalFileSize = int(self.size)
         return True
 
     def open(self, URL, method="GET", bytes=None):
@@ -767,7 +767,7 @@ class VOFile:
 
     def getFileInfo(self):
         """Return information harvested from the HTTP header"""
-        return (self.md5sum, self.totalFileSize)
+        return (self.totalFileSize, self.md5sum)
 
 
     def read(self, size=None):
