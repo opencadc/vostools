@@ -156,7 +156,7 @@ class Cache(object):
         """
         pass
 
-    @logExceptions()
+    #@logExceptions()
     def open(self, path, isNew, mustExist, ioObject, trustMetaData):
         """Open file with the desired modes
 
@@ -177,8 +177,8 @@ class Cache(object):
         with fileHandle.fileLock:
             vos.logger.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
                         id(fileHandle)))
-            # If this is a new file, initialize the cache state, otherwise leave
-            # it alone.
+            # If this is a new file, initialize the cache state, otherwise
+            # leave it alone.
             if fileHandle.fullyCached is None:
                 if isNew:
                     fileHandle.fileModified = True
@@ -206,30 +206,29 @@ class Cache(object):
                     fileHandle.gotHeader = False
                     fileHandle.fullyCached = False
 
-                if (not fileHandle.fullyCached and 
+                if (not fileHandle.fullyCached and
                         (fileHandle.metaData is None or
                         fileHandle.metaData.getNumReadBlocks() == 0)):
                     # If the cache file should be empty, empty it.
                     os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
                     os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
-
-        # For an existing file, start a data transfer to get the size and md5sum
-        # unless the information is available and is trusted.
-        if not fileHandle.fileModified and (fileHandle.metaData is None or 
+        # For an existing file, start a data transfer to get the size and
+        # md5sum unless the information is available and is trusted.
+        if not fileHandle.fileModified and (fileHandle.metaData is None or
                 not trustMetaData):
             fileHandle.readData(0, 0, None)
             with fileHandle.fileCondition:
-                while (not fileHandle.gotHeader and 
+                while (not fileHandle.gotHeader and
                         fileHandle.readException is None):
                     fileHandle.fileCondition.wait()
             vos.logger.debug("done wait %s %s" % (fileHandle.gotHeader,
                     fileHandle.readException))
             if fileHandle.readException is not None:
                 # If the file doesn't exist and is not required to exist, then
-                # an ENOENT error is ok and not propegated. All other errors are
-                # propegated.
-                if not (isinstance(fileHandle.readException[1],IOError) and
+                # an ENOENT error is ok and not propegated. All other errors
+                # are propegated.
+                if not (isinstance(fileHandle.readException[1], IOError) and
                         fileHandle.readException[1].errno == errno.ENOENT and
                         not mustExist):
                     raise fileHandle.readException
@@ -576,7 +575,7 @@ class IOProxy(object):
         self.cache = None
         self.cacheFileDescriptor = None
         self.currentWriteOffset = None
-        
+
     def getMD5(self):
         """
         Return the MD5sum of the remote file.
@@ -759,8 +758,9 @@ class FileHandle(object):
         self.fileSize = size
         blocks, numBlock = self.ioObject.blockInfo(0, self.fileSize)
 
-        # If the file had meta data and it hasn't change, abort the read thread.
-        if self.metaData is not None and (self.metaData.md5sum is None or 
+        # If the file had meta data and it hasn't change, abort the read
+        # thread.
+        if self.metaData is not None and (self.metaData.md5sum is None or
                 self.metaData.md5sum == md5):
             with self.fileCondition:
                 if self.readThread != None:
@@ -873,8 +873,8 @@ class FileHandle(object):
 
                 # Update the meta data md5
                 blocks, numBlocks = self.ioObject.blockInfo(0, size)
-                self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks,
-                        md5, size)
+                self.metaData = CacheMetaData(self.cacheMetaDataFile,
+                        numBlocks, md5, size)
                 if numBlocks > 0:
                     self.metaData.setReadBlocks(0, numBlocks - 1)
                 self.metaData.md5sum = md5
@@ -892,7 +892,6 @@ class FileHandle(object):
                 with self.fileCondition:
                     self.fileCondition.notify_all()
         vos.logger.debug("Flush node finished")
-
 
         self.cache.checkCacheSpace()
 
@@ -1080,7 +1079,7 @@ class FileHandle(object):
                 self.fullyCached = True
                 self.fileSize = length
 
-    def readData( self, startByte, mandatorySize, optionalSize):
+    def readData(self, startByte, mandatorySize, optionalSize):
         """Read the data range from the backing store in a thread"""
 
         vos.logger.debug("Getting data: %s %s %s" % (startByte, mandatorySize,
@@ -1149,7 +1148,7 @@ class CacheReadThread(threading.Thread):
                 self.fileHandle.readThread = None
                 vos.logger.debug("setFullyCached? %s %s %s %s" % (self.aborted,
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
-                if (not self.aborted and self.startByte == 0 and 
+                if (not self.aborted and self.startByte == 0 and
                         (self.optionSize is None or
                         self.optionSize == self.fileHandle.fileSize)):
                     self.fileHandle.fullyCached = True
@@ -1172,7 +1171,7 @@ class CacheReadThread(threading.Thread):
                     # continue to serve the existing file.
                 self.fileHandle.fileCondition.notify_all()
         except:
-            vos.logger.error( "Exception in thread started at:\n%s" % \
+            vos.logger.error("Exception in thread started at:\n%s" % \
                      ''.join(traceback.format_list(self.traceback)))
             self.fileHandle.setReadException()
             raise
