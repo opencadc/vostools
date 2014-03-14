@@ -1065,16 +1065,31 @@ class Client:
         return self.nodeCache[uri]
 
 
-    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None):
+    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None,
+                   full_negotiation=None):
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
-        if not self.cadc_short_cut and method == 'GET' and view == 'data':
+        # We can force a full negotiation
+        if full_negotiation:
+            do_shortcut = False;
+        else:
+            do_shortcut = self.cadc_short_cut
+
+        logger.debug("do_shortcut=%i method=%s view=%s" %(do_shortcut, method, view) )
+
+        if not do_shortcut and method == 'GET' and view == 'data':
             return self._get(uri)
 
-        if not self.cadc_short_cut and method in ('PUT'):
+        if not do_shortcut and method in ('PUT'):
             # logger.debug("Using _put")
             return self._put(uri)
+
+        if view == "cutout":
+            if cutout is None:
+                raise ValueError("For view=cutout, must specify a cutout "
+                                 "value of the form"
+                                 "[extension number][x1:x2,y1:y2]")
 
         parts = urlparse(uri)
         path = parts.path.strip('/')
@@ -1084,49 +1099,33 @@ class Client:
             return uri
         logger.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
         URL = None
-        if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
+        if do_shortcut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
 
-            ## only get here if cadc_short_cut == True
+            ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
 
-            if view == "cutout":
-                if cutout is None:
-                    raise ValueError("For view=cutout, must specify a cutout "
-                                     "value of the form"
-                                     "[extension number][x1:x2,y1:y2]")
-
-                parts = urlparse(self.fixURI(uri))
-                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
-                ext = "&" if "?" in URL else "?"
-                URL += ext + "cutout=" + cutout
-
-                logger.debug("Sending short cuturl: %s" %( URL))
-                return URL
-
-            direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
-            transProtocol = ''
-            if self.protocol == 'http':
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPPUT_PROTOCOL
-            else:
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPSGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPSPUT_PROTOCOL
+            direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
+            protocol = {'GET': {'https': Client.VO_HTTPSGET_PROTOCOL,
+                                'http': Client.VO_HTTPGET_PROTOCOL},
+                        'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                                'http': Client.VO_HTTPPUT_PROTOCOL}}
  
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
 
-            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction, 'PROTOCOL' : transProtocol})
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction[method], 'PROTOCOL' : protocol[method][self.protocol]})
             headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
             httpCon = self.conn.getConnection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
                 response = httpCon.getresponse()
+
                 if response.status == 303:
+                    # Normal case is a redirect
                     URL = response.getheader('Location', None)
+                elif response.status == 404:
+                    # The file doesn't exist
+                    raise IOError(errno.ENOENT, "No location on redirect", url)
                 else:
                     logger.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
@@ -1135,16 +1134,11 @@ class Client:
                 logger.error(str(e))
             finally: 
                 httpCon.close()          
-  
-            logger.debug("Sending short cuturl: %s" %( URL))
+
+            logger.debug("Sending short cut url: %s" %( URL))
             return URL
 
         if view == "cutout":
-
-            if cutout is None:
-                raise ValueError("For view=cutout, must specify a cutout "
-                                "value of the form"
-                                "[extension number][x1:x2,y1:y2]")
 
             urlbase = self._get(uri)[0]
             
@@ -1224,13 +1218,15 @@ class Client:
         con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
         F = ET.parse(con)
 
-        P = F.find(Node.PROTOCOL)
+        allP = F.findall(Node.PROTOCOL)
         logger.debug("Transfer protocol: %s" % (str(F)))
-        if P is None:
+        if allP is None:
             return self.getTransferError(transURL, uri)
         result = []
-        for node in P.findall(Node.ENDPOINT):
-            result.append(node.text)
+
+        for P in allP:
+            for node in P.findall(Node.ENDPOINT):
+                result.append(node.text)
         return result
 
     def getTransferError(self, url, uri):
@@ -1298,7 +1294,7 @@ class Client:
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, 
-            limit=None, nextURI=None, size=None, cutout=None, range=None):
+            limit=None, nextURI=None, size=None, cutout=None, range=None, full_negotiation=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1327,7 +1323,7 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
-            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
+            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
         if URL is None:
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...

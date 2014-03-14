@@ -95,12 +95,15 @@ class MyIOProxy(IOProxy):
                 try:
                     buff = self.lastVOFile.read(blockSize)
                 except IOError as e:
-                    # existing URLs do not work anymore. Try another transfer
-                    # negotiation. If it still fails let the error propagate
+                    # existing URLs do not work anymore. Try another
+                    # transfer, forcing a full negotiation. This
+                    # handles the case that we tried a short cut URL
+                    # and it failed, so now we can try the full URL
+                    # list. If it still fails let the error propagate
                     # to client
                     self.lastVOFile = self.vofs.client.open(
                             self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                            size=size, range=range)
+                            size=size, range=range, full_negotiation=True)
                     buff = self.lastVOFile.read(blockSize)
 
                 if not self.cacheFile.gotHeader:
@@ -233,7 +236,7 @@ class VOFS(LoggingMixIn, Operations):
         # All communication with the VOSpace goes through this client
         # connection.
         try:
-            self.client = vos.Client(rootNode=root, conn=conn)
+            self.client = vos.Client(rootNode=root, conn=conn, cadc_short_cut=True)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
