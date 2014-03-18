@@ -24,7 +24,7 @@ else
 endif
 
 if (! ${?CADC_PYTHON_TEST_TARGETS} ) then
-    set CADC_PYTHON_TEST_TARGETS = 'python2.7'
+    set CADC_PYTHON_TEST_TARGETS = 'python2.7 python2.6'
 endif
 echo "Testing for targets $CADC_PYTHON_TEST_TARGETS. Set CADC_PYTHON_TEST_TARGETS to change this."
 echo "###################"
@@ -142,7 +142,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     # --- test exceeding the local cache ---
     echo -n "copy cache test data to container"
     rm foo.dat >& /dev/null
-    fallocate -l $CACHETEST_FSIZE foo.dat >& /dev/null
+    truncate -s $CACHETEST_FSIZE foo.dat >& /dev/null
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
         $CPCMD $CERTFILE foo.dat $CONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
