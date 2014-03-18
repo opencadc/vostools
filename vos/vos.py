@@ -1324,7 +1324,7 @@ class Client:
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
             URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
-        if URL is None:
+        if URL is None or not len(URL) > 0 :
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
             node = self.getNode(uri)
@@ -1339,7 +1339,7 @@ class Client:
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
                     #logger.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
-                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
+                    return self.open([target], mode, view, head, URL, limit, nextURI, size, cutout)
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
                     #logger.debug("Opening %s with urllib2" % (target))
