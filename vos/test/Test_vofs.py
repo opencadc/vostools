@@ -231,8 +231,7 @@ class TestVOFS(unittest.TestCase):
             HandleWrapper.findHandle(fh).cacheFileHandle.readData.reset_mock()
             fh = myVofs.open( file, os.O_RDONLY, None)
             self.assertTrue(HandleWrapper.findHandle(fh).readOnly)
-            mockFileHandle.return_value.readData.\
-                    assert_called_once_with(0, 0, None)
+            self.assertEqual(mockFileHandle.return_value.readData.call_count, 0)
         
             # test a truncated file
             myVofs.cache.open = Mock(wraps=myVofs.cache.open)

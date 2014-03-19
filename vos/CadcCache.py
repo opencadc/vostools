@@ -213,12 +213,11 @@ class Cache(object):
                     os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
                     os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
-        # For an existing file, start a data transfer to get the size and
-        # md5sum unless the information is available and is trusted.
-        if not fileHandle.fileModified and (fileHandle.metaData is None or
-                not trustMetaData):
-            fileHandle.readData(0, 0, None)
-            with fileHandle.fileCondition:
+            # For an existing file, start a data transfer to get the size and
+            # md5sum unless the information is available and is trusted.
+            if (fileHandle.refCount == 1 and not fileHandle.fileModified and 
+                    (fileHandle.metaData is None or not trustMetaData)):
+                fileHandle.readData(0, 0, None)
                 while (not fileHandle.gotHeader and
                         fileHandle.readException is None):
                     fileHandle.fileCondition.wait()
@@ -231,7 +230,11 @@ class Cache(object):
                 if not (isinstance(fileHandle.readException[1], IOError) and
                         fileHandle.readException[1].errno == errno.ENOENT and
                         not mustExist):
-                    raise fileHandle.readException
+                    print "**************", fileHandle.readException[1].errno, \
+                                errno.ENOENT
+                    raise fileHandle.readException[0], \
+                            fileHandle.readException[1], \
+                            fileHandle.readException[2]
                 # The file didn't exist on the backing store but its ok
                 fileHandle.fullyCached = True
                 fileHandle.gotHeader = True
@@ -1146,7 +1149,6 @@ class CacheReadThread(threading.Thread):
             self.fileHandle.ioObject.readFromBacking(self.optionSize,
                     self.startByte)
             with self.fileHandle.fileCondition:
-                self.fileHandle.readThread = None
                 vos.logger.debug("setFullyCached? %s %s %s %s" % (self.aborted,
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
                 if (not self.aborted and self.startByte == 0 and
@@ -1170,13 +1172,13 @@ class CacheReadThread(threading.Thread):
                     # smaller read window. Also it is not invalid for the file
                     # to be replaced in vospace, and for this client to
                     # continue to serve the existing file.
-                self.fileHandle.fileCondition.notify_all()
         except:
             vos.logger.error("Exception in thread started at:\n%s" % \
                      ''.join(traceback.format_list(self.traceback)))
             self.fileHandle.setReadException()
             raise
         finally:
+            vos.logger.debug("read thread finished")
             with self.fileHandle.fileCondition:
                 if self.fileHandle.readThread is not None:
                     self.fileHandle.readThread = None

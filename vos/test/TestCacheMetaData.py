@@ -22,32 +22,40 @@ class TestCacheMetaData(unittest.TestCase):
     def testPersist(self):      
        
        #create file
-       file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345)
+       file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
+               0x2345, 1024)
        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1", file1.metaDataFile)
        self.assertEquals(10, file1.bitmap.length())
        file1.setReadBlocks(2, 5)
        self.assertEquals(4, file1.bitmap.count_bits())
        self.assertEquals("0011110000", str(file1.bitmap))
        self.assertEquals(0x2345, file1.md5sum)
+       self.assertEquals(1024, file1.size)
        
        file1.persist()
        
-       file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345)
+       file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
+               0x2345, 1024)
        self.assertEquals(4, file2.bitmap.count_bits())
        self.assertEquals("0011110000", str(file2.bitmap))
        self.assertEquals(0x2345, file2.md5sum)
+       self.assertEquals(1024, file2.size)
        
        # same file name, different md5 => reset bitmap
-       file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x23456)
+       file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 
+                0x23456, 1025)
        self.assertEquals(0, file3.bitmap.count_bits())
        self.assertEquals("0000000000", str(file3.bitmap))
        self.assertEquals(0x23456, file3.md5sum)
+       self.assertEquals(1025, file3.size)
        
        CacheMetaData.deleteCacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1")
-       file4 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345)
+       file4 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
+               0x2345, 1025)
        self.assertEquals(0, file4.bitmap.count_bits())
        self.assertEquals("0000000000", str(file4.bitmap))
        self.assertEquals(0x2345, file4.md5sum)
+       self.assertEquals(1025, file4.size)
        
        file4.setReadBlocks(-8, -5)
        self.assertEquals("0011110000", str(file4.bitmap))
@@ -57,10 +65,12 @@ class TestCacheMetaData(unittest.TestCase):
        """ To test getRange functionality """
 
        #first file
-       file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345)
+       file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
+               0x2345, 1025)
        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1", file1.metaDataFile)
        self.assertEquals(10, file1.bitmap.length())
        self.assertEquals(0x2345, file1.md5sum)
+       self.assertEquals(1025, file1.size)
        
        #bitvector should be "0000000000"
        self.assertEquals(0, file1.getNumReadBlocks())
@@ -109,7 +119,8 @@ class TestCacheMetaData(unittest.TestCase):
        except ValueError:
            expected = 1 
            
-       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1" + " (0x2345, 0111110000)", str(file1))
+       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1" + 
+                " (0x2345, 1025 0111110000)", str(file1))
        
        self.assertEquals(1, expected)
        file1.persist()
@@ -117,12 +128,14 @@ class TestCacheMetaData(unittest.TestCase):
        file1.delete()
        self.assertTrue(not os.path.exists(TestCacheMetaData.TEST_CACHE_PATH + "file1"))
        
-       file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", 10, 0x2345)
+       file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", 
+                10, 0x2345, 1024)
        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file2.metaDataFile)
        self.assertEquals(10, file2.bitmap.length())
        self.assertEquals(0x2345, file2.md5sum)
        file2.persist()
-       file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", 10, 0x2345)
+       file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
+               10, 0x2345, 1025)
        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file3.metaDataFile)
        self.assertEquals(10, file3.bitmap.length())
        self.assertEquals(0x2345, file3.md5sum)

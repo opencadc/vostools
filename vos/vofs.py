@@ -59,7 +59,7 @@ class MyIOProxy(IOProxy):
         vos.logger.debug("attributes: %s " % str(node.attr))
         return node.props.get("MD5")
 
-    #@logExceptions()
+    @logExceptions()
     def readFromBacking(self, size=None, offset=0,
             blockSize=Cache.IO_BLOCK_SIZE):
         """

@@ -1113,7 +1113,8 @@ class Client:
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
 
-            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction[method], 'PROTOCOL' : protocol[method][self.protocol]})
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' :
+                    direction[method], 'PROTOCOL' : protocol[method]['http']})
             headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
             httpCon = self.conn.getConnection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
