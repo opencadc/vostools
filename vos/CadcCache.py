@@ -230,8 +230,6 @@ class Cache(object):
                 if not (isinstance(fileHandle.readException[1], IOError) and
                         fileHandle.readException[1].errno == errno.ENOENT and
                         not mustExist):
-                    print "**************", fileHandle.readException[1].errno, \
-                                errno.ENOENT
                     raise fileHandle.readException[0], \
                             fileHandle.readException[1], \
                             fileHandle.readException[2]
