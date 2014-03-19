@@ -1070,9 +1070,10 @@ class Client:
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
-        # We can force a full negotiation
-        if full_negotiation:
-            do_shortcut = False;
+        # full_negotiation is an override, so it can be used to
+        # force either shortcut (false) or full negotiation (true)
+        if full_negotiation is not None:
+            do_shortcut = not full_negotiation
         else:
             do_shortcut = self.cadc_short_cut
 
