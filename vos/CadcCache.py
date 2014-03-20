@@ -113,9 +113,12 @@ class Cache(object):
         # always acquire the cache lock first.
         self.cacheLock = threading.RLock()
 
-        # Create a FlushNodeQueue that will be used by FileHandles
+        # A thread queue will be shared by FileHandles to flush nodes.
+        # Figure out how many threads will be available now, but defer
+        # initializing the queue / worker threads until they are first
+        # needed in FileHandle.release, after FUSE is initialized
         self.maxFlushThreads = maxFlushThreads
-        self.flushNodeQueue = FlushNodeQueue(maxFlushThreads=self.maxFlushThreads)
+        self.flushNodeQueue = None
 
         if os.path.exists(self.cacheDir):
             if not os.path.isdir(self.cacheDir):
@@ -728,7 +731,7 @@ class FileHandle(object):
                 self.readThread.aborted = True
 
             # If flushing is not already in progress, submit to the thread
-            # queue. What if this one was already placed in the queue???
+            # queue.
             if (self.flushThread is None and self.refCount == 1 and
                     self.fileModified and not self.obsolete):
 
@@ -741,6 +744,12 @@ class FileHandle(object):
                 #self.flushThread.start()
 
                 # use a thread queue
+                with self.cache.cacheLock:
+                    # initialize the flushNodeQueue if necessary
+                    if self.cache.flushNodeQueue is None:
+                        self.cache.flushNodeQueue = FlushNodeQueue(\
+                            maxFlushThreads=self.cache.maxFlushThreads)
+
                 vos.logger.debug("Submit to flush thread queue")
                 self.flushThread = True; # Now we simply use as a flag
                 self.cache.flushNodeQueue.put(self)
