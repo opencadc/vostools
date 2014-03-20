@@ -737,26 +737,31 @@ class FileHandle(object):
 
                 self.refCount += 1
 
+                # Acquire the writer lock exclusively. This will
+                # prevent the file from being modified while it is
+                # being flushed -- which could take a while depending
+                # on the size of the queue. flushNode() releases it
+                # when done.
+                self.writerLock.acquire(shared=False)
+
                 # Use a thread
                 #vos.logger.debug("Start flush thread")
                 #self.flushThread = threading.Thread(target=self.flushNode,
                 #        args=[])
                 #self.flushThread.start()
 
-                # use a thread queue
+                # initialize the flushNodeQueue if necessary
                 with self.cache.cacheLock:
-                    # initialize the flushNodeQueue if necessary
                     if self.cache.flushNodeQueue is None:
                         self.cache.flushNodeQueue = FlushNodeQueue(\
                             maxFlushThreads=self.cache.maxFlushThreads)
 
                 vos.logger.debug("Submit to flush thread queue")
-                self.flushThread = True; # Now we simply use as a flag
+                self.flushThread = True;
                 self.cache.flushNodeQueue.put(self)
                 vos.logger.debug("queue size now %i" \
                                      % self.cache.flushNodeQueue.qsize())
 
-            # What do I do here?
             while (self.flushThread != None or self.readThread != None):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
@@ -803,37 +808,35 @@ class FileHandle(object):
                              % (self.path,_flush_thread_count))
         self.flushException = None
 
-        # Acquire the writer lock exclusivly. This will prevent the file from
-        # being modified while it is being flushed.
-        with self.writerLock(shared=False):
-            try:
-                # Get the md5sum of the cached file
-                size, mtime = self.getFileInfo()
+        try:
+            # Get the md5sum of the cached file
+            size, mtime = self.getFileInfo()
 
-                # Write the file to vospace.
+            # Write the file to vospace.
 
-                with self.fileLock:
-                    os.fsync(self.ioObject.cacheFileDescriptor)
-                md5 = self.ioObject.writeToBacking()
+            with self.fileLock:
+                os.fsync(self.ioObject.cacheFileDescriptor)
+            md5 = self.ioObject.writeToBacking()
 
-                # Update the meta data md5
-                blocks, numBlocks = self.ioObject.blockInfo(0, size)
-                self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks,
-                        md5)
-                if numBlocks > 0:
-                    self.metaData.setReadBlocks(0, numBlocks - 1)
-                self.metaData.md5sum = md5
-                self.metaData.persist()
+            # Update the meta data md5
+            blocks, numBlocks = self.ioObject.blockInfo(0, size)
+            self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks,
+                                          md5)
+            if numBlocks > 0:
+                self.metaData.setReadBlocks(0, numBlocks - 1)
+            self.metaData.md5sum = md5
+            self.metaData.persist()
 
-            except Exception as e:
-                self.flushException = sys.exc_info()
-            finally:
-                self.flushThread = None
-                self.fileModified = False
-                self.deref()
-                # Wake up any threads waiting for the flush to finish
-                with self.fileCondition:
-                    self.fileCondition.notify_all()
+        except Exception as e:
+            self.flushException = sys.exc_info()
+        finally:
+            self.writerLock.release()
+            self.flushThread = None
+            self.fileModified = False
+            self.deref()
+            # Wake up any threads waiting for the flush to finish
+            with self.fileCondition:
+                self.fileCondition.notify_all()
 
 
         self.cache.checkCacheSpace()
