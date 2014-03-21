@@ -807,7 +807,7 @@ class FileHandle(object):
         global _flush_thread_count
         _flush_thread_count = _flush_thread_count + 1
 
-        vos.logger.debug("flushing node %s, thread count is %i " \
+        vos.logger.debug("flushing node %s, working thread count is %i " \
                              % (self.path,_flush_thread_count))
         self.flushException = None
 
@@ -844,7 +844,7 @@ class FileHandle(object):
         self.cache.checkCacheSpace()
 
         _flush_thread_count = _flush_thread_count - 1
-        vos.logger.debug("finished flushing node %s, thread count is %i " \
+        vos.logger.debug("finished flushing node %s, working thread count is %i " \
                              % (self.path,_flush_thread_count))
 
         return
