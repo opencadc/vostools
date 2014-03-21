@@ -1,4 +1,3 @@
-from vos import Client
-from vos import Connection
-from vos import Node
-
+from vos import Connection, Client
+import fuse
+import vofs

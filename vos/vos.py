@@ -5,6 +5,7 @@
 
 """
 
+
 import copy
 import errno
 import hashlib
@@ -28,7 +29,6 @@ from __version__ import version
 logger = logging.getLogger('vos')
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
-
 
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
@@ -100,9 +100,9 @@ class Connection:
 
         try:
             if parts.scheme=="https":
-                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=60)
+                connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=600)
             else:
-                connection = httplib.HTTPConnection(parts.netloc,timeout=60)
+                connection = httplib.HTTPConnection(parts.netloc,timeout=600)
         except httplib.NotConnected as e:
             logger.error("HTTP connection to %s failed \n" % (parts.netloc))
             logger.error("%s \n" % (str(e)))
@@ -179,6 +179,9 @@ class Node:
         self.update()
 
     def __eq__(self, node):
+        if not isinstance(node, Node):
+            return False
+
         return self.props == node.props
 
     def update(self):
@@ -338,6 +341,7 @@ class Node:
                                     'publicread',
                                     'quota',
                                     'length',
+                                    'MD5',
                                     'mtime',
                                     'ctime',
                                     'ispublic']:
@@ -610,16 +614,22 @@ class VOFile:
     maxRetryTime - maximum time to retry for when transient errors are encountered
     """
    
+    errnos = { 404: errno.ENOENT,
+               401: errno.EACCES,
+               409: errno.EEXIST,
+               408: errno.EAGAIN }
     ### if we get one of these codes, retry the command... ;-(
     retryCodes = (503, 408, 504, 412) 
 
-    def __init__(self, URLs, connector, method, size=None, followRedirect=True):
+    def __init__(self, URLs, connector, method, size=None, followRedirect=True,
+            range=None):
         self.closed = True
         self.resp = 503
         self.connector = connector
         self.httpCon = None
         self.timeout = -1
         self.size = size
+        self.md5sum = None
         self.maxRetries = 10000
         self.maxRetryTime = MAX_RETRY_TIME
         # this should be redone during a cleanup. Basically, a GET might result in multiple
@@ -633,11 +643,12 @@ class VOFile:
         self.urlIndex = 0
         self.followRedirect = followRedirect
         self._fpos = 0
-        self.open(self.URLs[self.urlIndex], method)
+        self.open(self.URLs[self.urlIndex], method, bytes=range)
         # initial values for retry parameters
         self.currentRetryDelay = DEFAULT_RETRY_DELAY
         self.totalRetryDelay = 0
         self.retries = 0
+        self.fileSize = None
 
 	#logger.debug("Sending back VOFile object for file of size %s" % (str(self.size)))
 
@@ -650,7 +661,7 @@ class VOFile:
         elif loc == os.SEEK_SET:
             self._fpos = offset
         elif loc == os.SEEK_END:
-            self._fpos = self.size - offset
+            self._fpos = int(self.size) - offset
         return
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
@@ -664,6 +675,7 @@ class VOFile:
             self.resp = self.httpCon.getresponse()
             return self.checkstatus(codes=code)
         except ssl.SSLError as e:
+            raise
             raise IOError(errno.EAGAIN, str(e))
         except IOError as e:
             raise e
@@ -682,10 +694,6 @@ class VOFile:
                  401: "Not Authorized",
                  409: "Conflict",
                  408: "Connection Timeout"}
-        errnos = { 404: errno.ENOENT,
-                   401: errno.EACCES,
-                   409: errno.EEXIST,
-                   408: errno.EAGAIN }
         logger.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
             logger.debug("Got status code: %s for %s" % (self.resp.status, self.url))
@@ -693,13 +701,16 @@ class VOFile:
             if msg is not None:
                 msg = html2text.html2text(msg, self.url).strip()
             logger.debug("Error message: %s" % (msg))
-            if self.resp.status in errnos.keys():
+            if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.certfile is None:
                     msg += " using anonymous access "
             raise IOError(self.resp.status, msg, self.url)
         self.size = self.resp.getheader("Content-Length", 0)
+        if self.resp.status == 200:
+            self.md5sum = self.resp.getheader("Content-MD5", None)
+            self.totalFileSize = int(self.size)
         return True
 
     def open(self, URL, method="GET", bytes=None):
@@ -754,6 +765,10 @@ class VOFile:
         #logger.debug("Opening connection for %s to %s" % (URL, method))
         #logger.debug("Done setting headers")
 
+    def getFileInfo(self):
+        """Return information harvested from the HTTP header"""
+        return (self.totalFileSize, self.md5sum)
+
 
     def read(self, size=None):
         """return size bytes from the connection response"""
@@ -786,8 +801,6 @@ class VOFile:
             self._fpos += len(buff)
             #logger.debug("left file pointer at: %d" % (self._fpos))
             return buff
-        elif self.resp.status == 404:
-            raise IOError(errnos[self.resp.status], self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location', None)
             logger.debug("Got redirect URL: %s" % (URL))
@@ -803,6 +816,13 @@ class VOFile:
                 #logger.debug("Got url:%s from redirect but not following" % (self.url))
                 return self.url
         elif self.resp.status in VOFile.retryCodes:
+            # Note: 404 (File Not Found) might be returned when:
+            # 1. file deleted or replaced
+            # 2. file migrated from cache
+            # 3. hardware failure on storage node
+            # For 3. it is necessary to try the other URLs in the list otherwise this the
+            # failed URL might show up even after the caller tries to re-negotiate the transfer.
+            # For 1. and 2., calls to the other URLs in the list might or might not succed. 
             if self.urlIndex < len(self.URLs)-1:
                 # go to the next URL
                 self.urlIndex += 1
@@ -812,7 +832,12 @@ class VOFile:
             self.URLs.pop(self.urlIndex) #remove url from list
             if len(self.URLs) == 0:
                 # no more URLs to try...
-                raise IOError(self.resp.status, "unexpected server response %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+                if self.resp.status == 404:
+                    raise IOError(errno.ENOENT, self.resp.read())
+                else:
+                    raise IOError(errno.EIO, 
+                            "unexpected server response %s (%d)" % 
+                            (self.resp.reason, self.resp.status), self.url)
             if self.urlIndex < len(self.URLs):
                 self.open(self.URLs[self.urlIndex], "GET")
                 return self.read(size)
@@ -844,7 +869,7 @@ class VOFile:
             self.open(self.URLs[self.urlIndex], "GET")
             return self.read(size)
         else:
-            raise IOError(self.resp.status, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
+            raise IOError(errno.EIO, "failed to connect to server after multiple attempts %s (%d)" % (self.resp.reason, self.resp.status), self.url)
 
     def write(self, buf):
         """write buffer to the connection"""
@@ -1040,16 +1065,32 @@ class Client:
         return self.nodeCache[uri]
 
 
-    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None):
+    def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None,
+                   full_negotiation=None):
         """Split apart the node string into parts and return the correct URL for this node"""
         uri = self.fixURI(uri)
 
-        if not self.cadc_short_cut and method == 'GET' and view == 'data':
+        # full_negotiation is an override, so it can be used to
+        # force either shortcut (false) or full negotiation (true)
+        if full_negotiation is not None:
+            do_shortcut = not full_negotiation
+        else:
+            do_shortcut = self.cadc_short_cut
+
+        logger.debug("do_shortcut=%i method=%s view=%s" %(do_shortcut, method, view) )
+
+        if not do_shortcut and method == 'GET' and view == 'data':
             return self._get(uri)
 
-        if not self.cadc_short_cut and method in ('PUT'):
+        if not do_shortcut and method in ('PUT'):
             # logger.debug("Using _put")
             return self._put(uri)
+
+        if view == "cutout":
+            if cutout is None:
+                raise ValueError("For view=cutout, must specify a cutout "
+                                 "value of the form"
+                                 "[extension number][x1:x2,y1:y2]")
 
         parts = urlparse(uri)
         path = parts.path.strip('/')
@@ -1059,49 +1100,33 @@ class Client:
             return uri
         logger.debug("Node URI: %s, server: %s, parts: %s " %( uri, server, str(parts)))
         URL = None
-        if self.cadc_short_cut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
+        if do_shortcut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT") :
 
-            ## only get here if cadc_short_cut == True
+            ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
 
-            if view == "cutout":
-                if cutout is None:
-                    raise ValueError("For view=cutout, must specify a cutout "
-                                     "value of the form"
-                                     "[extension number][x1:x2,y1:y2]")
-
-                parts = urlparse(self.fixURI(uri))
-                URL="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/%s" % ( parts.path)
-                ext = "&" if "?" in URL else "?"
-                URL += ext + "cutout=" + cutout
-
-                logger.debug("Sending short cuturl: %s" %( URL))
-                return URL
-
-            direction = "pullFromVoSpace" if method == 'GET' else "pushToVoSpace"
-            transProtocol = ''
-            if self.protocol == 'http':
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPPUT_PROTOCOL
-            else:
-                if method == 'GET':
-                    transProtocol = Client.VO_HTTPSGET_PROTOCOL
-                else:
-                    transProtocol = Client.VO_HTTPSPUT_PROTOCOL
+            direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
+            protocol = {'GET': {'https': Client.VO_HTTPSGET_PROTOCOL,
+                                'http': Client.VO_HTTPGET_PROTOCOL},
+                        'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                                'http': Client.VO_HTTPPUT_PROTOCOL}}
  
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
 
-            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction, 'PROTOCOL' : transProtocol})
+            form = urllib.urlencode({'TARGET' : self.fixURI(uri), 'DIRECTION' : direction[method], 'PROTOCOL' : protocol[method][self.protocol]})
             headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
             httpCon = self.conn.getConnection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
                 response = httpCon.getresponse()
+
                 if response.status == 303:
+                    # Normal case is a redirect
                     URL = response.getheader('Location', None)
+                elif response.status == 404:
+                    # The file doesn't exist
+                    raise IOError(errno.ENOENT, "No location on redirect", url)
                 else:
                     logger.error("GET/PUT shortcut not working. POST to %s returns: %s" % \
                             (Client.VOTransfer, response.status))
@@ -1110,16 +1135,11 @@ class Client:
                 logger.error(str(e))
             finally: 
                 httpCon.close()          
-  
-            logger.debug("Sending short cuturl: %s" %( URL))
+
+            logger.debug("Sending short cut url: %s" %( URL))
             return URL
 
         if view == "cutout":
-
-            if cutout is None:
-                raise ValueError("For view=cutout, must specify a cutout "
-                                "value of the form"
-                                "[extension number][x1:x2,y1:y2]")
 
             urlbase = self._get(uri)[0]
             
@@ -1199,13 +1219,15 @@ class Client:
         con = VOFile(transURL, self.conn, method="GET", followRedirect=True)
         F = ET.parse(con)
 
-        P = F.find(Node.PROTOCOL)
+        allP = F.findall(Node.PROTOCOL)
         logger.debug("Transfer protocol: %s" % (str(F)))
-        if P is None:
+        if allP is None:
             return self.getTransferError(transURL, uri)
         result = []
-        for node in P.findall(Node.ENDPOINT):
-            result.append(node.text)
+
+        for P in allP:
+            for node in P.findall(Node.ENDPOINT):
+                result.append(node.text)
         return result
 
     def getTransferError(self, url, uri):
@@ -1272,11 +1294,13 @@ class Client:
         raise OSError(errorCodes.get(errorMessage, errno.ENOENT), "%s: %s" %( uri, errorMessage ))
 
 
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None, size=None, cutout=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, 
+            limit=None, nextURI=None, size=None, cutout=None, range=None, full_negotiation=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
-        ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
+        ### really that's an error, but I thought I'd just accept those are 
+        ### os.O_RDONLY
 
         logger.debug("URI: %s" % ( uri))
         logger.debug("URL: %s" %(URL))
@@ -1300,8 +1324,8 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         if URL is None:
             ### we where given one, see if getNodeURL can figure this out.
-            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
-        if URL is None:
+            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
+        if URL is None or not len(URL) > 0 :
             ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
             node = self.getNode(uri)
@@ -1316,13 +1340,13 @@ class Client:
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
                     #logger.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
-                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
+                    return self.open([target], mode, view, head, URL, limit, nextURI, size, cutout)
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
                     #logger.debug("Opening %s with urllib2" % (target))
                     return urllib2.urlopen(target)
         else:
-            return VOFile(URL, self.conn, method=method, size=size)
+            return VOFile(URL, self.conn, method=method, size=size, range=range)
         return None
 
 

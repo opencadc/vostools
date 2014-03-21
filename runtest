@@ -1,0 +1,27 @@
+#!/bin/tcsh -f
+
+if ( $0:h == $0 ) then
+    set thisDir=$PWD
+else
+    set thisDir=$0:h
+    if ( $thisDir !~ "/*" ) then
+        set thisDir = $PWD/$thisDir
+    endif
+endif
+
+if ($?PYTHONPATH) then
+    setenv PYTHONPATH "${PYTHONPATH}:${thisDir}"
+else
+    setenv PYTHONPATH "$thisDir"
+endif
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+    #--ignore-module=test_cadcCache vos/test/TestCadcCache.py vos/test/Test_vofs.py
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+   #--ignore-module=Test_vofs vos/test/Test_vofs.py
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+#    --ignore-module=Test_vofile vos/test/Test_vofile.py
+
+python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+   --ignore-module=TestCacheMetaData vos/test/TestCacheMetaData.py
