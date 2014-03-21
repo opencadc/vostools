@@ -184,7 +184,7 @@ class VOFS(LoggingMixIn, Operations):
     setxattr = None
 
     def __init__(self, root, cache_dir, options, conn=None,
-            cache_limit=1024, cache_nodes=False):
+            cache_limit=1024, cache_nodes=False, cache_max_flush_threads=10):
         """Initialize the VOFS.
 
         cache_limit is in MB.
@@ -209,7 +209,7 @@ class VOFS(LoggingMixIn, Operations):
 
         # VOSpace is a bit slow so we do some caching.
         self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout, \
-                               maxFlushThreads=5)
+                               maxFlushThreads=cache_max_flush_threads)
 
         # All communication with the VOSpace goes through this client
         # connection.
