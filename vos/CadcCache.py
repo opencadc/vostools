@@ -91,7 +91,7 @@ class Cache(object):
     """
     IO_BLOCK_SIZE = 2 ** 14
 
-    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60, maxFlushThreads=100):
+    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60, maxFlushThreads=10):
         """Initialize the Cache Object
 
         Parameters:
