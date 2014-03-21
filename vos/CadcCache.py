@@ -730,45 +730,48 @@ class FileHandle(object):
             if self.refCount == 1 and self.readThread != None:
                 self.readThread.aborted = True
 
-            # If flushing is not already in progress, submit to the thread
-            # queue.
-            if (self.flushThread is None and self.refCount == 1 and
-                    self.fileModified and not self.obsolete):
+            # Acquire the writer lock exclusively. This will prevent
+            # the file from being modified while it is being
+            # flushed. This used to be inside flushNode when it was
+            # executed immediately in a new thread. However, now that
+            # this is done by a thread queue there could be a large
+            # delay, so the lock is acquired by the thread that puts
+            # it in the queue and waits for it to finish.
+            with self.writerLock(shared=False):
+                # If flushing is not already in progress, submit to the thread
+                # queue.
+                if (self.flushThread is None and self.refCount == 1 and
+                        self.fileModified and not self.obsolete):
 
-                self.refCount += 1
+                    self.refCount += 1
 
-                # Acquire the writer lock exclusively. This will
-                # prevent the file from being modified while it is
-                # being flushed -- which could take a while depending
-                # on the size of the queue. flushNode() releases it
-                # when done.
-                self.writerLock.acquire(shared=False)
+                    # Old code: Launch a new short-lived thread
+                    #vos.logger.debug("Start flush thread")
+                    #self.flushThread = threading.Thread(target=self.flushNode,
+                    #        args=[])
+                    #self.flushThread.start()
 
-                # Use a thread
-                #vos.logger.debug("Start flush thread")
-                #self.flushThread = threading.Thread(target=self.flushNode,
-                #        args=[])
-                #self.flushThread.start()
+                    # New code: Use a thread queue
+                    with self.cache.cacheLock:
+                        # Initialize the queue first time here
+                        if self.cache.flushNodeQueue is None:
+                            self.cache.flushNodeQueue = FlushNodeQueue(\
+                                maxFlushThreads=self.cache.maxFlushThreads)
 
-                # initialize the flushNodeQueue if necessary
-                with self.cache.cacheLock:
-                    if self.cache.flushNodeQueue is None:
-                        self.cache.flushNodeQueue = FlushNodeQueue(\
-                            maxFlushThreads=self.cache.maxFlushThreads)
+                    self.flushThread = True;
+                    self.cache.flushNodeQueue.put(self)
+                    vos.logger.debug("queue size now %i" \
+                                         % self.cache.flushNodeQueue.qsize())
 
-                vos.logger.debug("Submit to flush thread queue")
-                self.flushThread = True;
-                self.cache.flushNodeQueue.put(self)
-                vos.logger.debug("queue size now %i" \
-                                     % self.cache.flushNodeQueue.qsize())
-
-            while (self.flushThread != None or self.readThread != None):
-                # Wait for the flush to complete. This will throw a CacheRetry
-                # exception if the timeout is exeeded.
-                # Ignore timeouts. It important to close the file descriptor.
-                vos.logger.debug("flushThread: %s, readThread: %s" %
-                        (self.flushThread, self.readThread))
-                self.fileCondition.wait()
+                while (self.flushThread != None or self.readThread != None):
+                    # Wait for the flush to complete. This will throw
+                    # a CacheRetry exception if the timeout is
+                    # exeeded.  Ignore timeouts. It important to close
+                    # the file descriptor.
+                    vos.logger.debug("flushThread: %s, readThread: %s" %
+                            (self.flushThread, self.readThread))
+                    vos.logger.debug("Waiting for flush to complete.")
+                    self.fileCondition.wait()
 
             # Look for write failures.
             if self.flushException is not None:
@@ -830,7 +833,6 @@ class FileHandle(object):
         except Exception as e:
             self.flushException = sys.exc_info()
         finally:
-            self.writerLock.release()
             self.flushThread = None
             self.fileModified = False
             self.deref()
