@@ -1125,9 +1125,9 @@ class FlushNodeQueue(Queue):
     def worker(self):
         """A worker is a thin wrapper for FileHandle.flushNode()
         """
-        vos.logger.debug("Worker has started")
+       # vos.logger.debug("Worker has started")
         while True:
             fileHandle = self.get()
-            vos.logger.debug("Worker has work")
+            #vos.logger.debug("Worker has work")
             fileHandle.flushNode()
             self.task_done()
