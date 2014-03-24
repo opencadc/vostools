@@ -1299,32 +1299,30 @@ class Client:
             method = "HEAD"
         if not method:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
-        if URL is None:
-            ### we where given one, see if getNodeURL can figure this out.
-            URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
-        if URL is None:
-            ## Dang... getNodeURL failed... maybe this is a LinkNode?
-            ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
+        follow_link_target = False
+        if uri is not None and view in ['data', 'cutout']:
             node = self.getNode(uri)
-            if node.type == "vos:LinkNode":
-                logger.debug("appears that %s is a linkNode" % ( node.uri))
+            follow_link_target = node.type=="vos:LinkNode"
+        if URL is None:
+            if follow_link_target:
                 target = node.node.findtext(Node.TARGET)
-                logger.debug(target)
                 if target is None:
-                    #logger.debug("Why is target None?")
-                    ### hmm. well, that shouldn't have happened.
-                    return None
+                    logger.debug("No target for linkNode {}".format(node.uri))
+                    raise IOError("Failed to follow link")
+                logger.debug("%s is a link to %s" % ( node.uri, target))
                 if re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None:
-                    #logger.debug("Opening %s with VOFile" %(target))
                     ### try opening this target directly, cross your fingers.
                     return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
                 else:
                     ### hmm. just try and open the target, maybe python will understand it.
-                    #logger.debug("Opening %s with urllib2" % (target))
+                    if cutout is not None:
+                        target = "{}?cutout={}".format(target,cutout)
                     return urllib2.urlopen(target)
-        else:
-            return VOFile(URL, self.conn, method=method, size=size)
-        return None
+            else:
+                ### we where given one, see if getNodeURL can figure this out.
+                URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI, cutout=cutout)
+
+        return VOFile(URL, self.conn, method=method, size=size)
 
 
     def addProps(self, node):
