@@ -52,12 +52,17 @@ class urlparse:
 
     def __init__(self, url):
 
-        m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?.*)?", url)
-        if not m.group:
-            return None
-        self.scheme = m.group('scheme')
-        self.netloc = m.group('netloc')
-        self.path = m.group('path')
+        self.scheme = None
+        self.netloc = None
+        self.args = None
+        self.path = None
+        m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
+        if m.group is not None:
+            logging.debug("URL Parser said: "+str( m.groups()))
+            self.scheme = m.group('scheme')
+            self.netloc = m.group('netloc')
+            self.path = ( m.group('path') is not None and m.group('path') ) or ''
+            self.args = ( m.group('args') is not None and m.group('args') ) or ''
 
     def __str__(self):
         return "[scheme: %s, netloc: %s, path: %s]" % (self.scheme, self.netloc, self.path)
@@ -1003,7 +1008,7 @@ class Client:
         if not host or host == '':
             host = self.VOSpaceServer
         path = os.path.normpath(path).strip('/')
-        return "%s://%s/%s" % (parts.scheme, host, path)
+        return "%s://%s/%s%s" % (parts.scheme, host, path, parts.args)
 
 
     def getNode(self, uri, limit=0, force=False):
