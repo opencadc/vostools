@@ -1301,8 +1301,14 @@ class Client:
             raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
         follow_link_target = False
         if uri is not None and view in ['data', 'cutout']:
-            node = self.getNode(uri)
-            follow_link_target = node.type=="vos:LinkNode"
+            try:
+               node = self.getNode(uri)
+               follow_link_target = node.type=="vos:LinkNode"
+            except IOError as e:
+               if e.errno in [2, 404]:
+                   pass
+               else:
+                   raise e
         if URL is None:
             if follow_link_target:
                 target = node.node.findtext(Node.TARGET)
