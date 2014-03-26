@@ -736,35 +736,38 @@ class FileHandle(object):
             # executed immediately in a new thread. However, now that
             # this is done by a thread queue there could be a large
             # delay, so the lock is acquired by the thread that puts
-            # it in the queue and waits for it to finish.
-            with self.writerLock(shared=False):
-                # If flushing is not already in progress, submit to the thread
-                # queue.
-                if (self.flushQueued is None and self.refCount == 1 and
-                        self.fileModified and not self.obsolete):
+            # it in the queue and waits for it to finish. The lock
+            # is released by the worker thread doing the flush (and
+            # it needs to steal the lock in order to do so...)
+            self.writerLock.acquire(shared=False)
 
-                    self.refCount += 1
+            # If flushing is not already in progress, submit to the thread
+            # queue.
+            if (self.flushQueued is None and self.refCount == 1 and
+                    self.fileModified and not self.obsolete):
 
-                    # Old code: Launch a new short-lived thread
-                    #vos.logger.debug("Start flush thread")
-                    #self.flushThread = threading.Thread(target=self.flushNode,
-                    #        args=[])
-                    #self.flushThread.start()
+                self.refCount += 1
 
-                    self.cache.flushNodeQueue.put(self)
-                    self.flushQueued = True;
-                    vos.logger.debug("queue size now %i" \
-                                         % self.cache.flushNodeQueue.qsize())
+                # Old code: Launch a new short-lived thread
+                #vos.logger.debug("Start flush thread")
+                #self.flushThread = threading.Thread(target=self.flushNode,
+                #        args=[])
+                #self.flushThread.start()
 
-                while (self.flushQueued != None or self.readThread != None):
-                    # Wait for the flush to complete. This will throw
-                    # a CacheRetry exception if the timeout is
-                    # exeeded.  Ignore timeouts. It important to close
-                    # the file descriptor.
-                    vos.logger.debug("flushQueued: %s, readThread: %s" %
-                            (self.flushQueued, self.readThread))
-                    vos.logger.debug("Waiting for flush to complete.")
-                    self.fileCondition.wait()
+                self.cache.flushNodeQueue.put(self)
+                self.flushQueued = True;
+                vos.logger.debug("queue size now %i" \
+                                     % self.cache.flushNodeQueue.qsize())
+
+            while (self.flushQueued != None or self.readThread != None):
+                # Wait for the flush to complete. This will throw
+                # a CacheRetry exception if the timeout is
+                # exeeded.  Ignore timeouts. It important to close
+                # the file descriptor.
+                vos.logger.debug("flushQueued: %s, readThread: %s" %
+                        (self.flushQueued, self.readThread))
+                vos.logger.debug("Waiting for flush to complete.")
+                self.fileCondition.wait()
 
             # Look for write failures.
             if self.flushException is not None:
@@ -804,6 +807,10 @@ class FileHandle(object):
                              % (self.path,_flush_thread_count))
         self.flushException = None
 
+        # Now that the flush has started we want this thread to own
+        # the lock
+        self.writerLock.steal()
+
         try:
             # Get the md5sum of the cached file
             size, mtime = self.getFileInfo()
@@ -827,6 +834,7 @@ class FileHandle(object):
             self.flushException = sys.exc_info()
         finally:
             self.flushQueued = None
+            self.writerLock.release()
             self.fileModified = False
             self.deref()
             # Wake up any threads waiting for the flush to finish
