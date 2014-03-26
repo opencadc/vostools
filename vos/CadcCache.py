@@ -1115,6 +1115,10 @@ class FlushNodeQueue(Queue):
         vos.logger.debug("started a FlushNodeQueue with %i workers" \
                              % self.maxFlushThreads)
 
+    def join(self):
+        vos.logger.debug("FlushNodeQueue waiting until all work is done")
+        Queue.join(self)
+
     def worker(self):
         """A worker is a thin wrapper for FileHandle.flushNode()
         """

@@ -335,6 +335,14 @@ class VOFS(LoggingMixIn, Operations):
         ## now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
+    def destroy(self, path):
+        """Called on filesystem destruction. Path is always /
+
+           Call the flushNodeQueue join() method which will block
+           until any running and/or queued jobs are finished"""
+
+        self.cache.flushNodeQueue.join()
+
     #@logExceptions()
     def fsync(self, path, datasync, id):
         if self.opt.readonly:
