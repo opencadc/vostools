@@ -9,8 +9,14 @@ class TimeoutError(Exception):
     def __str__(self):
         return repr(self.value)
 
-
 class RecursionError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+class StealError(Exception):
     def __init__(self, value):
         self.value = value
 
@@ -85,6 +91,15 @@ class SharedLock(object):
                             raise TimeoutError(
                                     "Timout waiting for a shared lock")
                 self.exclusiveLock = threading.current_thread()
+
+    def steal(self):
+        """Assign ownership of an exclusive lock to the current thread
+        """
+        if self.exclusiveLock is not None:
+            self.exclusiveLock = threading.current_thread()
+        else:
+            raise StealError("It is only possible to steal an exclusive lock")
+
 
     def release(self):
         """Release a previously acquired lock.
