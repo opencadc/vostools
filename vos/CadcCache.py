@@ -698,8 +698,8 @@ class FileHandle(object):
         self.fullyCached = None
         # Is this file now obsoleted by a new file.
         self.obsolete = False
-        # Is the file being flushed out to vospace right now?
-        self.flushThread = None
+        # Is the file flush out to vospace queued right now?
+        self.flushQueued = None
         self.flushException = None
         self.readThread = None
 
@@ -740,7 +740,7 @@ class FileHandle(object):
             with self.writerLock(shared=False):
                 # If flushing is not already in progress, submit to the thread
                 # queue.
-                if (self.flushThread is None and self.refCount == 1 and
+                if (self.flushQueued is None and self.refCount == 1 and
                         self.fileModified and not self.obsolete):
 
                     self.refCount += 1
@@ -751,18 +751,18 @@ class FileHandle(object):
                     #        args=[])
                     #self.flushThread.start()
 
-                    self.flushThread = True;
                     self.cache.flushNodeQueue.put(self)
+                    self.flushQueued = True;
                     vos.logger.debug("queue size now %i" \
                                          % self.cache.flushNodeQueue.qsize())
 
-                while (self.flushThread != None or self.readThread != None):
+                while (self.flushQueued != None or self.readThread != None):
                     # Wait for the flush to complete. This will throw
                     # a CacheRetry exception if the timeout is
                     # exeeded.  Ignore timeouts. It important to close
                     # the file descriptor.
-                    vos.logger.debug("flushThread: %s, readThread: %s" %
-                            (self.flushThread, self.readThread))
+                    vos.logger.debug("flushQueued: %s, readThread: %s" %
+                            (self.flushQueued, self.readThread))
                     vos.logger.debug("Waiting for flush to complete.")
                     self.fileCondition.wait()
 
@@ -826,7 +826,7 @@ class FileHandle(object):
         except Exception as e:
             self.flushException = sys.exc_info()
         finally:
-            self.flushThread = None
+            self.flushQueued = None
             self.fileModified = False
             self.deref()
             # Wake up any threads waiting for the flush to finish
