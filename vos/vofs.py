@@ -19,7 +19,8 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse
-from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
+from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
+    IOProxy, FlushNodeQueue
 from logExceptions import logExceptions
 
 
@@ -405,6 +406,16 @@ class VOFS(LoggingMixIn, Operations):
             return cacheFileAttrs
 
         return self.getNode(path, limit=0, force=False).attr
+
+    def init(self, path):
+        """Called on filesystem initialization. (Path is always /)
+
+           Here is where we start the worker threads for the queue
+           that flushes nodes."""
+
+        self.cache.flushNodeQueue = \
+            FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
+
 
     #@logExceptions()
     def mkdir(self, path, mode):

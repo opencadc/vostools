@@ -115,8 +115,8 @@ class Cache(object):
 
         # A thread queue will be shared by FileHandles to flush nodes.
         # Figure out how many threads will be available now, but defer
-        # initializing the queue / worker threads until they are first
-        # needed in FileHandle.release, after FUSE is initialized
+        # initializing the queue / worker threads until the filesystem
+        # is initialized (see vofs.init)
         self.maxFlushThreads = maxFlushThreads
         self.flushNodeQueue = None
 
@@ -750,13 +750,6 @@ class FileHandle(object):
                     #self.flushThread = threading.Thread(target=self.flushNode,
                     #        args=[])
                     #self.flushThread.start()
-
-                    # New code: Use a thread queue
-                    with self.cache.cacheLock:
-                        # Initialize the queue first time here
-                        if self.cache.flushNodeQueue is None:
-                            self.cache.flushNodeQueue = FlushNodeQueue(\
-                                maxFlushThreads=self.cache.maxFlushThreads)
 
                     self.flushThread = True;
                     self.cache.flushNodeQueue.put(self)
