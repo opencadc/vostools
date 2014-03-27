@@ -106,7 +106,6 @@ if __name__ == "__main__":
                     readonly=opt.readonly,
                     #auto_cache=True,
                     allow_other=opt.allow_other,
-		    atomic_o_trunc=True,
                     noapplexattr=True,
                     noappledouble=True,
                     foreground=opt.foreground)
@@ -119,6 +118,5 @@ if __name__ == "__main__":
                     readonly=opt.readonly,
                     allow_other=opt.allow_other,
                     #auto_cache=True,
-		    atomic_o_trunc=True,
                     foreground=opt.foreground)
 
