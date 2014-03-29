@@ -1106,12 +1106,13 @@ class Client:
 
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
-
-            form = urllib.urlencode({'TARGET': self.fixURI(uri),
+            args = {'TARGET': self.fixURI(uri),
                                      'DIRECTION': direction[method],
                                      'PROTOCOL': protocol[method][self.protocol],
-                                     'view': view,
-                                     'cutout': cutout})
+                                     'view': view}
+            if cutout is not None:
+                args['cutout'] = cutout
+            form = urllib.urlencode(args)
             headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
             httpCon = self.conn.get_connection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
@@ -1196,14 +1197,18 @@ class Client:
         """Build the transfer XML document"""
         protocol = {"pullFromVoSpace": "%sget" % (self.protocol),
                     "pushToVoSpace": "%sput" % (self.protocol)}
+        views = {"defaultview": "%s#%s" % ( Node.IVOAURL, "defaultview"),
+                 "data": "ivo://cadc.nrc.ca/vospace/view#data",
+                 "cutout": "ivo://cadc.nrc.ca/vospace/view#cutout"
+                }
         transfer_xml = ElementTree.Element("transfer")
         transfer_xml.attrib['xmlns'] = Node.VOSNS
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
         ElementTree.SubElement(transfer_xml, "target").text = uri
         ElementTree.SubElement(transfer_xml, "direction").text = direction
-        ElementTree.SubElement(transfer_xml, "view").attrib['uri'] = "%s#%s" % (Node.IVOAURL, view)
+        ElementTree.SubElement(transfer_xml, "view").attrib['uri'] = views.get(view, views["defaultview"])
         if cutout is not None:
-            ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = "%s#%s" % (Node.IVOAURL, cutout)
+            ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = cutout
         ElementTree.SubElement(transfer_xml, "protocol").attrib['uri'] = "%s#%s" % (Node.IVOAURL, protocol[direction])
         logger.debug(ElementTree.tostring(transfer_xml))
         url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransfer)
@@ -1350,7 +1355,6 @@ class Client:
                     return urllib2.urlopen(target)
             else:
                 URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI,
-                                      full_negotiation=True,
                                       cutout=cutout)
 
         return VOFile(URL, self.conn, method=method, size=size)
