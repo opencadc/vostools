@@ -16,7 +16,8 @@ class CacheMetaData(object):
         metaDataFile - name of the metadata file to persist to
         blocks - number of blocks required to store the entire file. If None,
                 the file must exist.
-        md5sum - md5sum of the file. If None, the file must exist
+        md5sum - md5sum of the file. If None, the file must exist.
+        size - Size of the file. If None, the file must exist.
         """
 
         self.metaDataFile = metaDataFile
@@ -26,7 +27,7 @@ class CacheMetaData(object):
         if os.path.exists(self.metaDataFile):
             f = open(self.metaDataFile, 'rU')
             persisted = pickle.load(f)
-            if(self.md5sum == None or persisted.md5sum == self.md5sum):
+            if(self.md5sum is None or persisted.md5sum == self.md5sum):
                 #persisted bitmap still valid. Used that instead
                 self.bitmap = persisted.bitmap
                 self.size = persisted.size
@@ -46,7 +47,7 @@ class CacheMetaData(object):
             return "%s (None, %s %s)" % (self.metaDataFile,
                     self.size, self.bitmap)
         else:
-            return "%s (%#x, %s %s)" % (self.metaDataFile, self.md5sum, 
+            return "%s (%#x, %s %s)" % (self.metaDataFile, self.md5sum,
                     self.size, self.bitmap)
 
     def setReadBlocks(self, start, end):

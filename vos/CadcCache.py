@@ -213,12 +213,11 @@ class Cache(object):
                     os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
                     os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
-        # For an existing file, start a data transfer to get the size and
-        # md5sum unless the information is available and is trusted.
-        if not fileHandle.fileModified and (fileHandle.metaData is None or
-                not trustMetaData):
-            fileHandle.readData(0, 0, None)
-            with fileHandle.fileCondition:
+            # For an existing file, start a data transfer to get the size and
+            # md5sum unless the information is available and is trusted.
+            if (fileHandle.refCount == 1 and not fileHandle.fileModified and 
+                    (fileHandle.metaData is None or not trustMetaData)):
+                fileHandle.readData(0, 0, None)
                 while (not fileHandle.gotHeader and
                         fileHandle.readException is None):
                     fileHandle.fileCondition.wait()
@@ -231,7 +230,9 @@ class Cache(object):
                 if not (isinstance(fileHandle.readException[1], IOError) and
                         fileHandle.readException[1].errno == errno.ENOENT and
                         not mustExist):
-                    raise fileHandle.readException
+                    raise fileHandle.readException[0], \
+                            fileHandle.readException[1], \
+                            fileHandle.readException[2]
                 # The file didn't exist on the backing store but its ok
                 fileHandle.fullyCached = True
                 fileHandle.gotHeader = True
@@ -284,7 +285,7 @@ class Cache(object):
         # schedule to allow for files which grow.
         (oldest_file, cacheSize) = self.determineCacheSize()
         while (cacheSize / 1024 / 1024 > self.maxCacheSize and
-                oldest_file != None):
+                oldest_file is not None):
             with self.cacheLock:
                 if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
                     vos.logger.debug("Removing file %s from the local cache" %
@@ -626,7 +627,7 @@ class IOProxy(object):
 
         #vos.logger.debug("writing %d bytes at %d" % (len(buffer), offset))
 
-        if (self.currentWriteOffset != None and
+        if (self.currentWriteOffset is not None and
                 self.currentWriteOffset != offset):
             # Only allow seeks to block boundaries
             if (offset % self.cache.IO_BLOCK_SIZE != 0 or
@@ -763,7 +764,7 @@ class FileHandle(object):
         if self.metaData is not None and (self.metaData.md5sum is None or
                 self.metaData.md5sum == md5):
             with self.fileCondition:
-                if self.readThread != None:
+                if self.readThread is not None:
                     self.readThread.aborted = True
 
         # If the md5sum isn't the same, the cache data is no good.
@@ -799,7 +800,7 @@ class FileHandle(object):
         # using the condition lock acquires the fileLock
         with self.fileCondition:
             # Tell any running read thread to exit
-            if self.refCount == 1 and self.readThread != None:
+            if self.refCount == 1 and self.readThread is not None:
                 self.readThread.aborted = True
 
             # If flushing is not already in progress, start the thread
@@ -812,7 +813,8 @@ class FileHandle(object):
                         args=[])
                 self.flushThread.start()
 
-            while (self.flushThread != None or self.readThread != None):
+            while (self.flushThread is not None or
+                    self.readThread is not None):
                 # Wait for the flush to complete. This will throw a CacheRetry
                 # exception if the timeout is exeeded.
                 # Ignore timeouts. It important to close the file descriptor.
@@ -1090,7 +1092,7 @@ class FileHandle(object):
 
 
 class CacheReadThread(threading.Thread):
-    CONTINUE_MAX_SIZE = 1024 * 1024
+    CONTINUE_MAX_SIZE = 1024 * 1024 * 4
 
     def __init__(self, start, mandatorySize, optionSize, fileHandle):
         """ CacheReadThread class is used to start data transfer from the back
@@ -1145,7 +1147,6 @@ class CacheReadThread(threading.Thread):
             self.fileHandle.ioObject.readFromBacking(self.optionSize,
                     self.startByte)
             with self.fileHandle.fileCondition:
-                self.fileHandle.readThread = None
                 vos.logger.debug("setFullyCached? %s %s %s %s" % (self.aborted,
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
                 if (not self.aborted and self.startByte == 0 and
@@ -1169,14 +1170,14 @@ class CacheReadThread(threading.Thread):
                     # smaller read window. Also it is not invalid for the file
                     # to be replaced in vospace, and for this client to
                     # continue to serve the existing file.
-                self.fileHandle.fileCondition.notify_all()
         except:
             vos.logger.error("Exception in thread started at:\n%s" % \
                      ''.join(traceback.format_list(self.traceback)))
             self.fileHandle.setReadException()
             raise
         finally:
+            vos.logger.debug("read thread finished")
             with self.fileHandle.fileCondition:
-                if self.fileHandle.readThread != None:
+                if self.fileHandle.readThread is not None:
                     self.fileHandle.readThread = None
                     self.fileHandle.fileCondition.notify_all()

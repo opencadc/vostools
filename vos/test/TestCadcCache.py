@@ -978,7 +978,7 @@ class TestCadcCache(unittest.TestCase):
             fh.release()
             fh2.release()
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
@@ -1014,7 +1014,7 @@ class TestCadcCache(unittest.TestCase):
             # The file doesn't exist and was created.
             ioObject.readFromBacking = Mock(side_effect=IOError(errno.ENOENT,
                     "No such file"))
-            fh = testObject.open("/dir1/dir2/file", False, False, 
+            fh = testObject.open("/dir1/dir2/file3", False, False, 
                     ioObject, False)
             self.assertTrue(fh.fullyCached)
             self.assertEqual(fh.fileSize, 0)
@@ -1589,7 +1589,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
             self.assertEqual(crt.optionEnd, None)
             self.assertEqual(crt.fileHandle, 4)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_execute(self):
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
             ioObject = TestCadcCacheReadThread.MyIoObject()
@@ -1628,7 +1628,7 @@ class TestCadcCacheReadThread(unittest.TestCase):
             crt = CadcCache.CacheReadThread(0, 0, 1000, fh)
             fh.fileSize = 1000
             fh.FullyCached = False
-            fh.readThread = None
+            fh.readThread = 1
             fh.fileCondition.notify_all = Mock(
                     wraps=fh.fileCondition.notify_all)
             fh.metaData = Object()

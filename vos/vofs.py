@@ -45,7 +45,7 @@ class MyIOProxy(IOProxy):
         self.path = path
         self.condition = CacheCondition(None)
 
-    @logExceptions()
+    #@logExceptions()
     def writeToBacking(self):
         """
         Write a file in the cache to the remote file.
@@ -59,7 +59,7 @@ class MyIOProxy(IOProxy):
         vos.logger.debug("attributes: %s " % str(node.attr))
         return node.props.get("MD5")
 
-    #@logExceptions()
+    @logExceptions()
     def readFromBacking(self, size=None, offset=0,
             blockSize=Cache.IO_BLOCK_SIZE):
         """
@@ -135,7 +135,7 @@ class MyIOProxy(IOProxy):
                 self.cacheFile.path))
 
     def getMD5(self):
-        if self.md5 == None:
+        if self.md5 is None:
             node = self.vofs.getNode(self.path)
             self.setSize(int(node.props.get('length')))
             self.setMD5(node.props.get('MD5'))
@@ -143,7 +143,7 @@ class MyIOProxy(IOProxy):
         return self.md5
 
     def getSize(self):
-        if self.size == None:
+        if self.size is None:
             node = self.vofs.getNode(self.path)
             self.setSize(int(node.props.get('length')))
             self.setMD5(node.props.get('MD5'))
@@ -236,7 +236,8 @@ class VOFS(LoggingMixIn, Operations):
         # All communication with the VOSpace goes through this client
         # connection.
         try:
-            self.client = vos.Client(rootNode=root, conn=conn, cadc_short_cut=True)
+            self.client = vos.Client(rootNode=root, conn=conn,
+                    cadc_short_cut=True)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
@@ -531,7 +532,7 @@ class VOFS(LoggingMixIn, Operations):
             raise e
 
         myProxy = MyIOProxy(self, path)
-        if node != None:
+        if node is not None:
             myProxy.setSize(int(node.props.get('length')))
             myProxy.setMD5(node.props.get('MD5'))
 
@@ -541,7 +542,7 @@ class VOFS(LoggingMixIn, Operations):
 
         handle = self.cache.open(path, isNew, mustExist, myProxy,
                 self.cache_nodes)
-        if (node != None):
+        if node is not None:
             handle.setHeader(myProxy.getSize(), myProxy.getMD5())
         return HandleWrapper(handle, readOnly).getId()
 
@@ -672,7 +673,7 @@ class VOFS(LoggingMixIn, Operations):
         except Exception, e:
             vos.logger.error("%s" % str(e))
             import re
-            if re.search('NodeLocked', str(e)) != None:
+            if re.search('NodeLocked', str(e)) is not None:
                 raise FuseOSError(EPERM)
             return -1
 
