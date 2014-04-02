@@ -1003,9 +1003,16 @@ class Client:
             logger.debug("FOO3")
             return md5.hexdigest()
 
+<<<<<<< HEAD
         logger.debug("FOO4 %s" % srcNode)
         if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
             logger.error("sizes don't match ( %s -> %s ) " % (src, dest))
+=======
+        if destSize != srcSize and ((srcNode is None) or \
+                                        (srcNode.type == 'vos:LinkNode'))  :
+            logger.error("sizes don't match ( %s (%i) -> %s (%i)) " % \
+                             (src, srcSize, dest, destSize))
+>>>>>>> b8fb91cba05a0689dc6982d9a1a78d0ab1ba3077
             raise IOError(errno.EIO, "sizes don't match", src)
         return destSize
 

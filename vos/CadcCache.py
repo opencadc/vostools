@@ -1190,7 +1190,8 @@ class CacheReadThread(threading.Thread):
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
                 if self.aborted:
                     return
-                elif (self.startByte == 0 and (self.optionSize is None or
+                elif (self.startByte == 0 and
+                        (self.optionSize is None or
                         self.optionSize == self.fileHandle.fileSize)):
                     self.fileHandle.fullyCached = True
                     vos.logger.debug("setFullyCached")
