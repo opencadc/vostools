@@ -540,6 +540,7 @@ class TestCadcCache(unittest.TestCase):
     def test_04_renameFile(self):
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             # Rename a non-existing file. Should do nothing as this could be an
             # existing file which is not cached. Not failing is the only
             # requirement.
@@ -708,6 +709,7 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy3 = IOProxyForTest()
 
         with CadcCache.Cache(testDir, 100, True) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             with self.assertRaises(ValueError):
                 testCache.renameDir("adir", "anotherDir")
             with self.assertRaises(ValueError):
@@ -763,6 +765,8 @@ class TestCadcCache(unittest.TestCase):
 
         testIOProxy = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, False) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
+
             # Try to get the attributes for a non-existing file.
             self.assertEqual(testCache.getAttr("/no/such/file"), None)
 
@@ -800,6 +804,7 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy = IOProxyForTest()
         testIOProxy2 = IOProxyForTest()
         with CadcCache.Cache(testDir, 100, True) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             testFile = testCache.open("/dir1/dir2/file", False, False,
                 testIOProxy, False)
             self.assertEqual(1, testFile.refCount)
@@ -816,6 +821,7 @@ class TestCadcCache(unittest.TestCase):
             self.assertFalse(testFile.obsolete)
             testFile2 = testCache.open("/dir1/dir2/file", True, False, 
                     testIOProxy2, False)
+
             self.assertTrue(testFile.obsolete)
             self.assertFalse(testFile2.obsolete)
             self.assertEqual(1, testFile.refCount)
@@ -957,6 +963,7 @@ class TestCadcCache(unittest.TestCase):
     def test_02_open1(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
+            testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
             fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
@@ -982,6 +989,7 @@ class TestCadcCache(unittest.TestCase):
     def test_02_open2(self):
         """ Open a new file"""
         with CadcCache.Cache(testDir, 100) as testObject:
+            testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
             fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
@@ -1091,6 +1099,7 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100) as testObject:
             # This should really flush the data to the backing
+            testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyForTest()
             ioObject.writeToBacking = MagicMock(return_value="1234")
             fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
@@ -1109,6 +1118,7 @@ class TestCadcCache(unittest.TestCase):
 
         with CadcCache.Cache(testDir, 100, timeout=1) as testObject:
             # This should really flush the data to the backing
+            testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyForTest()
             fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
                     False)
@@ -1181,6 +1191,7 @@ class TestCadcCache(unittest.TestCase):
         """Test writing to a file which is not cached."""
 
         with CadcCache.Cache(testDir, 100) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject, 
                     False) as fh:
@@ -1193,6 +1204,7 @@ class TestCadcCache(unittest.TestCase):
         """Test writing to a file wich returns an error"""
 
         with CadcCache.Cache(testDir, 100) as testCache:
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject, 
                     False) as fh:
@@ -1489,6 +1501,7 @@ class TestCadcCache(unittest.TestCase):
         testIOProxy.readFromBacking = Mock(wraps=testIOProxy.readFromBacking)
         with CadcCache.Cache(testDir, 100, timeout=2) as testCache:
             # Expand a new file
+            testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             with testCache.open("/dir1/dir2/file", True, False, testIOProxy, 
                     False) as testFile:
                 testFile.truncate(10)
