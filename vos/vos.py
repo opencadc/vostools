@@ -939,6 +939,7 @@ class Client:
         """copy to/from vospace"""
 
         checkSource = False
+        srcNode = None
         if src[0:4] == "vos:":
             srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
@@ -994,8 +995,11 @@ class Client:
                                                                   
                 raise OSError(errno.EIO, "MD5s don't match", src)
             return md5.hexdigest()
-        if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
-            logger.error("sizes don't match ( %s -> %s ) " % (src, dest))
+
+        if destSize != srcSize and ((srcNode is None) or \
+                                        (srcNode.type == 'vos:LinkNode'))  :
+            logger.error("sizes don't match ( %s (%i) -> %s (%i)) " % \
+                             (src, srcSize, dest, destSize))
             raise IOError(errno.EIO, "sizes don't match", src)
         return destSize
 
