@@ -1114,7 +1114,7 @@ class FileHandle(object):
                     self.fileCondition.wait()
 
             # Ensure the required part of the file is in cache.
-            if self.length != 0:
+            if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
             with self.fileLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)

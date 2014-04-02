@@ -560,8 +560,8 @@ class VOFS(LoggingMixIn, Operations):
 
         # new file in cache library or if no node information (node not in
         # vospace).
-        handle = self.cache.open(path, isNew, mustExist, myProxy,
-                self.cache_nodes)
+        handle = self.cache.open(path, flags & os.O_WRONLY != 0, mustExist, 
+                myProxy, self.cache_nodes)
         if flags & os.O_TRUNC != 0:
             handle.truncate(0)
         if node is not None:
