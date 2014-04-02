@@ -1181,6 +1181,8 @@ class TestCadcCache(unittest.TestCase):
         """Test writing to a file which is not cached."""
 
         with CadcCache.Cache(testDir, 100) as testCache:
+            testCache.flushNodeQueue = \
+                    FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject, 
                     False) as fh:

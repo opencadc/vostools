@@ -1095,14 +1095,24 @@ class FileHandle(object):
 
     def truncate(self, length):
         vos.logger.debug("Truncate %s" % (self.path, ))
+
         # Acquire an exclusive lock on the file
         with self.writerLock(shared=False):
-            with self.fileLock:
+            with self.fileCondition:
                 if self.fileSize is not None and length == self.fileSize:
                     return
 
+                # Tell any running read thread to exit
+                if self.readThread is not None:
+                    self.readThread.aborted = True
+                    self.fileCondition.notify
+
+                while self.readThread is not None:
+                    self.fileCondition.wait()
+
             # Ensure the required part of the file is in cache.
-            self.makeCached(0, min(length, self.fileSize))
+            if self.length != 0:
+                self.makeCached(0, min(length, self.fileSize))
             with self.fileLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
@@ -1169,7 +1179,7 @@ class CacheReadThread(threading.Thread):
             return False
         return True
 
-    #@logExceptions()
+    @logExceptions()
     def execute(self):
         try:
             self.fileHandle.readException = None
@@ -1178,8 +1188,9 @@ class CacheReadThread(threading.Thread):
             with self.fileHandle.fileCondition:
                 vos.logger.debug("setFullyCached? %s %s %s %s" % (self.aborted,
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
-                if (not self.aborted and self.startByte == 0 and
-                        (self.optionSize is None or
+                if self.aborted:
+                    return
+                elif (self.startByte == 0 and (self.optionSize is None or
                         self.optionSize == self.fileHandle.fileSize)):
                     self.fileHandle.fullyCached = True
                     vos.logger.debug("setFullyCached")

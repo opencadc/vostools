@@ -23,6 +23,7 @@ import time
 import urllib
 import urllib2
 import xml.etree.ElementTree as ET
+from logExceptions import logExceptions
 
 from __version__ import version
 
@@ -935,10 +936,12 @@ class Client:
         self.cadc_short_cut = cadc_short_cut
         return
 
+    @logExceptions()
     def copy(self, src, dest, sendMD5=False):
         """copy to/from vospace"""
 
         checkSource = False
+        srcNode = None
         if src[0:4] == "vos:":
             srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
@@ -951,6 +954,8 @@ class Client:
             srcSize = os.stat(src).st_size
             fin = open(src, 'r')
             fout = self.open(dest, os.O_WRONLY, size=srcSize)
+
+        logger.debug("FOO src: %s dest: %s sendMD5: %s" % (src,dest,sendMD5))
 
         destSize = 0
         md5 = hashlib.md5()
@@ -986,6 +991,8 @@ class Client:
             checkMD5 = self.getNode(dest, 
                                     force=True).props.get(
                 'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            logger.debug("FOO2, checkMD5 = %s, md5 = %s" %\
+                             (checkMD5,md5.hexdigest()))
 
         if sendMD5:
             if checkMD5 != md5.hexdigest():
@@ -993,7 +1000,10 @@ class Client:
                                % (checkMD5, md5.hexdigest())))
                                                                   
                 raise OSError(errno.EIO, "MD5s don't match", src)
+            logger.debug("FOO3")
             return md5.hexdigest()
+
+        logger.debug("FOO4 %s" % srcNode)
         if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
             logger.error("sizes don't match ( %s -> %s ) " % (src, dest))
             raise IOError(errno.EIO, "sizes don't match", src)

@@ -556,12 +556,12 @@ class VOFS(LoggingMixIn, Operations):
             myProxy.setSize(int(node.props.get('length')))
             myProxy.setMD5(node.props.get('MD5'))
 
-        # new file in cache library if no node information (node not in
-        # vospace) or file is open for truncate
-        isNew = flags & os.O_TRUNC != 0
-
+        # new file in cache library or if no node information (node not in
+        # vospace).
         handle = self.cache.open(path, isNew, mustExist, myProxy,
                 self.cache_nodes)
+        if flags & os.O_TRUNC != 0:
+            handle.truncate(0)
         if node is not None:
             handle.setHeader(myProxy.getSize(), myProxy.getMD5())
         return HandleWrapper(handle, readOnly).getId()
@@ -776,7 +776,7 @@ class VOFS(LoggingMixIn, Operations):
             self.client.delete(path)
         self.delNode(path, force=True)
 
-    #@logExceptions()
+    @logExceptions()
     def write(self, path, data, size, offset, id=None):
         import ctypes
 
