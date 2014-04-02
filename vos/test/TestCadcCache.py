@@ -19,7 +19,7 @@ import functools
 import pdb
 
 from vos import CadcCache
-from vos.SharedLock import SharedLock, TimeoutError, RecursionError
+from vos.SharedLock import SharedLock, TimeoutError, RecursionError, StealError
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
@@ -416,6 +416,29 @@ class TestSharedLock(unittest.TestCase):
         lock.release()
         self.assertEqual(0, len(lock.lockersList))
         self.assertTrue(lock.exclusiveLock is None)
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    @patch('threading.current_thread')
+    def test_steal(self,mock_current_thread):
+        """Test stealing exclusive locks
+        """
+
+        # Get a shared lock and then attempt to steal it. Should fail.
+        lock = SharedLock()
+        lock.acquire()
+        with self.assertRaises(StealError) as e:
+            lock.steal()
+        lock.release()
+
+        # Now get an exclusive lock in one thread, and steal it in another
+        mock_current_thread.return_value = 'thread1'
+        lock = SharedLock()
+        lock.acquire(shared=False)
+        self.assertEqual('thread1',lock.exclusiveLock)
+        mock_current_thread.return_value = 'thread2'
+        lock.steal()
+        self.assertEqual('thread2',lock.exclusiveLock)
+        lock.release()
 
     def getShared(self,lock):
         lock.acquire(shared=True)
