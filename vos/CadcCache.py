@@ -831,6 +831,9 @@ class FileHandle(object):
                 # it needs to steal the lock in order to do so...)
                 self.writerLock.acquire(shared=False)
 
+                if self.cache.flushNodeQueue is None:
+                    raise CacheError("flushNodeQueue has not been initialized")
+
                 self.cache.flushNodeQueue.put(self)
                 self.flushQueued = True;
                 vos.logger.debug("queue size now %i" \
@@ -1219,7 +1222,7 @@ class FlushNodeQueue(Queue):
     This class implements a thread queue for flushing nodes
     """
 
-    def __init__(self, maxFlushThreads=100):
+    def __init__(self, maxFlushThreads=10):
         """Initialize the FlushNodeQueue Object
 
         Parameters:
