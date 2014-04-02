@@ -20,7 +20,7 @@ from ctypes import cdll
 from ctypes.util import find_library
 import urlparse
 from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
-    IOProxy, FlushNodeQueue
+    IOProxy, FlushNodeQueue, CacheError
 from logExceptions import logExceptions
 
 
@@ -365,6 +365,8 @@ class VOFS(LoggingMixIn, Operations):
            Call the flushNodeQueue join() method which will block
            until any running and/or queued jobs are finished"""
 
+        if self.cache.flushNodeQueue is None:
+            raise CacheError("flushNodeQueue has not been initialized")
         self.cache.flushNodeQueue.join()
 
     #@logExceptions()
