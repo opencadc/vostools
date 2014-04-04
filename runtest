@@ -15,7 +15,13 @@ else
     setenv PYTHONPATH "$thisDir"
 endif
 
-python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
-    --ignore-module=test_cadcCache vos/test/TestCadcCache.py vos/test/Test_vofs.py
 #python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
-    #--ignore-module=test_cadcCache vos/test/Test_vofs.py
+    #--ignore-module=test_cadcCache vos/test/TestCadcCache.py vos/test/Test_vofs.py
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+   #--ignore-module=Test_vofs vos/test/Test_vofs.py
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+#    --ignore-module=Test_vofile vos/test/Test_vofile.py
+
+python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+   --ignore-module=TestCacheMetaData vos/test/TestCacheMetaData.py

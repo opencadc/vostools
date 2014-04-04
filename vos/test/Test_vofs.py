@@ -8,7 +8,7 @@ from contextlib import nested
 from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
-from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle
+from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy
 from vos.vofs import HandleWrapper
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
@@ -16,6 +16,32 @@ skipTests = False
 
 class Object(object):
     pass
+
+class MyFileHandle(FileHandle):
+    def __init__(self, path, cache, ioObject):
+        anIOProxy = IOProxy()
+        anIOProxy.writeToBacking = Mock()
+        super(MyFileHandle, self).__init__(path, cache, anIOProxy)
+    def readData(self, start, mandatory, optional):
+        self.setHeader(10,"12345")
+        self.gotHeader = True
+        with self.fileCondition:
+            self.fileCondition.notify_all()
+        return
+
+class MyFileHandle2(FileHandle):
+    def __init__(self, path, cache, ioObject):
+        anIOProxy = IOProxy()
+        anIOProxy.writeToBacking = Mock()
+        super(MyFileHandle2, self).__init__(path, cache, anIOProxy)
+    def readData(self, start, mandatory, optional):
+        try:
+            raise IOError(ENOENT, "No such file")
+        except IOError:
+            self.setReadException()
+        with self.fileCondition:
+            self.fileCondition.notify_all()
+        return
 
 class TestVOFS(unittest.TestCase):
     testMountPoint = "/tmp/testfs"
@@ -34,6 +60,21 @@ class TestVOFS(unittest.TestCase):
 
     def tearDown(self):
         self.setUp()
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_init_(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        self.assertTrue(testfs.opt is opt)
+        self.assertEqual(testfs.root, self.testMountPoint)
+
+        # Client connection fails
+        with patch('vos.Client.__init__') as mock1:
+            e = IOError()
+            e.errno = EIO
+            mock1.side_effect = e
+            with self.assertRaises(FuseOSError):
+                testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+
 
     @unittest.skipIf(skipTests, "Individual tests")
     def testWrite1(self):
@@ -125,72 +166,97 @@ class TestVOFS(unittest.TestCase):
             testfs.read( "/dir1/dir2/file", 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
     
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
+        file2 = "/dir1/dir2/file2"
+        file3 = "/dir1/dir2/file2"
         myVofs.cache.getAttr = Mock()
         myVofs.cache.getAttr.return_value = None
         
         # getNode return not found
         myVofs.getNode = Mock()
-        myVofs.getNode.side_effect = FuseOSError(404)
-        fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
-        self.assertEqual(self.testCacheDir + "/data" + file,
-                HandleWrapper.findHandle(fh) .cacheFileHandle.cacheDataFile)
-        self.assertEqual(self.testCacheDir + "/metaData" + file,
-                HandleWrapper.findHandle(fh).cacheFileHandle.cacheMetaDataFile)
-        self.assertFalse(HandleWrapper.findHandle(fh).readOnly)
+        myVofs.getNode.side_effect = IOError(404, "NoFile")
+        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+            mockFileHandle.return_value = MyFileHandle2(file, myVofs.cache, 
+                    None)
+            mockFileHandle.return_value.readData = Mock(
+                    wraps=mockFileHandle.return_value.readData)
+            fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
+            self.assertEqual(self.testCacheDir + "/data" + file,
+                    HandleWrapper.findHandle(fh) .cacheFileHandle.cacheDataFile)
+            self.assertEqual(self.testCacheDir + "/metaData" + file,
+                    HandleWrapper.findHandle(fh).cacheFileHandle.\
+                    cacheMetaDataFile)
+            self.assertFalse(HandleWrapper.findHandle(fh).readOnly)
+            self.assertEqual(mockFileHandle.return_value.readData.call_count, 1)
+            myVofs.release(file, fh)
 
-        # non existing file open in read/write mode should fail
-        with self.assertRaises(FuseOSError) as e:
-            myVofs.open(file, os.O_RDWR, None)
-        self.assertEqual(e.exception.errno, ENOENT)
-            
-        # test with mocks so we can assert other parts of the function
-        with patch('vos.vofs.MyIOProxy') as mock1:
-            with patch('vos.CadcCache.Cache') as mock2:
-                myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
-                myVofs.getNode = Mock()
-                myVofs.getNode.side_effect = FuseOSError(404)
-                #myVofs.cache = mock2
-                fh = myVofs.open( file, os.O_RDWR | os.O_CREAT, None)
-                self.assertFalse(HandleWrapper.findHandle(fh).readOnly)
-                mock1.assert_called_with(myVofs, None)
-                #mock2.open.assert_called_with(file, True, mock1)
+            # Try to open a file which doesn't exist.
+            with self.assertRaises(FuseOSError):
+                fh = myVofs.open( file2, os.O_RDWR, None)
+
+            myVofs.getNode.side_effect = IOError(ENOENT, "no file")
+            # Open where getNode returns an error
+            with self.assertRaises(FuseOSError):
+                fh = myVofs.open( file2, os.O_RDWR, None)
 
         # test file in the cache already
         myVofs.cache.getAttr = Mock()
         myVofs.cache.getAttr.return_value = Mock()
-        fhMock = Mock()
-        myVofs.cache.open = Mock()
-        myVofs.cache.open.return_value = fhMock
-        with patch('vos.vofs.MyIOProxy') as myIOProxyMock:
-            myMock = Object()
-            myIOProxyMock.return_value = myMock
+        #fhMock = Mock()
+        #myVofs.cache.open = Mock()
+        #myVofs.cache.open.return_value = fhMock
+        with nested(patch('vos.vofs.MyIOProxy'), 
+                patch('vos.CadcCache.FileHandle')) as \
+                (myIOProxy, mockFileHandle):
+            mockFileHandle.return_value = MyFileHandle(file, myVofs.cache, None)
+            mockFileHandle.return_value.readData = Mock(
+                    wraps=mockFileHandle.return_value.readData)
+            myMockIOObject = Object()
+            myIOProxy.return_value = myMockIOObject
             fh = myVofs.open( file, os.O_RDWR, None)
-            self.assertTrue(HandleWrapper.findHandle(fh).cacheFileHandle.
+            mockFileHandle.return_value.readData.\
+                    assert_called_once_with(0, 0, None)
+            self.assertFalse(HandleWrapper.findHandle(fh).cacheFileHandle.
                     fileModified)
-            self.assertTrue(HandleWrapper.findHandle(fh).cacheFileHandle.
+            self.assertFalse(HandleWrapper.findHandle(fh).cacheFileHandle.
                     fullyCached)
-            myVofs.cache.open.assert_called_once_with(file, False, myMock)
-            myVofs.cache.open.reset_mock()
             
             # test a read-only file
+            mockFileHandle.return_value.readData.reset_mock()
             myVofs.cache.getAttr = Mock()
             myVofs.cache.getAttr.return_value = Mock()
+            HandleWrapper.findHandle(fh).cacheFileHandle.readData.reset_mock()
             fh = myVofs.open( file, os.O_RDONLY, None)
             self.assertTrue(HandleWrapper.findHandle(fh).readOnly)
-            self.assertTrue(HandleWrapper.findHandle(fh).cacheFileHandle is
-                    fhMock)
-            myVofs.cache.open.reset_mock()
+            self.assertEqual(mockFileHandle.return_value.readData.call_count, 0)
         
             # test a truncated file
+            myVofs.cache.open = Mock(wraps=myVofs.cache.open)
             fh = myVofs.open( file, os.O_TRUNC, None)
-            myVofs.cache.open.assert_called_once_with(file, True, myMock)
+            myVofs.cache.open.assert_called_once_with(file, False, True, 
+                    myMockIOObject, False)
             myVofs.cache.open.reset_mock()
 
-    
+            # Test a file with a locked parent opened read/write.
+            myVofs.cache.getAttr.return_value = None
+            nodeLocked = Object()
+            nodeLocked.props = {'islocked': True, 'parent': True}
+            nodeLocked.type = "vos:ContainerNode"
+            nodeUnlocked = Object()
+            nodeUnlocked.props = {'islocked': False, 'child': True}
+            nodeUnlocked.type = "vos:DataNode"
+            myVofs.getNode = Mock(side_effect=SideEffect({
+                    (os.path.dirname(file3),): nodeLocked,
+                    (file3,): nodeUnlocked }
+                     ,name="myVofs.getNode", default=None)) 
+            myMockIOObject.setSize = Mock()
+            with self.assertRaises(FuseOSError):
+                fh = myVofs.open( file3, os.O_RDWR, None)
+
+
     @unittest.skipIf(skipTests, "Individual tests")
     def test_create(self):
         file = "/dir1/dir2/file"
@@ -227,7 +293,7 @@ class TestVOFS(unittest.TestCase):
         testfs.open.assert_called_once_with(file, os.O_WRONLY)       
 
                 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_release(self):
         file = "/dir1/dir2/file"
 
@@ -507,6 +573,7 @@ class TestVOFS(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_fsync(self):
+
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
@@ -521,44 +588,74 @@ class TestVOFS(unittest.TestCase):
                 }, name="node.props.get") )
         node.type = "vos:DataNode"
         testfs.client.getNode = Mock(return_value = node)
-        fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
-        HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
-                Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.fsync)
-        testfs.fsync(file, False, fh)
-        HandleWrapper.findHandle(fh).cacheFileHandle.fsync.assert_called_once_with()
-        testfs.release(file, fh)
-        
-        # Try flushing on a read-only file.
-        testfs.client.getNode = Mock(return_value = node)
-        fh = testfs.open( file, os.O_RDONLY, None)
-        HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
-                Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.fsync)
-        with self.assertRaises(FuseOSError) as e:
+        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+            mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
+            fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
+            HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
+                    Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fsync)
             testfs.fsync(file, False, fh)
-        self.assertEqual(e.exception.errno, EPERM)
-        self.assertEqual(HandleWrapper.findHandle(fh).cacheFileHandle.fsync.call_count, 0)
-        testfs.release(file, fh)
+            HandleWrapper.findHandle(fh).cacheFileHandle.fsync.\
+                    assert_called_once_with()
+            HandleWrapper.findHandle(fh).cacheFileHandle.fsync.\
+                    assert_called_once_with()
+        
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_fsync2(self):
+        file = "/dir1/dir2/file"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
+        testfs.client = Object()
+        node = Mock(spec=vos.Node)
+        node.isdir = Mock(return_value = False)
+        node.props = Object
+        node.props.get = Mock(side_effect=SideEffect({
+                ('islocked', False): False,
+                ('length',): 10,
+                ('MD5',): 12354,
+                }, name="node.props.get") )
+        node.type = "vos:DataNode"
+        testfs.client.getNode = Mock(return_value = node)
+        # Try flushing on a read-only file.
+        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+            mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
+            fh = testfs.open( file, os.O_RDONLY, None)
+            self.assertFalse(HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fileModified)
+            HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
+                    Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fsync)
+            with self.assertRaises(FuseOSError) as e:
+                testfs.fsync(file, False, fh)
+            self.assertEqual(e.exception.errno, EPERM)
+            self.assertEqual(HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fsync.call_count, 0)
+            self.assertFalse(HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fileModified)
+
+            testfs.release(file, fh)
 
         # Try with an invalid file descriptor
         with self.assertRaises(FuseOSError) as e:
             testfs.fsync(file, False, -1)
         self.assertEqual(e.exception.errno, EIO)
 
-
         # Try flushing on a read-only file system.
-        myopt = copy.copy(opt)
-        myopt.readonly = True
-        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, myopt)
-        testfs.client = Object()
-        testfs.client.getNode = Mock(return_value = node)
-        fh = testfs.open( file, os.O_RDONLY, None)
-        HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
-                Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.fsync)
-        testfs.fsync(file, False, fh)
-        self.assertEqual(HandleWrapper.findHandle(fh).cacheFileHandle.fsync.
-                call_count, 0)
-        testfs.release(file, fh)
+        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+            myopt = copy.copy(opt)
+            testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, myopt)
+            mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
+            myopt.readonly = True
+            testfs.client = Object()
+            testfs.client.getNode = Mock(return_value = node)
+            fh = testfs.open( file, os.O_RDONLY, None)
+            HandleWrapper.findHandle(fh).cacheFileHandle.fsync = \
+                    Mock(wraps=HandleWrapper.findHandle(fh).cacheFileHandle.
+                    fsync)
+            testfs.fsync(file, False, fh)
+            self.assertEqual(HandleWrapper.findHandle(fh).cacheFileHandle.fsync.
+                    call_count, 0)
+            testfs.release(file, fh)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_rename(self):
@@ -636,19 +733,29 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.open = Mock(wraps=testfs.cache.open)
         origRelease = FileHandle.release
         origTruncate = FileHandle.truncate
-        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+        with nested(patch('vos.CadcCache.FileHandle.release'),
+                patch('vos.CadcCache.FileHandle')) as (mockRelease,
+                mockFileHandle):
+            mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
+            mockFileHandle.return_value.readData = \
+                    Mock(wraps=mockFileHandle.return_value.readData)
             mockRelease.wraps = origRelease # TODO This doesn't really work,
                                             # release is not called and so open
                                             # files are being leaked
             testfs.truncate(file, 0)
             self.assertEqual(testfs.cache.open.call_count, 1)
             self.assertEqual(testfs.cache.open.call_args[0][0], file)
-            self.assertTrue(testfs.cache.open.call_args[0][1])
+            self.assertFalse(testfs.cache.open.call_args[0][1])
+            self.assertTrue(testfs.cache.open.call_args[0][2])
             mockRelease.assert_called_once_with()
+            self.assertEqual(mockFileHandle.return_value.readData.call_count, 1)
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
-        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+        with nested(patch('vos.CadcCache.FileHandle.release'),
+                patch('vos.CadcCache.FileHandle.readData')) as mocks:
+            mockRelease = mocks[0]
+            mockReadData = mocks[1]
             mockRelease.wraps = origRelease # TODO This doesn't really work,
                                             # release is not called and so open
                                             # files are being leaked
@@ -663,7 +770,10 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate with an exception returned by the CadcCache truncate
         testfs.cache.open.reset_mock()
-        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+        with nested(patch('vos.CadcCache.FileHandle.release'),
+                patch('vos.CadcCache.FileHandle.readData')) as mocks:
+            mockRelease = mocks[0]
+            mockReadData = mocks[1]
             mockRelease.wraps = origRelease # TODO This doesn't really work,
                                             # release is not called and so open
                                             # files are being leaked
@@ -676,7 +786,10 @@ class TestVOFS(unittest.TestCase):
             mockRelease.assert_called_once_with()
 
         # Truncate an already opened file given the file handle.
-        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+        with nested(patch('vos.CadcCache.FileHandle.release'),
+                patch('vos.CadcCache.FileHandle.readData')) as mocks:
+            mockRelease = mocks[0]
+            mockReadData = mocks[1]
             mockRelease.wraps = origRelease # TODO This doesn't really work,
                                             # release is not called and so open
                                             # files are being leaked
@@ -704,8 +817,14 @@ class TestVOFS(unittest.TestCase):
         testfs2.cache.open = Mock(wraps=testfs2.cache.open)
 
         # Truncate a read only file handle.
-        with patch('vos.CadcCache.FileHandle.release') as mockRelease:
+        with nested(patch('vos.CadcCache.FileHandle.release'),
+                patch('vos.CadcCache.FileHandle')) as \
+                (mockRelease, mockFileHandle):
             mockRelease.wraps = origRelease
+            mockFileHandle.return_value = MyFileHandle(file, testfs2.cache, 
+                    None)
+            mockFileHandle.return_value.readData = \
+                    Mock(wraps=mockFileHandle.return_value.readData)
             try:
                 fh = testfs2.open( file, os.O_RDONLY, None)
                 testfs2.cache.open.reset_mock()
@@ -798,6 +917,7 @@ class TestMyIOProxy(unittest.TestCase):
             myVofs.cacheFile = Mock()
             myVofs.cacheFile.path = path
             myVofs.client = client
+            client.getFileInfo = Mock(return_value=(123,"456", 45))
             testProxy = vofs.MyIOProxy(myVofs, None)
 
 
@@ -840,6 +960,38 @@ class TestMyIOProxy(unittest.TestCase):
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 1)
 
+                    # Submit a request with size = None and offset > 0
+                    vos_VOFILE.open.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
+                    callCount[0] = 0
+                    testProxy.readFromBacking(None, 1)
+                    self.assertEqual(client.open.call_count, 1)
+                    vos_VOFILE.open.assert_called_once_with("url0", 
+                            bytes="bytes=1-")
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 1)
+
+                    # Do a read which fails. This should result in a
+                    # renegotiation.
+                    vos_VOFILE.open.reset_mock()
+                    vos_VOFILE.close.reset_mock()
+                    vos_VOFILE.read.reset_mock()
+                    callCount[0] = 0
+                    self.assertTrue(testProxy.lastVOFile is not None)
+                    testProxy.lastVOFile.read = Mock(side_effect=IOError())
+                    # This throws an exception because read will be called
+                    # twice, the first is caught and error handling occurs, the
+                    # second is not caught.
+                    with self.assertRaises(IOError):
+                        testProxy.readFromBacking(None, 1)
+                    self.assertEqual(client.open.call_count, 2)
+                    vos_VOFILE.open.assert_called_with("url0", 
+                            bytes="bytes=1-")
+                    self.assertEqual(vos_VOFILE.close.call_count, 1)
+                    self.assertEqual(vos_VOFILE.read.call_count, 2)
+
+
                 finally:
                     testProxy.cacheFile.readThread = None
 
@@ -864,9 +1016,39 @@ class TestMyIOProxy(unittest.TestCase):
         path = "/dir1/dir2/file"
         cacheFile = Object()
         cacheFile.path = path
+        cacheFile.gotHeader = True
         cacheFile.cache = Object()
         testProxy.setCacheFile(cacheFile)
         testProxy.readFromBacking()
+
+    @unittest.skipIf(skipTests, "Individual tests")    
+    def test_getMD5(self):
+        testProxy = vofs.MyIOProxy(None, "vos:/anode")
+        node = vos.Node("vos:/anode", properties = \
+                {"MD5": "1234", "length": "1"})
+        testProxy.vofs = Object()
+        testProxy.vofs.getNode = Mock(side_effect=SideEffect({
+                ('vos:/anode',): node, }
+                 , name="testfs.getNode")) 
+        self.assertEqual(testProxy.getMD5(), "1234")
+
+        testProxy.md5 = "789"
+        self.assertEqual(testProxy.getMD5(), "789")
+
+    @unittest.skipIf(skipTests, "Individual tests")    
+    def test_getSize(self):
+        testProxy = vofs.MyIOProxy(None, "vos:/anode")
+        node = vos.Node("vos:/anode", properties = \
+                {"MD5": "1234", "length": "1"})
+        testProxy.vofs = Object()
+        testProxy.vofs.getNode = Mock(side_effect=SideEffect({
+                ('vos:/anode',): node, }
+                 , name="testfs.getNode")) 
+        self.assertEqual(testProxy.getSize(), 1)
+
+        testProxy.size = 27
+        self.assertEqual(testProxy.getSize(), 27)
+
 
 class TestHandleWrapper(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")

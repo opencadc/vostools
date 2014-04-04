@@ -19,7 +19,8 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse
-from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
+from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
+    IOProxy, FlushNodeQueue, CacheError
 from logExceptions import logExceptions
 
 
@@ -35,12 +36,15 @@ def flag2mode(flags):
 
 
 class MyIOProxy(IOProxy):
-    def __init__(self, vofs, node):
+    def __init__(self, vofs, path):
         super(MyIOProxy, self).__init__()
         self.vofs = vofs
-        self.node = node
         # This is the vofile object last used
         self.lastVOFile = None
+        self.size = None
+        self.md5 = None
+        self.path = path
+        self.condition = CacheCondition(None)
 
     #@logExceptions()
     def writeToBacking(self):
@@ -56,7 +60,7 @@ class MyIOProxy(IOProxy):
         vos.logger.debug("attributes: %s " % str(node.attr))
         return node.props.get("MD5")
 
-    #@logExceptions()
+    @logExceptions()
     def readFromBacking(self, size=None, offset=0,
             blockSize=Cache.IO_BLOCK_SIZE):
         """
@@ -103,6 +107,10 @@ class MyIOProxy(IOProxy):
                             size=size, range=range, full_negotiation=True)
                     buff = self.lastVOFile.read(blockSize)
 
+                if not self.cacheFile.gotHeader:
+                    info = self.lastVOFile.getFileInfo()
+                    self.cacheFile.setHeader(info[0], info[1])
+
                 if buff is None:
                     vos.logger.debug("buffer for %s is None" %
                             (self.cacheFile.path))
@@ -118,6 +126,9 @@ class MyIOProxy(IOProxy):
                     # The transfer was aborted.
                     break
                 offset += len(buff)
+        except Exception as e:
+            self.exception = e
+            raise
         finally:
             self.lastVOFile.close()
 
@@ -125,16 +136,26 @@ class MyIOProxy(IOProxy):
                 self.cacheFile.path))
 
     def getMD5(self):
-        if self.node is None:
-            return None
-        else:
-            return self.node.props.get('MD5')
+        if self.md5 is None:
+            node = self.vofs.getNode(self.path)
+            self.setSize(int(node.props.get('length')))
+            self.setMD5(node.props.get('MD5'))
+
+        return self.md5
 
     def getSize(self):
-        if self.node is None:
-            return None
-        else:
-            return int(self.node.props.get('length'))
+        if self.size is None:
+            node = self.vofs.getNode(self.path)
+            self.setSize(int(node.props.get('length')))
+            self.setMD5(node.props.get('MD5'))
+
+        return self.size
+
+    def setMD5(self, md5):
+        self.md5 = md5
+
+    def setSize(self, size):
+        self.size = size
 
 
 class HandleWrapper(object):
@@ -187,7 +208,7 @@ class VOFS(LoggingMixIn, Operations):
     setxattr = None
 
     def __init__(self, root, cache_dir, options, conn=None,
-            cache_limit=1024, cache_nodes=False):
+            cache_limit=1024, cache_nodes=False, cache_max_flush_threads=10):
         """Initialize the VOFS.
 
         cache_limit is in MB.
@@ -211,14 +232,16 @@ class VOFS(LoggingMixIn, Operations):
         self.root = root
 
         # VOSpace is a bit slow so we do some caching.
-        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout)
+        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout, \
+                               maxFlushThreads=cache_max_flush_threads)
 
         # All communication with the VOSpace goes through this client
         # connection.
         try:
-            self.client = vos.Client(rootNode=root, conn=conn, cadc_short_cut=True)
+            self.client = vos.Client(rootNode=root, conn=conn,
+                    cadc_short_cut=True)
         except Exception as e:
-            e = FuseOSError(e.errno)
+            e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
             e.strerror = getattr(e, 'strerror', 'failed while making mount')
             raise e
@@ -336,6 +359,16 @@ class VOFS(LoggingMixIn, Operations):
         ## now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
+    def destroy(self, path):
+        """Called on filesystem destruction. Path is always /
+
+           Call the flushNodeQueue join() method which will block
+           until any running and/or queued jobs are finished"""
+
+        if self.cache.flushNodeQueue is None:
+            raise CacheError("flushNodeQueue has not been initialized")
+        self.cache.flushNodeQueue.join()
+
     #@logExceptions()
     def fsync(self, path, datasync, id):
         if self.opt.readonly:
@@ -408,6 +441,16 @@ class VOFS(LoggingMixIn, Operations):
 
         return self.getNode(path, limit=0, force=False).attr
 
+    def init(self, path):
+        """Called on filesystem initialization. (Path is always /)
+
+           Here is where we start the worker threads for the queue
+           that flushes nodes."""
+
+        self.cache.flushNodeQueue = \
+            FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
+
+
     #@logExceptions()
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
@@ -450,14 +493,15 @@ class VOFS(LoggingMixIn, Operations):
         # whether the other two flags are absent.
         readOnly = ((flags & (os.O_RDWR | os.O_WRONLY)) == 0)
 
+        mustExist = not ((flags & os.O_CREAT) == os.O_CREAT)
         cacheFileAttrs = self.cache.getAttr(path)
-        if cacheFileAttrs is None:
+        if cacheFileAttrs is None and not readOnly:
             # file in the cache not in the process of being modified.
             # see if this node already exists in the cache; if not get info
             # from vospace
             try:
                 node = self.getNode(path)
-            except Exception as e:
+            except IOError as e:
                 if e.errno == 404:
                     # file does not exist
                     if not flags & os.O_CREAT:
@@ -509,14 +553,20 @@ class VOFS(LoggingMixIn, Operations):
             vos.logger.debug("Cannot create locked file: %s", path)
             raise e
 
-        myProxy = MyIOProxy(self, node)
-        # new file in cache library if no node information (node not in
-        # vospace) or file is open for truncate
-        isNew = ((cacheFileAttrs == None) and (node == None) or
-                ((flags & os.O_TRUNC) != 0))
+        myProxy = MyIOProxy(self, path)
+        if node is not None:
+            myProxy.setSize(int(node.props.get('length')))
+            myProxy.setMD5(node.props.get('MD5'))
 
-        return HandleWrapper(self.cache.open(path, isNew, myProxy),
-                readOnly).getId()
+        # new file in cache library or if no node information (node not in
+        # vospace).
+        handle = self.cache.open(path, flags & os.O_WRONLY != 0, mustExist, 
+                myProxy, self.cache_nodes)
+        if flags & os.O_TRUNC != 0:
+            handle.truncate(0)
+        if node is not None:
+            handle.setHeader(myProxy.getSize(), myProxy.getMD5())
+        return HandleWrapper(handle, readOnly).getId()
 
     #@logExceptions()
     def read(self, path, size=0, offset=0, id=None):
@@ -623,7 +673,6 @@ class VOFS(LoggingMixIn, Operations):
                 del self.node[fh.cacheFileHandle.path]
         except Exception, e:
             #unexpected problem
-            raise
             raise FuseOSError(EIO)
         return
 
@@ -646,7 +695,7 @@ class VOFS(LoggingMixIn, Operations):
         except Exception, e:
             vos.logger.error("%s" % str(e))
             import re
-            if re.search('NodeLocked', str(e)) != None:
+            if re.search('NodeLocked', str(e)) is not None:
                 raise FuseOSError(EPERM)
             return -1
 
@@ -696,10 +745,8 @@ class VOFS(LoggingMixIn, Operations):
         if id is None:
             # Ensure the file exists.
             if length == 0:
-                try:
-                    fh = self.open(path, os.O_RDWR | os.O_TRUNC)
-                finally:
-                    self.release(path, fh)
+                fh = self.open(path, os.O_RDWR | os.O_TRUNC)
+                self.release(path, fh)
                 return
 
             fh = self.open(path, os.O_RDWR)
@@ -731,7 +778,7 @@ class VOFS(LoggingMixIn, Operations):
             self.client.delete(path)
         self.delNode(path, force=True)
 
-    #@logExceptions()
+    @logExceptions()
     def write(self, path, data, size, offset, id=None):
         import ctypes
 

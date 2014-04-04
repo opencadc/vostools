@@ -129,28 +129,28 @@ def copy(source,dest,exclude=None,include=None):
         if exclude is not None:
            for thisIgnore in exclude.split(','):
                if not thisDest.find(thisIgnore) < 0:
-	           skip = True
+                   skip = True
                    continue
 
         if include is not None:
-           skip = True 
-           for thisIgnore in include.split(','):
-               if not thisDest.find(thisIgnore) < 0:
-	           skip = False
-                   continue
+            skip = True
+            for thisIgnore in include.split(','):
+                if not thisDest.find(thisIgnore) < 0:
+                    skip = False
+                    continue
 
         if not skip:
             logging.info("%s -> %s " % ( source, dest))
         while not skip:
             try:
-                client.copy(source,dest,sendMD5=True)
+                client.copy(source, dest, sendMD5=True)
                 break
             except Exception as e:
-                if getattr(e,'errno',-1) == 104:
+                if getattr(e, 'errno', -1) == 104:
                     ### 104 is connection reset by peer.  Try again on this error
                     logging.debug(str(e))
-		    exit_code = getattr(e,'errno',-1)
-		elif getattr(e,'errno',-1) == errno.EIO:
+                    exit_code = getattr(e, 'errno', -1)
+                elif getattr(e, 'errno', -1) == errno.EIO:
                     ### retry on IO errors
                     logging.warning(str(e)+"\nRetrying")
                     pass
