@@ -1304,7 +1304,7 @@ class Client:
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None,
-             limit=None, nextURI=None, size=None, cutout=None):
+             limit=None, nextURI=None, size=None, range=None, cutout=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1364,7 +1364,7 @@ class Client:
                 URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI,
                                       cutout=cutout)
 
-        return VOFile(URL, self.conn, method=method, size=size)
+        return VOFile(URL, self.conn, method=method, size=size, range=range)
 
 
     def addProps(self, node):
