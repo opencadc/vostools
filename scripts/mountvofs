@@ -51,6 +51,9 @@ if __name__ == "__main__":
 	    help="cache dataNode properties, containerNodes are not cached")
     parser.add_option("--allow_other", action="store_true", default=False, 
 	    help="Allow all users access to this mountpoint")
+    parser.add_option("--max_flush_threads", action="store", type=int,
+	    help="upper limit on number of flush (upload) threads",
+	    default=10)
 
     parser.version = version
     (opt, args)=parser.parse_args()
@@ -93,7 +96,8 @@ if __name__ == "__main__":
         os.makedirs(mount)
     if platform=="darwin":
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
-		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes), 
+		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
+                cache_max_flush_threads=opt.max_flush_threads), 
 		    mount,
                     fsname=root,
                     volname=root,
@@ -107,7 +111,9 @@ if __name__ == "__main__":
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
-		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes), mount,
+		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
+                cache_max_flush_threads=opt.max_flush_threads),
+                    mount,
                     fsname=root,
                     readonly=opt.readonly,
                     allow_other=opt.allow_other,

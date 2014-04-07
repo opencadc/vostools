@@ -19,7 +19,8 @@ from __version__ import version
 from ctypes import cdll
 from ctypes.util import find_library
 import urlparse
-from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, IOProxy
+from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
+    IOProxy, FlushNodeQueue, CacheError
 from logExceptions import logExceptions
 
 
@@ -207,7 +208,7 @@ class VOFS(LoggingMixIn, Operations):
     setxattr = None
 
     def __init__(self, root, cache_dir, options, conn=None,
-            cache_limit=1024, cache_nodes=False):
+            cache_limit=1024, cache_nodes=False, cache_max_flush_threads=10):
         """Initialize the VOFS.
 
         cache_limit is in MB.
@@ -231,7 +232,8 @@ class VOFS(LoggingMixIn, Operations):
         self.root = root
 
         # VOSpace is a bit slow so we do some caching.
-        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout)
+        self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout, \
+                               maxFlushThreads=cache_max_flush_threads)
 
         # All communication with the VOSpace goes through this client
         # connection.
@@ -357,6 +359,16 @@ class VOFS(LoggingMixIn, Operations):
         ## now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
+    def destroy(self, path):
+        """Called on filesystem destruction. Path is always /
+
+           Call the flushNodeQueue join() method which will block
+           until any running and/or queued jobs are finished"""
+
+        if self.cache.flushNodeQueue is None:
+            raise CacheError("flushNodeQueue has not been initialized")
+        self.cache.flushNodeQueue.join()
+
     #@logExceptions()
     def fsync(self, path, datasync, id):
         if self.opt.readonly:
@@ -428,6 +440,16 @@ class VOFS(LoggingMixIn, Operations):
             return cacheFileAttrs
 
         return self.getNode(path, limit=0, force=False).attr
+
+    def init(self, path):
+        """Called on filesystem initialization. (Path is always /)
+
+           Here is where we start the worker threads for the queue
+           that flushes nodes."""
+
+        self.cache.flushNodeQueue = \
+            FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
+
 
     #@logExceptions()
     def mkdir(self, path, mode):
@@ -536,12 +558,12 @@ class VOFS(LoggingMixIn, Operations):
             myProxy.setSize(int(node.props.get('length')))
             myProxy.setMD5(node.props.get('MD5'))
 
-        # new file in cache library if no node information (node not in
-        # vospace) or file is open for truncate
-        isNew = flags & os.O_TRUNC != 0
-
-        handle = self.cache.open(path, isNew, mustExist, myProxy,
-                self.cache_nodes)
+        # new file in cache library or if no node information (node not in
+        # vospace).
+        handle = self.cache.open(path, flags & os.O_WRONLY != 0, mustExist, 
+                myProxy, self.cache_nodes)
+        if flags & os.O_TRUNC != 0:
+            handle.truncate(0)
         if node is not None:
             handle.setHeader(myProxy.getSize(), myProxy.getMD5())
         return HandleWrapper(handle, readOnly).getId()
@@ -756,7 +778,7 @@ class VOFS(LoggingMixIn, Operations):
             self.client.delete(path)
         self.delNode(path, force=True)
 
-    #@logExceptions()
+    @logExceptions()
     def write(self, path, data, size, offset, id=None):
         import ctypes
 

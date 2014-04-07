@@ -8,6 +8,7 @@ import io
 import stat
 import time
 import threading
+from Queue import Queue
 import traceback
 import hashlib
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
@@ -25,6 +26,7 @@ import pdb
 libcPath = ctypes.util.find_library('c')
 libc = ctypes.cdll.LoadLibrary(libcPath)
 
+_flush_thread_count = 0
 
 # TODO optionally disable random reads - always read to the end of the file.
 
@@ -90,7 +92,7 @@ class Cache(object):
     """
     IO_BLOCK_SIZE = 2 ** 14
 
-    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60):
+    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60, maxFlushThreads=10):
         """Initialize the Cache Object
 
         Parameters:
@@ -98,6 +100,7 @@ class Cache(object):
         cacheDir : string - The directory for the cache.
         maxCacheSize : int - The maximum cache size in megabytes
         readOnly : boolean - Is the cached data read-only
+        maxFlushThreads : int - Maximum number of nodes to flush simultaneously
         """
 
         self.cacheDir = os.path.abspath(cacheDir)
@@ -110,6 +113,13 @@ class Cache(object):
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
         self.cacheLock = threading.RLock()
+
+        # A thread queue will be shared by FileHandles to flush nodes.
+        # Figure out how many threads will be available now, but defer
+        # initializing the queue / worker threads until the filesystem
+        # is initialized (see vofs.init)
+        self.maxFlushThreads = maxFlushThreads
+        self.flushNodeQueue = None
 
         if os.path.exists(self.cacheDir):
             if not os.path.isdir(self.cacheDir):
@@ -736,8 +746,8 @@ class FileHandle(object):
         self.fullyCached = None
         # Is this file now obsoleted by a new file.
         self.obsolete = False
-        # Is the file being flushed out to vospace right now?
-        self.flushThread = None
+        # Is the file flush out to vospace queued right now?
+        self.flushQueued = None
         self.flushException = None
         self.readThread = None
         self.gotHeader = False
@@ -803,23 +813,38 @@ class FileHandle(object):
             if self.refCount == 1 and self.readThread is not None:
                 self.readThread.aborted = True
 
-            # If flushing is not already in progress, start the thread
-            if (self.flushThread is None and self.refCount == 1 and
+            # If flushing is not already in progress, submit to the thread
+            # queue.
+            if (self.flushQueued is None and self.refCount == 1 and
                     self.fileModified and not self.obsolete):
 
-                vos.logger.debug("Start flush thread")
                 self.refCount += 1
-                self.flushThread = threading.Thread(target=self.flushNode,
-                        args=[])
-                self.flushThread.start()
 
-            while (self.flushThread is not None or
-                    self.readThread is not None):
-                # Wait for the flush to complete. This will throw a CacheRetry
-                # exception if the timeout is exeeded.
-                # Ignore timeouts. It important to close the file descriptor.
-                vos.logger.debug("flushThread: %s, readThread: %s" %
-                        (self.flushThread, self.readThread))
+                # Acquire the writer lock exclusively. This will prevent
+                # the file from being modified while it is being
+                # flushed. This used to be inside flushNode when it was
+                # executed immediately in a new thread. However, now that
+                # this is done by a thread queue there could be a large
+                # delay, so the lock is acquired by the thread that puts
+                # it in the queue and waits for it to finish. The lock
+                # is released by the worker thread doing the flush (and
+                # it needs to steal the lock in order to do so...)
+                self.writerLock.acquire(shared=False)
+
+                if self.cache.flushNodeQueue is None:
+                    raise CacheError("flushNodeQueue has not been initialized")
+
+                self.cache.flushNodeQueue.put(self)
+                self.flushQueued = True;
+                vos.logger.debug("queue size now %i" \
+                                     % self.cache.flushNodeQueue.qsize())
+
+            while (self.flushQueued is not None or
+                   self.readThread is not None):
+                # Wait for the flush to complete.
+                vos.logger.debug("flushQueued: %s, readThread: %s" %
+                        (self.flushQueued, self.readThread))
+                vos.logger.debug("Waiting for flush to complete.")
                 self.fileCondition.wait()
 
             # Look for write failures.
@@ -857,43 +882,50 @@ class FileHandle(object):
         """Flush the file to the backing store.
         """
 
-        vos.logger.debug("Flush node %s " % self.path)
+        global _flush_thread_count
+        _flush_thread_count = _flush_thread_count + 1
+
+        vos.logger.debug("flushing node %s, working thread count is %i " \
+                             % (self.path,_flush_thread_count))
         self.flushException = None
 
-        # Acquire the writer lock exclusivly. This will prevent the file from
-        # being modified while it is being flushed.
-        with self.writerLock(shared=False):
-            try:
-                # Get the md5sum of the cached file
-                size, mtime = self.getFileInfo()
+        # Now that the flush has started we want this thread to own
+        # the lock
+        self.writerLock.steal()
 
-                # Write the file to vospace.
+        try:
+            # Get the md5sum of the cached file
+            size, mtime = self.getFileInfo()
 
-                with self.fileLock:
-                    os.fsync(self.ioObject.cacheFileDescriptor)
-                md5 = self.ioObject.writeToBacking()
+            # Write the file to vospace.
 
-                # Update the meta data md5
-                blocks, numBlocks = self.ioObject.blockInfo(0, size)
-                self.metaData = CacheMetaData(self.cacheMetaDataFile,
-                        numBlocks, md5, size)
-                if numBlocks > 0:
-                    self.metaData.setReadBlocks(0, numBlocks - 1)
-                self.metaData.md5sum = md5
-                self.metaData.persist()
+            with self.fileLock:
+                os.fsync(self.ioObject.cacheFileDescriptor)
+            md5 = self.ioObject.writeToBacking()
 
-            except Exception as e:
-                vos.logger.debug("Flush node failed")
-                self.flushException = sys.exc_info()
-            finally:
-                self.flushThread = None
-                self.fileModified = False
-                vos.logger.debug("Flush node notify")
-                self.deref()
-                # Wake up any threads waiting for the flush to finish
-                with self.fileCondition:
-                    self.fileCondition.notify_all()
-        vos.logger.debug("Flush node finished")
+            # Update the meta data md5
+            blocks, numBlocks = self.ioObject.blockInfo(0, size)
+            self.metaData = CacheMetaData(self.cacheMetaDataFile,
+                                          numBlocks, md5, size)
+            if numBlocks > 0:
+                self.metaData.setReadBlocks(0, numBlocks - 1)
+            self.metaData.md5sum = md5
+            self.metaData.persist()
+
+        except Exception as e:
+            vos.logger.debug("Flush node failed")
+            self.flushException = sys.exc_info()
+        finally:
+            self.flushQueued = None
+            self.writerLock.release()
+            self.fileModified = False
+            self.deref()
+            _flush_thread_count = _flush_thread_count - 1
+            vos.logger.debug("finished flushing node %s, working thread count is %i " \
+                             % (self.path,_flush_thread_count))
+            # Wake up any threads waiting for the flush to finish
+            with self.fileCondition:
+                self.fileCondition.notify_all()
 
         self.cache.checkCacheSpace()
 
@@ -1066,14 +1098,24 @@ class FileHandle(object):
 
     def truncate(self, length):
         vos.logger.debug("Truncate %s" % (self.path, ))
+
         # Acquire an exclusive lock on the file
         with self.writerLock(shared=False):
-            with self.fileLock:
+            with self.fileCondition:
                 if self.fileSize is not None and length == self.fileSize:
                     return
 
+                # Tell any running read thread to exit
+                if self.readThread is not None:
+                    self.readThread.aborted = True
+                    self.fileCondition.notify
+
+                while self.readThread is not None:
+                    self.fileCondition.wait()
+
             # Ensure the required part of the file is in cache.
-            self.makeCached(0, min(length, self.fileSize))
+            if length != 0:
+                self.makeCached(0, min(length, self.fileSize))
             with self.fileLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
@@ -1140,7 +1182,7 @@ class CacheReadThread(threading.Thread):
             return False
         return True
 
-    #@logExceptions()
+    @logExceptions()
     def execute(self):
         try:
             self.fileHandle.readException = None
@@ -1149,7 +1191,9 @@ class CacheReadThread(threading.Thread):
             with self.fileHandle.fileCondition:
                 vos.logger.debug("setFullyCached? %s %s %s %s" % (self.aborted,
                 self.startByte, self.optionSize, self.fileHandle.fileSize))
-                if (not self.aborted and self.startByte == 0 and
+                if self.aborted:
+                    return
+                elif (self.startByte == 0 and
                         (self.optionSize is None or
                         self.optionSize == self.fileHandle.fileSize)):
                     self.fileHandle.fullyCached = True
@@ -1181,3 +1225,43 @@ class CacheReadThread(threading.Thread):
                 if self.fileHandle.readThread is not None:
                     self.fileHandle.readThread = None
                     self.fileHandle.fileCondition.notify_all()
+
+
+class FlushNodeQueue(Queue):
+    """
+    This class implements a thread queue for flushing nodes
+    """
+
+    def __init__(self, maxFlushThreads=10):
+        """Initialize the FlushNodeQueue Object
+
+        Parameters:
+        -----------
+        maxFlushThreads : int - Maximum number of flush threads
+        """
+
+        Queue.__init__(self)
+
+        # Start the worker threads
+        self.maxFlushThreads = maxFlushThreads
+        for i in range(self.maxFlushThreads):
+            t = threading.Thread(target=self.worker)
+            t.daemon = True
+            t.start()
+
+        vos.logger.debug("started a FlushNodeQueue with %i workers" \
+                             % self.maxFlushThreads)
+
+    def join(self):
+        vos.logger.debug("FlushNodeQueue waiting until all work is done")
+        Queue.join(self)
+
+    def worker(self):
+        """A worker is a thin wrapper for FileHandle.flushNode()
+        """
+       # vos.logger.debug("Worker has started")
+        while True:
+            fileHandle = self.get()
+            #vos.logger.debug("Worker has work")
+            fileHandle.flushNode()
+            self.task_done()

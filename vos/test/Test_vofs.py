@@ -236,7 +236,7 @@ class TestVOFS(unittest.TestCase):
             # test a truncated file
             myVofs.cache.open = Mock(wraps=myVofs.cache.open)
             fh = myVofs.open( file, os.O_TRUNC, None)
-            myVofs.cache.open.assert_called_once_with(file, True, True, 
+            myVofs.cache.open.assert_called_once_with(file, False, True, 
                     myMockIOObject, False)
             myVofs.cache.open.reset_mock()
 
@@ -745,10 +745,10 @@ class TestVOFS(unittest.TestCase):
             testfs.truncate(file, 0)
             self.assertEqual(testfs.cache.open.call_count, 1)
             self.assertEqual(testfs.cache.open.call_args[0][0], file)
-            self.assertTrue(testfs.cache.open.call_args[0][1])
+            self.assertFalse(testfs.cache.open.call_args[0][1])
             self.assertTrue(testfs.cache.open.call_args[0][2])
             mockRelease.assert_called_once_with()
-            self.assertEqual(mockFileHandle.return_value.readData.call_count, 0)
+            self.assertEqual(mockFileHandle.return_value.readData.call_count, 1)
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
