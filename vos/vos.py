@@ -1296,7 +1296,7 @@ class Client:
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None,
-             limit=None, nextURI=None, size=None, range=None, cutout=None):
+             limit=None, nextURI=None, size=None, cutout=None, range=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1344,7 +1344,7 @@ class Client:
                     # TODO
                     # the above re.search should use generic VOSpace uri search, not CADC specific.
                     ## Since this is an CADC vospace link, just follow it.
-                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
+                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout, range)
                 else:
                     # A target external to VOSpace, open the target directly
                     # TODO
