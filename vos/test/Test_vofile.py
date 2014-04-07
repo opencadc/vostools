@@ -37,7 +37,7 @@ class TestVOFile(unittest2.TestCase):
         generator = mockHttpRequest.getresponse.iter.return_value
         iterator = iter([mockHttpResponse503, mockHttpResponse200])
         generator.__iter__.return_value = iterator
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(["Some URL"], mockConn, "GET")
 
         # check the response
@@ -61,7 +61,7 @@ class TestVOFile(unittest2.TestCase):
         mockConn = Mock(name="Connection")
         mockHttpRequest = Mock(name="HttpRequest")
         mockHttpRequest.getresponse.return_value = mockHttpResponse
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(["Some URL"], mockConn, "GET")
         # set number of retries to 1 and check the IOError was thrown
         vofile.maxRetries = 1
@@ -93,7 +93,7 @@ class TestVOFile(unittest2.TestCase):
 
         # set a 412 response first followed by a 200 response
         mockHttpRequest.getresponse = MagicMock(side_effect=[mockHttpResponse412, mockHttpResponse200])
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(["Some URL"], mockConn, "GET")
         vofile.currentRetryDelay = 2
 
@@ -134,7 +134,7 @@ class TestVOFile(unittest2.TestCase):
         # test successful - use first url
         self.responses = [mockHttpResponse200]
         mockHttpRequest.getresponse = Mock(side_effect=self.side_effect)
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(transferURLs, mockConn, "GET")
         vofile.read()
         assert(vofile.url == transferURLs[0])
@@ -144,7 +144,7 @@ class TestVOFile(unittest2.TestCase):
         # test first url busy
         self.responses = [mockHttpResponse503, mockHttpResponse200]
         mockHttpRequest.getresponse = Mock(side_effect=self.side_effect)
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(transferURLs, mockConn, "GET")
         vofile.read()
         assert(vofile.url == transferURLs[1])
@@ -154,7 +154,7 @@ class TestVOFile(unittest2.TestCase):
         #test first url error - ignored internally, second url busy, third url works
         self.responses = [mockHttpResponse404, mockHttpResponse503, mockHttpResponse200]
         mockHttpRequest.getresponse = Mock(side_effect=self.side_effect)
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(transferURLs, mockConn, "GET")
         vofile.read()
         assert(vofile.url == transferURLs[2])
@@ -164,7 +164,7 @@ class TestVOFile(unittest2.TestCase):
         # all urls busy first time, first one successfull second time
         self.responses = [mockHttpResponse503, mockHttpResponse503, mockHttpResponse503, mockHttpResponse200]
         mockHttpRequest.getresponse = Mock(side_effect=self.side_effect)
-        mockConn.getConnection.return_value = mockHttpRequest
+        mockConn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(transferURLs, mockConn, "GET")
         vofile.read()
         assert(vofile.url == transferURLs[0])
