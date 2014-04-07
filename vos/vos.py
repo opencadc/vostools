@@ -675,26 +675,8 @@ class VOFile:
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
-        if self.closed:
-            return True
-        logger.debug("Closing connection")
-        try:
-            if self.transEncode is not None:
-                self.httpCon.send('0\r\n\r\n')
-            self.resp = self.httpCon.getresponse()
-            return self.checkstatus(codes=code)
-        except ssl.SSLError as e:
-            raise
-            raise IOError(errno.EAGAIN, str(e))
-        except IOError as e:
-            raise e
-        except Exception as e:
-            raise IOError(errno.ENOTCONN, str(e))
-        finally:
-            self.httpCon.close()
-            self.closed = True
-            logger.debug("Connection closed")
-        return True
+        self.httpCon.close()
+
 
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416, 416, 402, 408, 412, 504)):
@@ -783,12 +765,20 @@ class VOFile:
         """return size bytes from the connection response"""
 
         #logger.debug("Starting to read file by closing http(s) connection")
+        
         if not self.closed:
+            logger.debug("Completing HTTP Request")
             try:
-                self.close()
-            except IOError:
-                logger.info("Error on URL: %s" % (self.url))
-                # gets might have other URLs to try on, so keep going ...
+                if self.transEncode is not None:
+                    self.httpCon.send('0\r\n\r\n')
+                self.resp = self.httpCon.getresponse()
+                self.closed = True
+            except IOErorr as e:
+                logger.info(str(e))
+            except Exception as e:
+                raise IOError(errno.ENOTCONN, str(e))
+
+            self.checkstatus()
 
         if self.resp.status == 416:
             return ""
@@ -1046,7 +1036,8 @@ class Client:
         #logger.debug("Getting node %s" % ( uri))
         uri = self.fixURI(uri)
         if force or uri not in self.nodeCache:
-            xml_file = self.open(uri, os.O_RDONLY, limit=limit)
+            xml_file = StringIO(self.open(uri, os.O_RDONLY, limit=limit).read())
+            xml_file.seek(0)
             dom = ElementTree.parse(xml_file)
             node = Node(dom.getroot())
             # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
@@ -1057,7 +1048,8 @@ class Client:
                 nextURI = None
                 while nextURI != node.getNodeList()[-1].uri:
                     nextURI = node.getNodeList()[-1].uri
-                    xml_file = self.open(uri, os.O_RDONLY, nextURI=nextURI, limit=limit)
+                    xml_file = StringIO(self.open(uri, os.O_RDONLY, nextURI=nextURI, limit=limit).read())
+                    xml_file.seek(0)
                     next_page = Node(ElementTree.parse(xml_file).getroot())
                     if len(next_page.getNodeList()) > 0 and nextURI == next_page.getNodeList()[0].uri:
                         next_page.getNodeList().pop(0)

@@ -7,19 +7,19 @@ import vos.vos as vos
 
 class UrlparseTest(unittest.TestCase):
     def test_urlparse(self):
-        parts = vos.urlparse("http://www.test.com/path")
+        parts = vos.URLparse("http://www.test.com/path")
         assert_that(parts.scheme, equal_to("http"))
         assert_that(parts.netloc, equal_to("www.test.com"))
         assert_that(parts.path, equal_to("/path"))
 
     def test_urlparse_naming_authority(self):
-        parts = vos.urlparse("https://cadc.nrc.ca!vospace/path")
+        parts = vos.URLparse("https://cadc.nrc.ca!vospace/path")
         assert_that(parts.scheme, equal_to("https"))
         assert_that(parts.netloc, equal_to("cadc.nrc.ca!vospace"))
         assert_that(parts.path, equal_to("/path"))
 
     def test_urlparse_multi_depth_path(self):
-        parts = vos.urlparse("http://cadc.nrc.ca!vospace/multi/depth/path.ext")
+        parts = vos.URLparse("http://cadc.nrc.ca!vospace/multi/depth/path.ext")
         assert_that(parts.scheme, equal_to("http"))
         assert_that(parts.netloc, equal_to("cadc.nrc.ca!vospace"))
         assert_that(parts.path, equal_to("/multi/depth/path.ext"))
