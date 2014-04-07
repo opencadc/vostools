@@ -45,7 +45,7 @@ class ClientTest(unittest.TestCase):
         http_con.getresponse.return_value = http_response
 
         conn = Mock(spec=vos.Connection)
-        conn.getConnection.return_value = http_con
+        conn.get_connection.return_value = http_con
 
         self.undertest = vos.Client(certFile=None, conn=conn, cadc_short_cut=True)
         self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
