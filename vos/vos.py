@@ -22,13 +22,9 @@ import sys
 import time
 import urllib
 import urllib2
-<<<<<<< HEAD
-import xml.etree.ElementTree as ET
+from xml.etree import ElementTree
 from logExceptions import logExceptions
 
-=======
-from xml.etree import ElementTree
->>>>>>> 867a99dfbd3fb337ca6ce8c2369d78c6f20c1a65
 from __version__ import version
 
 logger = logging.getLogger('vos')
@@ -113,7 +109,7 @@ class Connection:
         if self.http_debug:
             connection.set_debuglevel(1)
 
-        ## Try to open this connection. 
+        ## Try to open this connection.
         start_time = time.time()
         logger.debug("Opening the connection")
         while True:
@@ -294,7 +290,7 @@ class Node:
 
         self.attr['st_mode'] = attr.get('st_mode', st_mode)
 
-        ## We set the owner and group bits to be those of the currently running process.  
+        ## We set the owner and group bits to be those of the currently running process.
         ## This is a hack since we don't have an easy way to figure these out.  TBD!
         self.attr['st_uid'] = attr.get('st_uid', os.getuid())
         self.attr['st_gid'] = attr.get('st_uid', os.getgid())
@@ -470,7 +466,7 @@ class Node:
             ### There should be a '#' in there someplace...
             propertyNode.attrib["uri"] = "%s" % self.fix_prop(property)
             if properties[property] is None:
-                ## this is actually a delete property                                                                                                                                                
+                ## this is actually a delete property
                 propertyNode.attrib['xsi:nil'] = 'true'
                 propertyNode.attrib["xmlns:xsi"] = Node.XSINS
                 propertyNode.text = ""
@@ -813,7 +809,7 @@ class VOFile:
             # 3. hardware failure on storage node
             # For 3. it is necessary to try the other URLs in the list otherwise this the
             # failed URL might show up even after the caller tries to re-negotiate the transfer.
-            # For 1. and 2., calls to the other URLs in the list might or might not succed. 
+            # For 1. and 2., calls to the other URLs in the list might or might not succeed.
             if self.urlIndex < len(self.URLs) - 1:
                 # go to the next URL
                 self.urlIndex += 1
@@ -906,7 +902,7 @@ class Client:
         archive: the name of the archive to associated with GET requests
         cadc_short_cut: if True then just assumed data web service urls
         http_debug: if True, then httplib will print debug statements
-        
+
         """
         if certFile is not None and not os.access(certFile, os.F_OK):
             ### can't get this certfile
@@ -971,7 +967,7 @@ class Client:
                 checkMD5 = srcMD5
             else:
                 # TODO
-                # this is a hack .. 
+                # this is a hack ..
                 # we should check the data integraty of links too
                 # just not sure how
                 checkMD5 = md5.hexdigest()
@@ -997,10 +993,10 @@ class Client:
     def fixURI(self, uri):
         """given a uri check if the authority part is there and if it isn't
         then add the CADC vospace authority
-        
+
         """
         parts = URLparse(uri)
-        # TODO 
+        # TODO
         # implement support for local files (parts.scheme=None
         # and self.rootNode=None
 
@@ -1257,7 +1253,7 @@ class Client:
             # do not remove the line below. It is used for testing
             logger.debug("Job URL: " + jobURL + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
-                # poll the job. Sleeping time in between polls is doubling each time 
+                # poll the job. Sleeping time in between polls is doubling each time
                 # until it gets to 32sec
                 totalSlept = 0
                 if (sleepTime <= 32):
@@ -1300,11 +1296,11 @@ class Client:
 
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None,
-             limit=None, nextURI=None, size=None, cutout=None):
+             limit=None, nextURI=None, size=None, cutout=None, range=None):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
-        ### really that's an error, but I thought I'd just accept those are 
+        ### really that's an error, but I thought I'd just accept those are
         ### os.O_RDONLY
 
         logger.debug("URI: %s" % ( uri))
@@ -1348,7 +1344,7 @@ class Client:
                     # TODO
                     # the above re.search should use generic VOSpace uri search, not CADC specific.
                     ## Since this is an CADC vospace link, just follow it.
-                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout)
+                    return self.open(target, mode, view, head, URL, limit, nextURI, size, cutout, range)
                 else:
                     # A target external to VOSpace, open the target directly
                     # TODO
@@ -1360,7 +1356,7 @@ class Client:
                 URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI,
                                       cutout=cutout)
 
-        return VOFile(URL, self.conn, method=method, size=size)
+        return VOFile(URL, self.conn, method=method, size=size, range=range)
 
 
     def addProps(self, node):
