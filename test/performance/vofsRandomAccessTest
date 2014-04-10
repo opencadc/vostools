@@ -6,6 +6,10 @@ then
     thisDir=.
 fi
 
+if [ ! $PYTHONPATH ]; then
+    export PYTHONPATH=$thidDir/../../
+fi
+
 referencefs=$1
 offsets="0 5000 200000 10000"
 echo "seek pattern (KB): $offsets"
@@ -32,7 +36,7 @@ fi
 testFile=700000o.fits.fz
 vospace=vos://cadc.nrc.ca~vospace/CADCAuthtest1
 
-mountCmd="mountvofs --certfile=$A/test-certificates/x509_CADCAuthtest1.pem \
+mountCmd="$thisDir/../../scripts/mountvofs --certfile=$A/test-certificates/x509_CADCAuthtest1.pem \
 	--cache_dir=$cacheDir --mountpoint=$mountPoint --readonly \
 	--vospace=$vospace --cache_nodes --log=$logDir" 
 echo "$mountCmd"
