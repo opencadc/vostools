@@ -1108,7 +1108,7 @@ class FileHandle(object):
                 # Tell any running read thread to exit
                 if self.readThread is not None:
                     self.readThread.aborted = True
-                    self.fileCondition.notify
+                    self.fileCondition.notify_all()
 
                 while self.readThread is not None:
                     self.fileCondition.wait()
