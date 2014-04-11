@@ -901,9 +901,10 @@ class Client:
                      "groupread", "groupwrite", "ispublic"]
 
 
-    def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
-                 rootNode=None, conn=None, archive='vospace', cadc_short_cut=False,
-                 http_debug=False):
+    def __init__(self,
+                 certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
+                 rootNode=None, conn=None, archive='vospace',
+                 cadc_short_cut=False, http_debug=False, secure_get=False):
         """This could/should be expanded to set various defaults
 
         certFile: CADC proxy certficate location.
@@ -931,6 +932,14 @@ class Client:
         self.archive = archive
         self.nodeCache = {}
         self.cadc_short_cut = cadc_short_cut
+
+        # Using HTTP for short cut GETs are faster, but if the
+        # user wants a secure connection, force that here
+        if secure_get:
+            self.short_cut_get_protocol = Client.VO_HTTPSGET_PROTOCOL
+        else:
+            self.short_cut_get_protocol = Client.VO_HTTPGET_PROTOCOL
+
         return
 
     #@logExceptions()
@@ -1106,7 +1115,7 @@ class Client:
             ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
             direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-            protocol = {'GET': {'https': Client.VO_HTTPSGET_PROTOCOL,
+            protocol = {'GET': {'https': self.short_cut_get_protocol,
                                 'http': Client.VO_HTTPGET_PROTOCOL},
                         'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
                                 'http': Client.VO_HTTPPUT_PROTOCOL}}
