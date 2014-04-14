@@ -671,8 +671,19 @@ class VOFile:
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
-        self.httpCon.close()
-
+        try:
+            if self.transEncode is not None:
+                self.httpCon.send('0\r\n\r\n')
+            self.resp = self.httpCon.getresponse()
+            self.checkstatus()
+        except IOError as e:
+            raise e
+        except Exception as e:
+            raise IOError(errno.ENOTCONN, str(e))
+        finally:
+            self.closed = True
+            self.httpCon.close()
+        return self.closed
 
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416, 416, 402, 408, 412, 504)):
@@ -763,18 +774,10 @@ class VOFile:
         #logger.debug("Starting to read file by closing http(s) connection")
         
         if not self.closed:
-            logger.debug("Completing HTTP Request")
             try:
-                if self.transEncode is not None:
-                    self.httpCon.send('0\r\n\r\n')
-                self.resp = self.httpCon.getresponse()
-                self.closed = True
-            except IOErorr as e:
+                self.close()
+            except IOError as e:
                 logger.info(str(e))
-            except Exception as e:
-                raise IOError(errno.ENOTCONN, str(e))
-
-            self.checkstatus()
 
         if self.resp.status == 416:
             return ""
