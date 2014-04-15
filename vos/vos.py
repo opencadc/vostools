@@ -643,8 +643,16 @@ class VOFile:
         # Make all the calls to open send a list of URLs
         # this should be redone during a cleanup. Basically, a GET might result in multiple
         # URLs (list of URLs) but VOFile is also used to retrieve schema files and other info.
-        # All the calls should pass a list of URLs
-        self.URLs = (isinstance(url_list, list) and url_list) or [url_list]
+        # All the calls should pass a list of URLs. Make sure that we make
+        # a copy of the input list so that we don't accidentally modify
+        # the caller's copy.
+        if isinstance(url_list, list):
+            self.URLs = []
+            for u in url_list:
+                self.URLs.append(u)
+        else:
+            self.URLs = [url_list]
+
         self.urlIndex = 0
         self.followRedirect = followRedirect
         self._fpos = 0
