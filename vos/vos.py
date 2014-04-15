@@ -933,13 +933,7 @@ class Client:
         self.archive = archive
         self.nodeCache = {}
         self.cadc_short_cut = cadc_short_cut
-
-        # Using HTTP for short cut GETs are faster, but if the
-        # user wants a secure connection, force that here
-        if secure_get:
-            self.short_cut_get_protocol = Client.VO_HTTPSGET_PROTOCOL
-        else:
-            self.short_cut_get_protocol = Client.VO_HTTPGET_PROTOCOL
+        self.secure_get = secure_get
 
         return
 
@@ -1118,17 +1112,29 @@ class Client:
             ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
             direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-            protocol = {'GET': {'https': self.short_cut_get_protocol,
-                                'http': Client.VO_HTTPGET_PROTOCOL},
-                        'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
-                                'http': Client.VO_HTTPPUT_PROTOCOL}}
+
+            # We override the GET protocol to use HTTP (faster)
+            # unless a secure_get is requested.
+            protocol = {
+                'GET':
+                    {'https':
+                         (self.secure_get and
+                          Client.VO_HTTPSGET_PROTOCOL) or
+                     Client.VO_HTTPGET_PROTOCOL,
+                     'http': Client.VO_HTTPGET_PROTOCOL},
+                'PUT':
+                    {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                     'http': Client.VO_HTTPPUT_PROTOCOL}}
 
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
-            args = {'TARGET': self.fixURI(uri),
-                                     'DIRECTION': direction[method],
-                                     'PROTOCOL': protocol[method][self.protocol],
-                                     'view': view}
+
+            args = {
+                'TARGET': self.fixURI(uri),
+                'DIRECTION': direction[method],
+                'PROTOCOL': protocol[method][self.protocol],
+                'view': view}
+
             if cutout is not None:
                 args['cutout'] = cutout
             form = urllib.urlencode(args)
