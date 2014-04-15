@@ -24,6 +24,7 @@ import urllib
 import urllib2
 from xml.etree import ElementTree
 from logExceptions import logExceptions
+from copy import deepcopy
 
 from __version__ import version
 
@@ -643,13 +644,12 @@ class VOFile:
         # Make all the calls to open send a list of URLs
         # this should be redone during a cleanup. Basically, a GET might result in multiple
         # URLs (list of URLs) but VOFile is also used to retrieve schema files and other info.
-        # All the calls should pass a list of URLs. Make sure that we make
-        # a copy of the input list so that we don't accidentally modify
-        # the caller's copy.
+
+        # All the calls should pass a list of URLs. Make sure that we
+        # make a deep copy of the input list so that we don't
+        # accidentally modify the caller's copy.
         if isinstance(url_list, list):
-            self.URLs = []
-            for u in url_list:
-                self.URLs.append(u)
+            self.URLs = deepcopy(url_list)
         else:
             self.URLs = [url_list]
 
