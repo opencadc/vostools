@@ -115,13 +115,13 @@ def sizeFormat(size):
     """Format a size value for listing"""
     import math
     if opt.human:
-        sizeUnit = ['B', 'K', 'M', 'G']
+        sizeUnit = ['B', 'K', 'M', 'G', 'T']
         try:
             length = float(size)
             scale = int(math.log(length) / math.log(1024))
             length = "%.0f%s" % (length / (1024.0 ** scale), sizeUnit[scale])
         except:
-            length = str(size)
+            length = str(int(size))
     else:
         length = str(int(size))
     return "%12s " % (length)
