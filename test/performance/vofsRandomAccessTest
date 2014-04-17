@@ -1,10 +1,18 @@
 #!/bin/bash
 
 thisDir=${0%/*}
-if [ "$thisDir" = "mfs_free_space_test" ]
+if [ "$thisDir" = "vofsRandomAccessTest" ]
 then
     thisDir=.
 fi
+
+if [ ! $PYTHONPATH ]; then
+    export PYTHONPATH=$thidDir/../../
+fi
+
+echo "python path: $PYTHONPATH"
+
+wcCmd="wc -c"
 
 referencefs=$1
 offsets="0 5000 200000 10000"
@@ -13,6 +21,7 @@ echo "seek test times are in us, and the values in the row are:"
 echo "   time to open the file"
 echo "   times to do each of the seeks"
 echo "   time to close the file"
+echo "wc command is '$wcCmd'"
 echo "wc times are in seconds."
 
 testDirectory=/tmp/$USER/vofsRandomAccessTest
@@ -32,12 +41,10 @@ fi
 testFile=700000o.fits.fz
 vospace=vos://cadc.nrc.ca~vospace/CADCAuthtest1
 
-mountCmd="mountvofs --certfile=$A/test-certificates/x509_CADCAuthtest1.pem \
+mountCmd="$thisDir/../../scripts/mountvofs --certfile=$A/test-certificates/x509_CADCAuthtest1.pem \
 	--cache_dir=$cacheDir --mountpoint=$mountPoint --readonly \
-	--vospace=$vospace --cache_nodes --log=$logDir" 
+	--vospace=$vospace --cache_nodes --log=$logDir"
 echo "$mountCmd"
-
-
 
 # Create the mount point if necessary
 mkdir -p $mountPoint
@@ -58,12 +65,12 @@ r1=$($thisDir/vofsRandomAccessSeeks.py --size=20 --offsets="$offsets" \
 results="$prefix initial seeks: $r1"
 
 echo "$prefix wc after initial seek: $(date)"
-r1=$(/usr/bin/time -f "$prefix"' wc after initial seek: %e' wc -w $mountPoint/$testFile 2>&1 > /dev/null )
+r1=$(/usr/bin/time -f "$prefix"' wc after initial seek: %e' ${wcCmd} $mountPoint/$testFile 2>&1 > /dev/null )
 results="$results 
 $r1"
 
 echo "$prefix second wc after initial seek: $(date)"
-r1=$(/usr/bin/time -f "$prefix"' wc after initial seek: %e' wc -w $mountPoint/$testFile 2>&1 > /dev/null )
+r1=$(/usr/bin/time -f "$prefix"' wc after initial seek: %e' ${wcCmd} $mountPoint/$testFile 2>&1 > /dev/null )
 results="$results 
 $r1"
 
@@ -85,7 +92,7 @@ $mountCmd
 sleep 5
 
 echo "$prefix wc on cleared cache: $(date)"
-r1=$(/usr/bin/time -f "$prefix"' wc after cleared cache: %e' wc -w $mountPoint/$testFile 2>&1 > /dev/null )
+r1=$(/usr/bin/time -f "$prefix"' wc after cleared cache: %e' ${wcCmd} $mountPoint/$testFile 2>&1 > /dev/null )
 results="$results 
 $r1"
 
@@ -110,7 +117,7 @@ EOF
 results="$results 
 $r1"
 
-wc -w $mountPoint/$testFile &> /dev/null
+${wcCmd} $mountPoint/$testFile &> /dev/null
 
 # Do a multi threaded test
 r1=$(/usr/bin/time -f  "$prefix"' parallel reads with initialized cache: %e' parallel.py --numThreads=4 2>&1 > /dev/null << EOF
@@ -156,11 +163,11 @@ r1=$($thisDir/vofsRandomAccessSeeks.py --size=20 --offsets="$offsets" \
 results="$results 
 $prefix cleared-cache reference seeks: $r1"
 
-r1=$(/usr/bin/time -f "$prefix"' wc: %e' wc -w $referencefs/$testFile 2>&1 > /dev/null )
+r1=$(/usr/bin/time -f "$prefix"' wc: %e' ${wcCmd} $referencefs/$testFile 2>&1 > /dev/null )
 results="$results 
 $r1"
 
-r1=$(/usr/bin/time -f "$prefix"' wc: %e' wc -w $referencefs/$testFile 2>&1 > /dev/null )
+r1=$(/usr/bin/time -f "$prefix"' wc: %e' ${wcCmd} $referencefs/$testFile 2>&1 > /dev/null )
 results="$results 
 $r1"
 
@@ -182,7 +189,7 @@ EOF
 )
 results="$results 
 $r1"
-wc -w $referencefs/$testFile &> /dev/null
+${wcCmd} $referencefs/$testFile &> /dev/null
 r1=$(/usr/bin/time -f  "$prefix"' reference parallel reads initialized cache: %e' parallel.py --numThreads=4 2>&1 > /dev/null << EOF
 
 $thisDir/vofsRandomAccessSeeks.py --size=20 --random=500 --delay=.001 --fileName=$referencefs/$testFile

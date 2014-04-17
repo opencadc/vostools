@@ -103,6 +103,8 @@ class Cache(object):
         maxFlushThreads : int - Maximum number of nodes to flush simultaneously
         """
 
+        sys.setcheckinterval(10)
+        vos.logger.debug("check interval: %d" % sys.getcheckinterval())
         self.cacheDir = os.path.abspath(cacheDir)
         self.dataDir = os.path.join(self.cacheDir, "data")
         self.metaDataDir = os.path.join(self.cacheDir, "metaData")
@@ -184,7 +186,7 @@ class Cache(object):
         """
 
         fileHandle = self.getFileHandle(path, isNew, ioObject)
-        with fileHandle.fileLock:
+        with fileHandle.fileCondition:
             vos.logger.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
                         id(fileHandle)))
             # If this is a new file, initialize the cache state, otherwise
@@ -220,8 +222,9 @@ class Cache(object):
                         (fileHandle.metaData is None or
                         fileHandle.metaData.getNumReadBlocks() == 0)):
                     # If the cache file should be empty, empty it.
-                    os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
-                    os.fsync(fileHandle.ioObject.cacheFileDescriptor)
+                    with fileHandle.ioObject.cacheFileDescriptorLock:
+                        os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
+                        os.fsync(fileHandle.ioObject.cacheFileDescriptor)
 
             # For an existing file, start a data transfer to get the size and
             # md5sum unless the information is available and is trusted.
@@ -231,8 +234,6 @@ class Cache(object):
                 while (not fileHandle.gotHeader and
                         fileHandle.readException is None):
                     fileHandle.fileCondition.wait()
-            vos.logger.debug("done wait %s %s" % (fileHandle.gotHeader,
-                    fileHandle.readException))
             if fileHandle.readException is not None:
                 # If the file doesn't exist and is not required to exist, then
                 # an ENOENT error is ok and not propegated. All other errors
@@ -586,6 +587,7 @@ class IOProxy(object):
         self.cache = None
         self.cacheFileDescriptor = None
         self.currentWriteOffset = None
+        self.cacheFileDescriptorLock = threading.Lock()
 
     def getMD5(self):
         """
@@ -654,7 +656,7 @@ class IOProxy(object):
                     "of the known file size: %d > %d." %
                     (offset + len(buffer), self.cacheFile.fileSize))
 
-        with self.cacheFile.fileLock:
+        with self.cacheFileDescriptorLock:
             os.lseek(self.cacheFileDescriptor, offset, os.SEEK_SET)
             # Write the data to the data file.
             nextByte = 0
@@ -663,6 +665,7 @@ class IOProxy(object):
                 nextByte += os.write(self.cacheFileDescriptor,
                         buffer[nextByte:])
 
+        with self.cacheFile.fileCondition:
             # Set the mask bits corresponding to any completely read blocks.
             lastCompleteByte = offset + len(buffer)
             if lastCompleteByte != self.cacheFile.fileSize:
@@ -728,9 +731,10 @@ class FileHandle(object):
             os.makedirs(os.path.dirname(self.cacheDataFile), stat.S_IRWXU)
         except OSError:
             pass
-        self.ioObject.cacheFileDescriptor = os.open(self.cacheDataFile,
-                os.O_RDWR | os.O_CREAT)
-        info = os.fstat(self.ioObject.cacheFileDescriptor)
+        with self.ioObject.cacheFileDescriptorLock:
+            self.ioObject.cacheFileDescriptor = os.open(self.cacheDataFile,
+                    os.O_RDWR | os.O_CREAT)
+            info = os.fstat(self.ioObject.cacheFileDescriptor)
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
         # Lock for modifing the FileHandle object.
@@ -785,8 +789,9 @@ class FileHandle(object):
 
         if not self.fullyCached and self.metaData.getNumReadBlocks() == 0:
             # If the cache file should be empty, empty it.
-            os.ftruncate(self.ioObject.cacheFileDescriptor, 0)
-            os.fsync(self.ioObject.cacheFileDescriptor)
+            with self.ioObject.cacheFileDescriptorLock:
+                os.ftruncate(self.ioObject.cacheFileDescriptor, 0)
+                os.fsync(self.ioObject.cacheFileDescriptor)
         self.gotHeader = True
 
     def setReadException(self):
@@ -846,6 +851,7 @@ class FileHandle(object):
                         (self.flushQueued, self.readThread))
                 vos.logger.debug("Waiting for flush to complete.")
                 self.fileCondition.wait()
+            vos.logger.debug("done wait 1")
 
             # Look for write failures.
             if self.flushException is not None:
@@ -856,7 +862,8 @@ class FileHandle(object):
         return
 
     def deref(self):
-        with nested(self.cache.cacheLock, self.fileLock):
+        with nested(self.cache.cacheLock, self.fileLock,
+                self.ioObject.cacheFileDescriptorLock):
             self.refCount -= 1
             if self.refCount == 0:
                 os.close(self.ioObject.cacheFileDescriptor)
@@ -875,7 +882,8 @@ class FileHandle(object):
     def getFileInfo(self):
         """Get the current file information for the file."""
 
-        info = os.fstat(self.ioObject.cacheFileDescriptor)
+        with self.ioObject.cacheFileDescriptorLock:
+            info = os.fstat(self.ioObject.cacheFileDescriptor)
         return info.st_size, info.st_mtime
 
     def flushNode(self):
@@ -899,7 +907,7 @@ class FileHandle(object):
 
             # Write the file to vospace.
 
-            with self.fileLock:
+            with self.ioObject.cacheFileDescriptorLock:
                 os.fsync(self.ioObject.cacheFileDescriptor)
             md5 = self.ioObject.writeToBacking()
 
@@ -926,6 +934,7 @@ class FileHandle(object):
             # Wake up any threads waiting for the flush to finish
             with self.fileCondition:
                 self.fileCondition.notify_all()
+                vos.logger.debug("notify 2")
 
         self.cache.checkCacheSpace()
 
@@ -961,7 +970,7 @@ class FileHandle(object):
             self.makeCached(offset, self.fileSize)
 
             r = self.ioObject.cacheFileDescriptor
-            with self.fileCondition:
+            with self.ioObject.cacheFileDescriptorLock:
                 # seek and write.
                 os.lseek(r, offset, os.SEEK_SET)
                 wroteBytes = libc.write(r, data, size)
@@ -993,7 +1002,7 @@ class FileHandle(object):
         self.makeCached(offset, size)
 
         r = self.ioObject.cacheFileDescriptor
-        with self.fileLock:
+        with self.ioObject.cacheFileDescriptorLock:
             # seek and read.
             os.lseek(r, offset, os.SEEK_SET)
             libc.lseek(r, offset, os.SEEK_SET)
@@ -1063,6 +1072,7 @@ class FileHandle(object):
                 if (self.metaData.getRange(firstBlock, lastBlock) ==
                         (None, None)):
                     return
+            vos.logger.debug("done wait 2")
 
             # Make sure the required range hasn't changed
             requiredRange = self.metaData.getRange(firstBlock, lastBlock)
@@ -1089,11 +1099,13 @@ class FileHandle(object):
             while (self.metaData.getRange(firstBlock, lastBlock) !=
                     (None, None) and self.readThread is not None):
                 self.fileCondition.wait()
+                vos.logger.debug("woke 3")
+            vos.logger.debug("done wait 3")
 
     def fsync(self):
         with self.fileLock:
             if self.ioObject.cacheFileDescriptor is not None:
-                with self.fileLock:
+                with self.ioObject.cacheFileDescriptorLock:
                     os.fsync(self.ioObject.cacheFileDescriptor)
 
     def truncate(self, length):
@@ -1108,7 +1120,8 @@ class FileHandle(object):
                 # Tell any running read thread to exit
                 if self.readThread is not None:
                     self.readThread.aborted = True
-                    self.fileCondition.notify
+                    self.fileCondition.notify_all()
+                    vos.logger.debug("notify 3")
 
                 while self.readThread is not None:
                     self.fileCondition.wait()
@@ -1116,7 +1129,7 @@ class FileHandle(object):
             # Ensure the required part of the file is in cache.
             if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
-            with self.fileLock:
+            with nested(self.fileLock, self.ioObject.cacheFileDescriptorLock):
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
                 self.fileModified = True
@@ -1134,7 +1147,7 @@ class FileHandle(object):
 
 
 class CacheReadThread(threading.Thread):
-    CONTINUE_MAX_SIZE = 1024 * 1024 * 4
+    CONTINUE_MAX_SIZE = 1024 * 1024 / 2
 
     def __init__(self, start, mandatorySize, optionSize, fileHandle):
         """ CacheReadThread class is used to start data transfer from the back
@@ -1225,6 +1238,7 @@ class CacheReadThread(threading.Thread):
                 if self.fileHandle.readThread is not None:
                     self.fileHandle.readThread = None
                     self.fileHandle.fileCondition.notify_all()
+                    vos.logger.debug("notify 4")
 
 
 class FlushNodeQueue(Queue):
