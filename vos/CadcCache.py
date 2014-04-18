@@ -1108,7 +1108,7 @@ class FileHandle(object):
                 # Tell any running read thread to exit
                 if self.readThread is not None:
                     self.readThread.aborted = True
-                    self.fileCondition.notify
+                    self.fileCondition.notify_all()
 
                 while self.readThread is not None:
                     self.fileCondition.wait()
@@ -1134,7 +1134,7 @@ class FileHandle(object):
 
 
 class CacheReadThread(threading.Thread):
-    CONTINUE_MAX_SIZE = 1024 * 1024 * 4
+    CONTINUE_MAX_SIZE = 1024 * 1024
 
     def __init__(self, start, mandatorySize, optionSize, fileHandle):
         """ CacheReadThread class is used to start data transfer from the back
