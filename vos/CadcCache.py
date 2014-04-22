@@ -851,7 +851,6 @@ class FileHandle(object):
                         (self.flushQueued, self.readThread))
                 vos.logger.debug("Waiting for flush to complete.")
                 self.fileCondition.wait()
-            vos.logger.debug("done wait 1")
 
             # Look for write failures.
             if self.flushException is not None:
@@ -934,7 +933,6 @@ class FileHandle(object):
             # Wake up any threads waiting for the flush to finish
             with self.fileCondition:
                 self.fileCondition.notify_all()
-                vos.logger.debug("notify 2")
 
         self.cache.checkCacheSpace()
 
@@ -1072,7 +1070,6 @@ class FileHandle(object):
                 if (self.metaData.getRange(firstBlock, lastBlock) ==
                         (None, None)):
                     return
-            vos.logger.debug("done wait 2")
 
             # Make sure the required range hasn't changed
             requiredRange = self.metaData.getRange(firstBlock, lastBlock)
@@ -1099,8 +1096,6 @@ class FileHandle(object):
             while (self.metaData.getRange(firstBlock, lastBlock) !=
                     (None, None) and self.readThread is not None):
                 self.fileCondition.wait()
-                vos.logger.debug("woke 3")
-            vos.logger.debug("done wait 3")
 
     def fsync(self):
         with self.fileLock:
@@ -1121,7 +1116,6 @@ class FileHandle(object):
                 if self.readThread is not None:
                     self.readThread.aborted = True
                     self.fileCondition.notify_all()
-                    vos.logger.debug("notify 3")
 
                 while self.readThread is not None:
                     self.fileCondition.wait()
@@ -1238,7 +1232,6 @@ class CacheReadThread(threading.Thread):
                 if self.fileHandle.readThread is not None:
                     self.fileHandle.readThread = None
                     self.fileHandle.fileCondition.notify_all()
-                    vos.logger.debug("notify 4")
 
 
 class FlushNodeQueue(Queue):
