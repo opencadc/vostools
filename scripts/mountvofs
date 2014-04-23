@@ -54,6 +54,8 @@ if __name__ == "__main__":
     parser.add_option("--max_flush_threads", action="store", type=int,
 	    help="upper limit on number of flush (upload) threads",
 	    default=10)
+    parser.add_option("--secure_get", action="store_true", default=False,
+	    help="Ensure HTTPS instead of HTTP is used to retrieve data (slower)")
 
     parser.version = version
     (opt, args)=parser.parse_args()
@@ -97,7 +99,8 @@ if __name__ == "__main__":
     if platform=="darwin":
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
 		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
-                cache_max_flush_threads=opt.max_flush_threads), 
+		cache_max_flush_threads=opt.max_flush_threads,
+		secure_get=opt.secure_get),
 		    mount,
                     fsname=root,
                     volname=root,
@@ -112,7 +115,8 @@ if __name__ == "__main__":
     else:
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
 		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
-                cache_max_flush_threads=opt.max_flush_threads),
+		cache_max_flush_threads=opt.max_flush_threads,
+		secure_get=opt.secure_get),
                     mount,
                     fsname=root,
                     readonly=opt.readonly,

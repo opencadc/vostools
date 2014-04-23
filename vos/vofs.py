@@ -208,7 +208,8 @@ class VOFS(LoggingMixIn, Operations):
     setxattr = None
 
     def __init__(self, root, cache_dir, options, conn=None,
-            cache_limit=1024, cache_nodes=False, cache_max_flush_threads=10):
+                 cache_limit=1024, cache_nodes=False,
+                 cache_max_flush_threads=10, secure_get=False):
         """Initialize the VOFS.
 
         cache_limit is in MB.
@@ -239,7 +240,7 @@ class VOFS(LoggingMixIn, Operations):
         # connection.
         try:
             self.client = vos.Client(rootNode=root, conn=conn,
-                    cadc_short_cut=True)
+                    cadc_short_cut=True, secure_get=secure_get)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root

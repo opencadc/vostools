@@ -61,7 +61,7 @@ def size_format(size):
             scale = int(math.log(length) / math.log(1024))
             length = "%.0f%s" % (length / (1024.0 ** scale), size_unit[scale])
         except:
-            length = str(size)
+            length = str(int(size))
     else:
         length = str(int(size))
     return "%12s " % length

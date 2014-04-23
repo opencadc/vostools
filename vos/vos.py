@@ -24,6 +24,7 @@ import urllib
 import urllib2
 from xml.etree import ElementTree
 from logExceptions import logExceptions
+from copy import deepcopy
 
 from __version__ import version
 
@@ -655,8 +656,15 @@ class VOFile:
         # Make all the calls to open send a list of URLs
         # this should be redone during a cleanup. Basically, a GET might result in multiple
         # URLs (list of URLs) but VOFile is also used to retrieve schema files and other info.
-        # All the calls should pass a list of URLs
-        self.URLs = (isinstance(url_list, list) and url_list) or [url_list]
+
+        # All the calls should pass a list of URLs. Make sure that we
+        # make a deep copy of the input list so that we don't
+        # accidentally modify the caller's copy.
+        if isinstance(url_list, list):
+            self.URLs = deepcopy(url_list)
+        else:
+            self.URLs = [url_list]
+
         self.urlIndex = 0
         self.followRedirect = followRedirect
         self._fpos = 0
@@ -910,9 +918,10 @@ class Client:
                      "groupread", "groupwrite", "ispublic"]
 
 
-    def __init__(self, certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
-                 rootNode=None, conn=None, archive='vospace', cadc_short_cut=False,
-                 http_debug=False):
+    def __init__(self,
+                 certFile=os.path.join(os.getenv('HOME'), '.ssl/cadcproxy.pem'),
+                 rootNode=None, conn=None, archive='vospace',
+                 cadc_short_cut=False, http_debug=False, secure_get=False):
         """This could/should be expanded to set various defaults
 
         certFile: CADC proxy certficate location.
@@ -940,6 +949,8 @@ class Client:
         self.archive = archive
         self.nodeCache = {}
         self.cadc_short_cut = cadc_short_cut
+        self.secure_get = secure_get
+
         return
 
     #@logExceptions()
@@ -1118,17 +1129,29 @@ class Client:
             ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
             direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-            protocol = {'GET': {'https': Client.VO_HTTPSGET_PROTOCOL,
-                                'http': Client.VO_HTTPGET_PROTOCOL},
-                        'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
-                                'http': Client.VO_HTTPPUT_PROTOCOL}}
+
+            # We override the GET protocol to use HTTP (faster)
+            # unless a secure_get is requested.
+            protocol = {
+                'GET':
+                    {'https':
+                         (self.secure_get and
+                          Client.VO_HTTPSGET_PROTOCOL) or
+                     Client.VO_HTTPGET_PROTOCOL,
+                     'http': Client.VO_HTTPGET_PROTOCOL},
+                'PUT':
+                    {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                     'http': Client.VO_HTTPPUT_PROTOCOL}}
 
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
-            args = {'TARGET': self.fixURI(uri),
-                                     'DIRECTION': direction[method],
-                                     'PROTOCOL': protocol[method][self.protocol],
-                                     'view': view}
+
+            args = {
+                'TARGET': self.fixURI(uri),
+                'DIRECTION': direction[method],
+                'PROTOCOL': protocol[method][self.protocol],
+                'view': view}
+
             if cutout is not None:
                 args['cutout'] = cutout
             form = urllib.urlencode(args)
