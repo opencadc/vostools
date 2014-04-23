@@ -412,8 +412,8 @@ class VOFS(LoggingMixIn, Operations):
             self.node[path] = self.client.getNode(path, force=True,
                     limit=limit)
         except Exception as e:
-            vos.logger.error(str(e))
-            vos.logger.error(type(e))
+            vos.logger.debug(str(e))
+            vos.logger.debug(type(e))
             ex = FuseOSError(getattr(e, 'errno', ENOENT))
             ex.filename = path
             ex.strerror = getattr(e, 'strerror', 'Error getting %s' % (path))
