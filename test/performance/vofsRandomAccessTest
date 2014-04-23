@@ -1,7 +1,7 @@
 #!/bin/bash
 
 thisDir=${0%/*}
-if [ "$thisDir" = "mfs_free_space_test" ]
+if [ "$thisDir" = "vofsRandomAccessTest" ]
 then
     thisDir=.
 fi
@@ -9,6 +9,8 @@ fi
 if [ ! $PYTHONPATH ]; then
     export PYTHONPATH=$thidDir/../../
 fi
+
+echo "python path: $PYTHONPATH"
 
 wcCmd="wc -c"
 
@@ -41,7 +43,7 @@ vospace=vos://cadc.nrc.ca~vospace/CADCAuthtest1
 
 mountCmd="$thisDir/../../scripts/mountvofs --certfile=$A/test-certificates/x509_CADCAuthtest1.pem \
 	--cache_dir=$cacheDir --mountpoint=$mountPoint --readonly \
-	--vospace=$vospace --cache_nodes --log=$logDir" 
+	--vospace=$vospace --cache_nodes --log=$logDir"
 echo "$mountCmd"
 
 # Create the mount point if necessary
