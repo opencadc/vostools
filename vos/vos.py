@@ -28,8 +28,29 @@ from logExceptions import logExceptions
 from __version__ import version
 
 logger = logging.getLogger('vos')
-#if sys.version_info[1] > 6:
-#    logger.addHandler(logging.NullHandler())
+
+if sys.version_info[1] > 6:
+    logger.addHandler(logging.NullHandler())
+
+def get_logger(verbose=False, debug=False, quiet=False):
+    """Sets up the logging for vos library.
+
+    vos clients should call get_logger with an OptionParser object to set the reporting level."""
+
+    log_format = "%(module)s: %(levelname)s: %(message)s"
+    log_level = logging.ERROR
+
+    log_level = (debug and logging.DEBUG) or (verbose and logging.INFO) or ( quiet and logging.FATAL) or logging.ERROR
+
+    if log_level == logging.DEBUG:
+        log_format = "%(levelname)s: @(%(asctime)s) thread:%(thread)d - %(module)s.%(funcName)s %(lineno)d: %(message)s"
+
+    logger.setLevel(log_level)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter(fmt=log_format))
+    logger.addHandler(stream_handler)
+    return logger
+    
 
 BUFSIZE = 8388608  # Size of read/write buffer
 MAX_RETRY_DELAY = 128  # maximum delay between retries
@@ -52,8 +73,6 @@ class URLparse:
         self.args = None
         self.path = None
         m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
-        if m.group is not None:
-            logging.debug("URL Parser said: " + str(m.groups()))
         self.scheme = m.group('scheme')
         self.netloc = m.group('netloc')
         self.path = (m.group('path') is not None and m.group('path')) or ''
@@ -89,10 +108,10 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         certFilename -- the name of the certificate pem file.
         """
-        logger.debug("parsing url: %s" % url)
+
         parts = URLparse(url)
-        logger.debug("Got: %s " % str(parts))
         certfile = self.certfile
+
         logger.debug("Trying to connect to %s://%s using %s" % (parts.scheme, parts.netloc, certfile))
 
         try:
@@ -112,6 +131,7 @@ class Connection:
         ## Try to open this connection.
         start_time = time.time()
         logger.debug("Opening the connection")
+
         while True:
             try:
                 connection.connect()
@@ -120,16 +140,8 @@ class Connection:
                 logger.critical("Retrying connection for 30 seconds")
                 if time.time() - start_time > 1200:
                     raise e
-            except Exception as e:
-                logger.debug(str(e))
-                ex = IOError()
-                ex.errno = errno.ECONNREFUSED
-                ex.strerror = str(e)
-                ex.filename = parts.netloc
-                raise ex
             break
 
-        #logger.debug("Returning connection " )
         return connection
 
 
@@ -671,6 +683,8 @@ class VOFile:
 
     def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408, 412, 504)):
         """close the connection"""
+        if self.closed:
+            return self.closed
         try:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
@@ -679,6 +693,7 @@ class VOFile:
         except IOError as e:
             raise e
         except Exception as e:
+            logger.debug(str(e))
             raise IOError(errno.ENOTCONN, str(e))
         finally:
             self.closed = True
@@ -760,8 +775,6 @@ class VOFile:
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
         self.httpCon.endheaders()
-        #logger.debug("Opening connection for %s to %s" % (URL, method))
-        #logger.debug("Done setting headers")
 
     def getFileInfo(self):
         """Return information harvested from the HTTP header"""
@@ -773,11 +786,12 @@ class VOFile:
 
         #logger.debug("Starting to read file by closing http(s) connection")
         
+        read_error = None
         if not self.closed:
             try:
                 self.close()
-            except IOError as e:
-                logger.info(str(e))
+            except IOError as read_error:
+                logger.info(str(read_error))
 
         if self.resp.status == 416:
             return ""
@@ -822,6 +836,8 @@ class VOFile:
             self.URLs.pop(self.urlIndex)  #remove url from list
             if len(self.URLs) == 0:
                 # no more URLs to try...
+                if read_error is not None:
+                    raise read_error
                 if self.resp.status == 404:
                     raise IOError(errno.ENOENT, self.resp.read())
                 else:
@@ -1064,7 +1080,9 @@ class Client:
     def getNodeURL(self, uri, method='GET', view=None, limit=0, nextURI=None, cutout=None,
                    full_negotiation=None):
         """Split apart the node string into parts and return the correct URL for this node"""
+
         uri = self.fixURI(uri)
+        logger.debug("Getting URL for: "+str(uri))
 
         # full_negotiation is an override, so it can be used to
         # force either shortcut (false) or full negotiation (true)
@@ -1079,7 +1097,6 @@ class Client:
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method in ('PUT'):
-            # logger.debug("Using _put")
             return self._put(uri)
 
         if view == "cutout":
@@ -1089,13 +1106,13 @@ class Client:
                                  "[extension number][x1:x2,y1:y2]")
 
         parts = URLparse(uri)
+        logger.debug("parts: "+str(parts))
 
         # see if we have a VOSpace server that goes with this URI in our look up list
         server = Client.VOServers.get(parts.netloc, None)
         if server is None:
             return uri
 
-        logger.debug("Node URI: %s, server: %s, parts: %s " % ( uri, server, str(parts)))
         URL = None
         if do_shortcut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT"):
             ## only get here if do_shortcut == True
@@ -1151,10 +1168,8 @@ class Client:
         data = ""
         if len(fields) > 0:
             data = "?" + urllib.urlencode(fields)
-        logger.debug("data: %s" % data)
-        logger.debug("Fields: %s" % str(fields))
         URL = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
-        logger.debug("Node URL %s (%s)" % (URL, method))
+        logger.debug("URL: %s (%s)" % (URL, method))
         return URL
 
     def link(self, srcURI, linkURI):
@@ -1305,9 +1320,6 @@ class Client:
         ### sometimes this is called with mode from ['w', 'r']
         ### really that's an error, but I thought I'd just accept those are
         ### os.O_RDONLY
-
-        logger.debug("URI: %s" % ( uri))
-        logger.debug("URL: %s" % (URL))
 
         if type(mode) == str:
             mode = os.O_RDONLY
