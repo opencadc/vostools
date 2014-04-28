@@ -1013,9 +1013,9 @@ class Client:
 
                 raise OSError(errno.EIO, "MD5s don't match", src)
             return md5.hexdigest()
-        if destSize != srcSize and ((srcNode is None) or \
-                                        (srcNode.type == 'vos:LinkNode'))  :
-            logger.error("sizes don't match ( %s (%i) -> %s (%i)) " % \
+
+        if destSize != srcSize and (srcNode is not None) and (srcNode.type != 'vos:LinkNode'):
+            logger.error("sizes don't match ( %s (%i) -> %s (%i)) " %
                              (src, srcSize, dest, destSize))
             raise IOError(errno.EIO, "sizes don't match", src)
         return destSize
@@ -1389,7 +1389,7 @@ class Client:
                     # Need a way of passing along authentication.
                     if cutout is not None:
                         target = "{}?cutout={}".format(target, cutout)
-                    return urllib2.urlopen(target)
+                    return VOFile([target], self.conn, method=method, size=size, range=range)
             else:
                 URL = self.getNodeURL(uri, method=method, view=view, limit=limit, nextURI=nextURI,
                                       cutout=cutout)
