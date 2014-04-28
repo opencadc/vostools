@@ -727,7 +727,7 @@ class VOFile:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.certfile is None:
                     msg += " using anonymous access "
-            raise IOError(self.resp.status, msg, self.url)
+            raise IOError(VOFile.errnos.get(self.resp.status,self.resp.status), msg, self.url)
         self.size = self.resp.getheader("Content-Length", 0)
         if self.resp.status == 200:
             self.md5sum = self.resp.getheader("Content-MD5", None)
