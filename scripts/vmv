@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!python
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
