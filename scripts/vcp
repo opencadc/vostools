@@ -1,28 +1,33 @@
-#!/usr/bin/env python2.7
-
+#!python
 """copy files from / to vospace directly without using the FUSE layer"""
 
+import time
 from vos import __version__ 
+from optparse import OptionParser
+import logging
+import sys
+import vos
+import errno
+import os
+import hashlib
+import signal
+import re
+
 
 exit_code = 0
 
-usage = """
-  vcp filename vos:rootNode/destination
+usage = "%prog filename vos:rootNode/destination"
 
-  behaviour attempts to mimic the unix filesystem.
+description="Copy a file or directory (always recursive) to a VOSpace location.  Try to be UNIX like. "
 
-  Warnings:
-    vcp destination specified with a trailing '/' implies ContainerNode 
-
-    If destination has trailing '/' and exists but is a DataNode then 
-    error message is returned:  "Invalid Argument (target node is not a DataNode)"
-
-    vcp currently only works on the CADC VOSpace server.
-
- Version: %s """ % (__version__.version)
-
-import time
-import errno
+#  Warnings:
+#    vcp destination specified with a trailing '/' implies ContainerNode 
+#
+#    If destination has trailing '/' and exists but is a DataNode then 
+#    error message is returned:  "Invalid Argument (target node is not a DataNode)"
+#
+#    vcp currently only works on the CADC VOSpace server.
+# Version: %s """ % (__version__.version)
 
 
 def getNode(filename):
@@ -31,7 +36,7 @@ def getNode(filename):
 
 
 def isdir(filename):
-    logging.debug("Doing an isdir on %s" %(filename))
+    logger.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
             return client.isdir(filename)
@@ -41,7 +46,7 @@ def isdir(filename):
         return os.path.isdir(filename)
 
 def islink(filename):
-    logging.debug("Doing an islink on %s" %(filename))
+    logger.debug("Doing an islink on %s" %(filename))
     if filename[0:4]=="vos:":
         try:
             return getNode(filename).islink()
@@ -51,7 +56,7 @@ def islink(filename):
         return os.path.islink(filename)
 
 def access(filename,mode):
-    logging.debug("checking for access %s " %(filename))
+    logger.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
         try:
             node = getNode(filename)
@@ -63,7 +68,7 @@ def access(filename,mode):
 
 def listdir(dirname):
     """Walk through the directory structure a al os.walk"""
-    logging.debug("getting a dirlist %s " %(dirname))
+    logger.debug("getting a dirlist %s " %(dirname))
     
     if dirname[0:4]=="vos:":
         return client.listdir(dirname, force=True)
@@ -71,18 +76,17 @@ def listdir(dirname):
         return os.listdir(dirname)
 
 def mkdir(filename):
-    logging.debug("Making directory %s " % ( filename))
+    logger.debug("Making directory %s " % ( filename))
     if filename[0:4]=='vos:':
         return client.mkdir(filename)
     else:
         return os.mkdir(filename)
 
 def getMD5(filename):
-    logging.debug("getting the MD5 for %s" % (filename))
+    logger.debug("getting the MD5 for %s" % (filename))
     if filename[0:4]=='vos:':
         md5 = getNode(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
     else:
-        import hashlib
         md5=hashlib.md5()
         fin = file(filename,'r')
         while True:
@@ -104,7 +108,7 @@ def copy(source,dest,exclude=None,include=None):
             mkdir(dest)
         ## for all files in the current source directory copy them to the destination directory
         for filename in listdir(source):
-            logging.debug("%s -> %s" % ( filename, source))
+            logger.debug("%s -> %s" % ( filename, source))
             copy(os.path.join(source,filename),os.path.join(dest,filename))
       else:
         if opt.interogate:
@@ -113,15 +117,16 @@ def copy(source,dest,exclude=None,include=None):
                 ans=sys.stdin.readline().strip()
                 if ans!='y':
                     raise Exception("File exists")
+
         if access(dest,os.F_OK) and not opt.overwrite:
             ### check if the MD5 of dest and source mathc, if they do then skip
             if getMD5(dest)==getMD5(source):
-                logging.info("%s matches %s, skipping" % ( source, dest))
+                logger.info("%s matches %s, skipping" % ( source, dest))
                 return 
-        loopCount=0
-        waitTime=1
+
         if not access(os.path.dirname(dest),os.F_OK):
             raise IOError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % ( os.path.dirname(dest)))
+
         if not isdir(os.path.dirname(dest)) and not islink(os.path.dirname(dest)):
             raise IOError(errno.ENOTDIR, "vcp: %s is not a ContainerNode or LinkNode" % ( os.path.dirname(dest)))
 
@@ -140,7 +145,7 @@ def copy(source,dest,exclude=None,include=None):
                     continue
 
         if not skip:
-            logging.info("%s -> %s " % ( source, dest))
+            logger.info("%s -> %s " % ( source, dest))
         while not skip:
             try:
                 client.copy(source, dest, sendMD5=True)
@@ -148,21 +153,21 @@ def copy(source,dest,exclude=None,include=None):
             except Exception as e:
                 if getattr(e, 'errno', -1) == 104:
                     ### 104 is connection reset by peer.  Try again on this error
-                    logging.debug(str(e))
+                    logger.debug(str(e))
                     exit_code = getattr(e, 'errno', -1)
                 elif getattr(e, 'errno', -1) == errno.EIO:
                     ### retry on IO errors
-                    logging.warning(str(e)+"\nRetrying")
+                    logger.warning(str(e)+"\nRetrying")
                     pass
                 elif opt.ignore:
-                    logging.error("Ignoring error: %s " % ( str(e)))
+                    logger.error("Ignoring error: %s " % ( str(e)))
                     skip = True
                 else:
                     raise e
     except IOError as e:
         if getattr(e,'errno',-1) == errno.EINVAL:
             # not a valid uri, just skip those...
-            logging.error("%s: Skipping" % ( str(e)))
+            logger.error("%s: Skipping" % ( str(e)))
         else:
             raise e
 
@@ -172,17 +177,10 @@ def signal_handler(signum, frame):
 
 if __name__=='__main__':
 
-
-    from optparse import OptionParser
-    import logging, sys
-    import vos, errno, os
-    import ssl
-
-    ## handle interupts nicely
-    import signal
+    ## handle interrupts nicely
     signal.signal(signal.SIGINT, signal_handler)
     
-    parser=OptionParser(usage)
+    parser=OptionParser(usage, description=description, version=__version__.version)
     parser.add_option("--certfile", help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
     parser.add_option("-d","--debug", action="store_true",help="set this option to get help solving connection issues")
     parser.add_option("--exclude", default=None,help="exclude files that match patern")
@@ -190,41 +188,20 @@ if __name__=='__main__':
     parser.add_option("-i","--interogate", action="store_true",help="Ask before overwriting files")
     parser.add_option("-v","--verbose", action="store_true",help="Verbose output")
     parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
-    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-    parser.add_option("--quick", action="store_true", help="Use default CADC urls, for speed but can fail if CADC changes data storage mechanism", default=False)
+    parser.add_option("--quick", action="store_true", help="Use default CADC urls, for speed.  Will fail if CADC changes data storage mechanism", default=False)
     parser.add_option("--ignore", action="store_true", default=False, help="ignore errors and continue with recursive copy")
 
-    name=sys.argv[0]
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
-
     (opt,args)=parser.parse_args()
+    if len(args) < 2:
+        parser.error("Must give a source and a destination")
 
-    if opt.version:
-        sys.stdout.write("vcp version %s \n\n" % (__version__.version)) 
-        sys.exit()
+    logger = vos.vos.get_logger(opt)
 
     dest=args.pop()
 
     if dest[0:4] != 'vos:':
-	dest = os.path.abspath(dest)
+        dest = os.path.abspath(dest)
 
-
-    format = "%(message)s"
-
-    logLevel=logging.ERROR
-    if opt.verbose:
-        logLevel=logging.INFO
-    elif opt.debug:
-        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
-        logLevel=logging.DEBUG
-        
-    logging.basicConfig(level=logLevel,format=format)
-
-
-    
     try:
         client=vos.Client(certFile=opt.certfile, cadc_short_cut=opt.quick)
 
@@ -241,7 +218,7 @@ if __name__=='__main__':
 
             thisDest=dest
             if isdir(source):
-                logging.debug("%s is a directory or link to one" % (source))
+                logger.debug("%s is a directory or link to one" % (source))
                 # To mimic unix fs behaviours if copying a directory and
                 # the destination directory exists then the actual
                 # destination in a recursive copy is the destination +
@@ -259,18 +236,14 @@ if __name__=='__main__':
             
             copy(source,thisDest,exclude=opt.exclude,include=opt.include)
 
-    except ssl.SSLError as e:
-        logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
-        exit_code = getattr(e,'errno',-2)
     except KeyboardInterrupt as ke:
-        logging.info("Received keyboard interrupt. Execution aborted...\n")
-	exit_code = getattr(ke, 'errno', -1)
+        logger.info("Received keyboard interrupt. Execution aborted...\n")
+        exit_code = getattr(ke, 'errno', -1)
     except Exception as e:
         message = str(e)
-        logging.error(message)
-        import re
+        logger.error(message)
         if re.search('NodeLocked',str(e)) != None:
-            logging.error("Use vlock to unlock the node before copying to %s." % (thisDest))
+            logger.error("Use vlock to unlock the node before copying to %s." % (thisDest))
         exit_code = getattr(e,'errno',-1)
 
     sys.exit(exit_code)
