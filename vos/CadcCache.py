@@ -16,7 +16,8 @@ import errno
 from contextlib import nested
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
         EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
-import ctypes
+import ctypes 
+import ctypes.util
 
 import vos
 from SharedLock import SharedLock as SharedLock
@@ -588,6 +589,7 @@ class IOProxy(object):
         self.cacheFileDescriptor = None
         self.currentWriteOffset = None
         self.cacheFileDescriptorLock = threading.Lock()
+        self.exception = None
 
     def getMD5(self):
         """
@@ -807,6 +809,9 @@ class FileHandle(object):
         requirement.
         """
 
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
+
         vos.logger.debug("releasing node %s: id %d: refcount %d: modified %s: "
                 "obsolete: %s" %
                 (self.path, id(self), self.refCount, self.fileModified,
@@ -890,6 +895,10 @@ class FileHandle(object):
         """
 
         global _flush_thread_count
+
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
+
         _flush_thread_count = _flush_thread_count + 1
 
         vos.logger.debug("flushing node %s, working thread count is %i " \
@@ -947,6 +956,9 @@ class FileHandle(object):
         vos.logger.debug("writting %d bytes at %d to %d " % (size, offset,
                 self.ioObject.cacheFileDescriptor))
 
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
+
         if self.fileSize is None:
             self.fileSize = self.ioObject.getSize()
 
@@ -993,6 +1005,9 @@ class FileHandle(object):
         """
 
         vos.logger.debug("reading %d bytes at %d " % (size, offset))
+
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
 
         self.fileCondition.setTimeout()
 
@@ -1069,10 +1084,12 @@ class FileHandle(object):
 
                 if (self.metaData.getRange(firstBlock, lastBlock) ==
                         (None, None)):
-                    return
+                    break
 
             # Make sure the required range hasn't changed
             requiredRange = self.metaData.getRange(firstBlock, lastBlock)
+            if requiredRange == (None, None):
+                return
 
             # No read thread running, start one.
             startByte = requiredRange[0] * Cache.IO_BLOCK_SIZE
@@ -1098,6 +1115,8 @@ class FileHandle(object):
                 self.fileCondition.wait()
 
     def fsync(self):
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
         with self.fileLock:
             if self.ioObject.cacheFileDescriptor is not None:
                 with self.ioObject.cacheFileDescriptorLock:
@@ -1105,6 +1124,9 @@ class FileHandle(object):
 
     def truncate(self, length):
         vos.logger.debug("Truncate %s" % (self.path, ))
+
+        if self.ioObject.exception is not None:
+            raise self.ioObject.exception
 
         # Acquire an exclusive lock on the file
         with self.writerLock(shared=False):

@@ -54,6 +54,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set CERTFILE = " --certfile=$CERTPATH"
 
     echo "mount command: " $MOUNTCMD
+    echo "testing version: " `$MOUNTCMD --version`
     echo "cache test limit ${CACHETEST_LIMIT}MB, using $CACHETEST_NFILES files of size $CACHETEST_FSIZE"
     echo
 

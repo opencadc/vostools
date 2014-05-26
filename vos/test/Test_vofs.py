@@ -893,7 +893,7 @@ class TestMyIOProxy(unittest.TestCase):
             client.copy.assert_called_once_with( testCache.dataDir + 
                     "/dir1/dir2/file", node.uri)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def testReadFromBacking(self):
         callCount = [0]
         def mock_read(block_size):
@@ -979,7 +979,7 @@ class TestMyIOProxy(unittest.TestCase):
                     vos_VOFILE.read.reset_mock()
                     callCount[0] = 0
                     self.assertTrue(testProxy.lastVOFile is not None)
-                    testProxy.lastVOFile.read = Mock(side_effect=IOError())
+                    testProxy.lastVOFile.read = Mock(side_effect=IOError)
                     # This throws an exception because read will be called
                     # twice, the first is caught and error handling occurs, the
                     # second is not caught.
@@ -990,7 +990,11 @@ class TestMyIOProxy(unittest.TestCase):
                             bytes="bytes=1-")
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 2)
+                    self.assertTrue(type(testProxy.exception) is IOError)
+                    testProxy.exception = None
 
+                except Exception as e:
+                    print "unexpected exception", e
 
                 finally:
                     testProxy.cacheFile.readThread = None
