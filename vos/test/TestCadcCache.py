@@ -1059,6 +1059,17 @@ class TestCadcCache(unittest.TestCase):
             self.assertTrue(fh.gotHeader)
             testObject.flushNodeQueue.join()
 
+            # checkCacheSpace throws an exception. The test is that open does
+            # not throw an exception even though checkCacheSpace does.
+            testObject.checkCacheSpace = Mock(side_effect=OSError(errno.ENOENT,
+                    "checkCacheSpaceError *EXPECTED*"))
+            fh = testObject.open("/dir1/dir2/file3", False, False, 
+                    ioObject, False)
+            self.assertTrue(fh.fullyCached)
+            self.assertEqual(fh.fileSize, 0)
+            self.assertTrue(fh.gotHeader)
+            testObject.flushNodeQueue.join()
+
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release1(self):
@@ -1241,9 +1252,9 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyForTest()
             fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
                     False)
-            ioObject.exception = IOError()
-            with self.assertRaises(IOError):
-                fh.flushNode()
+            ioObject.exception = IOError("Test Exception")
+            fh.flushNode()
+            self.assertEqual(fh.flushException[1], ioObject.exception)
             ioObject.exception = None
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1258,6 +1269,20 @@ class TestCadcCache(unittest.TestCase):
             fh.writerLock.release = MagicMock()
             ioObject.writeToBacking = MagicMock(side_effect=IOError(
                     errno.ENOENT, "No such file *EXPECTED*"))
+            fh.flushNode()
+            self.assertTrue(fh.flushException[0] is IOError)
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_03_flushNode3(self):
+        """flush node with an exception raised by checkCacheSpace
+           The test is that no exception is raised"""
+
+        with CadcCache.Cache(testDir, 100) as testObject:
+            ioObject = IOProxyForTest()
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
+                    False)
+            testObject.checkCacheSpace = Mock(side_effect=OSError(errno.ENOENT,
+                    "checkCacheSpaceError *EXPECTED*"))
             fh.flushNode()
             self.assertTrue(fh.flushException[0] is IOError)
 
@@ -1560,7 +1585,7 @@ class TestCadcCache(unittest.TestCase):
             cond.notify_all()
 
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_00_determineCacheSize(self):
         """ Test checking the cache space """
         if os.path.exists(testDir):
@@ -1586,6 +1611,14 @@ class TestCadcCache(unittest.TestCase):
         cache.fileHandleDict[testVospaceFile2] = None
         #get the total size (5M) and but no files not in use
         self.assertEquals((None, 5*1024*1024), cache.determineCacheSize())
+
+        # os.stat returns errors.
+        with patch('os.stat') as mockedStat:
+            mockedStat.side_effect = OSError(-1,-1)
+
+            self.assertEquals((None, 0), cache.determineCacheSize())
+
+
         
     
     @unittest.skipIf(skipTests, "Individual tests")

@@ -250,7 +250,10 @@ class Cache(object):
                 fileHandle.gotHeader = True
                 fileHandle.fileSize = 0
 
-        self.checkCacheSpace()
+        try:
+            self.checkCacheSpace()
+        except:
+            pass
 
         return fileHandle
 
@@ -288,6 +291,7 @@ class Cache(object):
                 newFileHandle.refCount += 1
         return newFileHandle
 
+    @logExceptions()
     def checkCacheSpace(self):
         """Clear the oldest files until cache_size < cache_limit"""
 
@@ -350,10 +354,14 @@ class Cache(object):
                 with self.cacheLock:
                     inFileHandleDict = (fp[len(self.dataDir):] not in
                             self.fileHandleDict)
-                if (inFileHandleDict and oldest_time > os.stat(fp).st_atime):
-                    oldest_time = os.stat(fp).st_atime
+                try:
+                    osStat = os.stat(fp)
+                except:
+                    continue
+                if (inFileHandleDict and oldest_time > osStat.st_atime):
+                    oldest_time = osStat.st_atime
                     oldest_file = fp
-                total_size += os.path.getsize(fp)
+                total_size += osStat.st_size
         return (oldest_file, total_size)
 
     def unlinkFile(self, path):
@@ -890,26 +898,27 @@ class FileHandle(object):
             info = os.fstat(self.ioObject.cacheFileDescriptor)
         return info.st_size, info.st_mtime
 
+    @logExceptions()
     def flushNode(self):
         """Flush the file to the backing store.
         """
 
         global _flush_thread_count
 
-        if self.ioObject.exception is not None:
-            raise self.ioObject.exception
-
-        _flush_thread_count = _flush_thread_count + 1
-
-        vos.logger.debug("flushing node %s, working thread count is %i " \
-                             % (self.path,_flush_thread_count))
-        self.flushException = None
-
-        # Now that the flush has started we want this thread to own
-        # the lock
-        self.writerLock.steal()
-
         try:
+            if self.ioObject.exception is not None:
+                raise self.ioObject.exception
+
+            _flush_thread_count = _flush_thread_count + 1
+
+            vos.logger.debug("flushing node %s, working thread count is %i " \
+                                 % (self.path,_flush_thread_count))
+            self.flushException = None
+
+            # Now that the flush has started we want this thread to own
+            # the lock
+            self.writerLock.steal()
+
             # Get the md5sum of the cached file
             size, mtime = self.getFileInfo()
 
@@ -933,7 +942,10 @@ class FileHandle(object):
             self.flushException = sys.exc_info()
         finally:
             self.flushQueued = None
-            self.writerLock.release()
+            try:
+                self.writerLock.release()
+            except:
+                pass
             self.fileModified = False
             self.deref()
             _flush_thread_count = _flush_thread_count - 1
@@ -943,7 +955,10 @@ class FileHandle(object):
             with self.fileCondition:
                 self.fileCondition.notify_all()
 
-        self.cache.checkCacheSpace()
+        try:
+            self.cache.checkCacheSpace()
+        except:
+            pass
 
         return
 
