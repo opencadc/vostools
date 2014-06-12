@@ -8,8 +8,10 @@ from contextlib import nested
 from vos import vofs, vos
 from mock import Mock, MagicMock, patch
 from vos.fuse import FuseOSError
-from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy
+from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, \
+        IOProxy, FlushNodeQueue
 from vos.vofs import HandleWrapper
+from vos.NodeCache import NodeCache
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
 skipTests = False
@@ -279,6 +281,10 @@ class TestVOFS(unittest.TestCase):
                  , name="testfs.getNode")) 
         with self.assertRaises(FuseOSError) as e:
             testfs.create(file, os.O_RDWR)     
+
+        testfs.getNode = Mock(side_effect=FuseOSError)
+        with self.assertRaises(FuseOSError) as e:
+            testfs.create(file, os.O_RDWR)     
         
         
         node.props.get = Mock(return_value=False)
@@ -322,18 +328,6 @@ class TestVOFS(unittest.TestCase):
             myVofs.release(file, fh.getId())
         self.assertEqual(e.exception.errno, EIO)
             
-        # when file modified locally, release should remove it from the list of
-        # accessed files in VOFS
-        basefh = Object()
-        basefh.path = file
-        basefh.fileModified = True
-        basefh.release = Mock(return_value = True)
-        fh = HandleWrapper(basefh, False)
-        myVofs.node[file] = Mock(name="fileInfo")
-        self.assertEqual(1, len(myVofs.node))
-        myVofs.release(file, fh.getId())
-        self.assertEqual(0, len(myVofs.node))
-
         # Release an invalid file descriptor
         with self.assertRaises(FuseOSError) as e:
             myVofs.release(file, -1)
@@ -372,14 +366,11 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(return_value = None)
         testfs.cache.unlinkFile = Mock()
         testfs.client.delete = Mock()
-        testfs.delNode = Mock()
-        mocks = (testfs.getNode, testfs.cache.unlinkFile, testfs.client.delete,
-                testfs.delNode)
+        mocks = (testfs.getNode, testfs.cache.unlinkFile, testfs.client.delete)
         testfs.unlink(path)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
         testfs.cache.unlinkFile.assert_called_once_with(path)
         self.assertFalse(testfs.client.delete.called)
-        testfs.delNode.assert_called_once_with(path, force=True)
 
         for mock in mocks:
             mock.reset_mock()
@@ -392,7 +383,6 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
         testfs.cache.unlinkFile.assert_called_once_with(path)
         testfs.client.delete.assert_called_once_with(path)
-        testfs.delNode.assert_called_once_with(path, force=True)
 
         for mock in mocks:
             mock.reset_mock()
@@ -407,13 +397,6 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
         self.assertFalse(testfs.cache.unlinkFile.called)
         self.assertFalse(testfs.client.delete.called)
-        self.assertFalse(testfs.delNode.called)
-
-    @unittest.skipIf(skipTests, "Individual tests")
-    def test_delNode(self):
-        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        path = "/a/file/path"
-        testfs.delNode(path, force=True)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_mkdir(self):
@@ -457,7 +440,6 @@ class TestVOFS(unittest.TestCase):
     def test_rmdir(self):
         path="/a/file/path"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
-        testfs.delNode = Mock(wraps=testfs.delNode)
         testfs.client = Object()
         testfs.client.delete = Mock()
         node = Object()
@@ -471,20 +453,17 @@ class TestVOFS(unittest.TestCase):
         testfs.client.getNode = Mock(return_value = node)
         testfs.rmdir(path)
         testfs.client.delete.assert_called_once_with(path)
-        testfs.delNode.assert_called_once_with(path,force=True)
         
         # Try deleting a node which is locked.
         node.props.get = Mock(side_effect=SideEffect({
                 ('islocked', False): True,
                 }, name="node.props.get") )
         testfs.client.delete.reset_mock()
-        testfs.delNode.reset_mock()
 
         with self.assertRaises(FuseOSError) as e:
             testfs.rmdir(path)
         self.assertEqual(e.exception.errno, EPERM)
         self.assertFalse(testfs.client.delete.called)
-        self.assertFalse(testfs.delNode.called)
         testfs.client = Object()
 
 
@@ -562,8 +541,7 @@ class TestVOFS(unittest.TestCase):
         # File exists.
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node = Object
-        node.isdir = Mock(return_value=False)
-        testfs.node[file] = node
+        testfs.getNode = Mock(return_value=node)
 
         self.assertEqual(testfs.access(file, stat.S_IRUSR), 0)
 
@@ -728,6 +706,8 @@ class TestVOFS(unittest.TestCase):
         vos_VOFILE.close = Mock()
         vos_VOFILE.read = Mock(side_effect=mock_read)
         testfs.client.open = Mock(return_value = vos_VOFILE)
+        testfs.client.nodeCache = Object()
+        testfs.client.nodeCache = NodeCache()
 
         # Truncate a non-open file to 0 bytes
         testfs.cache.open = Mock(wraps=testfs.cache.open)
@@ -843,6 +823,30 @@ class TestVOFS(unittest.TestCase):
         with self.assertRaises(FuseOSError) as e:
             testfs2.truncate(file, 20, -1)
         self.assertEqual(e.exception.errno, EIO)
+
+    def test_getNode(self):
+        file = "/dir1/dir2/file"
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        node = Mock(spec=vos.Node)
+        testfs.client = Object()
+        testfs.client.getNode = Mock(return_value = node)
+        node = testfs.getNode(file, force=True, limit=10)
+        testfs.client.getNode.assert_called_once_with(file, force=True, limit=10)
+
+        err = IOError()
+        err.errno = 1
+        testfs.client.getNode = Mock(side_effect=err)
+        with self.assertRaises(FuseOSError):
+            node = testfs.getNode(file, force=True, limit=10)
+
+    def test_init(self):
+        testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
+        testfs.init("/")
+        self.assertTrue(isinstance(testfs.cache.flushNodeQueue, FlushNodeQueue))
+        testfs.destroy("/")
+        self.assertEqual(testfs.cache.flushNodeQueue, None)
+
+
 
 
 class SideEffect(object):
@@ -1074,11 +1078,12 @@ class TestHandleWrapper(unittest.TestCase):
             self.assertTrue( handle is vofs.HandleWrapper.
                     findHandle(handle.getId()))
 
+def run():
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
+    suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
+    suite3 = unittest.TestLoader().loadTestsFromTestCase(TestHandleWrapper)
+    alltests = unittest.TestSuite([suite1, suite2, suite3])
+    return unittest.TextTestRunner(verbosity=2).run(alltests)
 
-suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
-suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
-suite3 = unittest.TestLoader().loadTestsFromTestCase(TestHandleWrapper)
-alltests = unittest.TestSuite([suite1, suite2, suite3])
-unittest.TextTestRunner(verbosity=2).run(alltests)
-
-
+if __name__ == "__main__":
+    run()

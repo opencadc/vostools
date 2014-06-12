@@ -1272,7 +1272,7 @@ class TestCadcCache(unittest.TestCase):
             fh.flushNode()
             self.assertTrue(fh.flushException[0] is IOError)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def test_03_flushNode3(self):
         """flush node with an exception raised by checkCacheSpace
            The test is that no exception is raised"""
@@ -1281,10 +1281,10 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyForTest()
             fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
                     False)
+            fh.writerLock.acquire(shared=False)
             testObject.checkCacheSpace = Mock(side_effect=OSError(errno.ENOENT,
                     "checkCacheSpaceError *EXPECTED*"))
             fh.flushNode()
-            self.assertTrue(fh.flushException[0] is IOError)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1585,7 +1585,7 @@ class TestCadcCache(unittest.TestCase):
             cond.notify_all()
 
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_00_determineCacheSize(self):
         """ Test checking the cache space """
         if os.path.exists(testDir):
@@ -1687,7 +1687,7 @@ class TestCadcCache(unittest.TestCase):
                 with self.assertRaises(OSError):
                     testCache.removeEmptyDirs(testDir + "/dir1/dir2/dir4")
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_04_truncate(self):
         """ Test file truncate"""
         testIOProxy = IOProxyForTest()
@@ -1976,18 +1976,21 @@ class TestCadcCacheReadThread(unittest.TestCase):
             self.assertEquals(mandatoryEnd, crt.mandatoryEnd)
         
 
-logging.getLogger('CadcCache').setLevel(logging.DEBUG)
-logging.getLogger('CadcCache').addHandler(logging.StreamHandler())
+def run():
+    logging.getLogger('CadcCache').setLevel(logging.DEBUG)
+    logging.getLogger('CadcCache').addHandler(logging.StreamHandler())
 
-suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
-suite2 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
-suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
-suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
-suite5 = unittest.TestLoader().loadTestsFromTestCase(TestCacheAborted)
-suite6 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
-suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
-suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
-alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, 
-        suite6, suite7, suite8])
-unittest.TextTestRunner(verbosity=2).run(alltests)
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCacheCondtion)
+    suite2 = unittest.TestLoader().loadTestsFromTestCase(TestSharedLock)
+    suite3 = unittest.TestLoader().loadTestsFromTestCase(TestCacheError)
+    suite4 = unittest.TestLoader().loadTestsFromTestCase(TestCacheRetry)
+    suite5 = unittest.TestLoader().loadTestsFromTestCase(TestCacheAborted)
+    suite6 = unittest.TestLoader().loadTestsFromTestCase(TestIOProxy)
+    suite7 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCacheReadThread)
+    suite8 = unittest.TestLoader().loadTestsFromTestCase(TestCadcCache)
+    alltests = unittest.TestSuite([suite1, suite2, suite3, suite4, suite5, 
+            suite6, suite7, suite8])
+    return(unittest.TextTestRunner(verbosity=2).run(alltests))
 
+if __name__ == "__main__":
+    run()

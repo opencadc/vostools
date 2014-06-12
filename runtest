@@ -16,7 +16,22 @@ else
 endif
 
 python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
-    --ignore-module=test_cadcCache vos/test/TestCadcCache.py vos/test/Test_vofs.py
+    --ignore-module=BitVector --ignore-module=fuse --ignore-module=html2text \
+    --ignore-module=TestAll --ignore-module=Test_vos \
+    --ignore-module=TestNodeCache --ignore-module=TestCadcCache \
+    --ignore-module=Test_vofs --ignore-module=Test_vofile \
+    --ignore-module=TestCacheMetaData \
+    vos/test/TestAll.py 
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+    #--ignore-module=Test_vofs vos/test/TestCadcCache.py vos/test/Test_vofs.py
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+#    --ignore-module=Test_vos vos/test/Test_vos.py
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+    #--ignore-module=Test_vos vos/test/Test_vos.py vos/test/Test_vos.py
+
 #python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
    #--ignore-module=Test_vofs vos/test/Test_vofs.py
 
@@ -25,3 +40,6 @@ python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
 
 #python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
 #   --ignore-module=TestCacheMetaData vos/test/TestCacheMetaData.py
+
+#python2.7 -m trace --count -s -m -C cover --ignore-dir=/usr/lib64:/usr/lib \
+   #--ignore-module=TestNodeCache vos/test/TestNodeCache.py
