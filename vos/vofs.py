@@ -183,6 +183,7 @@ class HandleWrapper(object):
             theHandle = HandleWrapper.handleList[id]
         return theHandle
 
+    @logExceptions()
     def release(self):
         with HandleWrapper.myLock:
             del HandleWrapper.handleList[id(self)]
@@ -219,9 +220,6 @@ class VOFS(LoggingMixIn, Operations):
 
         self.cache_nodes = cache_nodes
 
-        # This dictionary contains the Node data about the VOSpace node in
-        # question
-        self.node = {}
         # Standard attribtutes of the Node
         # Where in the file system this Node is currently located
         self.loading_dir = {}
@@ -252,14 +250,6 @@ class VOFS(LoggingMixIn, Operations):
 
     def __call__(self, op, path, *args):
         return super(VOFS, self).__call__(op, path, *args)
-
-    def __del__(self):
-        self.node = None
-
-    def delNode(self, path, force=False):
-        """Delete the references associated with this Node"""
-        if not self.cache_nodes or force:
-            self.node.pop(path, None)
 
     #@logExceptions()
     def access(self, path, mode):
@@ -369,6 +359,7 @@ class VOFS(LoggingMixIn, Operations):
         if self.cache.flushNodeQueue is None:
             raise CacheError("flushNodeQueue has not been initialized")
         self.cache.flushNodeQueue.join()
+        self.cache.flushNodeQueue = None
 
     #@logExceptions()
     def fsync(self, path, datasync, id):
@@ -396,22 +387,11 @@ class VOFS(LoggingMixIn, Operations):
         """
 
         vos.logger.debug("force? -> %s path -> %s" % (force, path))
-        ### force if this is a container we've not looked in before
-        if path in self.node and not force:
-            node = self.node[path]
-            if (node.isdir() and limit != 0 and
-                    len(node.getNodeList()) == 0):
-                force = True
-            if not force:
-                vos.logger.debug("Sending back cached metadata for %s" %
-                        (path))
-                return node
 
         ## Pull the node meta data from VOSpace.
         try:
             vos.logger.debug("requesting node %s from VOSpace" % (path))
-            self.node[path] = self.client.getNode(path, force=True,
-                    limit=limit)
+            node = self.client.getNode(path, force=force, limit=limit)
         except Exception as e:
             vos.logger.debug(str(e))
             vos.logger.debug(type(e))
@@ -421,11 +401,7 @@ class VOFS(LoggingMixIn, Operations):
             vos.logger.debug("failing with errno = %d" % ex.errno)
             raise ex
 
-        if self.node[path].isdir() and self.node[path]._nodeList is not None:
-            for node in self.node[path]._nodeList:
-                subPath = os.path.join(path, node.name)
-                self.node[subPath] = node
-        return self.node[path]
+        return node
 
     #@logExceptions()
     def getattr(self, path, id=None):
@@ -450,7 +426,6 @@ class VOFS(LoggingMixIn, Operations):
 
         self.cache.flushNodeQueue = \
             FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
-
 
     #@logExceptions()
     def mkdir(self, path, mode):
@@ -561,7 +536,7 @@ class VOFS(LoggingMixIn, Operations):
 
         # new file in cache library or if no node information (node not in
         # vospace).
-        handle = self.cache.open(path, flags & os.O_WRONLY != 0, mustExist, 
+        handle = self.cache.open(path, flags & os.O_WRONLY != 0, mustExist,
                 myProxy, self.cache_nodes)
         if flags & os.O_TRUNC != 0:
             handle.truncate(0)
@@ -640,7 +615,7 @@ class VOFS(LoggingMixIn, Operations):
         This should always be run in a thread."""
         try:
             vos.logger.debug("Starting getNodeList thread")
-            self.getNode(path, force=not self.opt.cache_nodes,
+            self.getNode(path, force=True,
                     limit=None).getNodeList()
             vos.logger.debug("Got listing for %s" % (path))
         finally:
@@ -666,12 +641,11 @@ class VOFS(LoggingMixIn, Operations):
                 except CacheRetry:
                     vos.logger.debug("Timeout Waiting for file release: %s",
                             fh.cacheFileHandle.path)
+            if fh.cacheFileHandle.fileModified:
+                # This makes the node disapear from the nodeCache.
+                with self.client.nodeCache.volatile(path):
+                    pass
             fh.release()
-            if ((fh.cacheFileHandle.fileModified) and
-                    (fh.cacheFileHandle.path in self.node)):
-                #local copy modified. remove from list
-                vos.logger.debug("deleting old node %s " % path)
-                del self.node[fh.cacheFileHandle.path]
         except Exception, e:
             #unexpected problem
             raise FuseOSError(EIO)
@@ -711,7 +685,6 @@ class VOFS(LoggingMixIn, Operations):
             vos.logger.info("%s is locked." % path)
             raise FuseOSError(EPERM)
         self.client.delete(path)
-        self.delNode(path, force=True)
 
     #@logExceptions()
     def statfs(self, path):
@@ -777,7 +750,6 @@ class VOFS(LoggingMixIn, Operations):
         self.cache.unlinkFile(path)
         if node:
             self.client.delete(path)
-        self.delNode(path, force=True)
 
     @logExceptions()
     def write(self, path, data, size, offset, id=None):

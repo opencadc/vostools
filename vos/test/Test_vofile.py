@@ -222,5 +222,9 @@ class SideEffect(object):
                     str(self.controller) + "***")
 
         
-suite = unittest2.TestLoader().loadTestsFromTestCase(TestVOFile)
-unittest2.TextTestRunner(verbosity=2).run(suite)
+def run():
+    suite = unittest2.TestLoader().loadTestsFromTestCase(TestVOFile)
+    return unittest2.TextTestRunner(verbosity=2).run(suite)
+
+if __name__ == "__main__":
+    run()

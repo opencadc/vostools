@@ -142,9 +142,13 @@ class TestCacheMetaData(unittest.TestCase):
        
        
        
+def run():
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestCacheMetaData)
+    return unittest.TextTestRunner(verbosity=2).run(suite)
+
+if __name__=='__main__':
+    run()
        
-suite = unittest.TestLoader().loadTestsFromTestCase(TestCacheMetaData)
-unittest.TextTestRunner(verbosity=2).run(suite)
 
 
 if __name__ == '__main__':

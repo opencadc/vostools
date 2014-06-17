@@ -43,7 +43,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     ## we cannot feasibly test the --xsv option, but it is here to fiddle with in development
     set LSCMD = "$pythonVersion $CADC_ROOT/scripts/vls"
-    set MOUNTCMD = "$pythonVersion $CADC_ROOT/scripts/mountvofs --cache_limit=$CACHETEST_LIMIT"
+    set MOUNTCMD = "$pythonVersion $CADC_ROOT/scripts/mountvofs --cache_limit=$CACHETEST_LIMIT --cache_nodes"
     set MKDIRCMD = "$pythonVersion $CADC_ROOT/scripts/vmkdir"
     set RMCMD = "$pythonVersion $CADC_ROOT/scripts/vrm"
     set CPCMD = "$pythonVersion $CADC_ROOT/scripts/vcp"
@@ -143,7 +143,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     # --- test exceeding the local cache ---
     echo -n "copy cache test data to container"
     rm foo.dat >& /dev/null
-    truncate -s $CACHETEST_FSIZE foo.dat >& /dev/null
+    cat /dev/zero | head -c $CACHETEST_FSIZE_BYTES /dev/zero > foo.dat
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
         $CPCMD $CERTFILE foo.dat $CONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
@@ -176,14 +176,15 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
 
     echo -n "delete non-empty container "
-    rm $MCONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-    ls $MCONTAINER/foo >& /dev/null || echo " [FAIL]" && exit -1
-    ls $MCONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+    ls $MCONTAINER
+    rm -rf $MCONTAINER || echo " [FAIL]" && exit -1
+    ls $MCONTAINER/foo >& /dev/null && echo " [FAIL]" && exit -1
+    ls $MCONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "delete empty container "
-    rmdir $MCONTAINER/* >& /dev/null || echo " [FAIL]" && exit -1
-    #rm $MCONTAINER/* >& /dev/null || echo " [FAIL]" && exit -1 #TODO activate when cp succeeds
+    mkdir $MCONTAINER
     rmdir $MCONTAINER > /dev/null || echo " [FAIL]" && exit -1
     $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
     echo " [OK]"

@@ -6,11 +6,11 @@ A node is locked by setting the islocked property. When a node is
 locked, it cannot be copied to, moved or deleted. """
 
 
-from vos import Node 
 import logging
 import optparse
 import sys
 import vos
+from vos.vos import Node 
 import os
 import signal
 
