@@ -48,10 +48,11 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set RMCMD = "$pythonVersion $CADC_ROOT/scripts/vrm"
     set CPCMD = "$pythonVersion $CADC_ROOT/scripts/vcp"
     set RMDIRCMD = "$pythonVersion $CADC_ROOT/scripts/vrmdir"
-
     set CERTPATH = "$A/test-certificates/x509_CADCRegtest1.pem"
     set CERT = " --cert=$CERTPATH"
     set CERTFILE = " --certfile=$CERTPATH"
+    set LOGFILE = "/tmp/mountvofs.log"
+    set ANONLOGFILE = "/tmp/mountvofs_anon.log"
 
     echo "mount command: " $MOUNTCMD
     echo "testing version: " `$MOUNTCMD --version`
@@ -83,11 +84,33 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo "*** starting test sequence ***"
     echo
 
-    echo -n "mount vospace"
+    # Clean up from last time
     fusermount -u $MOUNTPOINT >& /dev/null
     rmdir $MOUNTPOINT >& /dev/null
     rm -fR $VOS_CACHE #clean the cache
-    $MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=/tmp/mountvofs.log -d || echo " [FAIL]" && exit -1
+
+    # For the anonymous mount test we use a separate temporary log
+    echo -n "mount vospace anonymously"
+    rm $ANONLOGFILE >& /dev/null
+    $MOUNTCMD --cert= --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$ANONLOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
+    sleep 3
+    ls $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+
+    echo -n "check that https protocol not used for anonymous mount"
+    set HAVEHTTPS = `grep https $ANONLOGFILE`
+    [ ! -z $HAVEHTTPS ] && echo " [FAIL]" && exit -1
+    echo " [OK]"
+
+    echo -n "unmount anonymous vospace"
+    fusermount -u $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
+    rmdir $MOUNTPOINT >& /dev/null
+    rm -fR $VOS_CACHE #clean the cache
+    cat $ANONLOGFILE >> $LOGFILE  # since the original gets removed
+    echo " [OK]"
+
+    echo -n "mount vospace using certificate"
+    $MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
     sleep 3
     ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
     echo " [OK]"
@@ -177,7 +200,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     echo -n "delete non-empty container "
     ls $MCONTAINER
-    rm -rf $MCONTAINER || echo " [FAIL]" && exit -1
+    rm -rf $MCONTAINER >& /dev/null || echo " [FAIL]" && exit -1
     ls $MCONTAINER/foo >& /dev/null && echo " [FAIL]" && exit -1
     ls $MCONTAINER >& /dev/null && echo " [FAIL]" && exit -1
     $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
