@@ -679,7 +679,7 @@ class VOFile:
     retryCodes = (503, 408, 504, 412)
 
     def __init__(self, url_list, connector, method, size=None,
-            followRedirect=True, range=None):
+            followRedirect=True, range=None, possible_partial_read=False):
         self.closed = True
         self.connector = connector
         self.httpCon = None
@@ -705,7 +705,7 @@ class VOFile:
         self.urlIndex = 0
         self.followRedirect = followRedirect
         self._fpos = 0
-        self.open(self.URLs[self.urlIndex], method, bytes=range)
+        self.open(self.URLs[self.urlIndex], method, bytes=range, possible_partial_read=possible_partial_read)
         # initial values for retry parameters
         self.currentRetryDelay = DEFAULT_RETRY_DELAY
         self.totalRetryDelay = 0
@@ -775,7 +775,7 @@ class VOFile:
             self.totalFileSize = int(self.size)
         return True
 
-    def open(self, URL, method="GET", bytes=None):
+    def open(self, URL, method="GET", bytes=None, possible_partial_read=False):
         """Open a connection to the given URL"""
         logger.debug("Opening %s (%s)" % (URL, method))
         self.url = URL
@@ -824,6 +824,11 @@ class VOFile:
             self.httpCon.putheader("Range", bytes)
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
+        
+        # set header if a partial read is possible
+        if possible_partial_read and method == 'GET':
+            self.httpCon.putheader("X-CADC-Partial-Read", "true")
+                
         self.httpCon.endheaders()
 
     def getFileInfo(self):
@@ -1422,7 +1427,8 @@ class Client:
                 "%s: %s" % (uri, errorMessage))
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None,
-             limit=None, nextURI=None, size=None, cutout=None, range=None):
+             limit=None, nextURI=None, size=None, cutout=None, range=None,
+             full_negotiation=False, possible_partial_read=False):
         """Connect to the uri as a VOFile object"""
 
         ### sometimes this is called with mode from ['w', 'r']
@@ -1479,10 +1485,10 @@ class Client:
                     if cutout is not None:
                         target = "{}?cutout={}".format(target, cutout)
                     return VOFile([target], self.conn, method=method,
-                            size=size, range=range)
+                            size=size, range=range, possible_partial_read=possible_partial_read)
             else:
                 URL = self.getNodeURL(uri, method=method, view=view,
-                        limit=limit, nextURI=nextURI, cutout=cutout)
+                        limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
 
         return VOFile(URL, self.conn, method=method, size=size, range=range)
 
