@@ -87,7 +87,13 @@ if __name__ == "__main__":
     else:
         certfile=os.path.abspath(opt.certfile)
     conn=vos.Connection(certfile=certfile)
-    logging.debug("Got a certificate, connections should work")
+    if certfile is None:
+        readonly = True
+        logging.debug("No certificate, anonymous connections should work")
+    else:
+        readonly = opt.readonly
+        logging.debug("Got a certificate, connections should work")
+    
 
     root = opt.vospace
     mount = os.path.abspath(opt.mountpoint)
@@ -106,7 +112,7 @@ if __name__ == "__main__":
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
-                    readonly=opt.readonly,
+                    readonly=readonly,
                     #auto_cache=True,
                     allow_other=opt.allow_other,
                     noapplexattr=True,
@@ -119,7 +125,7 @@ if __name__ == "__main__":
 		secure_get=opt.secure_get),
                     mount,
                     fsname=root,
-                    readonly=opt.readonly,
+                    readonly=readonly,
                     allow_other=opt.allow_other,
                     #auto_cache=True,
                     foreground=opt.foreground)
