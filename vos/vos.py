@@ -967,13 +967,12 @@ class Client:
     vosProperties = ["description", "type", "encoding", "MD5", "length",
                     "creator", "date", "groupread", "groupwrite", "ispublic"]
 
-    def __init__(self, certFile=os.path.join(
-            os.getenv('HOME'), '.ssl/cadcproxy.pem'), rootNode=None,
-            conn=None, archive='vospace', cadc_short_cut=False,
-            http_debug=False, secure_get=False):
+    def __init__(self, certFile=None, rootNode=None, conn=None,
+                 archive='vospace', cadc_short_cut=False, http_debug=False,
+                 secure_get=False):
         """This could/should be expanded to set various defaults
 
-        certFile: CADC proxy certficate location.
+        certFile: CADC proxy certficate location. Overrides cert in conn.
         rootNode: the base of the VOSpace for uri references.
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
@@ -981,18 +980,23 @@ class Client:
         http_debug: if True, then httplib will print debug statements
 
         """
-        if certFile is not None and not os.access(certFile, os.F_OK):
-            ### can't get this certfile
-            #logger.debug("Failed to access certfile %s " % (certFile))
-            #logger.debug("Using anonymous mode, try getCert if you want to
-            # use authentication")
-            certFile = None
+
+        if certFile is not None:
+            # certfile supplied, override and create new conn
+            conn = Connection(certfile=certFile, http_debug=http_debug)
+        elif conn:
+            # get certfile from conn
+            certFile = conn.certfile
+        else:
+            # fall back is an anonymous connection
+            conn = Connection(certfile=certFile, http_debug=http_debug)
+
+        # Set the protocol
         if certFile is None:
             self.protocol = "http"
         else:
             self.protocol = "https"
-        if not conn:
-            conn = Connection(certfile=certFile, http_debug=http_debug)
+
         self.conn = conn
         self.VOSpaceServer = "cadc.nrc.ca!vospace"
         self.rootNode = rootNode
