@@ -80,3 +80,19 @@ group in order to mount FUSE file systems.
   to your local directory.
 
 See --help for the commands:  vmkdir, vrm, vrmdir, vsync 
+
++++++++++++++++++++++++++ TEST SCRIPTS +++++++++++++++++++++++++++
+
+The top-level "runtest" executes unit tests in vos/test
+
+Integration and performance scripts are located in the test/ tree. At
+present these are designed to test installations at the CADC and will
+not work elsewhere. In order to run them, cadcVOFS must be installed
+in the following way:
+
+1) Set the environment variable $CADC_ROOT to the path where CADC
+software are installed.
+
+2) Install cadcVOFS
+> python setup.py install --prefix=$CADC_ROOT \
+  --install-script=$CADC_ROOT/scripts
