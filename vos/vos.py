@@ -826,7 +826,7 @@ class VOFile:
         self.httpCon.putheader("Expect", "100-continue")
         
         # set header if a partial read is possible
-        if possible_partial_read and method == 'GET':
+        if possible_partial_read and method == "GET":
             self.httpCon.putheader("X-CADC-Partial-Read", "true")
                 
         self.httpCon.endheaders()
@@ -1490,7 +1490,7 @@ class Client:
                 URL = self.getNodeURL(uri, method=method, view=view,
                         limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
 
-        return VOFile(URL, self.conn, method=method, size=size, range=range)
+        return VOFile(URL, self.conn, method=method, size=size, range=range, possible_partial_read=possible_partial_read)
 
     def addProps(self, node):
         """Given a node structure do a POST of the XML to the VOSpace to
