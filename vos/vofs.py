@@ -82,13 +82,14 @@ class MyIOProxy(IOProxy):
             vos.logger.debug("Opening a new vo file on %s",
                     self.cacheFile.path)
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
-                    mode=os.O_RDONLY, view="data", size=size, range=range)
+                    mode=os.O_RDONLY, view="data", size=size, range=range,
+                    possible_partial_read=True)
         else:
             vos.logger.debug("Opening a existing vo file on %s",
                     self.lastVOFile.URLs[self.lastVOFile.urlIndex])
             self.lastVOFile.open(
                     self.lastVOFile.URLs[self.lastVOFile.urlIndex],
-                    bytes=range)
+                    bytes=range, possible_partial_read=True)
         try:
             vos.logger.debug("reading from %s" % (
                     str(self.lastVOFile.URLs[self.lastVOFile.urlIndex])))
@@ -104,7 +105,7 @@ class MyIOProxy(IOProxy):
                     # to client
                     self.lastVOFile = self.vofs.client.open(
                             self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                            size=size, range=range, full_negotiation=True)
+                            size=size, range=range, full_negotiation=True, possible_partial_read=True)
                     buff = self.lastVOFile.read(blockSize)
 
                 if not self.cacheFile.gotHeader:
