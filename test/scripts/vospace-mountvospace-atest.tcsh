@@ -9,6 +9,14 @@ else
     endif
 endif
 
+if ( `uname -s` == "Darwin" ) then
+     set STATCMD = 'stat -f %z'
+     set UMOUNTCMD = 'umount'
+else
+     set STATCMD = 'stat -c %s'
+     set UMOUNTCMD = 'fusermount -u'
+endif
+
 
 date
 echo "###################"
@@ -85,7 +93,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo
 
     # Clean up from last time
-    fusermount -u $MOUNTPOINT >& /dev/null
+    ${UMOUNTCMD}  $MOUNTPOINT >& /dev/null
     rmdir $MOUNTPOINT >& /dev/null
     rm -fR $VOS_CACHE #clean the cache
 
@@ -103,7 +111,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "unmount anonymous vospace"
-    fusermount -u $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
+    ${UMOUNTCMD} $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
     rmdir $MOUNTPOINT >& /dev/null
     rm -fR $VOS_CACHE #clean the cache
     cat $ANONLOGFILE >> $LOGFILE  # since the original gets removed
@@ -177,10 +185,10 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo -n "access test data to exceed cache"
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
-        md5sum $MCONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
+        md5 $MCONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
     end
 
-    set FS_LAST = `stat -c %s $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1
+    set FS_LAST = `${STATCMD} $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1
     if( $FS_LAST != $CACHETEST_FSIZE_BYTES ) then
         # The last file should now be cached
         echo " [FAIL]" && exit -1
