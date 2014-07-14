@@ -37,29 +37,6 @@ if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
 
-def get_logger(verbose=False, debug=False, quiet=False):
-    """Sets up the logging for vos library.
-
-    vos clients should call get_logger with an OptionParser object to set the
-    reporting level."""
-
-    log_format = "%(module)s: %(levelname)s: %(message)s"
-    log_level = logging.ERROR
-
-    log_level = ((debug and logging.DEBUG) or (verbose and logging.INFO) or
-            (quiet and logging.FATAL) or logging.ERROR)
-
-    if log_level == logging.DEBUG:
-        log_format = "%(levelname)s: @(%(asctime)s) thread:%(thread)d - " \
-                "%(module)s.%(funcName)s %(lineno)d: %(message)s"
-
-    logger.setLevel(log_level)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(logging.Formatter(fmt=log_format))
-    logger.addHandler(stream_handler)
-    return logger
-
-
 BUFSIZE = 8388608  # Size of read/write buffer
 MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not
@@ -839,7 +816,7 @@ class VOFile:
             try:
                 self.close()
             except IOError as read_error:
-                logger.info(str(read_error))
+                logger.debug(str(read_error))
         if self.resp.status == 416:
             return ""
         # check the most likely response first
