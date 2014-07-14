@@ -1,177 +1,159 @@
-#!/usr/bin/env python2.7
+#!python
+"""Lists information about a VOSpace DataNode or the contents of a ContainerNode."""
 
-"""vls:  list the contents of a voSpace"""
-from vos import vos
-import optparse
+import errno
 import logging
-import os, sys
+import math
+import optparse
+import os
+import sys
+import time
 from vos import vos, __version__
 
-usage = """
-  vls vos:voSpaceTarget
-  lists information about the voSpaceTarget, a data or container node.   You must have read permission on the vosSpaceTarget
-
-eg:  vls vos/jkavelaars
-
-  Currently only work on CADC vospace server
-
-Version: %s """ % (__version__.version)
+usage = "%prog vos:VOSpace/Node"
+description = """lists file size and ownership of VOSpace/Node. Node can be dataNode, containerNode or linkNode."""
 
 
+def get_terminal_size():
+    """Get the size of the terminal
 
-def getTerminalSize():
-    def ioctl_GWINSZ(fd):
+    @return: tuple(int, int) giving the row/column of the terminal screen.
+    """
+
+    def ioctl_gwinsz(fd):
+        """
+
+        @param fd: A file descriptor that points at the Screen Parameters
+        @return: the termios screeen structure unpacked into an array.
+        """
         try:
-            import fcntl, termios, struct, os
-            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
-        '1234'))
+            import fcntl
+            import termios
+            import struct
+            this_cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
         except:
             return None
-        return cr
-    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+        return this_cr
+
+    cr = ioctl_gwinsz(0) or ioctl_gwinsz(1) or ioctl_gwinsz(2)
+
     if not cr:
         try:
-            fd = os.open(os.ctermid(), os.O_RDONLY)
-            cr = ioctl_GWINSZ(fd)
-            os.close(fd)
+            td = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_gwinsz(td)
+            td.close()
         except:
             pass
     if not cr:
         try:
-            cr = (env['LINES'], env['COLUMNS'])
+            cr = (os.environ['LINES'], os.environ['COLUMNS'])
         except:
             cr = (25, 80)
     return int(cr[1]), int(cr[0])
 
 
-
-
-parser = optparse.OptionParser(usage, add_help_option=False)
-parser.add_option("--help", action="store_true")
-parser.add_option("-l", "--long", action="store_true", help="verbose listing sorted by name")
-parser.add_option("-g", "--group", action="store_true", help="display group read/write information")
-parser.add_option("-h", "--human", action="store_true", help="make sizes human readable", default=False)
-parser.add_option("-S", "--Size", action="store_true", help="sort files by size", default=False)
-parser.add_option("-r", "--reverse", action="store_true", help="reverse the sort order", default=False)
-parser.add_option("-t", "--time", action="store_true", help="sort by time copied to VOSpace")
-parser.add_option("-v", "--verbose", action="store_true", help="print some diagnostics")
-parser.add_option("-d", "--debug", action="store_true", help="print all diagnositics")
-parser.add_option("-w", "--warning", action="store_true")
-parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-parser.add_option("--overwrite", help="Overwrite the existing certificate with a new one?", action="store_true")
-parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-
-if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit()
-
-(opt, args) = parser.parse_args()
-
-
-if opt.version:
-    sys.stdout.write("vls version %s \n\n" % (__version__.version)) 
-    sys.exit()
-if opt.help:
-    parser.print_help()
-    sys.exit(0)
-
-sortKey = False
-if opt.time:
-    sortKey = "date"
-if opt.Size:
-    sortKey = "size"
-
-
-if opt.verbose:
-    log_level = logging.INFO
-elif opt.debug:
-    log_level = logging.DEBUG
-elif opt.warning:
-    log_level = logging.WARNING
-else:
-    log_level = logging.ERROR
-
-logging.getLogger('vos').setLevel(log_level)
-logging.getLogger('vos').addHandler(logging.StreamHandler())
-logger = logging.getLogger('vos')
-
-if len(args) < 1:
-    parser.error("You must specifiy a VOSpace to list")
-    sys.exit(-1)
-
-if len(args) < 1  :
-    parser.error("Specify voSpace target to list using the vos: prefix")
-    sys.exit(-1)
-
-logger.debug("Connecting to vospace using certificate %s" % (opt.certfile))
-
-try:
-    client = vos.Client(certFile=opt.certfile)
-except Exception, e:
-    logger.error("Connection failed:  %s" % (str(e)))
-    sys.exit(-1)
-
-def sizeFormat(size):
+def size_format(size):
     """Format a size value for listing"""
-    import math
     if opt.human:
-        sizeUnit = ['B', 'K', 'M', 'G', 'T']
+        size_unit = ['B', 'K', 'M', 'G', 'T']
         try:
             length = float(size)
             scale = int(math.log(length) / math.log(1024))
-            length = "%.0f%s" % (length / (1024.0 ** scale), sizeUnit[scale])
+            length = "%.0f%s" % (length / (1024.0 ** scale), size_unit[scale])
         except:
             length = str(int(size))
     else:
         length = str(int(size))
-    return "%12s " % (length)
+    return "%12s " % length
 
-def dateFormat(Epoch):
-    """given a time object return a nicely formated string"""
-    import time, math
-    timeTup = time.localtime(Epoch)
-    if time.localtime().tm_year != timeTup.tm_year:
-        return time.strftime('%b %d  %Y ', timeTup)
-    return time.strftime('%b %d %H:%S ', timeTup)
 
-columns = ['permisions']
-if opt.long:
-    columns.extend(['creator'])
-columns.extend(['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
+def date_format(epoch):
+    """given a time object return a unix-ls like formatted string"""
 
-formats = {'permisions': lambda value: "%-11s" % (value),
-         'creator': lambda value: " %-20s" % (value),
-         'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
-         'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
-	 'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value=="true"],
-         'size': sizeFormat,
-         'date': dateFormat}
+    time_tuple = time.localtime(epoch)
+    if time.localtime().tm_year != time_tuple.tm_year:
+        return time.strftime('%b %d  %Y ', time_tuple)
+    return time.strftime('%b %d %H:%S ', time_tuple)
 
-for node in args:
 
-    if node[0:4] != "vos:":
-        parser.error("Improper vospace specification: %s " % (node))
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage, description=description, version=__version__.version, add_help_option=False)
+    parser.add_option("--help", action="store_true")
+    parser.add_option("-l", "--long", action="store_true", help="verbose listing sorted by name")
+    parser.add_option("-g", "--group", action="store_true", help="display group read/write information")
+    parser.add_option("-h", "--human", action="store_true", help="make sizes human readable", default=False)
+    parser.add_option("-S", "--Size", action="store_true", help="sort files by size", default=False)
+    parser.add_option("-r", "--reverse", action="store_true", help="reverse the sort order", default=False)
+    parser.add_option("-t", "--time", action="store_true", help="sort by time copied to VOSpace")
+    parser.add_option("-v", "--verbose", action="store_true", help="print some diagnostics")
+    parser.add_option("-d", "--debug", action="store_true", help="print all diagnositics")
+    parser.add_option("-w", "--warning", action="store_true")
+    parser.add_option("--certfile",
+                      help="location of your CADC security certificate file",
+                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("--overwrite",
+                      help="Overwrite the existing certificate with a new one?",
+                      action="store_true")
+    parser.add_option("-q",help="run quietly, exit on error without message", action="store_true")
+
+    (opt, args) = parser.parse_args()
+
+    # We disabled -h/--help so vls can have a -h option.
+    # Here we re-enable it but only with --help
+    opt.help and (parser.print_help() or sys.exit(0))
+
+    if not len(args) > 0 :
+        parser.error("missing VOSpace argument")
+
+    logger = vos.get_logger(verbose=opt.verbose, debug=opt.debug, quiet=opt.q)
+    sortKey = ( opt.time and "date" ) or ( opt.Size and "size" ) or False
+
     try:
-        logger.debug("getting listing of: %s" % ( str(node)))
-        infoList = client.getInfoList(node)
-    except IOError as e:
-        logger.error("Error getting listing of %s ( %s )" % (node, e.strerror))
-        sys.exit(e.errno)
-    except Exception as e:
-        logger.error("Error getting listing of %s ( %s )" % (node, str(e)))
+        client = vos.Client(certFile=opt.certfile)
+    except Exception, e:
+        logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(-1)
 
-    if sortKey:
-        infoList = sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
+    columns = ['permissions']
+    if opt.long:
+        columns.extend(['creator'])
+    columns.extend(['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-    for item in infoList:
-        name_string = item[0]
-        if opt.long or opt.group:
-            for col in columns:
-                sys.stdout.write(formats[col](item[1][col]))
-            if item[1]["permisions"][0] == 'l':
-                name_string = "%s -> %s" % (name_string, item[1]['target'])
-        sys.stdout.write("%s " % (name_string))
-        sys.stdout.write("\n")
+    formats = {'permissions': lambda value: "%-11s" % value,
+               'creator': lambda value: " %-20s" % value,
+               'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+               'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value == "true"],
+               'size': size_format,
+               'date': date_format}
 
-sys.exit(0)
+    for node in args:
+
+        try:
+            if not node[0:4] == "vos:" :
+                raise IOError(errno.EBADF, "Invalid node name", node)
+            logger.debug("getting listing of: %s" % str(node))
+            infoList = client.getInfoList(node)
+        except Exception as e:
+            logger.error(getattr(e,'strerror','error'))
+            sys.exit(getattr(e,'errno',errno.ENOMSG))
+
+        if sortKey:
+            try:
+                sorted_list = sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
+            except:
+                sorted_list = infoList 
+            finally:
+                infoList = sorted_list
+ 
+        for item in infoList:
+            name_string = item[0]
+            if opt.long or opt.group:
+                for col in columns:
+                    sys.stdout.write(formats[col](item[1][col]))
+                if item[1]["permissions"][0] == 'l':
+                    name_string = "%s -> %s" % (name_string, item[1]['target'])
+            sys.stdout.write("%s\n" % name_string)
+

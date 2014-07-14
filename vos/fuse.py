@@ -23,6 +23,7 @@ from platform import machine, system
 from signal import signal, SIGINT, SIG_DFL
 from stat import S_IFDIR
 from traceback import print_exc
+import traceback
 
 import logging
 
@@ -407,7 +408,7 @@ class FUSE(object):
         except OSError, e:
             return -(e.errno or EFAULT)
         except Exception, e2:
-            logging.error("%s" % str(e2))
+            logging.error("%s %s" % (str(e2), traceback.format_exc()))
             print_exc()
             return -EFAULT
 

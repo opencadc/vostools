@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!python
 """set/read/(list) a property(ies) if a node.
 
 The tag system is meant to allow tags, in addition to the standard

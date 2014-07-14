@@ -28,12 +28,12 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set RMCMD = "$pythonVersion $CADC_ROOT/scripts/vrm"
     set CPCMD = "$pythonVersion $CADC_ROOT/scripts/vcp"
 
-    set MVCMD = "python $CADC_ROOT/scripts/vmv"
-    set RMDIRCMD = "python $CADC_ROOT/scripts/vrmdir"
-    set CHMODCMD = "python $CADC_ROOT/scripts/vchmod"
-    set TAGCMD = "python $CADC_ROOT/scripts/vtag"
-    set LNCMD = "python $CADC_ROOT/scripts/vln"
-    set LOCKCMD = "python $CADC_ROOT/scripts/vlock"
+    set MVCMD = "$pythonVersion $CADC_ROOT/scripts/vmv"
+    set RMDIRCMD = "$pythonVersion $CADC_ROOT/scripts/vrmdir"
+    set CHMODCMD = "$pythonVersion $CADC_ROOT/scripts/vchmod"
+    set TAGCMD = "$pythonVersion $CADC_ROOT/scripts/vtag"
+    set LNCMD = "$pythonVersion $CADC_ROOT/scripts/vln"
+    set LOCKCMD = "$pythonVersion $CADC_ROOT/scripts/vlock"
 
     set CERT = " --cert=$A/test-certificates/x509_CADCRegtest1.pem"
 
