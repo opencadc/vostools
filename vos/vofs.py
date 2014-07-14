@@ -438,7 +438,7 @@ class VOFS(LoggingMixIn, Operations):
             parentNode = self.getNode(os.path.dirname(path), force=False,
                     limit=1)
             if parentNode and parentNode.props.get('islocked', False):
-                vos.logger.info("Parent node of %s is locked." % path)
+                vos.logger.debug("Parent node of %s is locked." % path)
                 raise FuseOSError(EPERM)
             self.client.mkdir(path)
             self.chmod(path, mode)
@@ -491,7 +491,7 @@ class VOFS(LoggingMixIn, Operations):
         locked = False
 
         if node and node.props.get('islocked', False):
-            vos.logger.info("%s is locked." % path)
+            vos.logger.debug("%s is locked." % path)
             locked = True
 
         if not readOnly and node and not locked:
@@ -499,7 +499,7 @@ class VOFS(LoggingMixIn, Operations):
                 parentNode = self.getNode(os.path.dirname(path),
                         force=False, limit=1)
                 if parentNode.props.get('islocked', False):
-                    vos.logger.info("%s is locked by parent node." % path)
+                    vos.logger.debug("%s is locked by parent node." % path)
                     locked = True
             elif node.type == "vos:LinkNode":
                 try:
@@ -508,13 +508,13 @@ class VOFS(LoggingMixIn, Operations):
                     targetNode = self.getNode(node.target, force=False,
                             limit=1)
                     if targetNode.props.get('islocked', False):
-                        vos.logger.info("%s target node is locked." % path)
+                        vos.logger.debug("%s target node is locked." % path)
                         locked = True
                     else:
                         targetParentNode = self.getNode(os.path.dirname(
                                 node.target), force=False, limit=1)
                         if targetParentNode.props.get('islocked', False):
-                            vos.logger.info(
+                            vos.logger.debug(
                                     "%s is locked by target parent node." %
                                     path)
                             locked = True
@@ -683,7 +683,7 @@ class VOFS(LoggingMixIn, Operations):
         #if len(node.getNodeList())>0:
         #    raise FuseOSError(ENOTEMPTY)
         if node and node.props.get('islocked', False):
-            vos.logger.info("%s is locked." % path)
+            vos.logger.debug("%s is locked." % path)
             raise FuseOSError(EPERM)
         self.client.delete(path)
 
@@ -746,7 +746,7 @@ class VOFS(LoggingMixIn, Operations):
     def unlink(self, path):
         node = self.getNode(path, force=False, limit=1)
         if node and node.props.get('islocked', False):
-            vos.logger.info("%s is locked." % path)
+            vos.logger.debug("%s is locked." % path)
             raise FuseOSError(EPERM)
         self.cache.unlinkFile(path)
         if node:
