@@ -185,7 +185,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
 
 
 def signal_handler(signum, frame):
-    raise KeyboardInterrupt("SIGINT signal handler. {} {}".format(signum, frame))
+    raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
 
 
 if __name__ == '__main__':

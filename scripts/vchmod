@@ -12,7 +12,7 @@ import os
 
 
 def signal_handler(signum, frame):
-    raise KeyboardInterrupt("SIGNAL {} from {} signal handler".format(signum, frame))
+    raise KeyboardInterrupt("SIGNAL {0} from {1} signal handler".format(signum, frame))
 
 
 if __name__ == '__main__':
