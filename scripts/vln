@@ -47,9 +47,9 @@ elif opt.warning:
 else:
     log_level = logging.ERROR
 
-logging.getLogger('vos').setLevel(log_level)
-logging.getLogger('vos').addHandler(logging.StreamHandler())
-logger = logging.getLogger('vos')
+logger = logging.getLogger('vln')
+logger.setLevel(log_level)
+logger.addHandler(logging.StreamHandler())
 
 if len(args) !=  2:
     parser.error("You must specifiy a source file and a target file")

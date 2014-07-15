@@ -45,9 +45,10 @@ Version: %s """ % (__version__.version)
     if opt.debug:
         log_level = logging.DEBUG
 
-    logging.getLogger('vos').setLevel(log_level)
-    logging.getLogger('vos').addHandler(logging.StreamHandler())
-    logger = logging.getLogger('vos')
+
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    logger.addHandler(logging.StreamHandler())
 
 
     if len(args) != 2:

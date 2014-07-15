@@ -1,5 +1,4 @@
 #!python
-
 """A FUSE based filesystem view of VOSpace."""
 
 import sys
@@ -19,51 +18,48 @@ DAEMON_TIMEOUT = 60
 if __name__ == "__main__":
     #usage="%prog <root> <mountpoint>"
 
-
     parser = optparse.OptionParser(description='mount vospace as a filesystem.')
 
     parser.add_option("--vospace", help="the VOSpace to mount", default="vos:")
     parser.add_option("--mountpoint",
-	    help="the mountpoint on the local filesystem",
-	    default="/tmp/vospace")
+                      help="the mountpoint on the local filesystem",
+                      default="/tmp/vospace")
     parser.add_option("--version", action="store_true",
-	    default=False, help="Print the version (%s)" % ( version))
+                      default=False, help="Print the version (%s)" % version)
     parser.add_option("-d", "--debug", action="store_true")
     parser.add_option("-v", "--verbose", action="store_true")
     parser.add_option("--warning", action="store_true", default=False,
-	    help="Print warning level log messages" )
-    parser.add_option("-f", "--foreground", action="store_true", 
-	    help="Mount the filesystem as a foreground opperation and " + 
-	    "produce copious amounts of debuging information")
-    parser.add_option("--log", action="store", 
-	    help="File to store debug log to", default="/tmp/vos.err")
-    parser.add_option("--cache_limit", action="store", type=int, 
-	    help="upper limit on local diskspace to use for file caching (in MBytes)",
-	    default=50*2**(10+10+10))
-    parser.add_option("--cache_dir", action="store", 
-	    help="local directory to use for file caching", default=None)
-    parser.add_option("--certfile", 
-	    help="location of your CADC security certificate file",
-	    default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("--readonly", action="store_true", 
-	    help="mount vofs readonly", default=False)
-    parser.add_option("--cache_nodes", action="store_true", default=False, 
-	    help="cache dataNode properties, containerNodes are not cached")
-    parser.add_option("--allow_other", action="store_true", default=False, 
-	    help="Allow all users access to this mountpoint")
+                      help="Print warning level log messages")
+    parser.add_option("-f", "--foreground", action="store_true",
+                      help="Mount the filesystem as a foreground opperation and " +
+                           "produce copious amounts of debuging information")
+    parser.add_option("--log", action="store",
+                      help="File to store debug log to", default="/tmp/vos.err")
+    parser.add_option("--cache_limit", action="store", type=int,
+                      help="upper limit on local diskspace to use for file caching (in MBytes)",
+                      default=50 * 2 ** (10 + 10 + 10))
+    parser.add_option("--cache_dir", action="store",
+                      help="local directory to use for file caching", default=None)
+    parser.add_option("--certfile",
+                      help="location of your CADC security certificate file",
+                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser.add_option("--readonly", action="store_true",
+                      help="mount vofs readonly", default=False)
+    parser.add_option("--cache_nodes", action="store_true", default=False,
+                      help="cache dataNode properties, containerNodes are not cached")
+    parser.add_option("--allow_other", action="store_true", default=False,
+                      help="Allow all users access to this mountpoint")
     parser.add_option("--max_flush_threads", action="store", type=int,
-	    help="upper limit on number of flush (upload) threads",
-	    default=10)
+                      help="upper limit on number of flush (upload) threads",
+                      default=10)
     parser.add_option("--secure_get", action="store_true", default=False,
-	    help="Ensure HTTPS instead of HTTP is used to retrieve data (slower)")
+                      help="Ensure HTTPS instead of HTTP is used to retrieve data (slower)")
 
     parser.version = version
-    (opt, args)=parser.parse_args()
+    (opt, args) = parser.parse_args()
     if opt.version:
         parser.print_version()
         sys.exit(0)
-
-
 
     if opt.verbose:
         log_level = logging.INFO
@@ -74,59 +70,58 @@ if __name__ == "__main__":
     else:
         log_level = logging.ERROR
 
-    format = ("%(asctime)s %(thread)d vos-"+str(version)+
-	    " %(module)s.%(funcName)s.%(lineno)d %(message)s")
-    logging.basicConfig(level=log_level, format=format,
-	    filename=os.path.abspath(opt.log))
+    log_format = ("%(asctime)s %(thread)d vos-"+str(version)+"%(module)s.%(funcName)s.%(lineno)d %(message)s")
+    logging.basicConfig(level=log_level, format=log_format,
+                        filename=os.path.abspath(opt.log))
 
-    logging.getLogger('vos').addHandler(logging.StreamHandler())
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    logger.addHandler(logging.StreamHandler())
 
-    logging.debug("Checking connection to VOSpace ")
+    logger.debug("Checking connection to VOSpace ")
     if not os.access(opt.certfile, os.F_OK):
-        certfile=None
+        certfile = None
     else:
-        certfile=os.path.abspath(opt.certfile)
-    conn=vos.Connection(certfile=certfile)
+        certfile = os.path.abspath(opt.certfile)
+    conn = vos.Connection(certfile=certfile)
     if certfile is None:
         readonly = True
-        logging.debug("No certificate, anonymous connections should work")
+        logger.debug("No certificate, anonymous connections should work")
     else:
         readonly = opt.readonly
-        logging.debug("Got a certificate, connections should work")
-    
+        logger.debug("Got a certificate, connections should work")
 
     root = opt.vospace
     mount = os.path.abspath(opt.mountpoint)
     if opt.cache_dir is None:
-        opt.cache_dir=os.path.normpath(os.path.join(
-		os.getenv('HOME', default='.'), root.replace(":", "_")))
+        opt.cache_dir = os.path.normpath(os.path.join(
+            os.getenv('HOME', value='.'), root.replace(":", "_")))
     if not os.access(mount, os.F_OK):
         os.makedirs(mount)
-    if platform=="darwin":
-        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
-		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
-		cache_max_flush_threads=opt.max_flush_threads,
-		secure_get=opt.secure_get),
-		    mount,
+    if platform == "darwin":
+        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
+                         cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
+                         cache_max_flush_threads=opt.max_flush_threads,
+                         secure_get=opt.secure_get),
+                    mount,
                     fsname=root,
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=readonly,
-                    #auto_cache=True,
+                    # auto_cache=True,
                     allow_other=opt.allow_other,
                     noapplexattr=True,
                     noappledouble=True,
                     foreground=opt.foreground)
     else:
-        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn, 
-		cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
-		cache_max_flush_threads=opt.max_flush_threads,
-		secure_get=opt.secure_get),
+        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
+                         cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
+                         cache_max_flush_threads=opt.max_flush_threads,
+                         secure_get=opt.secure_get),
                     mount,
                     fsname=root,
                     readonly=readonly,
                     allow_other=opt.allow_other,
-                    #auto_cache=True,
+                    # auto_cache=True,
                     foreground=opt.foreground)
-

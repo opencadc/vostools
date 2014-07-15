@@ -1,10 +1,11 @@
 #!python
 """A script for sending files to VOSpace via multiple connection streams."""
 
-
+import hashlib
+import os
 import sys
 import threading, Queue
-import datetime, optparse
+import optparse
 import errno
 import logging
 from vos import vos, __version__
@@ -15,8 +16,14 @@ usage = """
       Version: %s """ % (__version__.version)
 
 
-def computeMD5(filename, block_size=8192):
-    import hashlib
+def computeMD5(filename, block_size=None):
+    """
+    Read through a file and compute that files MD5 checksum.
+    :param filename: name of the file on disk
+    :param block_size: number of bytes to read into memory, defaults to 2**19 bytes
+    :return: md5 as a hexadecimal string
+    """
+    block_size = block_size is None and 2**19 or block_size
     md5 = hashlib.md5()
     r = open(filename, 'r')
     while True:
@@ -26,6 +33,7 @@ def computeMD5(filename, block_size=8192):
         md5.update(buf)
     r.close()
     return md5.hexdigest()
+
 
 def fileMD5(filename):
     import os
@@ -42,13 +50,9 @@ def fileMD5(filename):
     return md5
 
 class ThreadCopy(threading.Thread):
-    def __init__(self, queue):
+    def __init__(self, queue, client):
         super(ThreadCopy, self).__init__()
-
-        try:
-            self.client = vos.Client()
-        except Exception as e:
-            sys.exit(e.errno)
+        self.client = client
         self.queue = queue
         self.filesSent = 0
         self.filesSkipped = 0
@@ -56,19 +60,16 @@ class ThreadCopy(threading.Thread):
         self.bytesSkipped = 0
         self.filesErrored = 0
 
-
     def run(self):
         while True:
             (src, dest) = self.queue.get()
             requeue = (src, dest)
-            now = datetime.datetime.now()
             srcMD5 = None
             stat = os.stat(src)
-            if not opt.ignore_checksum and not opt.overwrite :
+            if not opt.ignore_checksum and not opt.overwrite:
                 srcMD5 = fileMD5(src)
-            logger.debug("Source MD5: %s " % (srcMD5))
             if not opt.overwrite:
-                """Check if the file is the same"""
+                # Check if the file is the same
                 try:
                     nodeInfo = None
                     if opt.cache_nodes:
@@ -77,7 +78,7 @@ class ThreadCopy(threading.Thread):
                         logger.debug("Getting node info from VOSpace")
                         logger.debug(str(nodeDict.keys()))
                         logger.debug(str(dest))
-                        node = self.client.getNode(dest)
+                        node = self.client.getNode(dest, limit=None)
                         destMD5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
                         destLength = node.attr['st_size']
                         destTime = node.attr['st_ctime']
@@ -94,14 +95,14 @@ class ThreadCopy(threading.Thread):
                         self.bytesSkipped += destLength
                         self.queue.task_done()
                         continue
-                except (IOError, OSError) as e:
+                except (IOError, OSError) as node_error:
                     """Ignore the erorr"""
-                    logger.debug(str(e))
+                    logger.debug(str(node_error))
                     pass
             logger.info("%s -> %s" % (src, dest))
             try:
                 self.client.copy(src, dest, sendMD5=True)
-                node = self.client.getNode(dest)
+                node = self.client.getNode(dest, limit=None)
                 destMD5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
                 destLength = node.attr['st_size']
                 destTime = node.attr['st_ctime']
@@ -138,7 +139,7 @@ def mkdirs(dirs):
     ## try and make a new directory and return
     ## failure indicates we should see if subdirs exist
     try:
-        c.mkdir(dirs)
+        client.mkdir(dirs)
         logger.info("Made directory %s " % (dirs))
         goodDirs.append(dirs)
         return
@@ -152,7 +153,6 @@ def mkdirs(dirs):
     return
 
 
-import os
 def copy(source, dest):
     ## strip down dest until we find a part that exists
     ## and then build up the path.  Dest should include the filename
@@ -167,18 +167,17 @@ def copy(source, dest):
         logger.error("filename %s contains illegal characters, skipping" % (source))
         return
 
-    
     dirname = os.path.dirname(dest)
     mkdirs(dirname)
     if opt.include is not None and not re.search(opt.include, source):
         return
     queue.put((source, dest), timeout=3600)
 
-def startStreams(nstreams):
+def startStreams(nstreams, vospace_client):
     streams = []
     for i in range(nstreams):
         logger.info("Launching vospace connection stream %d" % (i))
-        t = ThreadCopy(queue)
+        t = ThreadCopy(queue, client=vospace_client)
         t.setDaemon(True)
         t.start()
         streams.append(t)
@@ -188,9 +187,11 @@ def startStreams(nstreams):
 def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
     """Build a list of files that should be copied into VOSpace"""
     import string
+
     spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
     count = 0
     import re
+
     for (root, dirs, filenames) in os.walk(basePath):
         for thisDirname in dirs:
             if not recursive:
@@ -200,7 +201,7 @@ def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
             if ignore is not None:
                 for thisIgnore in ignore.split(','):
                     if not thisDirname.find(thisIgnore) < 0:
-                        logger.info ("excluding: %s " % (thisDirname))
+                        logger.info("excluding: %s " % (thisDirname))
                         skip = True
                         continue
             if skip:
@@ -214,7 +215,7 @@ def buildFileList(basePath, destRoot='', recursive=False, ignore=None):
             if ignore is not None:
                 for thisIgnore in ignore.split(','):
                     if not srcfilename.find(thisIgnore) < 0:
-                        logger.info ("excluding: %s " % (srcfilename))
+                        logger.info("excluding: %s " % (srcfilename))
                         skip = True
                         continue
             if skip:
@@ -284,9 +285,9 @@ if __name__ == '__main__':
     else:
         log_level = logging.ERROR
 
-    logging.getLogger('vos').setLevel(log_level)
-    logging.getLogger('vos').addHandler(logging.StreamHandler())
-    logger = logging.getLogger('vos')
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    logger.addHandler(logging.StreamHandler())
 
     if len(args) < 2:
         parser.error("requires one or more source files and a single destination directory")
@@ -304,15 +305,15 @@ if __name__ == '__main__':
         parser.error("Only allows sync FROM local copy TO VOSpace")
     ## Currently we don't create nodes in sync and we don't sync onto files
     logger.info("Connecting to VOSpace")
-    c = vos.Client(certFile=opt.certfile)
+    client = vos.Client(certFile=opt.certfile)
     logger.info("Confirming Destination is a directory")
-    destIsDir = c.isdir(dest)
+    destIsDir = client.isdir(dest)
 
     queue = Queue.Queue(maxsize=10 * opt.nstreams)
     goodDirs = []
     nodeDict = {}
 
-    streams = startStreams(opt.nstreams)
+    streams = startStreams(opt.nstreams, vospace_client=client)
 
 
     ### build a complete file list given all the things on the command line
@@ -324,7 +325,7 @@ if __name__ == '__main__':
                 if os.path.basename(filename) != os.path.basename(dest):
                     thisRoot = os.path.join(dest, os.path.basename(filename))
             mkdirs(thisRoot)
-            nodeDict[thisRoot] = c.getNode(thisRoot)
+            nodeDict[thisRoot] = client.getNode(thisRoot, limit=None)
             try:
                 buildFileList(filename, destRoot=thisRoot, recursive=opt.recursive, ignore=opt.exclude)
             except Exception as e:

@@ -41,9 +41,9 @@ elif opt.debug:
 else:
     log_level = logging.ERROR
 
-logging.getLogger('vos').setLevel(log_level)
-logging.getLogger('vos').addHandler(logging.StreamHandler())
-logger = logging.getLogger('vos')
+logger = logging.getLogger('vlock')
+logger.setLevel(log_level)
+logger.addHandler(logging.StreamHandler())
 
 lock = None
 if opt.lock:

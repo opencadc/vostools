@@ -17,13 +17,11 @@ import logging
 import mimetypes
 import os
 import re
-import ssl
 import stat
 import string
 import sys
 import time
 import urllib
-import urllib2
 from xml.etree import ElementTree
 from logExceptions import logExceptions
 from copy import deepcopy

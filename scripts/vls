@@ -107,7 +107,14 @@ if __name__ == '__main__':
     if not len(args) > 0 :
         parser.error("missing VOSpace argument")
 
-    logger = vos.get_logger(verbose=opt.verbose, debug=opt.debug, quiet=opt.q)
+    logger = logging.getLogger('vls')
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.ERROR)
+    if opt.verbose:
+        logger.setLevel(logging.INFO)
+    elif opt.debug:
+        logger.setLevel(logging.DEBUG)
+
     sortKey = ( opt.time and "date" ) or ( opt.Size and "size" ) or False
 
     try:

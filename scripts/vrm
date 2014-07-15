@@ -43,9 +43,10 @@ elif opt.warning:
 else:
     log_level = logging.ERROR
 
-logging.getLogger('vos').setLevel(log_level)
-logging.getLogger('vos').addHandler(logging.StreamHandler())
-logger = logging.getLogger('vos')
+logger = logging.getLogger()
+logger.setLevel(log_level)
+logger.addHandler(logging.StreamHandler())
+
 
 
 
