@@ -95,7 +95,7 @@ if __name__ == "__main__":
     mount = os.path.abspath(opt.mountpoint)
     if opt.cache_dir is None:
         opt.cache_dir = os.path.normpath(os.path.join(
-            os.getenv('HOME', value='.'), root.replace(":", "_")))
+            os.getenv('HOME', '.'), root.replace(":", "_")))
     if not os.access(mount, os.F_OK):
         os.makedirs(mount)
     if platform == "darwin":
