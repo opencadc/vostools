@@ -482,7 +482,7 @@ class Node:
                 propertyNode.attrib['xsi:nil'] = 'true'
                 propertyNode.attrib["xmlns:xsi"] = Node.XSINS
                 propertyNode.text = ""
-            elif len(str(properties[property])) > 0 and properties[property] is not None:
+            elif len(str(properties[property])) > 0:
                 propertyNode.text = properties[property]
 
         ## That's it for link nodes...
