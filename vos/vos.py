@@ -44,6 +44,7 @@ CONNECTION_TIMEOUT = 600  # seconds before HTTP connection should drop.
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME"),'.ssl/cadcproxy.pem'))
+VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
 class URLparse:
     """ Parse out the structure of a URL.
@@ -85,7 +86,7 @@ class Connection:
 
         ## allow anonymous access if no certfile is specified...
         if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-            logger.critical("Could not read security certificate at {}.  Reverting to anonymous.".format(vospace_certfile))
+            logger.critical("Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
             vospace_certfile = None
         self.vospace_certfile = vospace_certfile
         self.http_debug = http_debug
@@ -938,23 +939,22 @@ class Client:
                     "creator", "date", "groupread", "groupwrite", "ispublic"]
 
     def __init__(self, vospace_certfile=None, rootNode=None, conn=None,
-                 archive='vospace', cadc_short_cut=False, http_debug=False,
+                 cadc_short_cut=False, http_debug=False,
                  secure_get=False):
         """This could/should be expanded to set various defaults
 
-        certFile: CADC proxy certificate location. Overrides cert in conn.
+        vospace_certfile: CADC x509 proxy certificate file location. Overrides certfile in conn.
         rootNode: the base of the VOSpace for uri references.
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
         cadc_short_cut: if True then just assumed data web service urls
-        http_debug: if True, then httplib will print debug statements
-
+        secure_get: Use HTTPS: ie. transfer contents of files using SSL encryption.
         """
 
         vospace_certfile = vospace_certfile is None and \
             (isinstance(conn, Connection) and conn.vospace_certfile or VOSPACE_CERTFILE) or vospace_certfile
 
-        logger.debug("Using certificate file: {}".format(vospace_certfile))
+        logger.debug("Using certificate file: {0}".format(vospace_certfile))
         conn = Connection(vospace_certfile=vospace_certfile, http_debug=http_debug)
 
         # Set the protocol
@@ -966,7 +966,6 @@ class Client:
         self.conn = conn
         self.VOSpaceServer = "cadc.nrc.ca!vospace"
         self.rootNode = rootNode
-        self.archive = archive
         self.nodeCache = NodeCache()
         self.cadc_short_cut = cadc_short_cut
         self.secure_get = secure_get
@@ -975,7 +974,16 @@ class Client:
 
     #@logExceptions()
     def copy(self, src, dest, sendMD5=False):
-        """copy to/from vospace"""
+        """copy from src to dest vospace.
+
+        src:  a VOSpace or local-filesystem location.
+        dest: a VOSpace or local-filesystem location.
+
+        One of src or dest must be a vospace location and the other must be a local location.
+
+        TODO: handle vospace to vospace copies.
+        TODO: handle vospace to vospace copies.
+        """
 
         checkSource = False
         srcNode = None
@@ -1447,7 +1455,7 @@ class Client:
                     # TODO
                     # Need a way of passing along authentication.
                     if cutout is not None:
-                        target = "{}?cutout={}".format(target, cutout)
+                        target = "{0}?cutout={1}".format(target, cutout)
                     return VOFile([target], self.conn, method=method,
                             size=size, range=range, possible_partial_read=possible_partial_read)
             else:
@@ -1562,16 +1570,16 @@ class Client:
         return names
 
     def isdir(self, uri):
-        """Check to see if this given uri points at a containerNode or is
-           a link to one."""
+        """Check to see if the given uri points at a containerNode or is
+           a link to one.
+
+           uri: a vospace URI
+           """
         try:
             node = self.getNode(uri, limit=0)
-            # logger.debug(node.type)
             while node.type == "vos:LinkNode":
                 uri = node.target
-                # logger.debug(uri)
                 if uri[0:4] == "vos:":
-                    # logger.debug(uri)
                     node = self.getNode(uri, limit=0)
                 else:
                     return False
@@ -1588,12 +1596,18 @@ class Client:
             return False
 
     def access(self, uri, mode=os.O_RDONLY):
-        """Test for existance"""
+        """Test if the give vospace uri can be access if the given mode.
+
+        uri:  a vospace location.
+        mode: os.O_RDONLY
+
+        NOTE: Currently mode is ignored and only read-access is checked.
+        """
         try:
             dum = self.getNode(uri)
             return True
         except Exception as e:
-            # logger.debug(str(e))
+            logger.debug(str(e))
             return False
 
     def status(self, uri, code=[200, 303, 302]):
