@@ -57,7 +57,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set CPCMD = "$pythonVersion $CADC_ROOT/scripts/vcp"
     set RMDIRCMD = "$pythonVersion $CADC_ROOT/scripts/vrmdir"
     set CERTPATH = "$A/test-certificates/x509_CADCRegtest1.pem"
-    set CERT = " --cert=$CERTPATH"
+    set CERT = " --certfile=$CERTPATH"
     set CERTFILE = " --certfile=$CERTPATH"
     set LOGFILE = "/tmp/mountvofs.log"
     set ANONLOGFILE = "/tmp/mountvofs_anon.log"
@@ -100,14 +100,18 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     # For the anonymous mount test we use a separate temporary log
     echo -n "mount vospace anonymously"
     rm $ANONLOGFILE >& /dev/null
-    $MOUNTCMD --cert= --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$ANONLOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
+    $MOUNTCMD --certfile=anonymous --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$ANONLOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
     sleep 3
     ls $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
-    echo -n "check that https protocol not used for anonymous mount"
-    set HAVEHTTPS = `grep https $ANONLOGFILE`
-    [ ! -z $HAVEHTTPS ] && echo " [FAIL]" && exit -1
+    echo -n "check that https protocol not used for anonymous mount "
+    set HAVEHTTPS = `grep -c https $ANONLOGFILE`
+    if ( $HAVEHTTPS != 0 ) then
+	 echo " [FAIL]" 
+         echo "HAVEHTTPS: ${?HAVEHTTPS} ${HAVEHTTPS} "
+         exit -1
+    endif
     echo " [OK]"
 
     echo -n "unmount anonymous vospace"

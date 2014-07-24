@@ -80,7 +80,8 @@ if __name__ == "__main__":
 
     logger.debug("Checking connection to VOSpace ")
     if not os.access(opt.certfile, os.F_OK):
-        certfile = None
+        # setting this to 'blank' instead of None since 'None' implies use the default.
+        certfile = ""
     else:
         certfile = os.path.abspath(opt.certfile)
     conn = vos.Connection(vospace_certfile=certfile)

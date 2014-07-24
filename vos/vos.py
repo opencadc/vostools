@@ -954,12 +954,12 @@ class Client:
         secure_get: Use HTTPS: ie. transfer contents of files using SSL encryption.
         """
 
-        vospace_certfile = vospace_certfile is None and \
-            (isinstance(conn, Connection) and conn.vospace_certfile or VOSPACE_CERTFILE) or vospace_certfile
+        if not isinstance(conn, Connection):
+            vospace_certfile = vospace_certfile is None and VOSPACE_CERTFILE or vospace_certfile
+            logger.debug("Using certificate file: {0}".format(vospace_certfile))
+            conn = Connection(vospace_certfile=vospace_certfile, http_debug=http_debug)
 
-        logger.debug("Using certificate file: {0}".format(vospace_certfile))
-        conn = Connection(vospace_certfile=vospace_certfile, http_debug=http_debug)
-
+        vospace_certfile = conn.vospace_certfile
         # Set the protocol
         if vospace_certfile is None:
             self.protocol = "http"
