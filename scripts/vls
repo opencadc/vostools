@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Here we re-enable it but only with --help
     opt.help and (parser.print_help() or sys.exit(0))
 
-    if not len(args) > 0 :
+    if not len(args) > 0:
         parser.error("missing VOSpace argument")
 
     logger = logging.getLogger('vls')
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     elif opt.debug:
         logger.setLevel(logging.DEBUG)
 
-    sortKey = ( opt.time and "date" ) or ( opt.Size and "size" ) or False
+    sortKey = (opt.time and "date") or (opt.Size and "size") or False
 
     try:
         client = vos.Client(vospace_certfile=opt.certfile)
@@ -144,8 +144,8 @@ if __name__ == '__main__':
             logger.debug("getting listing of: %s" % str(node))
             infoList = client.getInfoList(node)
         except Exception as e:
-            logger.error(getattr(e,'strerror','error'))
-            sys.exit(getattr(e,'errno',errno.ENOMSG))
+            logger.error(getattr(e, 'strerror', 'error'))
+            sys.exit(getattr(e, 'errno', errno.ENOMSG))
 
         if sortKey:
             try:
