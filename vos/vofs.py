@@ -5,6 +5,7 @@
 from sys import argv, exit, platform
 import time
 import vos
+import urllib
 import fuse
 from fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import tempfile
@@ -584,7 +585,7 @@ class VOFS(LoggingMixIn, Operations):
 
         Currently doesn't provide correct capabilty for VOSpace FS.
         """
-        return self.getNode(path).target
+        return self.getNode(path).name+"?link="+urllib.quote_plus(self.getNode(path).target)
 
     #@logExceptions()
     def readdir(self, path, id):
