@@ -251,7 +251,7 @@ class Node:
 
         ## Only one date provided by VOSpace, so use this as all possible
         ## dates.
-        sdate = node.props.get('date', None)
+        sdate = self.props.get('date', None)
         atime = time.time()
         if not sdate:
             mtime = atime
