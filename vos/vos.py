@@ -248,7 +248,6 @@ class Node:
         ## Get the flags for file mode settings.
 
         self.attr = {}
-        node = self
 
         ## Only one date provided by VOSpace, so use this as all possible
         ## dates.
@@ -269,29 +268,31 @@ class Node:
 
         ## set the MODE by orring together all flags from stat
         st_mode = 0
-        self.attr['st_nlink'] = 1
 
-        if node.type == 'vos:ContainerNode':
+        st_nlink = 1
+        if self.type == 'vos:ContainerNode':
             st_mode |= stat.S_IFDIR
-            self.attr['st_nlink'] = len(node.getNodeList()) + 2
-        elif node.type == 'vos:LinkNode':
+            st_nlink = max(2, len(self.getInfoList()) + 2)
+            # if getInfoList length is < 0 we have a problem elsewhere, so above hack solves that problem.
+        elif self.type == 'vos:LinkNode':
             st_mode |= stat.S_IFLNK
         else:
             st_mode |= stat.S_IFREG
+        self.attr['st_nlink'] = st_nlink
 
         ## Set the OWNER permissions
         ## All files are read/write/execute by owner...
         st_mode |= stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
 
         ## Set the GROUP permissions
-        if node.props.get('groupwrite', "NONE") != "NONE":
+        if self.props.get('groupwrite', "NONE") != "NONE":
             st_mode |= stat.S_IWGRP
-        if node.props.get('groupread', "NONE") != "NONE":
+        if self.props.get('groupread', "NONE") != "NONE":
             st_mode |= stat.S_IRGRP
             st_mode |= stat.S_IXGRP
 
         ## Set the OTHER permissions
-        if node.props.get('ispublic', 'false') == 'true':
+        if self.props.get('ispublic', 'false') == 'true':
             ## If you can read the file then you can execute too.
             ## Public does NOT mean writeable.  EVER
             st_mode |= stat.S_IROTH | stat.S_IXOTH
@@ -304,8 +305,10 @@ class Node:
         ## TBD!
         self.attr['st_uid'] = attr.get('st_uid', os.getuid())
         self.attr['st_gid'] = attr.get('st_uid', os.getgid())
-        self.attr['st_size'] = attr.get('st_size',
-                int(node.props.get('length', 0)))
+
+        st_size = int(self.props.get('length', 0))
+        self.attr['st_size'] = st_size > 0 and st_size or 0
+
         self.attr['st_blocks'] = self.attr['st_size'] / 512
 
     def setxattr(self, attrs={}):
