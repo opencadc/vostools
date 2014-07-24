@@ -22,6 +22,7 @@ import string
 import sys
 import time
 import urllib
+import urlparse
 from xml.etree import ElementTree
 from logExceptions import logExceptions
 from copy import deepcopy
@@ -484,7 +485,7 @@ class Node:
                 propertyNode.attrib['xsi:nil'] = 'true'
                 propertyNode.attrib["xmlns:xsi"] = Node.XSINS
                 propertyNode.text = ""
-            elif len(properties[property]) > 0:
+            elif len(str(properties[property])) > 0 and properties[property] is not None:
                 propertyNode.text = properties[property]
 
         ## That's it for link nodes...
@@ -1065,7 +1066,12 @@ class Client:
             # Just past this back, I don't know how to fix...
             return uri
         ## Check that path name compiles with the standard
-
+        logger.debug("Got value of args: {}".format(parts.args))
+        if parts.args is not None and parts.args != "":
+            uri = urlparse.parse_qs(urlparse.urlparse(parts.args).query).get('link', None)[0]
+            logger.debug("Got uri: {}".format(uri))
+            if uri is not None:
+                return self.fixURI(uri)
         # Check for 'cutout' syntax values.
         path = re.match("(?P<fname>[^\[]*)(?P<ext>(\[\d*\:?\d*\])?"
                 "(\[\d*\:?\d*,?\d*\:?\d*\])?)", parts.path)
@@ -1096,11 +1102,32 @@ class Client:
         if node is None:
             logger.debug("Getting node from ws %s" % (uri))
             with self.nodeCache.watch(uri) as watch:
-                xml_file = StringIO(self.open(uri, os.O_RDONLY,
-                        limit=limit).read())
-                xml_file.seek(0)
-                dom = ElementTree.parse(xml_file)
-                node = Node(dom.getroot())
+                # If this is vospace URI then we can request the node info
+                # using the uri directly, but if this a URL then the metadata
+                # comes from the HTTP header.
+                if uri[0:4] == 'vos:':
+                    xml_file = StringIO(self.open(uri, os.O_RDONLY,
+                                                  limit=limit).read())
+                    xml_file.seek(0)
+                    dom = ElementTree.parse(xml_file)
+                    node = Node(dom.getroot())
+                elif uri.startswith('http'):
+                    header = self.open(None, URL=uri, mode=os.O_RDONLY, head=True)
+                    header.read()
+                    logger.debug("Got http headers: {}".format(header.resp.getheaders()))
+                    properties = {'type': header.resp.getheader('content-type','txt'),
+                                  'date': time.strftime(
+                            '%Y-%m-%dT%H:%M:%S GMT',
+                            time.strptime(header.resp.getheader('date', None),
+                                          '%a, %d %b %Y %H:%M:%S GMT')),
+                                  'groupwrite': None,
+                                  'groupread': None,
+                                  'ispublic': URLparse(uri).scheme == 'https' and 'true' or 'false',
+                                  'length': header.resp.getheader('content-length', 0)}
+                    node = Node(node=uri, node_type=Node.DATA_NODE, properties=properties)
+                    logger.debug(str(node))
+                else:
+                    raise OSError(2,"Bad URI {}".format(uri))
                 watch.insert(node)
                 # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
                 # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
