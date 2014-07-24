@@ -115,6 +115,7 @@ if __name__ == '__main__':
     elif opt.debug:
         logger.setLevel(logging.DEBUG)
 
+
     sortKey = (opt.time and "date") or (opt.Size and "size") or False
 
     try:
