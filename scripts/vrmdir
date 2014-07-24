@@ -47,7 +47,7 @@ logger.setLevel(log_level)
 logger.addHandler(logging.StreamHandler())
 
 try:
-    client=vos.Client(certFile=opt.certfile)
+    client=vos.Client(vospace_certfile=opt.certfile)
 except Exception as e:
     logging.error("Connection failed:  %s" %  (str(e)))
     sys.exit(e.__getattribute__('errno',-1))

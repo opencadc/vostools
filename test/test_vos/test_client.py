@@ -16,9 +16,9 @@ class ClientTest(unittest.TestCase):
     def setUp(self):
         self.conn = Mock(spec=vos.Connection)
 
-        # Set certFile to None because person running this may or may not
+        # Set certFile to blank because person running this may or may not
         # have a certification file.
-        self.undertest = vos.Client(certFile=None, conn=self.conn)
+        self.undertest = vos.Client(vospace_certfile="", conn=self.conn)
 
     def test_open_basic_vofile(self):
         vofile = self.undertest.open(TEST_URI_1)
@@ -47,7 +47,7 @@ class ClientTest(unittest.TestCase):
         conn = Mock(spec=vos.Connection)
         conn.get_connection.return_value = http_con
 
-        self.undertest = vos.Client(certFile=None, conn=conn, cadc_short_cut=True)
+        self.undertest = vos.Client(vospace_certfile="", conn=conn, cadc_short_cut=True)
         self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
 
         url = self.undertest.getNodeURL(TEST_URI_2, view="data")

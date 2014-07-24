@@ -43,7 +43,7 @@ MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
 CONNECTION_TIMEOUT = 600  # seconds before HTTP connection should drop.
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
-
+VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME"),'.ssl/cadcproxy.pem'))
 
 class URLparse:
     """ Parse out the structure of a URL.
@@ -72,23 +72,22 @@ class URLparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, certfile=None, http_debug=False):
+    def __init__(self, vospace_certfile=None, http_debug=False):
         """Setup the Certificate for later usage
 
         cerdServerURL -- the location of the cadc proxy certificate server
-        certfile      -- where to store the certificate, if None then
+        vospace_certfile      -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
         http_debug -- set True to generate httplib debug statements
 
-        The user must supply a valid certificate.
+        The user must supply a valid certificate or connection will be 'anonymous'.
         """
 
         ## allow anonymous access if no certfile is specified...
-        if certfile is not None and not os.access(certfile, os.F_OK):
-            raise EnvironmentError(errno.EACCES,
-                   "No certificate file found at %s\n"
-                   " (Perhaps use getCert to pull one)" % certfile)
-        self.certfile = certfile
+        if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
+            logger.critical("Could not read security certificate at {}.  Reverting to anonymous.".format(vospace_certfile))
+            vospace_certfile = None
+        self.vospace_certfile = vospace_certfile
         self.http_debug = http_debug
 
     def get_connection(self, url):
@@ -96,19 +95,16 @@ class Connection:
         certificate if None given.
 
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
-        certFilename -- the name of the certificate pem file.
         """
 
         parts = URLparse(url)
-        certfile = self.certfile
-
-        logger.debug("Trying to connect to %s://%s using %s" %
-                (parts.scheme, parts.netloc, certfile))
+        logger.debug("Trying to connect to %s://%s using %s" % (parts.scheme, parts.netloc, self.vospace_certfile))
 
         try:
-            if parts.scheme == "https":
+            if parts.scheme == "https" and self.vospace_certfile is not None:
                 connection = httplib.HTTPSConnection(parts.netloc,
-                        key_file=certfile, cert_file=certfile,
+                                                     key_file=self.vospace_certfile,
+                                                     cert_file=self.vospace_certfile,
                         timeout=CONNECTION_TIMEOUT)
             else:
                 connection = httplib.HTTPConnection(parts.netloc,
@@ -129,11 +125,11 @@ class Connection:
         while True:
             try:
                 connection.connect()
-            except httplib.HTTPException as e:
-                logger.critical("%s" % (str(e)))
+            except httplib.HTTPException as http_exception:
+                logger.critical("%s" % (str(http_exception)))
                 logger.critical("Retrying connection for 30 seconds")
                 if time.time() - start_time > 1200:
-                    raise e
+                    raise http_exception
             break
 
         return connection
@@ -654,6 +650,7 @@ class VOFile:
     def __init__(self, url_list, connector, method, size=None,
             followRedirect=True, range=None, possible_partial_read=False):
         self.closed = True
+        assert isinstance(connector, Connection)
         self.connector = connector
         self.httpCon = None
         self.timeout = -1
@@ -734,7 +731,7 @@ class VOFile:
             if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
-                if self.resp.status == 401 and self.connector.certfile is None:
+                if self.resp.status == 401 and self.connector.vospace_certfile is None:
                     msg += " using anonymous access "
             raise IOError(VOFile.errnos.get(self.resp.status,
                     self.resp.status), msg, self.url)
@@ -935,17 +932,17 @@ class Client:
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
 
-    ### reservered vospace properties, not to be used for extended property
+    ### reserved vospace properties, not to be used for extended property
     ### setting
     vosProperties = ["description", "type", "encoding", "MD5", "length",
                     "creator", "date", "groupread", "groupwrite", "ispublic"]
 
-    def __init__(self, certFile=None, rootNode=None, conn=None,
+    def __init__(self, vospace_certfile=None, rootNode=None, conn=None,
                  archive='vospace', cadc_short_cut=False, http_debug=False,
                  secure_get=False):
         """This could/should be expanded to set various defaults
 
-        certFile: CADC proxy certficate location. Overrides cert in conn.
+        certFile: CADC proxy certificate location. Overrides cert in conn.
         rootNode: the base of the VOSpace for uri references.
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
@@ -954,18 +951,14 @@ class Client:
 
         """
 
-        if certFile is not None:
-            # certfile supplied, override and create new conn
-            conn = Connection(certfile=certFile, http_debug=http_debug)
-        elif conn:
-            # get certfile from conn
-            certFile = conn.certfile
-        else:
-            # fall back is an anonymous connection
-            conn = Connection(certfile=certFile, http_debug=http_debug)
+        vospace_certfile = vospace_certfile is None and \
+            (isinstance(conn, Connection) and conn.vospace_certfile or VOSPACE_CERTFILE) or vospace_certfile
+
+        logger.debug("Using certificate file: {}".format(vospace_certfile))
+        conn = Connection(vospace_certfile=vospace_certfile, http_debug=http_debug)
 
         # Set the protocol
-        if certFile is None:
+        if vospace_certfile is None:
             self.protocol = "http"
         else:
             self.protocol = "https"

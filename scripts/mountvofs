@@ -83,7 +83,7 @@ if __name__ == "__main__":
         certfile = None
     else:
         certfile = os.path.abspath(opt.certfile)
-    conn = vos.Connection(certfile=certfile)
+    conn = vos.Connection(vospace_certfile=certfile)
     if certfile is None:
         readonly = True
         logger.debug("No certificate, anonymous connections should work")
