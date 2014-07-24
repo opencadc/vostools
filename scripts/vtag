@@ -25,7 +25,7 @@ def vtag(node,props):
     props: dictionary of properties to set.  If dict is zero length, list them all.
 
     """
-    client = vos.Client(certFile=opt.certfile)
+    client = vos.Client(vospace_certfile=opt.certfile)
     node = client.getNode(node)
     if len(props) == 0 : 
         ## print all properties

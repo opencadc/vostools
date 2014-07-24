@@ -118,7 +118,7 @@ if __name__ == '__main__':
     sortKey = ( opt.time and "date" ) or ( opt.Size and "size" ) or False
 
     try:
-        client = vos.Client(certFile=opt.certfile)
+        client = vos.Client(vospace_certfile=opt.certfile)
     except Exception, e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(-1)

@@ -14,7 +14,7 @@ def _cat(vospace_uri, cert_filename=None):
     fh = None
     try:
         if vospace_uri[0:4] == "vos:":
-            fh = vos.Client(certFile=cert_filename).open(vospace_uri, view='data')
+            fh = vos.Client(vospace_certfile=cert_filename).open(vospace_uri, view='data')
         else:
             fh = open(vospace_uri, 'r')
         sys.stdout.write(fh.read())
