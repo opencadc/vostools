@@ -4,7 +4,7 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="VOS : VOSpace Python API and FUSE based filesystem." />
+    <meta name="description" content="VOS : VOSpace Python API and VOSpace/FUSE based filesystem." />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -36,11 +36,13 @@
 
 <p>VOSpace is an IVOA standard based protocol for interactions with Astronomical Data Repositories. </p>
 
-<p>cadcVOFS is a project lead by the Canadian Astronomy Data Centre to provide a Python package (vos) for interacting with the a VOSpace standards compliant data repository.  The vos package also includes a FUSE based filesystem, enabling a VOSpace to appear as a files system on the users desktop top.  Works on Linux and OS-X.</p>
+<p>CANFAR/VOS is a project lead by the Canadian Astronomy Data Centre to provide a Python package (vos) for interacting with the a VOSpace standards compliant data repository.
+    The vos package also includes a script (mountvofs) that establishes a FUSE based filesystem view of the CANFAR VOSpace. mountvofs enables VOSpace to appear as a filesystem on the users desktop.
+    Works on Linux and OS-X.</p>
 
 <pre><code>$ pip install vos
-$ mountvofs vos://cadc.nrc.ca!vospace/yourVOSpace /mount_point
-$ ls /mount_point
+$ mountvofs --vospace vos://cadc.nrc.ca!vospace/yourVOSpace --mountpoint /root/mount/point
+$ ls /root/mount/point
 </code></pre>
 
 <p>This package is still in beta.</p>
