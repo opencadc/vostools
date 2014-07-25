@@ -1,13 +1,11 @@
 
 +++++++++++++++++++++++++ DOCUMENTATION ++++++++++++++++++++++++++
 
-cadcVOFS is a set of python modules and scripts for access VOSpace.
+vos is a set of python modules and scripts to enable access VOSpace.
 
-The default installation of cadcVOFS is tuned for accessing the
-VOSpace provided by the Canadian Astronomy Data Centre
-http://www.cadc.hia.nrc.gc.ca/vospace.
+The default installation of vos is tuned for accessing the VOSpace provided by the Canadian Advanced Network For Astronomical Research http://www.canfar.net/
 
-VOSpace is a Distrbuted Cloud storage service for use in Astronomy.
+VOSpace is a Distributed Cloud storage service for use in Astronomy.
 
 There are three ways to use cadcVOFS:
       
