@@ -1,96 +1,65 @@
 
-+++++++++++++++++++++++++ DOCUMENTATION ++++++++++++++++++++++++++
+# DOCUMENTATION
 
 vos is a set of python modules and scripts to enable access VOSpace.
 
-The default installation of vos is tuned for accessing the VOSpace provided by the Canadian Advanced Network For Astronomical Research http://www.canfar.net/
+The default installation of vos is tuned for accessing the VOSpace provided by the [Canadian Advanced Network For Astronomical Research](http://www.canfar.net/) (CANFAR)
 
 VOSpace is a Distributed Cloud storage service for use in Astronomy.
 
 There are three ways to use cadcVOFS:
       
-     1) access VOSpace from the command-line 
+1. access VOSpace using the command-line script: eg. *vcp*
+1. make VOSpace appear as mounted filesystem: *mountvofs*
+1. use the vos module inside a Python script: `import vos`
 
-     2) make VOSpace appear as mounted filesystem
-     
-     3) use the vos module inside a Python script
+All of these methods require the user to have a pre-existing VOSpace account.
 
-All of these methods require the user to have a pre-existing VOSpace
-account with the CADC.
+Authentication to the CANFAR VOSpace service is performed using X509 security certificates that are managed by the CADC Group Management Service (GMS).
 
-Authentication to the CADC VOSpace service is performed using security
-certificates which are managed by the CADC Group Management Service
-(GMS).  The certificates can be retrieved from the CADC using the
-'getCert' script and users CADC account and password information.
+The certificates can be retrieved from the CADC using the *getCert* script included with this package.
 
-ADDITIONAL DOCUMENTATION AVAILABLE AT:  
+## ADDITIONAL DOCUMENTATION AVAILABLE AT:
 
-      <http://www.canfar.phys.uvic.ca/wiki/index.php/VOSpace_filesystem>
+      <http://www.canfar.net>
 
-+++++++++++++++++++++++ REQUIREMENTS +++++++++++++++++++++++++++++++
+# SYSTEM REQUIREMENTS
 
-    A CADC VOSpace account
-    fuse OR OS-FUSE  (see additional documentation)
-    python2.6 or newer
+* A CANFAR VOSpace account
+* fuse OR OS-FUSE  (see additional documentation)
+* python2.6 or newer
 
-+++++++++++++++++++++++++ INSTALLATION +++++++++++++++++++++++++++
+# INSTALLATION
 
-python setup.py install 
+vos is distributed via PyPI and that is the most direct way to get the latest stable release:
 
-+++++++++++++++++++++++++ USAGE ++++++++++++++++++++++++++++++++++
+`pip install vos --upgrade --user`
 
-1) Get a CADC account <http://www.cadc.hia.nrc.gc.ca/>
+Or, you can retrieve the github distribution and use
 
-2) Retrieve a SSL certificate from the CADC servers.
+ `python setup.py install --user`
 
-> getCert
 
-  retrieves a certificate from the CADC servers, these certifcates are
-  valid for 10 days (be default) but can be valid for upto 30 days (see
-  the getCert help).  The cerificate is stored in ${HOME}/.ssl by
-  default.
+# USAGE
 
-3a) For filesystem usage: 
-Depending on your operating system you may be required to be in a sytem user
-group in order to mount FUSE file systems.
-
-> mountvofs
-
+1. Get a [CANFAR account](http://www.canfar.phys.uvic.ca/canfar/auth/request.html)
+1. Install the vos package.
+1. Retrieve a X509/SSL certificate using the built in `getCert` script.
+1. Example Usage.
+    1. For filesystem usage: `mountvofs`
   mounts the CADC VOSpace root Container Node at /tmp/vospace and
-  initiates a 5GB cache in the users home directory (${HOME}/vos_)
+  initiates a 5GB cache in the users home directory (${HOME}/vos_).
+  `fusermount -u /tmp/vospace` (LINUX) or `umount /tmp/vospace` (OS-X) unmounts the file system.
+   * VOSpace does not have a mapping of your unix users
+   IDs and thus files appear to be owned by the user who issued the
+   'mountvofs' command.*
+    1. Commandline usage:
+        * `vls -l vos:`   [List a vospace]
+        * `vcp vos:jkavelaars/test.txt ./`  [copy test.txt to the local directory from the vospace container jkavelaars]
+        * See --help for the commands:  `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat` and `vln`
+    1. In a program:
+    'import vos
+    client = vos.Client()
+    client.listdir('vos:jkavelaars')'
 
-> fusermount -u /tmp/vospace
-  unmounts the file system.
-
-  **** Since the VOSpace does not have a mapping of your unix users
-       IDs all files appear to be owned by the user who issued the
-       'mountvofs' command.  Only that user can see the mount point.
-
-3b) Commandline usage:
-
-> vls -l vos:
-
-  Lists the contents of the CADC root VOSpace Container Node.
-
-> vcp vos:jkavelaars/test.txt ./
-
-  copys the files 'test.txt' from the the vospace container jkavelaars
-  to your local directory.
-
-See --help for the commands:  vmkdir, vrm, vrmdir, vsync 
-
-+++++++++++++++++++++++++ TEST SCRIPTS +++++++++++++++++++++++++++
-
-The top-level "runtest" executes unit tests in vos/test
-
-Integration and performance scripts are located in the test/ tree. At
-present these are designed to test installations at the CADC and will
-not work elsewhere. In order to run them, cadcVOFS must be installed
-in the following way:
-
-1) Set the environment variable $CADC_ROOT to the path where CADC
-software are installed.
-
-2) Install cadcVOFS
-> python setup.py install --prefix=$CADC_ROOT \
-  --install-script=$CADC_ROOT/scripts
+    provides a listing of the vospace container 'jkavelaars'
