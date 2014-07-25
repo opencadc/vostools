@@ -56,8 +56,10 @@ Or, you can retrieve the github distribution and use
         * `vcp vos:vospace/test.txt ./`  [copy test.txt to the local directory from the vospace container]
         * `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat` and `vln`
     1. In a Python script:
-`#!python
+```
+#!python
 import vos
 client = vos.Client()
-client.listdir('vos:jkavelaars')`
+client.listdir('vos:jkavelaars')
+```
     provides a listing of the vospace container 'jkavelaars'
