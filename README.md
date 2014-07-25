@@ -53,13 +53,12 @@ Or, you can retrieve the github distribution and use
    'mountvofs' command.*
     1. Commandline usage:
         * `vls -l vos:`   [List a vospace]
-        * `vcp vos:vospace/test.txt ./`  [copy test.txt to the local directory from the vospace container]
+        * `vcp vos:jkavelaars/test.txt ./`  [copies test.txt to the local directory from vospace]
         * `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat` and `vln`
-    1. In a Python script:
+    1. In a Python script (the example below provides a listing of a vospace container)
 ```
 #!python
 import vos
 client = vos.Client()
 client.listdir('vos:jkavelaars')
 ```
-    provides a listing of the vospace container 'jkavelaars'
