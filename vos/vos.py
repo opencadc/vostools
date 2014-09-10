@@ -1018,12 +1018,25 @@ class Client:
 
         checkSource = False
         srcNode = None
+
         if src[0:4] == "vos:":
+            # remove possible 'cutout' syntax from the src if its a vos source.
+            match = re.search("([^\[\]]*)(\[.*\])$", src)
+            cutout = None
+            logging.debug("Getting {} with match {}".format(src, match))
+            if match is not None:
+                src = match.group(1)
+                cutout = match.group(2)
+                logger.debug("Trying to access the file {} using cutout {}".format(src, cutout))
+                sendMD5 = False
             srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
             srcMD5 = srcNode.props.get('MD5',
                                        'd41d8cd98f00b204e9800998ecf8427e')
-            fin = self.open(src, os.O_RDONLY, view='data')
+            if cutout is not None:
+                fin = self.open(src, os.O_RDONLY, view='cutout', cutout=cutout)
+            else:
+                fin = self.open(src, os.O_RDONLY, view='data')
             fout = open(dest, 'w')
             checkSource = True
         else:
@@ -1074,7 +1087,7 @@ class Client:
             return md5.hexdigest()
 
         if (destSize != srcSize and (srcNode is not None) and
-                (srcNode.type != 'vos:LinkNode')):
+                (srcNode.type != 'vos:LinkNode') and cutout is None):
             logger.error("sizes don't match (%s (%i) -> %s (%i)) " %
                              (src, srcSize, dest, destSize))
             raise IOError(errno.EIO, "sizes don't match", src)
