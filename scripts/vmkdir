@@ -4,7 +4,8 @@
 
 import vos
 import time
-import optparse, os, sys, logging
+import os, sys, logging
+from vos.commonparser import CommonParser
 from vos import vos, __version__
 
 usage="""
@@ -13,35 +14,18 @@ usage="""
 
 
 
-parser=optparse.OptionParser(usage)
-parser.add_option("-v","--verbose",action="store_true")
-parser.add_option("-d","--debug",action="store_true")
-parser.add_option("-w","--warning",action="store_true")
+parser=CommonParser(usage)
 parser.add_option("-p",action="store_true",help="Create intermediate directories as required.")
-parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
 
 if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
         
 (opt,args)=parser.parse_args()
-
-if opt.version:
-        sys.stdout.write("vmkdir version %s \n\n" % (__version__.version)) 
-        sys.exit()
-
-if opt.verbose:
-    log_level = logging.INFO
-elif opt.debug:
-    log_level = logging.DEBUG
-elif opt.warning:
-    log_level = logging.WARNING
-else:
-    log_level = logging.ERROR
+parser.process_informational_options()
 
 logger = logging.getLogger('vmkdir')
-logger.setLevel(log_level)
+logger.setLevel(parser.log_level)
 logger.addHandler(logging.StreamHandler())
 
 

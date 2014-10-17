@@ -3,7 +3,7 @@
 
 """
 
-import optparse
+from vos.commonparser import CommonParser
 import signal
 from vos import vos, __version__
 import logging
@@ -26,37 +26,20 @@ if __name__ == '__main__':
     
     Version: %s """ % __version__.version
 
-    parser = optparse.OptionParser(usage)
+    parser = CommonParser(usage)
 
-    parser.add_option("--certfile", help="location of your CADC security certificate file",
-                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
     parser.add_option("-R", "--recursive", action='store_const', const=True,
                       help="Recursive set read/write properties")
-    parser.add_option("-v", "--verbose", action='store_const', const=True,
-                      help="print some diagnostics")
-    parser.add_option("-d", "--debug", action='store_const', const=True,
-                      help="print all diagnositics")
-    parser.add_option("--version", action="store_true", help="VOS Version %s" % __version__.version)
 
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
 
     (opt, args) = parser.parse_args()
-
-    if opt.version:
-        sys.stdout.write("vchmod version %s \n\n" % __version__.version)
-        sys.exit()
-
-    if opt.verbose:
-        log_level = logging.INFO
-    elif opt.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.ERROR
+    parser.process_informational_options()
 
     logger = logging.getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel(parser.log_level)
     logger.addHandler(logging.StreamHandler())
 
     if len(args) < 2:

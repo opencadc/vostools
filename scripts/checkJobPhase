@@ -12,7 +12,7 @@ This script is used to retrieve the state of a job using X509 authentication.
 
 import sys
 import vos
-import optparse
+from vos.commonparser import CommonParser
 import os
 import logging
 
@@ -22,24 +22,12 @@ if __name__ == '__main__':
                
                  checkJobPhase --cert=<certfile> <JOBURL>/phase """
 
-    parser=optparse.OptionParser(usage)
-
-    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-    parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
-    parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
-
+    parser=CommonParser(usage)
 
     (opt,args)=parser.parse_args()
+    parser.process_informational_options()
 
-
-    if opt.verbose:
-        log_level = logging.INFO
-    elif opt.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.ERROR
-
-    logging.getLogger('vos').setLevel(log_level)
+    logging.getLogger('vos').setLevel(parser.log_level)
     logging.getLogger('vos').addHandler(logging.StreamHandler())
 
     if len(args) !=  1:
