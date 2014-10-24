@@ -1268,6 +1268,10 @@ class Client:
             form = urllib.urlencode(args)
             headers = {"Content-type": "application/x-www-form-urlencoded",
                     "Accept": "text/plain"}
+            # Add cookie to header if present
+            if self.conn.vospace_cookie:
+                headers['Cookie'] = 'CADC_SSO=%s' % self.conn.vospace_cookie
+            logger.debug("Header: %s" % str(headers))
             httpCon = self.conn.get_connection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
