@@ -87,7 +87,8 @@ class Connection:
         The user must supply a valid certificate or connection will be 'anonymous'.
         """
 
-        ## cookies trump certs
+        ## cookies trump certs. We should only ever have cookie or certfile
+        ## set in order to avoid confusion.
         self.vospace_cookie = vospace_cookie
         if self.vospace_cookie:
             self.vospace_certfile = None
@@ -975,10 +976,11 @@ class Client:
             conn = Connection(vospace_certfile=vospace_certfile,
                               vospace_cookie=vospace_cookie,
                               http_debug=http_debug)
-            if conn.vospace_certfile:
-                logger.debug("Using certificate file: {0}".format(vospace_certfile))
-            if conn.vospace_cookie:
-                logger.debug("Using vospace cookie: "+conn.vospace_cookie)
+
+        if conn.vospace_certfile:
+            logger.debug("Using certificate file: {0}".format(vospace_certfile))
+        if conn.vospace_cookie:
+            logger.debug("Using vospace cookie: "+conn.vospace_cookie)
 
         vospace_certfile = conn.vospace_certfile
         # Set the protocol

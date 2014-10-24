@@ -64,13 +64,17 @@ if __name__ == "__main__":
         certfile = ""
     else:
         certfile = os.path.abspath(opt.certfile)
+
     conn = vos.Connection(vospace_certfile=certfile,vospace_cookie=opt.cookie)
-    if certfile is None:
-        readonly = True
-        logger.debug("No certificate, anonymous connections should work")
-    else:
+    if conn.vospace_certfile:
         readonly = opt.readonly
         logger.debug("Got a certificate, connections should work")
+    elif conn.vospace_cookie:
+        readonly = opt.readonly
+        logger.debug("Got a cookie, connections should work")
+    else:
+        readonly = True
+        logger.debug("No certificate/cookie, anonymous connections should work")
 
     root = opt.vospace
     mount = os.path.abspath(opt.mountpoint)
