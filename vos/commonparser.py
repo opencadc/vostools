@@ -21,6 +21,9 @@ class CommonParser(optparse.OptionParser):
                         help="location of your CADC security certificate file",
                         default=os.path.join(os.getenv("HOME", "."),
                                              ".ssl/cadcproxy.pem"))
+        self.add_option("--cookie",
+                        help="cookie string (alternative to certfile)",
+                        default=None)
         self.add_option("--version", action="store_true",
                         default=False,
                         help="Print the version (%s)" % version)

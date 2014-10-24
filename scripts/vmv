@@ -37,7 +37,8 @@ Version: %s """ % (__version__.version)
         parser.error("You must supply a source and desitination")
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile)
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_cookie=opt.cookie)
     except Exception as e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(e.__getattribute__('errno',-1))

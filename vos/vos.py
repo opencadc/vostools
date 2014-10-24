@@ -74,22 +74,30 @@ class URLparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, vospace_certfile=None, http_debug=False):
+    def __init__(self, vospace_certfile=None, vospace_cookie=None,
+                 http_debug=False):
         """Setup the Certificate for later usage
 
         cerdServerURL -- the location of the cadc proxy certificate server
-        vospace_certfile      -- where to store the certificate, if None then
+        vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
+        vospace_cookie -- cookie string (alternative to vospace_certfile)
         http_debug -- set True to generate httplib debug statements
 
         The user must supply a valid certificate or connection will be 'anonymous'.
         """
 
-        ## allow anonymous access if no certfile is specified...
-        if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-            logger.critical("Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
-            vospace_certfile = None
-        self.vospace_certfile = vospace_certfile
+        ## cookies trump certs
+        self.vospace_cookie = vospace_cookie
+        if self.vospace_cookie:
+            self.vospace_certfile = None
+        else:
+            ## allow anonymous access if no certfile specified
+            if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
+                logger.critical("Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
+                vospace_certfile = None
+            self.vospace_certfile = vospace_certfile
+
         self.http_debug = http_debug
 
     def get_connection(self, url):
@@ -763,6 +771,12 @@ class VOFile:
             userAgent = 'vofs ' + version
         self.httpCon.putheader("User-Agent", userAgent)
         self.transEncode = None
+
+        # Add cookie to header if present
+        if self.connector.vospace_cookie:
+            self.httpCon.putheader('Cookie', 'CADC_SSO=%s' % \
+                                       self.connector.vospace_cookie)
+
         #logger.debug("sending headers for file of size: %s " %
                 #(str(self.size)))
         if method in ["PUT"]:
@@ -944,10 +958,11 @@ class Client:
 
     def __init__(self, vospace_certfile=None, rootNode=None, conn=None,
                  cadc_short_cut=False, http_debug=False,
-                 secure_get=False):
+                 secure_get=False, vospace_cookie=None):
         """This could/should be expanded to set various defaults
 
         vospace_certfile: CADC x509 proxy certificate file location. Overrides certfile in conn.
+        vospace_cookie: cookie string (alternative to vospace_certfile)
         rootNode: the base of the VOSpace for uri references.
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
@@ -957,8 +972,13 @@ class Client:
 
         if not isinstance(conn, Connection):
             vospace_certfile = vospace_certfile is None and VOSPACE_CERTFILE or vospace_certfile
-            logger.debug("Using certificate file: {0}".format(vospace_certfile))
-            conn = Connection(vospace_certfile=vospace_certfile, http_debug=http_debug)
+            conn = Connection(vospace_certfile=vospace_certfile,
+                              vospace_cookie=vospace_cookie,
+                              http_debug=http_debug)
+            if conn.vospace_certfile:
+                logger.debug("Using certificate file: {0}".format(vospace_certfile))
+            if conn.vospace_cookie:
+                logger.debug("Using vospace cookie: "+conn.vospace_cookie)
 
         vospace_certfile = conn.vospace_certfile
         # Set the protocol

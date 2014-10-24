@@ -42,7 +42,7 @@ elif opt.unlock:
 exit_code = 0
 
 try:
-    client = vos.Client(vospace_certfile=opt.certfile)
+    client = vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
     node = client.getNode(args[0])
     if lock is not None:
         if node.changeProp(Node.ISLOCKED, lock) > 0:

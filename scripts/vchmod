@@ -93,7 +93,8 @@ if __name__ == '__main__':
     logger.debug("Node: %s" % cmdArgs['node'])
     returnCode = 0
     try:
-        client = vos.Client(vospace_certfile=opt.certfile)
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_cookie=opt.cookie)
         node = client.getNode(cmdArgs['node'])
         if opt.recursive:
             node.props.clear()

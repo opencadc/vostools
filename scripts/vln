@@ -44,7 +44,7 @@ if args[1][0:4] != "vos:":
 logger.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
-    vos=vos.Client(vospace_certfile=opt.certfile)
+    vos=vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
 except Exception as e:
     logger.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(-1)
