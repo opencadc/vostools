@@ -222,7 +222,7 @@ if __name__ == '__main__':
         dest = os.path.abspath(dest)
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_cookie=opt.cookie)
+                            vospace_cookie=opt.cookie,
                             cadc_short_cut=opt.quick)
         for source in args:
             if source[0:4] != "vos:":
