@@ -97,7 +97,7 @@ if __name__ == '__main__':
     if not len(args) > 0:
         parser.error("missing VOSpace argument")
 
-    logger = logging.getLogger('vls')
+    logger = logging.getLogger()
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(parser.log_level)
 

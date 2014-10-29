@@ -29,7 +29,7 @@ parser.add_option("--unlock", action="store_true", help="unLock the node")
 (opt, args) = parser.parse_args()
 parser.process_informational_options()
 
-logger = logging.getLogger('vlock')
+logger = logging.getLogger()
 logger.setLevel(parser.log_level)
 logger.addHandler(logging.StreamHandler())
 

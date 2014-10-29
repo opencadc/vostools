@@ -24,16 +24,14 @@ if len(sys.argv) == 1:
 (opt,args)=parser.parse_args()
 parser.process_informational_options()
 
-logger = logging.getLogger('vmkdir')
+logger = logging.getLogger()
 logger.setLevel(parser.log_level)
 logger.addHandler(logging.StreamHandler())
-
 
 if len(args)>1:
     parser.error("Only one directory can be built per call")
 
 logger.info("Creating ContainerNode (directory) %s" % ( args[0]))
-
 
 try:
 
