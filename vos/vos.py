@@ -47,6 +47,8 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME"),'.ssl/cadcproxy.pem'))
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
+COOKIE_DELEG = 'CADC_DELEG'
+
 class URLparse:
     """ Parse out the structure of a URL.
 
@@ -745,7 +747,7 @@ class VOFile:
             if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
-                if self.resp.status == 401 and self.connector.vospace_certfile is None:
+                if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_cookie is None:
                     msg += " using anonymous access "
             raise IOError(VOFile.errnos.get(self.resp.status,
                     self.resp.status), msg, self.url)
@@ -775,8 +777,13 @@ class VOFile:
 
         # Add cookie to header if present
         if self.connector.vospace_cookie:
-            self.httpCon.putheader('Cookie', 'CADC_SSO=%s' % \
-                                       self.connector.vospace_cookie)
+            self.httpCon.putheader('Cookie', '%s=%s' % \
+                                       (COOKIE_DELEG,
+                                        self.connector.vospace_cookie))
+            logger.debug("Here1: " + \
+                             '%s=%s' % \
+                             (COOKIE_DELEG,
+                              self.connector.vospace_cookie))
 
         #logger.debug("sending headers for file of size: %s " %
                 #(str(self.size)))
@@ -1270,7 +1277,14 @@ class Client:
                     "Accept": "text/plain"}
             # Add cookie to header if present
             if self.conn.vospace_cookie:
-                headers['Cookie'] = 'CADC_SSO=%s' % self.conn.vospace_cookie
+                headers['Cookie'] = '%s=%s' % \
+                    (COOKIE_DELEG,
+                     self.conn.vospace_cookie)
+
+                logger.debug("Here2: " + '%s=%s' % \
+                                 (COOKIE_DELEG,
+                                  self.conn.vospace_cookie))
+
             httpCon = self.conn.get_connection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
