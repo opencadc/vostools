@@ -195,7 +195,6 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     end
 
     set FS_LAST = `${STATCMD} $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1
-    echo "FS_LAST=$FS_LAST"
     if( $FS_LAST != $CACHETEST_FSIZE_BYTES ) then
         # The last file should now be cached
         echo " [FAIL]" && exit -1
