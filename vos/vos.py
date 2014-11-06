@@ -835,7 +835,8 @@ class VOFile:
             self.url = URL
             if not URL:
                 #logger.debug("Raising error?")
-                raise IOError(errno.ENOENT, "No Location on redirect",
+                raise IOError(errno.ENOENT, "Got 303 on {} but no Location value in header? [{}]".format(self.url,
+                                                                                                         self.resp.read()),
                         self.url)
             if self.followRedirect:
                 self.open(URL, "GET")
@@ -1256,7 +1257,9 @@ class Client:
                     URL = response.getheader('Location', None)
                 elif response.status == 404:
                     # The file doesn't exist
-                    raise IOError(errno.ENOENT, "No location on redirect", url)
+                    raise IOError(errno.ENOENT, response.read(), url)
+                elif response.status == 409:
+                    raise IOError(errno.EREMOTE, response.read(), url)
                 else:
                     logger.error("GET/PUT shortcut not working. POST to %s"
                             " returns: %s" %
@@ -1264,7 +1267,7 @@ class Client:
                     return self.getNodeURL(uri, method=method, view=view,
                             limit=limit, nextURI=nextURI, cutout=cutout)
             except Exception as e:
-                logger.error(str(e))
+                logger.debug(str(e))
             finally:
                 httpCon.close()
 
@@ -1504,6 +1507,8 @@ class Client:
             else:
                 URL = self.getNodeURL(uri, method=method, view=view,
                         limit=limit, nextURI=nextURI, cutout=cutout, full_negotiation=full_negotiation)
+                if URL is None:
+                    raise IOError(errno.EREMOTE)
 
         return VOFile(URL, self.conn, method=method, size=size, range=range, possible_partial_read=possible_partial_read)
 
