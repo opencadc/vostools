@@ -1,17 +1,52 @@
-# Test the NodeCache class
+# Test the vos Client class
 
 import os
 import unittest
 from mock import Mock, MagicMock, patch
 import vos
-from vos.vos import Client
+from vos.vos import Client, Connection
 
 class Object(object):
     pass
 
 class TestVos(unittest.TestCase):
-    """Test the NodeCache class.
+    """Test the vos Client class.
     """
+
+    def test_init(self):
+        # No parameters uses cert in ~/.ssl giving authenticated / https
+        with patch('os.access'):
+            client = Client()
+        self.assertEqual(client.protocol,"https")
+        self.assertTrue(client.conn.vospace_certfile)
+        self.assertIsNone(client.conn.vospace_cookie)
+
+        # Supplying an empty string for certfile implies anonymous / http
+        client = Client(vospace_certfile='')
+        self.assertEqual(client.protocol,"http")
+        self.assertIsNone(client.conn.vospace_certfile)
+        self.assertIsNone(client.conn.vospace_cookie)
+
+        # Specifying a certfile implies authenticated / https
+        with patch('os.access'):
+            client = Client(vospace_certfile='/path/to/cert')
+        self.assertEqual(client.protocol,"https")
+        self.assertTrue(client.conn.vospace_certfile)
+        self.assertIsNone(client.conn.vospace_cookie)
+
+        # Specifying a cookie implies authenticated / http
+        client = Client(vospace_cookie='a_cookie_string')
+        self.assertEqual(client.protocol,"http")
+        self.assertIsNone(client.conn.vospace_certfile)
+        self.assertTrue(client.conn.vospace_cookie)
+
+        # Specifying both a certfile and cookie implies cookie (auth) / http
+        with patch('os.access'):
+            client = Client(vospace_certfile='/path/to/cert',
+                            vospace_cookie='a_cookie_string')
+        self.assertEqual(client.protocol,"http")
+        self.assertIsNone(client.conn.vospace_certfile)
+        self.assertTrue(client.conn.vospace_cookie)
 
     def test_getNode(self):
         client = Client()

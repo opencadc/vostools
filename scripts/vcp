@@ -2,7 +2,7 @@
 """copy files from / to vospace directly without using the FUSE layer"""
 
 from vos import __version__
-from optparse import OptionParser
+from vos.commonparser import CommonParser
 import logging
 import sys
 import vos
@@ -193,15 +193,10 @@ if __name__ == '__main__':
     ## handle interrupts nicely
     signal.signal(signal.SIGINT, signal_handler)
 
-    parser = OptionParser(usage, description=description, version=__version__.version)
-    parser.add_option("--certfile", help="location of your CADC security certificate file",
-                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("-d", "--debug", action="store_true",
-                      help="set this option to get help solving connection issues")
+    parser = CommonParser(usage, description=description)
     parser.add_option("--exclude", default=None, help="exclude files that match pattern")
     parser.add_option("--include", default=None, help="only include files that match pattern (overrides exclude)")
     parser.add_option("-i", "--interrogate", action="store_true", help="Ask before overwriting files")
-    parser.add_option("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_option("--overwrite", action="store_true",
                       help="don't check destination MD5, just overwrite even if source matches destination")
     parser.add_option("--quick", action="store_true",
@@ -211,15 +206,14 @@ if __name__ == '__main__':
                       help="ignore errors and continue with recursive copy")
 
     (opt, args) = parser.parse_args()
+    parser.process_informational_options()
+
     if len(args) < 2:
         parser.error("Must give a source and a destination")
 
     logger = logging.getLogger()
     logger.addHandler(logging.StreamHandler())
-    if opt.verbose:
-        logger.setLevel(logging.INFO)
-    if opt.debug:
-        logger.setLevel(logging.DEBUG)
+    logger.setLevel(parser.log_level)
 
     dest = args.pop()
     this_destination = dest
@@ -227,7 +221,9 @@ if __name__ == '__main__':
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
     try:
-        client = vos.Client(vospace_certfile=opt.certfile, cadc_short_cut=opt.quick)
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_cookie=opt.cookie,
+                            cadc_short_cut=opt.quick)
         for source in args:
             if source[0:4] != "vos:":
                 source = os.path.abspath(source)

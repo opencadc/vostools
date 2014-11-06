@@ -7,7 +7,7 @@ locked, it cannot be copied to, moved or deleted. """
 
 
 import logging
-import optparse
+from vos.commonparser import CommonParser
 import sys
 import vos
 from vos.vos import Node 
@@ -21,28 +21,16 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-parser = optparse.OptionParser(version=vos.__version__.version)
+parser = CommonParser()
 
-parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
-parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
-parser.add_option("--certfile",
-                    help="location of your CADC security certificate file",
-                    default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
 parser.add_option("--lock", action="store_true", help="Lock the node")
 parser.add_option("--unlock", action="store_true", help="unLock the node")
 
 (opt, args) = parser.parse_args()
+parser.process_informational_options()
 
-
-if opt.verbose:
-    log_level = logging.INFO
-elif opt.debug:
-    log_level = logging.DEBUG
-else:
-    log_level = logging.ERROR
-
-logger = logging.getLogger('vlock')
-logger.setLevel(log_level)
+logger = logging.getLogger()
+logger.setLevel(parser.log_level)
 logger.addHandler(logging.StreamHandler())
 
 lock = None
@@ -54,7 +42,7 @@ elif opt.unlock:
 exit_code = 0
 
 try:
-    client = vos.Client(vospace_certfile=opt.certfile)
+    client = vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
     node = client.getNode(args[0])
     if lock is not None:
         if node.changeProp(Node.ISLOCKED, lock) > 0:

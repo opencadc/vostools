@@ -4,7 +4,7 @@
 import errno
 import logging
 import math
-import optparse
+from vos.commonparser import CommonParser
 import os
 import sys
 import time
@@ -79,7 +79,7 @@ def date_format(epoch):
 
 if __name__ == '__main__':
 
-    parser = optparse.OptionParser(usage, description=description, version=__version__.version, add_help_option=False)
+    parser = CommonParser(usage, description=description, add_help_option=False)
     parser.add_option("--help", action="store_true")
     parser.add_option("-l", "--long", action="store_true", help="verbose listing sorted by name")
     parser.add_option("-g", "--group", action="store_true", help="display group read/write information")
@@ -87,39 +87,25 @@ if __name__ == '__main__':
     parser.add_option("-S", "--Size", action="store_true", help="sort files by size", default=False)
     parser.add_option("-r", "--reverse", action="store_true", help="reverse the sort order", default=False)
     parser.add_option("-t", "--time", action="store_true", help="sort by time copied to VOSpace")
-    parser.add_option("-v", "--verbose", action="store_true", help="print some diagnostics")
-    parser.add_option("-d", "--debug", action="store_true", help="print all diagnositics")
-    parser.add_option("-w", "--warning", action="store_true")
-    parser.add_option("--certfile",
-                      help="location of your CADC security certificate file",
-                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("--overwrite",
-                      help="Overwrite the existing certificate with a new one?",
-                      action="store_true")
-    parser.add_option("-q",help="run quietly, exit on error without message", action="store_true")
 
     (opt, args) = parser.parse_args()
-
     # We disabled -h/--help so vls can have a -h option.
     # Here we re-enable it but only with --help
     opt.help and (parser.print_help() or sys.exit(0))
+    parser.process_informational_options()
 
     if not len(args) > 0:
         parser.error("missing VOSpace argument")
 
-    logger = logging.getLogger('vls')
+    logger = logging.getLogger()
     logger.addHandler(logging.StreamHandler())
-    logger.setLevel(logging.ERROR)
-    if opt.verbose:
-        logger.setLevel(logging.INFO)
-    elif opt.debug:
-        logger.setLevel(logging.DEBUG)
-
+    logger.setLevel(parser.log_level)
 
     sortKey = (opt.time and "date") or (opt.Size and "size") or False
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile)
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_cookie=opt.cookie)
     except Exception, e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(-1)

@@ -5,7 +5,7 @@ import hashlib
 import os
 import sys
 import threading, Queue
-import optparse
+from vos.commonparser import CommonParser
 import errno
 import logging
 from vos import vos, __version__
@@ -251,10 +251,7 @@ if __name__ == '__main__':
 
     startTime = time.time()
 
-    parser = optparse.OptionParser(usage)
-    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
-    parser.add_option('--debug', '-d', action="store_true", help='run in verbose mode')
-    parser.add_option('--warning', action="store_true")
+    parser = CommonParser(usage)
     parser.add_option('--ignore-checksum', action="store_true", help='dont check MD5 sum, use size and time instead')
     parser.add_option('--cache_nodes', action='store_true', help='cache node MD5 sum in an sqllite db')
     parser.add_option('--recursive', '-r', help="Do a recursive sync", action="store_true")
@@ -263,30 +260,16 @@ if __name__ == '__main__':
     parser.add_option('--include', help="only include files matching this pattern", default=None)
     parser.add_option('--overwrite', help="overwrite copy on server regardless of modification/size/md5 checks", action="store_true")
     parser.add_option('--load_test', action="store_true", help="Used to stress test the VOServer, also set --nstreams to a large value")
-    parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
-    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
 
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
 
     (opt, args) = parser.parse_args()
-
-    if opt.version:
-        sys.stdout.write("vsync version %s \n\n" % (__version__.version)) 
-        sys.exit(0)
-
-    if opt.verbose:
-        log_level = logging.INFO
-    elif opt.debug:
-        log_level = logging.DEBUG
-    elif opt.warning:
-        log_level = logging.WARNING
-    else:
-        log_level = logging.ERROR
+    parser.process_informational_options()
 
     logger = logging.getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel(parser.log_level)
     logger.addHandler(logging.StreamHandler())
 
     if len(args) < 2:
@@ -305,7 +288,7 @@ if __name__ == '__main__':
         parser.error("Only allows sync FROM local copy TO VOSpace")
     ## Currently we don't create nodes in sync and we don't sync onto files
     logger.info("Connecting to VOSpace")
-    client = vos.Client(vospace_certfile=opt.certfile)
+    client = vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
     logger.info("Confirming Destination is a directory")
     destIsDir = client.isdir(dest)
 

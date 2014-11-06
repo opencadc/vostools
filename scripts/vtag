@@ -25,7 +25,7 @@ def vtag(node,props):
     props: dictionary of properties to set.  If dict is zero length, list them all.
 
     """
-    client = vos.Client(vospace_certfile=opt.certfile)
+    client = vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
     node = client.getNode(node)
     if len(props) == 0 : 
         ## print all properties
@@ -60,40 +60,30 @@ def vtag(node,props):
 
 if __name__ == '__main__':
 
-    import optparse
+    from vos.commonparser import CommonParser
     import logging, sys
     import vos, os
     ## handle interupts nicely
     import signal
     signal.signal(signal.SIGINT, signal_handler)
 
-    parser = optparse.OptionParser(usage, version=__version__.version)
+    parser = CommonParser(usage)
 
-    parser.add_option('--verbose', '-v', action="store_true", help='run in verbose mode')
-    parser.add_option('--debug', action="store_true", help='run in verbose mode')
     parser.add_option('--remove', action="store_true", help='remove the listed property')
-    parser.add_option("--certfile",
-                        help="location of your CADC security certificate file",
-                        default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+
 # Not yet supported
 #    parser.add_option("-R", "--recursive", action='store_const', const=True,
 #                        help="Recursive set read/write properties")
  
 
     (opt, args) = parser.parse_args()
-   
+    parser.process_informational_options()
+
     if len(args) == 0:
         parser.error("no vospace supplied")
 
-    if opt.verbose:
-        log_level = logging.INFO
-    elif opt.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.ERROR
-
     logger = logging.getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel(parser.log_level)
     logger.addHandler(logging.StreamHandler())
 
     ## the node should be the first argument, the rest should contain the key/val pairs

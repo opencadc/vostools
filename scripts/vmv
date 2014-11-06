@@ -5,7 +5,7 @@
 import vos
 import time
 import os, sys, logging
-from optparse import OptionParser
+from vos.commonparser import CommonParser
 import signal
 from vos import vos, __version__
 
@@ -19,35 +19,17 @@ def main():
 
 Version: %s """ % (__version__.version)
 
-    parser = OptionParser(usage)
-    parser.add_option("-v", "--verbose", action="store_true")
-    parser.add_option("-d", "--debug", action="store_true")
-    parser.add_option("-w", "--warning", action="store_true")
-    parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
-    parser.add_option("--certfile", help="location of your CADC security certificate file", default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser = CommonParser(usage)
 
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
 
     (opt, args) = parser.parse_args()
-
-    if opt.version:
-        sys.stdout.write("vmv version %s \n\n" % (__version__.version)) 
-        sys.exit()
-
-
-    log_level = logging.ERROR
-    if opt.warning:
-        log_level = logging.WARNING
-    if opt.verbose:
-        log_level = logging.INFO
-    if opt.debug:
-        log_level = logging.DEBUG
-
+    parser.process_informational_options()
 
     logger = logging.getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel(parser.log_level)
     logger.addHandler(logging.StreamHandler())
 
 
@@ -55,7 +37,8 @@ Version: %s """ % (__version__.version)
         parser.error("You must supply a source and desitination")
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile)
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_cookie=opt.cookie)
     except Exception as e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(e.__getattribute__('errno',-1))

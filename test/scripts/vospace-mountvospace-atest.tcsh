@@ -12,9 +12,11 @@ endif
 if ( `uname -s` == "Darwin" ) then
      set STATCMD = 'stat -f %z'
      set UMOUNTCMD = 'umount'
+     set MD5CMD = 'md5'
 else
      set STATCMD = 'stat -c %s'
      set UMOUNTCMD = 'fusermount -u'
+     set MD5CMD = 'md5sum'
 endif
 
 
@@ -189,7 +191,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo -n "access test data to exceed cache"
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
-        md5 $MCONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
+        $MD5CMD $MCONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
     end
 
     set FS_LAST = `${STATCMD} $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1

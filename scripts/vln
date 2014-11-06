@@ -2,7 +2,7 @@
 
 """vls:  list the contents of a voSpace"""
 import vos
-import optparse
+from vos.commonparser import CommonParser
 import logging
 import os,sys
 from vos import vos, __version__
@@ -20,35 +20,17 @@ vln http://external.data.source vos:vospace/linkToExternalDataSource
  Version: %s """ % (__version__.version)
 
 
-parser=optparse.OptionParser(usage)
-
-parser.add_option("-v","--verbose",action="store_true",help="print some diagnostics")
-parser.add_option("-d","--debug",action="store_true",help="print all diagnositics")
-parser.add_option("-w","--warning", action="store_true")
-parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-parser.add_option("--version", action="store_true", help="VOS Version %s" % (__version__.version))
+parser=CommonParser(usage)
 
 if len(sys.argv) == 1:
     parser.print_help()
     sys.exit()
 
 (opt,args)=parser.parse_args()
+parser.process_informational_options()
 
-if opt.version:
-    sys.stdout.write("vln version %s \n\n" % (__version__.version)) 
-    sys.exit()
-
-if opt.verbose:
-    log_level = logging.INFO
-elif opt.debug:
-    log_level = logging.DEBUG
-elif opt.warning:
-    log_level = logging.WARNING
-else:
-    log_level = logging.ERROR
-
-logger = logging.getLogger('vln')
-logger.setLevel(log_level)
+logger = logging.getLogger()
+logger.setLevel(parser.log_level)
 logger.addHandler(logging.StreamHandler())
 
 if len(args) !=  2:
@@ -62,7 +44,7 @@ if args[1][0:4] != "vos:":
 logger.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
-    vos=vos.Client(vospace_certfile=opt.certfile)
+    vos=vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
 except Exception as e:
     logger.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(-1)
