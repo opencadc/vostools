@@ -14,13 +14,13 @@ import curses
 from datetime import datetime
 import warnings
 
-DELAY = 8
-RATE = 1
+DELAY = int(os.getenv('CANTOP_DELAY', 8))
+RATE = int(os.getenv('CANTOP_RATE', 1))
 PROGRESS = '*'
 
-"""The address of the server running the proc service."""
+# The address of the server running the proc service.
 CANFAR_PROC_SERVER = os.getenv('CANFAR_PROC_SERVER', 'https://www.canfar.phys.uvic.ca')
-"""The endpoint of the proc service on that server."""
+# The endpoint of the proc service on that server.
 CANFAR_PROC_ENDPOINT = os.getenv('CANFAR_PROC_ENDPOINT', '/proc/pub')
 
 
@@ -28,7 +28,7 @@ class Cantop(object):
     """
     A class to manage interaction with the CANFAR job listing service.
     """
-    def __init__(self, server=None, endpoint=None, certfile=None):
+    def __init__(self, server=None, endpoint=None, **kwargs):
         self.keep_columns = ['Job_ID',
                              'User',
                              'Started_on',
@@ -45,7 +45,7 @@ class Cantop(object):
 
         self.server = server
         self.endpoint = endpoint
-        self.client = vos.Client(certfile)
+        self.client = vos.Client(**kwargs)
 
     def window_init(self):
         self.main_window = curses.initscr()
