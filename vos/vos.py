@@ -780,10 +780,6 @@ class VOFile:
             self.httpCon.putheader('Cookie', '%s=%s' % \
                                        (COOKIE_DELEG,
                                         self.connector.vospace_cookie))
-            logger.debug("Here1: " + \
-                             '%s=%s' % \
-                             (COOKIE_DELEG,
-                              self.connector.vospace_cookie))
 
         #logger.debug("sending headers for file of size: %s " %
                 #(str(self.size)))
@@ -1280,10 +1276,6 @@ class Client:
                 headers['Cookie'] = '%s=%s' % \
                     (COOKIE_DELEG,
                      self.conn.vospace_cookie)
-
-                logger.debug("Here2: " + '%s=%s' % \
-                                 (COOKIE_DELEG,
-                                  self.conn.vospace_cookie))
 
             httpCon = self.conn.get_connection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)
