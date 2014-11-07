@@ -1,7 +1,7 @@
 
 # DOCUMENTATION
 
-vos is a set of python modules and scripts to enable access to VOSpace.
+vos is a set of python modules and scripts that ease access to VOSpace.
 
 The default installation of vos is tuned for accessing the VOSpace provided by the [Canadian Advanced Network For Astronomical Research](http://www.canfar.net/) (CANFAR)
 
@@ -13,19 +13,18 @@ There are three ways to use vos:
 1. make VOSpace appear as mounted filesystem: *mountvofs*
 1. use the vos module inside a Python script: `import vos`
 
-All of these methods require the user to have a pre-existing VOSpace account.
+Authentication to the CANFAR VOSpace service is performed using X509 security certificates, header tokens or username/password pairs.
+The authentication system is managed by the CADC Group Management Service (GMS).
 
-Authentication to the CANFAR VOSpace service is performed using X509 security certificates that are managed by the CADC Group Management Service (GMS).
-
-The certificates can be retrieved from the CADC using the *getCert* script included with this package.
+To retrieve an X509 security certificate for use with the `vos` tools use the *getCert* script included with this package.
 
 Additional information is available in the [CANFAR documentation](http://www.canfar.net/docs/vospace/)
 
 ## System Requirments
 
-* A CANFAR VOSpace account
-* fuse OR OS-FUSE  (see additional documentation)
-* python2.6 or newer
+* A CANFAR VOSpace account (required for WRITE access, READ access can be anonymous)
+* fuse OR OSX-FUSE  (see additional documentation, only required for filesystem  based access, not for command line or programmatic)
+* python2.6 or later
 
 ## Installation
 
@@ -33,7 +32,7 @@ vos is distributed via [PyPI/vos](pypi.python.org/pypi/vos) and PyPI is the most
 
 `pip install vos --upgrade --user`
 
-Or, you can retrieve the github distribution and use
+Or, you can retrieve the [github](github.com/canfar/vos) distribution and use
 
  `python setup.py install --user`
 
@@ -54,7 +53,8 @@ Or, you can retrieve the github distribution and use
     1. Commandline usage:
         * `vls -l vos:`   [List a vospace]
         * `vcp vos:jkavelaars/test.txt ./`  [copies test.txt to the local directory from vospace]
-        * `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat` and `vln`
+        * `vmkdir --help` [get a list of command line options and arguments]
+        * `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat`, `vchmod` and `vln`
     1. In a Python script (the example below provides a listing of a vospace container)
 ```
 #!python
