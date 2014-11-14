@@ -55,13 +55,13 @@ class TestVos(unittest.TestCase):
         self.assertEqual(uri, myNode.uri)
         self.assertEqual(len(myNode.getNodeList()), 0)
 
-        myNode = client.getNode(uri, limit=10, force=True)
+        myNode = client.getNode(uri, limit=2, force=True)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 10)
+        self.assertEqual(len(myNode.getNodeList()), 2)
 
-        myNode = client.getNode(uri, limit=10, force=False)
+        myNode = client.getNode(uri, limit=2, force=False)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 10)
+        self.assertEqual(len(myNode.getNodeList()), 2)
 
     def test_move(self):
         client = Client()
