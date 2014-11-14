@@ -47,7 +47,7 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME"),'.ssl/cadcproxy.pem'))
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
-COOKIE_DELEG = 'CADC_DELEG'
+HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 
 class URLparse:
     """ Parse out the structure of a URL.
@@ -76,23 +76,23 @@ class URLparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, vospace_certfile=None, vospace_cookie=None,
+    def __init__(self, vospace_certfile=None, vospace_token=None,
                  http_debug=False):
         """Setup the Certificate for later usage
 
         cerdServerURL -- the location of the cadc proxy certificate server
         vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
-        vospace_cookie -- cookie string (alternative to vospace_certfile)
+        vospace_token -- token string (alternative to vospace_certfile)
         http_debug -- set True to generate httplib debug statements
 
         The user must supply a valid certificate or connection will be 'anonymous'.
         """
 
-        ## cookies trump certs. We should only ever have cookie or certfile
+        ## tokens trump certs. We should only ever have token or certfile
         ## set in order to avoid confusion.
-        self.vospace_cookie = vospace_cookie
-        if self.vospace_cookie:
+        self.vospace_token = vospace_token
+        if self.vospace_token:
             self.vospace_certfile = None
         else:
             ## allow anonymous access if no certfile specified
@@ -747,7 +747,7 @@ class VOFile:
             if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
-                if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_cookie is None:
+                if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_token is None:
                     msg += " using anonymous access "
             raise IOError(VOFile.errnos.get(self.resp.status,
                     self.resp.status), msg, self.url)
@@ -775,11 +775,10 @@ class VOFile:
         self.httpCon.putheader("User-Agent", userAgent)
         self.transEncode = None
 
-        # Add cookie to header if present
-        if self.connector.vospace_cookie:
-            self.httpCon.putheader('Cookie', '%s=%s' % \
-                                       (COOKIE_DELEG,
-                                        self.connector.vospace_cookie))
+        # Add token to header if present
+        if self.connector.vospace_token:
+            self.httpCon.putheader(HEADER_DELEG_TOKEN,
+                                   self.connector.vospace_token)
 
         #logger.debug("sending headers for file of size: %s " %
                 #(str(self.size)))
@@ -963,11 +962,11 @@ class Client:
 
     def __init__(self, vospace_certfile=None, rootNode=None, conn=None,
                  cadc_short_cut=False, http_debug=False,
-                 secure_get=False, vospace_cookie=None):
+                 secure_get=False, vospace_token=None):
         """This could/should be expanded to set various defaults
 
         vospace_certfile: CADC x509 proxy certificate file location. Overrides certfile in conn.
-        vospace_cookie: cookie string (alternative to vospace_certfile)
+        vospace_token: token string (alternative to vospace_certfile)
         rootNode: the base of the VOSpace for uri references.
         conn: a connection pool object for this Client
         archive: the name of the archive to associated with GET requests
@@ -978,13 +977,13 @@ class Client:
         if not isinstance(conn, Connection):
             vospace_certfile = vospace_certfile is None and VOSPACE_CERTFILE or vospace_certfile
             conn = Connection(vospace_certfile=vospace_certfile,
-                              vospace_cookie=vospace_cookie,
+                              vospace_token=vospace_token,
                               http_debug=http_debug)
 
         if conn.vospace_certfile:
             logger.debug("Using certificate file: {0}".format(vospace_certfile))
-        if conn.vospace_cookie:
-            logger.debug("Using vospace cookie: "+conn.vospace_cookie)
+        if conn.vospace_token:
+            logger.debug("Using vospace token: "+conn.vospace_token)
 
         vospace_certfile = conn.vospace_certfile
         # Set the protocol
@@ -1277,11 +1276,9 @@ class Client:
             form = urllib.urlencode(args)
             headers = {"Content-type": "application/x-www-form-urlencoded",
                     "Accept": "text/plain"}
-            # Add cookie to header if present
-            if self.conn.vospace_cookie:
-                headers['Cookie'] = '%s=%s' % \
-                    (COOKIE_DELEG,
-                     self.conn.vospace_cookie)
+            # Add token to header if present
+            if self.conn.vospace_token:
+                headers[HEADER_DELEG_TOKEN] = self.conn.vospace_token
 
             httpCon = self.conn.get_connection(url)
             httpCon.request("POST", Client.VOTransfer, form, headers)

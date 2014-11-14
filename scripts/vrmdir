@@ -30,7 +30,7 @@ logger.addHandler(logging.StreamHandler())
 
 try:
     client=vos.Client(vospace_certfile=opt.certfile,
-                      vospace_cookie=opt.cookie)
+                      vospace_token=opt.token)
 except Exception as e:
     logging.error("Connection failed:  %s" %  (str(e)))
     sys.exit(e.__getattribute__('errno',-1))
