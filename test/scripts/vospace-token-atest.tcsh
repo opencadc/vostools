@@ -30,7 +30,7 @@ set ACCESS_PAGE=${VOSPACE_WEBSERVICE}/access/login
 echo "Using access page: $ACCESS_PAGE"
 set VOS_BASE = "vos://cadc.nrc.ca~vospace"
 
-# Username / password for getting cookies
+# Username / password for getting tokens
 echo "Enter credentials for a VOSpace account in which we will perform tests."
 echo -n "CADC Username: "
 set username = $<
@@ -67,54 +67,52 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     echo "Test CONTAINER: $CONTAINER"
 
-    # Start with a cookie scoped to user's entire tree
-    set COOKIE_RAW = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}"`
-    set COOKIE = `python -c "import urllib; print urllib.quote_plus('''$COOKIE_RAW''')"`
+    # Start with a token scoped to user's entire tree
+    set TOKEN = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}"`
 
     echo -n "create containers"
 
-    $MKDIRCMD --cookie="$COOKIE" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
-    $MKDIRCMD --cookie="$COOKIE" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
+    $MKDIRCMD --token="$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
+    $MKDIRCMD --token="$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "set permissions"
-    $CHMODCMD --cookie="$COOKIE" o+r $CONTAINER || echo " [FAIL]" && exit -1
-    $CHMODCMD --cookie="$COOKIE" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
-    $CHMODCMD --cookie="$COOKIE" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER || echo " [FAIL]" && exit -1
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     # Get a new token scoped only to the /B subdir
-    set COOKIE_RAW = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B"`
-    set COOKIE = `python -c "import urllib; print urllib.quote_plus('''$COOKIE_RAW''')"`
+    set TOKEN = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B"`
 
     echo -n "copy file to unscoped tree fails"
-    $CPCMD --cookie="$COOKIE" something.png $CONTAINER/A/ >& /dev/null
+    $CPCMD --token="$TOKEN" something.png $CONTAINER/A/ >& /dev/null
     if ( $status == 0 ) then
         echo " [FAIL]" && exit -1
     endif
     echo " [OK]"
 
     echo -n "copy a file to scoped tree"
-    $CPCMD --cookie="$COOKIE" something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
+    $CPCMD --token="$TOKEN" something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "check that the file got there"
-    $LSCMD --cookie="$COOKIE" $CONTAINER/B | grep -q 'something.png' || echo " [FAIL]" && exit -1
+    $LSCMD --token="$TOKEN" $CONTAINER/B | grep -q 'something.png' || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "create sub container with file in it"
-    $MKDIRCMD --cookie="$COOKIE" $CONTAINER/B/test > /dev/null || echo " [FAIL]" && exit -1
-    $CPCMD --cookie="$COOKIE" something.png $CONTAINER/B/test/ || echo " [FAIL]" && exit -1
-    $LSCMD --cookie="$COOKIE" $CONTAINER/B/test | grep -q 'something.png' || echo " [FAIL]" && exit -1
+    $MKDIRCMD --token="$TOKEN" $CONTAINER/B/test > /dev/null || echo " [FAIL]" && exit -1
+    $CPCMD --token="$TOKEN" something.png $CONTAINER/B/test/ || echo " [FAIL]" && exit -1
+    $LSCMD --token="$TOKEN" $CONTAINER/B/test | grep -q 'something.png' || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "remove the file in the sub container"
-    $RMCMD --cookie="$COOKIE" $CONTAINER/B/test/something.png || echo " [FAIL]" && exit -1
+    $RMCMD --token="$TOKEN" $CONTAINER/B/test/something.png || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "remove the sub container"
-    $RMDIRCMD --cookie="$COOKIE" $CONTAINER/B/test || echo " [FAIL]" && exit -1
-    $LSCMD --cookie="$COOKIE" $CONTAINER/B | grep -q test
+    $RMDIRCMD --token="$TOKEN" $CONTAINER/B/test || echo " [FAIL]" && exit -1
+    $LSCMD --token="$TOKEN" $CONTAINER/B | grep -q test
     if ( $status == 0 ) then
         echo " [FAIL]" && exit -1
     endif
@@ -124,7 +122,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     $UMOUNTCMD $MOUNTPOINT >& /dev/null
     rmdir $MOUNTPOINT >& /dev/null
     rm -fR $VOS_CACHE #clean the cache
-    $MOUNTCMD --cookie="$COOKIE" --cache_dir=$VOS_CACHE --mountpoint=$MOUNTPOINT --vospace=${VOS_BASE}/${username}/atest/$TIMESTAMP/B || echo " [FAIL]" && exit -1
+    $MOUNTCMD --token="$TOKEN" --cache_dir=$VOS_CACHE --mountpoint=$MOUNTPOINT --vospace=${VOS_BASE}/${username}/atest/$TIMESTAMP/B || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "copy file in to mounted filesystem"

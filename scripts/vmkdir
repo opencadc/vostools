@@ -35,7 +35,7 @@ logger.info("Creating ContainerNode (directory) %s" % ( args[0]))
 
 try:
 
-    client=vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
+    client=vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
 
     dirNames=[]
     thisDir = args[0]

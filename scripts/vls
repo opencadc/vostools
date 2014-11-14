@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_cookie=opt.cookie)
+                            vospace_token=opt.token)
     except Exception, e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(-1)

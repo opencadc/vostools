@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_cookie=opt.cookie)
+                            vospace_token=opt.token)
         sys.stdout.write("%s\n" % client.getJobStatus(args[0]))
     except KeyboardInterrupt:
         sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
