@@ -68,7 +68,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo "Test CONTAINER: $CONTAINER"
 
     # Start with a token scoped to user's entire tree
-    set TOKEN = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}"`
+    set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}`"
 
     echo -n "create containers"
 
@@ -83,7 +83,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     # Get a new token scoped only to the /B subdir
-    set TOKEN = `curl -s -d username=$username -d password=$password "${ACCESS_PAGE}?scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B"`
+    set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B`"
 
     echo -n "copy file to unscoped tree fails"
     $CPCMD --token="$TOKEN" something.png $CONTAINER/A/ >& /dev/null
