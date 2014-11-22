@@ -144,14 +144,14 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
             skip = False
             if exclude is not None:
                 for thisIgnore in exclude.split(','):
-                    if not this_destination.find(thisIgnore) < 0:
+                    if not destination_name.find(thisIgnore) < 0:
                         skip = True
                         continue
 
             if include is not None:
                 skip = True
                 for thisIgnore in include.split(','):
-                    if not this_destination.find(thisIgnore) < 0:
+                    if not destination_name.find(thisIgnore) < 0:
                         skip = False
                         continue
 
