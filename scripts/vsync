@@ -4,7 +4,7 @@
 import hashlib
 import os
 import sys
-import threading, Queue
+from multiprocessing import Process, JoinableQueue
 from vos.commonparser import CommonParser
 import errno
 import logging
@@ -49,7 +49,7 @@ def fileMD5(filename):
         md5 = md5[0]
     return md5
 
-class ThreadCopy(threading.Thread):
+class ThreadCopy(Process):
     def __init__(self, queue, client):
         super(ThreadCopy, self).__init__()
         self.client = client
@@ -178,7 +178,7 @@ def startStreams(nstreams, vospace_client):
     for i in range(nstreams):
         logger.info("Launching vospace connection stream %d" % (i))
         t = ThreadCopy(queue, client=vospace_client)
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         streams.append(t)
     return streams
@@ -288,11 +288,11 @@ if __name__ == '__main__':
         parser.error("Only allows sync FROM local copy TO VOSpace")
     ## Currently we don't create nodes in sync and we don't sync onto files
     logger.info("Connecting to VOSpace")
-    client = vos.Client(vospace_certfile=opt.certfile,vospace_cookie=opt.cookie)
+    client = vos.Client(vospace_certfile=opt.certfile, vospace_cookie=opt.cookie)
     logger.info("Confirming Destination is a directory")
     destIsDir = client.isdir(dest)
 
-    queue = Queue.Queue(maxsize=10 * opt.nstreams)
+    queue = JoinableQueue(maxsize=10 * opt.nstreams)
     goodDirs = []
     nodeDict = {}
 
