@@ -99,10 +99,9 @@ class Connection:
 
         # # tokens trump certs. We should only ever have token or certfile
         ## set in order to avoid confusion.
+        self.vospace_certfile = None
         self.vospace_token = vospace_token
-        if self.vospace_token:
-            self.vospace_certfile = None
-        else:
+        if self.vospace_token is None:
             ## allow anonymous access if no certfile specified
             if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
                 logger.critical(
@@ -861,7 +860,7 @@ class VOFile:
             self.url = URL
             if not URL:
                 #logger.debug("Raising error?")
-                raise IOError(errno.ENOENT, "Got 303 on {} but no Location value in header? [{}]".format(self.url,
+                raise IOError(errno.ENOENT, "Got 303 on {0} but no Location value in header? [{1}]".format(self.url,
                                                                                                          self.resp.read()),
                               self.url)
             if self.followRedirect:
@@ -1090,9 +1089,9 @@ class Client:
         return []
 
     magic_check = re.compile('[*?[]')
-
-    def has_magic(self, s):
-        return Client.magic_check.search(s) is not None
+    @classmethod
+    def has_magic(cls, s):
+        return cls.magic_check.search(s) is not None
 
     #@logExceptions()
     def copy(self, src, dest, sendMD5=False):
@@ -1114,11 +1113,11 @@ class Client:
 
         if src[0:4] == "vos:":
             match = re.search("([^\[\]]*)(\[.*\])$", src)
-            logging.debug("Getting {} with match {}".format(src, match))
+            logging.debug("Getting {0} with match {1}".format(src, match))
             if match is not None:
                 src = match.group(1)
                 cutout = match.group(2)
-                logger.debug("Trying to access the file {} using cutout {}".format(src, cutout))
+                logger.debug("Trying to access the file {1} using cutout {0}".format(src, cutout))
                 sendMD5 = False
             srcNode = self.getNode(src)
             srcSize = srcNode.attr['st_size']
@@ -1206,10 +1205,10 @@ class Client:
             # Just past this back, I don't know how to fix...
             return uri
         ## Check that path name compiles with the standard
-        logger.debug("Got value of args: {}".format(parts.args))
+        logger.debug("Got value of args: {0}".format(parts.args))
         if parts.args is not None and parts.args != "":
             uri = urlparse.parse_qs(urlparse.urlparse(parts.args).query).get('link', None)[0]
-            logger.debug("Got uri: {}".format(uri))
+            logger.debug("Got uri: {0}".format(uri))
             if uri is not None:
                 return self.fixURI(uri)
         # Check for 'cutout' syntax values.
@@ -1235,6 +1234,7 @@ class Client:
         """
         #logger.debug("Limit: %s " % (str(limit)))
         logger.debug("Getting node %s" % (uri))
+        logger.debug("Node: %s" % (uri))
         uri = self.fixURI(uri)
         node = None
         if not force and uri in self.nodeCache:
@@ -1254,7 +1254,7 @@ class Client:
                 elif uri.startswith('http'):
                     header = self.open(None, URL=uri, mode=os.O_RDONLY, head=True)
                     header.read()
-                    logger.debug("Got http headers: {}".format(header.resp.getheaders()))
+                    logger.debug("Got http headers: {0}".format(header.resp.getheaders()))
                     properties = {'type': header.resp.getheader('content-type', 'txt'),
                                   'date': time.strftime(
                                       '%Y-%m-%dT%H:%M:%S GMT',
@@ -1267,7 +1267,7 @@ class Client:
                     node = Node(node=uri, node_type=Node.DATA_NODE, properties=properties)
                     logger.debug(str(node))
                 else:
-                    raise OSError(2, "Bad URI {}".format(uri))
+                    raise OSError(2, "Bad URI {0}".format(uri))
                 watch.insert(node)
                 # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
                 # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
