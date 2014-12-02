@@ -1062,7 +1062,12 @@ class Client:
                 destSize += len(buf)
         except IOError as e:
             logger.debug(str(e))
-            return self.copy(src, dest, sendMD5=sendMD5)
+            if (srcNode.uri in self.nodeCache):
+                # remove from cache and retry
+                with self.nodeCache.volatile(srcNode.uri):
+                    return self.copy(src, dest, sendMD5=sendMD5)
+            else:
+                raise
         finally:
             fout.close()
             fin.close()
