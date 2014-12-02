@@ -19,34 +19,34 @@ class TestVos(unittest.TestCase):
             client = Client()
         self.assertEqual(client.protocol,"https")
         self.assertTrue(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_cookie)
+        self.assertIsNone(client.conn.vospace_token)
 
         # Supplying an empty string for certfile implies anonymous / http
         client = Client(vospace_certfile='')
         self.assertEqual(client.protocol,"http")
         self.assertIsNone(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_cookie)
+        self.assertIsNone(client.conn.vospace_token)
 
         # Specifying a certfile implies authenticated / https
         with patch('os.access'):
             client = Client(vospace_certfile='/path/to/cert')
         self.assertEqual(client.protocol,"https")
         self.assertTrue(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_cookie)
+        self.assertIsNone(client.conn.vospace_token)
 
-        # Specifying a cookie implies authenticated / http
-        client = Client(vospace_cookie='a_cookie_string')
+        # Specifying a token implies authenticated / http
+        client = Client(vospace_token='a_token_string')
         self.assertEqual(client.protocol,"http")
         self.assertIsNone(client.conn.vospace_certfile)
-        self.assertTrue(client.conn.vospace_cookie)
+        self.assertTrue(client.conn.vospace_token)
 
-        # Specifying both a certfile and cookie implies cookie (auth) / http
+        # Specifying both a certfile and token implies token (auth) / http
         with patch('os.access'):
             client = Client(vospace_certfile='/path/to/cert',
-                            vospace_cookie='a_cookie_string')
+                            vospace_token='a_token_string')
         self.assertEqual(client.protocol,"http")
         self.assertIsNone(client.conn.vospace_certfile)
-        self.assertTrue(client.conn.vospace_cookie)
+        self.assertTrue(client.conn.vospace_token)
 
     def test_getNode(self):
         client = Client()
@@ -55,13 +55,13 @@ class TestVos(unittest.TestCase):
         self.assertEqual(uri, myNode.uri)
         self.assertEqual(len(myNode.getNodeList()), 0)
 
-        myNode = client.getNode(uri, limit=10, force=True)
+        myNode = client.getNode(uri, limit=2, force=True)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 10)
+        self.assertEqual(len(myNode.getNodeList()), 2)
 
-        myNode = client.getNode(uri, limit=10, force=False)
+        myNode = client.getNode(uri, limit=2, force=False)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 10)
+        self.assertEqual(len(myNode.getNodeList()), 2)
 
     def test_move(self):
         client = Client()
