@@ -15,7 +15,7 @@ import glob
 
 exit_code = 0
 
-cutout_pattern = re.compile(r'(.*?)(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+$')
+cutout_pattern = re.compile(r'(.*?)(?P<cutout>(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+)$')
 
 
 usage = "%prog filename vos:rootNode/destination"
@@ -244,7 +244,7 @@ if __name__ == '__main__':
                 cutout = None
                 if cutout_match is not None:
                     source_pattern = cutout_match.group(1)
-                    cutout = cutout_match.group(2)
+                    cutout = cutout_match.group('cutout')
                 sources = lglob(source_pattern)
                 if cutout is not None:
                     # stick back on the cutout pattern if there was one.
