@@ -717,8 +717,14 @@ class VOFile:
             self._fpos = int(self.size) - offset
         return
 
-    def close(self, code=(200, 201, 202, 206, 302, 303, 503, 416, 402, 408,
-                          412, 504)):
+    def flush(self):
+        """
+        Flush is a NO OP in VOFile, we only really flush on close.
+        @return:
+        """
+        return
+
+    def close(self):
         """close the connection"""
         if self.closed:
             return self.closed
@@ -1081,7 +1087,7 @@ class Client:
         if basename == '':
             # `os.path.split()` returns an empty basename for paths ending with a
             # directory separator.  'q*x/' should match only directories.
-            if self.isdir(dirname, force=True):
+            if self.isdir(dirname):
                 return [basename]
         else:
             if self.access(os.path.join(dirname, basename)):
@@ -1791,7 +1797,7 @@ class Client:
         This is done by checking the view=data header and seeing if you
         get an error.
         """
-        return self.open(uri, view='data', head=True).close(code=code)
+        return self.open(uri, view='data', head=True).close()
 
     def getJobStatus(self, url):
         """ Returns the status of a job """
