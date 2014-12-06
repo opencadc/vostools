@@ -1041,6 +1041,8 @@ class Client:
             if basename:
                 if self.access(pathname):
                     yield pathname
+                else:
+                    raise IOError(errno.EACCES, "Permission denied: {0}".format(pathname))
             else:
                 # Patterns ending with a slash should match only directories
                 if self.iglob(dirname):
@@ -1092,6 +1094,8 @@ class Client:
         else:
             if self.access(os.path.join(dirname, basename)):
                 return [basename]
+            else:
+                raise IOError(errno.EACCES, "Permission denied: {0}".format(os.path.join(dirname, basename)))
         return []
 
     magic_check = re.compile('[*?[]')
