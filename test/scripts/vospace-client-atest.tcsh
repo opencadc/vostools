@@ -126,6 +126,16 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     \rm -f something.png.3
     echo " [OK]"
 
+    echo -n "Check pattern matched copy"
+    $CPCMD $CERT "$CONTAINER/something*" $TMPDIR || echo " [FAIL]" && exit -1
+    $MKDIRCMD $CERT $CONTAINER/pattern_dest
+    $CPCMD $CERT something* $CONTAINER/pattern_dest || echo " [FAIL]" && exit -1
+    echo " [OK]"
+
+    echo -n "Check pattern with cutout"
+    $CPCMD $CERT "$BASE/test*.fits[1:10,1:10]" $TMPDIR || echo " [FAIL]" && exit -1
+    echo " [OK]"
+
     $CPCMD $CERT $CONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
 
     echo -n "copy/overwrite existing data node "

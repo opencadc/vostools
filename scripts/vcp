@@ -11,9 +11,12 @@ import os
 import hashlib
 import signal
 import re
-
+import glob
 
 exit_code = 0
+
+cutout_pattern = re.compile(r'(.*?)(?P<cutout>(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+)$')
+
 
 usage = "%prog filename vos:rootNode/destination"
 
@@ -114,6 +117,11 @@ def get_md5(filename):
         md5 = md5.hexdigest()
     return md5
 
+def lglob(pathname):
+    if pathname[0:4] == "vos:":
+        return client.glob(pathname)
+    else:
+        return glob.glob(pathname)
 
 def copy(source_name, destination_name, exclude=None, include=None, interrogate=False, overwrite=False, ignore=False):
     """
@@ -206,6 +214,7 @@ def signal_handler(signum, frame):
 
 if __name__ == '__main__':
 
+
     ## handle interrupts nicely
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -240,38 +249,54 @@ if __name__ == '__main__':
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token,
                             cadc_short_cut=opt.quick)
-        for source in args:
-            if source[0:4] != "vos:":
-                source = os.path.abspath(source)
-            ### the source must exist, of course...
-            if not access(source, os.R_OK):
-                raise Exception("Can't access source: %s " % source)
+        for source_pattern in args:
+            # define this empty cutout string.  Then we strip possible cutout strings off the end of the
+            # pattern before matching.  This allows cutouts on the vos service.
+            # The shell does pattern matching for local files, so don't run glob on local files.
+            if source_pattern[0:4] != "vos:":
+                sources = [source_pattern]
+            else:
+                cutout_match = cutout_pattern.search(source_pattern)
+                cutout = None
+                if cutout_match is not None:
+                    source_pattern = cutout_match.group(1)
+                    cutout = cutout_match.group('cutout')
+                sources = lglob(source_pattern)
+                if cutout is not None:
+                    # stick back on the cutout pattern if there was one.
+                    sources = [s+cutout for s in sources]
+            for source in sources:
+                if source[0:4] != "vos:":
+                    source = os.path.abspath(source)
+                ### the source must exist, of course...
+                if not access(source, os.R_OK):
+                    raise Exception("Can't access source: %s " % source)
 
-            ## copying inside VOSpace not yet implemented
-            if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
-                raise Exception("Can not (yet) sync from VOSpace, only to")
+                ## copying inside VOSpace not yet implemented
+                if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
+                    raise Exception("Can not (yet) copy from VOSpace to VOspace.")
 
-            this_destination = dest
-            if isdir(source):
-                logger.debug("%s is a directory or link to one" % source)
-                # To mimic unix fs behaviours if copying a directory and
-                # the destination directory exists then the actual
-                # destination in a recursive copy is the destination +
-                # source basename.
-                # This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
-                if access(dest, os.F_OK):
-                    if not isdir(dest):
-                        raise Exception("Can't write a directory (%s) to a file (%s)" % (source, dest))
-                    # directory exists so we append the end of source to that (UNIX behaviour)
-                    this_destination = os.path.normpath(os.path.join(dest, os.path.basename(source)))
-                elif len(args) > 1:
-                    raise Exception("vcp can not copy multiple things into a non-existant location (%s)" % dest)
-            elif dest[-1] == '/' or isdir(dest):
-                # we're copying into a directory
-                this_destination = os.path.join(dest, os.path.basename(source))
+                this_destination = dest
+                if isdir(source):
+                    logger.debug("%s is a directory or link to one" % source)
+                    # To mimic unix fs behaviours if copying a directory and
+                    # the destination directory exists then the actual
+                    # destination in a recursive copy is the destination +
+                    # source basename.
+                    # This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
+                    if access(dest, os.F_OK):
+                        if not isdir(dest):
+                            raise Exception("Can't write a directory (%s) to a file (%s)" % (source, dest))
+                        # directory exists so we append the end of source to that (UNIX behaviour)
+                        this_destination = os.path.normpath(os.path.join(dest, os.path.basename(source)))
+                    elif len(args) > 1:
+                        raise Exception("vcp can not copy multiple things into a non-existent location (%s)" % dest)
+                elif dest[-1] == '/' or isdir(dest):
+                    # we're copying into a directory
+                    this_destination = os.path.join(dest, os.path.basename(source))
 
-            copy(source, this_destination, exclude=opt.exclude, include=opt.include,
-                 interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
+                copy(source, this_destination, exclude=opt.exclude, include=opt.include,
+                     interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
 
     except KeyboardInterrupt as ke:
         logger.info("Received keyboard interrupt. Execution aborted...\n")
