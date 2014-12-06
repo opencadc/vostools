@@ -34,6 +34,10 @@ def get_node(filename):
     return client.getNode(filename, limit=None)
 
 
+# here are a series of methods that choose between calling the system version or the vos version of various
+# function, based on pattern matching.
+# TODO: Put these function in a separate module.
+
 def isdir(filename):
     logger.debug("Doing an isdir on %s" % filename)
     if filename[0:4] == "vos:":
@@ -81,6 +85,18 @@ def mkdir(filename):
         return client.mkdir(filename)
     else:
         return os.mkdir(filename)
+
+
+def lglob(pathname):
+    """
+    Call system glob if not vos path.
+    @param pathname: the pathname (aka pattern) to glob with.
+    @return: list of matched filenames.
+    """
+    if pathname[0:4] == "vos:":
+        return client.glob(pathname)
+    else:
+        return glob.glob(pathname)
 
 
 def get_md5(filename):
