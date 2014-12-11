@@ -9,6 +9,8 @@ else
     endif
 endif
 
+set HEADCMD = 'head -c 1'
+
 if ( `uname -s` == "Darwin" ) then
      set STATCMD = 'stat -f %z'
      set UMOUNTCMD = 'umount'
@@ -63,6 +65,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set CERTFILE = " --certfile=$CERTPATH"
     set LOGFILE = "/tmp/mountvofs.log"
     set ANONLOGFILE = "/tmp/mountvofs_anon.log"
+    set BIGSTATICFILE = "transfer/bigfile.bin"
 
     echo "mount command: " $MOUNTCMD
     echo "testing version: " `$MOUNTCMD --version`
@@ -73,6 +76,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set VOROOT = "vos:"
     set VOHOME = "$VOROOT""CADCRegtest1"
     set BASE = "$VOHOME/atest"
+    set STATIC = "$VOHOME/vospace-static-test"
 
     set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
     set CONTAINER = $BASE/$TIMESTAMP
@@ -139,7 +143,6 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     ls $MCONTAINER >& /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
-
     echo -n "check recursive create (non-existant parents) "
     mkdir -p $MCONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
     $LSCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
@@ -176,7 +179,6 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     rm $MCONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
     echo " [OK]"
 
-
     # --- test exceeding the local cache ---
     echo -n "copy cache test data to container"
     rm foo.dat >& /dev/null
@@ -211,7 +213,6 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     # --- finish test exceeding the local cache ---
 
-
     echo -n "delete non-empty container "
     ls $MCONTAINER
     rm -rf $MCONTAINER >& /dev/null || echo " [FAIL]" && exit -1
@@ -225,6 +226,29 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     rmdir $MCONTAINER > /dev/null || echo " [FAIL]" && exit -1
     $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
     echo " [OK]"
+
+    echo -n "unmount vospace"
+    ${UMOUNTCMD} $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
+   echo " [OK]"
+
+    # --- test head on a really big file ---
+
+    echo -n "mount vospace static data location readonly "
+    $MOUNTCMD $CERT --readonly --vospace="$STATIC" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
+    sleep 3
+    ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
+    echo " [OK]"
+
+    echo -n "head request on a large file "
+    $HEADCMD $MOUNTPOINT/$BIGSTATICFILE >& /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+
+    echo -n "unmount vospace"
+    ${UMOUNTCMD} $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
+    rmdir $MOUNTPOINT >& /dev/null
+    rm -fR $VOS_CACHE #clean the cache
+    echo " [OK]"
+
 end
 
 echo
