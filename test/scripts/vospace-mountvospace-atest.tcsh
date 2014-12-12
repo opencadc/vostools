@@ -9,7 +9,7 @@ else
     endif
 endif
 
-set HEADCMD = 'head -c 1'
+set TAILCMD = 'tail -c 1'
 
 if ( `uname -s` == "Darwin" ) then
      set STATCMD = 'stat -f %z'
@@ -231,7 +231,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     ${UMOUNTCMD} $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit-1
    echo " [OK]"
 
-    # --- test head on a really big file ---
+    # --- test tail on a really big file ---
 
     echo -n "mount vospace static data location readonly "
     $MOUNTCMD $CERT --readonly --vospace="$STATIC" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
@@ -239,8 +239,8 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
     echo " [OK]"
 
-    echo -n "head request on a large file "
-    $HEADCMD $MOUNTPOINT/$BIGSTATICFILE >& /dev/null || echo " [FAIL]" && exit -1
+    echo -n "tail request on a large file "
+    $TAILCMD $MOUNTPOINT/$BIGSTATICFILE >& /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
     echo -n "unmount vospace"
