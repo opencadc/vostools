@@ -8,6 +8,12 @@ else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 
+if (! ${?TMPDIR} ) then
+        echo "TMPDIR env variable not set, using /tmp"
+else
+        echo "Using ${TMPDIR} for temporary files"
+endif
+
 if (! ${?CADC_PYTHON_TEST_TARGETS} ) then
     set CADC_PYTHON_TEST_TARGETS = 'python2.6 python2.7'
 endif
