@@ -769,8 +769,8 @@ class VOFile:
         # Get the file size. We use this 'X-CADC-Content-Length' as a
         # fallback to work around a server-side Java bug that limits
         # 'Content-Length' to a signed 32-bit integer (~2 gig files)
-        self.size = self.resp.getheader("Content-Length", self.resp.getheader(
-                "X-CADC-Content-Length",0))
+        self.size = self.resp.getheader("Content-Length", 
+                                        self.resp.getheader("X-CADC-Content-Length",0))
 
         if self.resp.status == 200:
             self.md5sum = self.resp.getheader("Content-MD5", None)
