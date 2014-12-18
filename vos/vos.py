@@ -51,7 +51,7 @@ MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
 CONNECTION_TIMEOUT = 600  # seconds before HTTP connection should drop.
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
-VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME"), '.ssl/cadcproxy.pem'))
+VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME","."), '.ssl/cadcproxy.pem'))
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
