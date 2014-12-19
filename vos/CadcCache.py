@@ -1031,15 +1031,13 @@ class FileHandle(object):
 
         r = self.ioObject.cacheFileDescriptor
         with self.ioObject.cacheFileDescriptorLock:
-            # seek and read.
+            # seek using python, avoid 32bit offset limit in libc32
             os.lseek(r, offset, os.SEEK_SET)
-            libc.lseek(r, offset, os.SEEK_SET)
-            startoffset = os.lseek(r, 0, os.SEEK_CUR)
             cbuffer = ctypes.create_string_buffer(size)
+            # do the read in libc to avoid passing around a string
             retsize = libc.read(r, cbuffer, size)
             if retsize < 0:
                 raise CacheError("Failed to read from cache file")
-            endoffset = os.lseek(r, 0, os.SEEK_CUR)
         if retsize != size:
             newcbuffer = ctypes.create_string_buffer(cbuffer[0:retsize],
                     retsize)
