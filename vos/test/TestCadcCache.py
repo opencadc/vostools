@@ -107,7 +107,7 @@ class TestIOProxy(unittest.TestCase):
         with CadcCache.Cache(testDir, 100, True) as testCache:
             testIOProxy = CadcCache.IOProxy()
             with self.assertRaises(NotImplementedError):
-                testIOProxy.getMD5()
+                testIOProxy.get_md5()
             with self.assertRaises(NotImplementedError):
                 testIOProxy.getSize();
             with self.assertRaises(NotImplementedError):
