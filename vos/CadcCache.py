@@ -93,7 +93,7 @@ class Cache(object):
     """
     IO_BLOCK_SIZE = 2 ** 14
 
-    def __init__(self, cacheDir, maxCacheSize, readOnly=False, timeout=60, maxFlushThreads=10):
+    def __init__(self, cacheDir, maxCacheSize, read_only=False, timeout=60, maxFlushThreads=10):
         """Initialize the Cache Object
 
         Parameters:
@@ -111,7 +111,7 @@ class Cache(object):
         self.metaDataDir = os.path.join(self.cacheDir, "metaData")
         self.timeout = timeout
         self.maxCacheSize = maxCacheSize
-        self.readOnly = readOnly
+        self.read_only = read_only
         self.fileHandleDict = {}
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
@@ -599,7 +599,7 @@ class IOProxy(object):
         self.cacheFileDescriptorLock = threading.Lock()
         self.exception = None
 
-    def getMD5(self):
+    def get_md5(self):
         """
         Return the MD5sum of the remote file.
         """

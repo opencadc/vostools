@@ -48,7 +48,7 @@ MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not
 # specified by server
 MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
-CONNECTION_TIMEOUT = 600  # seconds before HTTP connection should drop.
+CONNECTION_TIMEOUT = 0.1  # seconds before HTTP connection should drop.
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME","."), '.ssl/cadcproxy.pem'))
@@ -148,8 +148,8 @@ class Connection:
                 connection.connect()
             except httplib.HTTPException as http_exception:
                 logger.critical("%s" % (str(http_exception)))
-                logger.critical("Retrying connection for 30 seconds")
-                if time.time() - start_time > 1200:
+                logger.critical("Retrying connection for {} seconds".format(MAX_RETRY_TIME))
+                if time.time() - start_time > MAX_RETRY_TIME:
                     raise http_exception
             break
 
@@ -243,7 +243,7 @@ class Node:
         self.setxattr()
 
     def set_property(self, key, value):
-        """Given a dictionary of props build a properies subelement"""
+        """Given a dictionary of props build a properties sub-element"""
         properties = self.node.find(Node.PROPERTIES)
         uri = "%s#%s" % (Node.IVOAURL, key)
         ElementTree.SubElement(properties, Node.PROPERTY,
@@ -452,13 +452,12 @@ class Node:
 
         changed = 0
 
-        if mode & (stat.S_IROTH):
+        if mode & stat.S_IROTH:
             changed += self.setPublic('true')
         else:
             changed += self.setPublic('false')
 
-        if mode & (stat.S_IRGRP):
-
+        if mode & stat.S_IRGRP:
             changed += self.chrgrp(self.groupread)
         else:
             changed += self.chrgrp('')
@@ -1248,15 +1247,13 @@ class Client:
         uri   -- a voSpace node in the format vos:/vospaceName/nodeName
         limit -- load children nodes in batches of limit
         """
-        #logger.debug("Limit: %s " % (str(limit)))
-        logger.debug("Getting node %s" % (uri))
-        logger.debug("Node: %s" % (uri))
+        logger.debug("Getting node {0}".format(uri))
         uri = self.fixURI(uri)
         node = None
         if not force and uri in self.nodeCache:
             node = self.nodeCache[uri]
         if node is None:
-            logger.debug("Getting node from ws %s" % (uri))
+            logger.debug("Getting node {0} from ws".format(uri))
             with self.nodeCache.watch(uri) as watch:
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
@@ -1407,6 +1404,7 @@ class Client:
                                  " returns: %s" %
                                  (Client.VOTransfer, response.status))
                     return self.getNodeURL(uri, method=method, view=view,
+                                           full_negotiation=True,
                                            limit=limit, nextURI=nextURI, cutout=cutout)
             except Exception as e:
                 logger.debug(str(e))
@@ -1416,7 +1414,7 @@ class Client:
             logger.debug("Sending short cut url: %s" % (URL))
             return URL
 
-        ### this is a GET so we might have to stick some data onto the URL...
+        # this is a GET that is not a 'data' or 'cutout' view.  Add possible additional args to URL.
         fields = {}
         if limit is not None:
             fields['limit'] = limit
@@ -1630,8 +1628,7 @@ class Client:
         if URL is None:
             if target is not None:
                 logger.debug("%s is a link to %s" % (node.uri, target))
-                if (re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target)
-                    is not None):
+                if (re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None):
                     # TODO
                     # the above re.search should use generic VOSpace uri
                     # search, not CADC specific. i
