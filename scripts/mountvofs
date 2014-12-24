@@ -94,10 +94,10 @@ if __name__ == "__main__":
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=readonly,
-                    # auto_cache=True,
                     allow_other=opt.allow_other,
                     noapplexattr=True,
                     noappledouble=True,
+                    debug=opt.debug,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
@@ -108,5 +108,4 @@ if __name__ == "__main__":
                     fsname=root,
                     readonly=readonly,
                     allow_other=opt.allow_other,
-                    # auto_cache=True,
                     foreground=opt.foreground)
