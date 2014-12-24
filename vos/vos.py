@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 from contextlib import nested
 from cStringIO import StringIO
+import ssl
 import html2text
 import httplib
 import logging
@@ -48,7 +49,7 @@ MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not
 # specified by server
 MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
-CONNECTION_TIMEOUT = 0.1  # seconds before HTTP connection should drop.
+CONNECTION_TIMEOUT = 30  # seconds before HTTP connection should drop, should be less than DAEMON timeout in vofs
 SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME","."), '.ssl/cadcproxy.pem'))
@@ -153,6 +154,7 @@ class Connection:
                     raise http_exception
             break
 
+        logger.debug("Returning connection object: {0}".format(connection))
         return connection
 
 
@@ -666,6 +668,7 @@ class VOFile:
     errnos = {404: errno.ENOENT,
               401: errno.EACCES,
               409: errno.EEXIST,
+              423: errno.EPERM,
               408: errno.EAGAIN}
     # ## if we get one of these codes, retry the command... ;-(
     retryCodes = (503, 408, 504, 412)
@@ -728,18 +731,20 @@ class VOFile:
         if self.closed:
             return self.closed
         try:
+            logger.debug("closing the connection.")
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
+                logger.debug("End of document sent.")
+            logger.debug("getting response.")
             self.resp = self.httpCon.getresponse()
+            logger.debug("checking response status.")
             self.checkstatus()
-        except IOError as e:
-            raise e
-        except Exception as e:
-            logger.debug(str(e))
-            raise IOError(errno.ENOTCONN, str(e))
+            logger.debug("Finishing close.")
         finally:
             self.closed = True
+            logger.debug("actually closing.")
             self.httpCon.close()
+            logger.debug("closed.")
         return self.closed
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
@@ -748,6 +753,7 @@ class VOFile:
         msgs = {404: "Node Not Found",
                 401: "Not Authorized",
                 409: "Conflict",
+                423: "Locked",
                 408: "Connection Timeout"}
         logger.debug("status %d for URL %s" % (self.resp.status, self.url))
         if self.resp.status not in codes:
@@ -851,8 +857,12 @@ class VOFile:
         if not self.closed:
             try:
                 self.close()
-            except IOError as read_error:
-                logger.debug(str(read_error))
+            except (httplib.HTTPException, ssl.SSLError) as exception:
+                logger.debug("Caught {0}: {1}".format(type(exception), str(exception)))
+                raise exception
+            except IOError as exception:
+                logger.debug(type(exception))
+                logger.debug(str(exception))
         if self.resp.status == 416:
             return ""
         # check the most likely response first
