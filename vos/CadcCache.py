@@ -4,14 +4,11 @@ A sparse file caching library
 
 import os
 import sys
-import io
 import stat
 import time
 import threading
 from Queue import Queue
 import traceback
-import hashlib
-from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import errno
 from contextlib import nested
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
@@ -23,7 +20,7 @@ import vos
 from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
 from logExceptions import logExceptions
-import pdb
+
 libcPath = ctypes.util.find_library('c')
 libc = ctypes.cdll.LoadLibrary(libcPath)
 
@@ -807,10 +804,10 @@ class FileHandle(object):
     def setReadException(self):
         self.readException = sys.exc_info()
 
-    def release(self):
-        """Close the file.
+    def flush(self):
+        """Flush contents of file to backing.
 
-        The last release of a modified file may respond by raising a CacheRetry
+        The flush of a modified file may respond by raising a CacheRetry
         exception if the flush to the backing store takes longer than the
         timeout specified for the cache. The caller should respond to this by
         repeating the call to release after satisfying the FUSE timeout
@@ -820,10 +817,10 @@ class FileHandle(object):
         if self.ioObject.exception is not None:
             raise self.ioObject.exception
 
-        vos.logger.debug("releasing node %s: id %d: refcount %d: modified %s: "
-                "obsolete: %s" %
-                (self.path, id(self), self.refCount, self.fileModified,
-                self.obsolete))
+        vos.logger.debug("FLushing node %s: id %d: refcount %d: modified %s: "
+                         "obsolete: %s" %
+                         (self.path, id(self), self.refCount, self.fileModified,
+                          self.obsolete))
         self.fileCondition.setTimeout()
         # using the condition lock acquires the fileLock
         with self.fileCondition:
@@ -853,7 +850,7 @@ class FileHandle(object):
                     raise CacheError("flushNodeQueue has not been initialized")
 
                 self.cache.flushNodeQueue.put(self)
-                self.flushQueued = True;
+                self.flushQueued = True
                 vos.logger.debug("queue size now %i" \
                                      % self.cache.flushNodeQueue.qsize())
 
@@ -868,10 +865,19 @@ class FileHandle(object):
             # Look for write failures.
             if self.flushException is not None:
                 raise self.flushException[0], self.flushException[1], \
-                        self.flushException[2]
+                    self.flushException[2]
+
+            return 0
+
+    def release(self):
+        """Close the file.
+
+        delete our reference to this cache object.
+        """
+
         self.deref()
 
-        return
+        return 0
 
     def deref(self):
         with nested(self.cache.cacheLock, self.fileLock,
