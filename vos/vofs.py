@@ -254,9 +254,6 @@ class VOFS(Operations):
             errno = EAGAIN
             if getattr(all_exceptions, 'errno', None) is not None:
                 errno = all_exceptions.errno
-            if "System is in read-only mode for maintainence" in str(all_exceptions):
-                vos.logger.debug("Setting error to Permission Denied.")
-                errno = EPERM
             exception = FuseOSError(errno)
             ret = str(exception)
             raise exception
@@ -317,18 +314,8 @@ class VOFS(Operations):
             # directory would be changed.
             self.getattr(path)['st_ctime'] = time.time()
             ## if node.chmod returns false then no changes were made.
-            try:
-                self.client.update(node)
-                self.getNode(path, force=True)
-            except Exception as e:
-                vos.logger.debug(str(e))
-                vos.logger.debug(type(e))
-                if "System is in read-only mode for maintainence" in str(e):
-                    e.errno = EPERM
-                e = FuseOSError(getattr(e, 'errno', ))
-                e.filename = path
-                e.strerror = getattr(e, 'strerror', 'failed to chmod on {0}'.format(path))
-                raise e
+            self.client.update(node)
+            self.getNode(path, force=True)
 
     #@logExceptions()
     def create(self, path, flags, fi=None):
@@ -437,19 +424,16 @@ class VOFS(Operations):
 
         set the mode after creation. """
 
-        parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
-        if parent_node and parent_node.props.get('islocked', False):
-            vos.logger.debug("Parent node of %s is locked." % path)
-            raise FuseOSError(EPERM)
+        #parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
+        #if parent_node and parent_node.props.get('islocked', False):
+        #    vos.logger.debug("Parent node of %s is locked." % path)
+        #    raise FuseOSError(EPERM)
         try:
             self.client.mkdir(path)
         except IOError as io_error:
-            vos.logger.debug("Trying to deal with message: {0}".format(str(io_error)))
-            if "System is in read-only mode" in str(io_error):
-                vos.logger.debug("Raising Permission error.")
+            if "read-only mode" in str(io_error):
                 raise FuseOSError(EPERM)
-            vos.logger.debug("Raising generic Error")
-            raise FuseOSError(EFAULT)
+            raise FuseOSError(getattr(io_error, 'errno', EFAULT))
         self.chmod(path, mode)
 
     #@logExceptions()
@@ -618,6 +602,27 @@ class VOFS(Operations):
                 self.condition.notify_all()
         return
 
+    def flush(self, path, file_id):
+
+        try:
+            fh = HandleWrapper.file_handle(file_id)
+        except KeyError:
+            raise FuseOSError(EIO)
+        try:
+            while True:
+                try:
+                    fh.cache_file_handle.flush()
+                    break
+                except CacheRetry:
+                    vos.logger.debug("Timeout Waiting for file flush: %s",
+                                     fh.cacheFileHandle.path)
+        except Exception:
+            exception = FuseOSError(EIO)
+            exception.filename = path
+            raise exception
+        return 0
+
+
     #@logExceptions()
     def release(self, path, file_id):
         """Close the file.
@@ -760,7 +765,5 @@ class VOFS(Operations):
         try:
             return fh.cache_file_handle.write(data, size, offset)
         except CacheRetry:
-            e = FuseOSError(EAGAIN)
-            e.strerror = "Timeout waiting for file write"
             vos.logger.debug("Timeout Waiting for file write: %s", path)
-            raise e
+            raise FuseOSError(EAGAIN)
