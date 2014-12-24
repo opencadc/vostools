@@ -29,7 +29,7 @@ class MyIOProxy(IOProxy):
     def __init__(self, vofs, path):
         super(MyIOProxy, self).__init__()
         self.vofs = vofs
-        # This is the vofile object last used
+        # This is the vos.VOFile object last used
         self.lastVOFile = None
         self.size = None
         self.md5 = None
@@ -118,7 +118,7 @@ class MyIOProxy(IOProxy):
                 offset += len(buff)
         except Exception as e:
             self.exception = e
-            raise
+            raise e
         finally:
             self.lastVOFile.close()
 
@@ -187,7 +187,7 @@ class HandleWrapper(object):
 class VOFS(Operations):
     cacheTimeout = 60
     """
-    The VOFS filesystem opperations class.  Requires the vos (VOSpace)
+    The VOFS filesystem operations class.  Requires the vos (VOSpace)
     python package.
 
     To use this you will also need a VOSpace account from the CADC.
@@ -251,11 +251,13 @@ class VOFS(Operations):
             ret = getattr(self, op)(*args)
             return ret
         except Exception as all_exceptions:
-            exception = FuseOSError(getattr(all_exceptions, 'errno', EIO))
-            vos.logger.debug(str(all_exceptions))
+            errno = EAGAIN
+            if getattr(all_exceptions, 'errno', None) is not None:
+                errno = all_exceptions.errno
             if "System is in read-only mode for maintainence" in str(all_exceptions):
                 vos.logger.debug("Setting error to Permission Denied.")
-                exception.errno = EPERM
+                errno = EPERM
+            exception = FuseOSError(errno)
             ret = str(exception)
             raise exception
         finally:
@@ -406,17 +408,8 @@ class VOFS(Operations):
         """
 
         ## Pull the node meta data from VOSpace.
-        try:
-            vos.logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
-            node = self.client.getNode(path, force=force, limit=limit)
-        except Exception as e:
-            vos.logger.debug(str(e))
-            vos.logger.debug(type(e))
-            ex = FuseOSError(getattr(e, 'errno', ENOENT))
-            ex.filename = path
-            ex.strerror = getattr(e, 'strerror', 'Error getting {0}'.format(path))
-            vos.logger.debug("failing with errno = {}".format(ex.errno))
-            raise ex
+        vos.logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
+        node = self.client.getNode(path, force=force, limit=limit)
 
         return node
 
