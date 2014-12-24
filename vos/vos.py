@@ -762,14 +762,17 @@ class VOFile:
             msg = self.resp.read()
             if msg is not None:
                 msg = html2text.html2text(msg, self.url).strip()
-            logger.debug("Error message: %s" % (msg))
+            logger.debug("Error message: {0}".format(msg))
             if self.resp.status in VOFile.errnos.keys():
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_token is None:
                     msg += " using anonymous access "
-            raise IOError(VOFile.errnos.get(self.resp.status,
+            exception = IOError(VOFile.errnos.get(self.resp.status,
                                             self.resp.status), msg, self.url)
+            if self.resp.status == 500 and "read-only" in msg:
+                exception = IOError(errno.EPERM)
+            raise exception
 
         # Get the file size. We use this 'X-CADC-Content-Length' as a
         # fallback to work around a server-side Java bug that limits
@@ -1701,7 +1704,6 @@ class Client:
                          followRedirect=False)
             con.write(str(node))
             transURL = con.read()
-            # logger.debug("Got back %s from $Client.VOProperties " % (con))
             # Start the job
             con = VOFile(transURL + "/phase", self.conn, method="POST",
                          followRedirect=False)
@@ -1713,9 +1715,6 @@ class Client:
             con.write(str(node))
             con.read()
         return 0
-        #f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
-        #f.write(str(node))
-        #f.close()
 
     def mkdir(self, uri):
         node = Node(self.fixURI(uri), node_type="vos:ContainerNode")
