@@ -95,10 +95,11 @@ class Cache(object):
 
         Parameters:
         -----------
-        cacheDir : string - The directory for the cache.
-        maxCacheSize : int - The maximum cache size in megabytes
-        readOnly : boolean - Is the cached data read-only
-        maxFlushThreads : int - Maximum number of nodes to flush simultaneously
+        @param cacheDir: The directory for the cache.
+        @param maxCacheSize: The maximum cache size in megabytes
+        @param read_only:  Is the cached data read-only
+        @param timeout: number of seconds to wait before timing-out a cache read.
+        @param maxFlushThreads: Maximum number of nodes to flush simultaneously
         """
 
         sys.setcheckinterval(10)
@@ -817,7 +818,7 @@ class FileHandle(object):
         if self.ioObject.exception is not None:
             raise self.ioObject.exception
 
-        vos.logger.debug("FLushing node %s: id %d: refcount %d: modified %s: "
+        vos.logger.debug("Flushing node %s: id %d: refcount %d: modified %s: "
                          "obsolete: %s" %
                          (self.path, id(self), self.refCount, self.fileModified,
                           self.obsolete))
