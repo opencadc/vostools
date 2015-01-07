@@ -185,7 +185,7 @@ class HandleWrapper(object):
 
 
 class VOFS(Operations):
-    cacheTimeout = 60
+    cacheTimeout = 1.0
     """
     The VOFS filesystem operations class.  Requires the vos (VOSpace)
     python package.
@@ -542,13 +542,7 @@ class VOFS(Operations):
         except KeyError:
             raise FuseOSError(EIO)
 
-        try:
-            return fh.cache_file_handle.read(size, offset)
-        except CacheRetry:
-            e = FuseOSError(EAGAIN)
-            e.strerror = "Timeout waiting for file read: {0}".format(path)
-            vos.logger.debug(e.strerror)
-            raise e
+        return fh.cache_file_handle.read(size, offset)
 
     #@logExceptions()
     def readlink(self, path):
@@ -577,13 +571,7 @@ class VOFS(Operations):
 
             while self.loading_dir.get(path, False):
                 vos.logger.debug("Waiting ... ")
-                try:
-                    self.condition.wait()
-                except CacheRetry:
-                    e = FuseOSError(EAGAIN)
-                    e.strerror = "Timeout waiting for directory listing"
-                    vos.logger.debug("Timeout Waiting for directory read: {0}".format(path))
-                    raise e
+                self.condition.wait()
         return ['.', '..'] + [e.name.encode('utf-8') for e in self.getNode(path,
                                                                            force=False,
                                                                            limit=None).getNodeList()]
@@ -604,26 +592,13 @@ class VOFS(Operations):
 
     def flush(self, path, file_id):
 
+        fh = HandleWrapper.file_handle(file_id)
         try:
-            fh = HandleWrapper.file_handle(file_id)
-        except KeyError:
-            raise FuseOSError(EIO)
-        try:
-            while True:
-                try:
-                    fh.cache_file_handle.flush()
-                    break
-                except CacheRetry as ce:
-                    vos.logger.debug(str(ce))
-                    e = FuseOSError(EAGAIN)
-                    e.strerror = "Timeout waiting for file flush: {0}".format(fh.cache_file_handle.path)
-                    vos.logger.debug(str(e))
-                    raise e
-        except Exception as e:
-            vos.logger.debug("Error on flush: {0}".format(e))
-            exception = FuseOSError(EIO)
-            exception.filename = path
-            raise exception
+            fh.cache_file_handle.flush()
+        except CacheRetry as ce:
+            vos.logger.critical(str(ce))
+            vos.logger.critical("Push to VOSpace reached FUSE timeout, continuing VOSpace push in background.")
+            pass
         return 0
 
 
@@ -635,29 +610,13 @@ class VOFS(Operations):
         @param file_id: file_handle_id to close reference to
         """
         vos.logger.debug("releasing file %d " % file_id)
-        try:
-            fh = HandleWrapper.file_handle(file_id)
-        except KeyError:
-            raise FuseOSError(EIO)
-
-        try:
-            while True:
-                try:
-                    fh.cache_file_handle.release()
-                    break
-                except CacheRetry:
-                    vos.logger.debug("Timeout Waiting for file release: %s",
-                                     fh.cacheFileHandle.path)
-            if fh.cache_file_handle.fileModified:
-                # This makes the node disappear from the nodeCache.
-                with self.client.nodeCache.volatile(path):
-                    pass
-            fh.release()
-        except Exception:
-            exception = FuseOSError(EIO)
-            exception.filename = path
-            raise exception
-        return 0
+        fh = HandleWrapper.file_handle(file_id)
+        fh.cache_file_handle.release()
+        if fh.cache_file_handle.fileModified:
+            # This makes the node disappear from the nodeCache.
+            with self.client.nodeCache.volatile(path):
+                pass
+        return fh.release()
 
     #@logExceptions()
     def rename(self, src, dest):
@@ -766,8 +725,4 @@ class VOFS(Operations):
         vos.logger.debug("%s -> %s" % (path, fh))
         vos.logger.debug("%d --> %d" % (offset, offset + size))
 
-        try:
-            return fh.cache_file_handle.write(data, size, offset)
-        except CacheRetry:
-            vos.logger.debug("Timeout Waiting for file write: %s", path)
-            raise FuseOSError(EAGAIN)
+        return fh.cache_file_handle.write(data, size, offset)
