@@ -943,6 +943,7 @@ class FileHandle(object):
                 self.metaData.setReadBlocks(0, numBlocks - 1)
             self.metaData.md5sum = md5
             self.metaData.persist()
+            self.fileModified = False
 
         except Exception as e:
             vos.logger.debug("Flush node failed")
@@ -953,7 +954,6 @@ class FileHandle(object):
                 self.writerLock.release()
             except:
                 pass
-            self.fileModified = False
             self.deref()
             _flush_thread_count = _flush_thread_count - 1
             vos.logger.debug("finished flushing node %s, working thread count is %i " \
