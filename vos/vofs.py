@@ -613,10 +613,14 @@ class VOFS(Operations):
                 try:
                     fh.cache_file_handle.flush()
                     break
-                except CacheRetry:
-                    vos.logger.debug("Timeout Waiting for file flush: %s",
-                                     fh.cacheFileHandle.path)
-        except Exception:
+                except CacheRetry as ce:
+                    vos.logger.debug(str(ce))
+                    e = FuseOSError(EAGAIN)
+                    e.strerror = "Timeout waiting for file flush: {0}".format(fh.cache_file_handle.path)
+                    vos.logger.debug(str(e))
+                    raise e
+        except Exception as e:
+            vos.logger.debug("Error on flush: {0}".format(e))
             exception = FuseOSError(EIO)
             exception.filename = path
             raise exception
