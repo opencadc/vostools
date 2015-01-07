@@ -948,6 +948,7 @@ class FileHandle(object):
         except Exception as e:
             vos.logger.debug("Flush node failed")
             self.flushException = sys.exc_info()
+            vos.logger.debug(str(self.flushException))
         finally:
             self.flushQueued = None
             try:
