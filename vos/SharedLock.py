@@ -71,7 +71,7 @@ class SharedLock(object):
                     self.condition.wait(timeout - waitTime)
                     waitTime = time.time() - waitStart
                     if self.exclusiveLock is not None and waitTime > timeout:
-                        raise TimeoutError("Timout waiting for a shared lock")
+                        raise TimeoutError("Timeout waiting for a shared lock")
 
             # exclusive lock is now None, we can acquire either a shared or
             # exclusive lock
@@ -89,7 +89,7 @@ class SharedLock(object):
                         waitTime = time.time() - waitStart
                         if len(self.lockersList) > 0 and waitTime > timeout:
                             raise TimeoutError(
-                                    "Timout waiting for a shared lock")
+                                    "Timeout waiting for a shared lock")
                 self.exclusiveLock = threading.current_thread()
 
     def steal(self):
