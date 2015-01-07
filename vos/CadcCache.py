@@ -76,7 +76,7 @@ class CacheCondition(object):
             timeLeft = self.threadSpecificData.endTime - time.time()
             if timeLeft < 0:
                 self.threadSpecificData.endTime = None
-                raise CacheRetry("Condition varible timeout")
+                raise CacheRetry("Condition variable timeout")
             else:
                 self.myCondition.wait(timeLeft)
 
@@ -558,9 +558,11 @@ class CacheError(Exception):
         return repr(self.value)
 
 
-class CacheRetry(Exception):
-    def __init__(self, value):
+class CacheRetry(OSError):
+    def __init__(self, value, path=None):
         self.value = value
+        self.filename = path
+        self.errno = EAGAIN
 
     def __str__(self):
         return repr(self.value)
