@@ -13,6 +13,9 @@ from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from logExceptions import logExceptions
+import logging
+
+logger = logging.getLogger('vofs')
 
 
 def flag2mode(flags):
@@ -42,11 +45,11 @@ class MyIOProxy(IOProxy):
         """
         Write a file in the cache to the remote file.
         """
-        vos.logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
+        logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
 
         (size, mtime) = self.cacheFile.getFileInfo()
 
-        vos.logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
+        logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
         dest_uri = self.vofs.getNode(self.cacheFile.path).uri
         md5 = hashlib.md5()
         BUFSIZE = Cache.IO_BLOCK_SIZE
@@ -62,7 +65,7 @@ class MyIOProxy(IOProxy):
                 vo_file_handle.write(buf)
                 md5.update(buf)
         except Exception as e:
-            vos.logger.debug("{0}".format(e))
+            logger.debug("{0}".format(e))
             raise e
         finally:
             vo_file_handle.close()
@@ -92,22 +95,22 @@ class MyIOProxy(IOProxy):
             byte_range = "bytes=%s-%s" % (str(offset), end_str)
         else:
             byte_range = None
-        vos.logger.debug("reading range: %s" % (str(byte_range)))
+        logger.debug("reading range: %s" % (str(byte_range)))
 
         if self.lastVOFile is None:
-            vos.logger.debug("Opening a new vo file on %s",
+            logger.debug("Opening a new vo file on %s",
                              self.cacheFile.path)
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
                                                     mode=os.O_RDONLY, view="data", size=size, range=byte_range,
                                                     possible_partial_read=True)
         else:
-            vos.logger.debug("Opening a existing vo file on %s",
+            logger.debug("Opening a existing vo file on %s",
                              self.lastVOFile.URLs[self.lastVOFile.urlIndex])
             self.lastVOFile.open(
                 self.lastVOFile.URLs[self.lastVOFile.urlIndex],
                 bytes=byte_range, possible_partial_read=True)
         try:
-            vos.logger.debug("reading from %s" % (
+            logger.debug("reading from %s" % (
                 str(self.lastVOFile.URLs[self.lastVOFile.urlIndex])))
             while True:
                 try:
@@ -119,7 +122,7 @@ class MyIOProxy(IOProxy):
                     # and it failed, so now we can try the full URL
                     # list. If it still fails let the error propagate
                     # to client
-                    vos.logger.debug("Error while reading: {0}".format(io_error))
+                    logger.debug("Error while reading: {0}".format(io_error))
                     self.lastVOFile = self.vofs.client.open(
                         self.cacheFile.path, mode=os.O_RDONLY, view="data",
                         size=size, range=byte_range, full_negotiation=True, possible_partial_read=True)
@@ -130,9 +133,9 @@ class MyIOProxy(IOProxy):
                     self.cacheFile.setHeader(info[0], info[1])
 
                 if buff is None:
-                    vos.logger.debug("buffer for {0} is None".format(self.cacheFile.path))
+                    logger.debug("buffer for {0} is None".format(self.cacheFile.path))
                 else:
-                    vos.logger.debug("Writing: {0} bytes at {1} to cache for {2}".format(len(buff),
+                    logger.debug("Writing: {0} bytes at {1} to cache for {2}".format(len(buff),
                                                                                          offset,
                                                                                          self.cacheFile.path))
                 if not buff:
@@ -149,7 +152,7 @@ class MyIOProxy(IOProxy):
         finally:
             self.lastVOFile.close()
 
-        vos.logger.debug("Wrote: %d bytes to cache for %s" % (offset, self.cacheFile.path))
+        logger.debug("Wrote: %d bytes to cache for %s" % (offset, self.cacheFile.path))
 
     def get_md5(self):
         if self.md5 is None:
@@ -271,7 +274,7 @@ class VOFS(Operations):
         self.condition = CacheCondition(lock=None, timeout=VOFS.cacheTimeout)
 
     def __call__(self, op, *args):
-        vos.logger.debug('-> {0} {1}'.format(op, repr(args)))
+        logger.debug('-> {0} {1}'.format(op, repr(args)))
         ret = None
         try:
             if not hasattr(self, op):
@@ -286,14 +289,14 @@ class VOFS(Operations):
             ret = str(exception)
             raise exception
         finally:
-            vos.logger.debug('<- {0} {1}'.format(op, repr(ret)))
+            logger.debug('<- {0} {1}'.format(op, repr(ret)))
 
     #@logExceptions()
     def access(self, path, mode):
         """Check if path is accessible.
 
         Only checks read access, mode is currently ignored"""
-        vos.logger.debug("Checking if -->{0}<-- is accessible".format(path))
+        logger.debug("Checking if -->{0}<-- is accessible".format(path))
         try:
             self.getNode(path)
         except:
@@ -314,7 +317,7 @@ class VOFS(Operations):
         Here I use the logic that the new group will be inherited from
         the container group information.
         """
-        vos.logger.debug("Changing mode for %s to %d" % (path, mode))
+        logger.debug("Changing mode for %s to %d" % (path, mode))
 
         node = self.getNode(path)
         parent = self.getNode(os.path.dirname(path))
@@ -352,7 +355,7 @@ class VOFS(Operations):
         @param flags: Read/Write settings (eg. 600)
         """
 
-        vos.logger.debug("Creating a node: %s with flags %s" %
+        logger.debug("Creating a node: %s with flags %s" %
                          (path, str(flags)))
 
         # Create is handle by the client.
@@ -372,8 +375,8 @@ class VOFS(Operations):
                 self.getNode(path, force=True)
 
         except Exception as e:
-            vos.logger.error(str(e))
-            vos.logger.error("Error trying to create Node {0}".format(path))
+            logger.error(str(e))
+            logger.error("Error trying to create Node {0}".format(path))
             f = FuseOSError(getattr(e, 'errno', EIO))
             f.strerror = getattr(e, 'strerror', 'failed to create {0}'.format(path))
             raise f
@@ -395,7 +398,7 @@ class VOFS(Operations):
     #@logExceptions()
     def fsync(self, path, data_sync, file_id):
         if self.opt.readonly:
-            vos.logger.debug("File system is readonly, no sync allowed")
+            logger.debug("File system is readonly, no sync allowed")
             return
 
         try:
@@ -423,7 +426,7 @@ class VOFS(Operations):
         """
 
         ## Pull the node meta data from VOSpace.
-        vos.logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
+        logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
         node = self.client.getNode(path, force=force, limit=limit)
 
         return node
@@ -433,7 +436,7 @@ class VOFS(Operations):
         """
         Build some attributes for this file, we have to make-up some stuff
         """
-        vos.logger.debug("getting attributes of {0}".format(path))
+        logger.debug("getting attributes of {0}".format(path))
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         attr = self.cache.getAttr(path)
@@ -454,7 +457,7 @@ class VOFS(Operations):
 
         #parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
         #if parent_node and parent_node.props.get('islocked', False):
-        #    vos.logger.debug("Parent node of %s is locked." % path)
+        #    logger.debug("Parent node of %s is locked." % path)
         #    raise FuseOSError(EPERM)
         try:
             self.client.mkdir(path)
@@ -473,7 +476,7 @@ class VOFS(Operations):
 
         """
 
-        vos.logger.debug("Opening %s with flags %s" % (path, flag2mode(flags)))
+        logger.debug("Opening %s with flags %s" % (path, flag2mode(flags)))
         node = None
 
         # according to man for open(2), flags must contain one of O_RDWR,
@@ -505,14 +508,14 @@ class VOFS(Operations):
         locked = False
 
         if node and node.props.get('islocked', False):
-            vos.logger.debug("%s is locked." % path)
+            logger.debug("%s is locked." % path)
             locked = True
 
         if not read_only and node and not locked:
             if node.type == "vos:DataNode":
                 parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
                 if parent_node.props.get('islocked', False):
-                    vos.logger.debug("%s is locked by parent node." % path)
+                    logger.debug("%s is locked by parent node." % path)
                     locked = True
             elif node.type == "vos:LinkNode":
                 try:
@@ -520,15 +523,15 @@ class VOFS(Operations):
                     # locked
                     target_node = self.getNode(node.target, force=False, limit=1)
                     if target_node.props.get('islocked', False):
-                        vos.logger.debug("{0} target node is locked.".format(path))
+                        logger.debug("{0} target node is locked.".format(path))
                         locked = True
                     else:
                         target_parent_node = self.getNode(os.path.dirname(node.target), force=False, limit=1)
                         if target_parent_node.props.get('islocked', False):
-                            vos.logger.debug("{0} parent node is locked.".format(path))
+                            logger.debug("{0} parent node is locked.".format(path))
                             locked = True
                 except Exception as lock_exception:
-                    vos.logger.warn("Error while checking for lock: {0}".format(str(lock_exception)))
+                    logger.warn("Error while checking for lock: {0}".format(str(lock_exception)))
                     pass
 
         if locked and not read_only:
@@ -536,7 +539,7 @@ class VOFS(Operations):
             e = OSError(EPERM)
             e.filename = path
             e.strerror = "Cannot write to locked file"
-            vos.logger.debug("{0}".format(e))
+            logger.debug("{0}".format(e))
             raise e
 
         my_proxy = MyIOProxy(self, path)
@@ -546,7 +549,8 @@ class VOFS(Operations):
 
         # new file in cache library or if no node information (node not in vospace).
         handle = self.cache.open(path, flags & os.O_WRONLY != 0, must_exist, my_proxy, self.cache_nodes)
-
+        if not read_only:
+            handle.write_ref_count += 1
         if flags & os.O_TRUNC != 0:
             handle.truncate(0)
         if node is not None:
@@ -564,7 +568,7 @@ class VOFS(Operations):
         if file_id is None:
             raise FuseOSError(EIO)
 
-        vos.logger.debug("reading range: %s %d %d %d" % (path, size, offset, file_id))
+        logger.debug("reading range: %s %d %d %d" % (path, size, offset, file_id))
 
         try:
             fh = HandleWrapper.file_handle(file_id)
@@ -590,7 +594,7 @@ class VOFS(Operations):
     #@logExceptions()
     def readdir(self, path, file_id):
         """Send a list of entries in this directory"""
-        vos.logger.debug("Getting directory list for {0}".format(path))
+        logger.debug("Getting directory list for {0}".format(path))
         ## reading from VOSpace can be slow, we'll do this in a thread
         import thread
         with self.condition:
@@ -599,7 +603,7 @@ class VOFS(Operations):
                 thread.start_new_thread(self.load_dir, (path, ))
 
             while self.loading_dir.get(path, False):
-                vos.logger.debug("Waiting ... ")
+                logger.debug("Waiting ... ")
                 self.condition.wait()
         return ['.', '..'] + [e.name.encode('utf-8') for e in self.getNode(path,
                                                                            force=False,
@@ -610,9 +614,9 @@ class VOFS(Operations):
         """Load the dirlist from VOSpace.
         This should always be run in a thread."""
         try:
-            vos.logger.debug("Starting getNodeList thread")
+            logger.debug("Starting getNodeList thread")
             self.getNode(path, force=True, limit=None).getNodeList()
-            vos.logger.debug("Got listing for {0}".format(path))
+            logger.debug("Got listing for {0}".format(path))
         finally:
             self.loading_dir[path] = False
             with self.condition:
@@ -621,14 +625,14 @@ class VOFS(Operations):
 
     def flush(self, path, file_id):
 
-        vos.logger.debug("flushing {0}".format(file_id))
+        logger.debug("flushing {0}".format(file_id))
         fh = HandleWrapper.file_handle(file_id)
 
         try:
             fh.cache_file_handle.flush()
         except CacheRetry as ce:
-            vos.logger.critical(str(ce))
-            vos.logger.critical("Push to VOSpace reached FUSE timeout, continuing VOSpace push in background.")
+            logger.critical(str(ce))
+            logger.critical("Push to VOSpace reached FUSE timeout, continuing VOSpace push in background.")
             pass
         return 0
 
@@ -640,7 +644,7 @@ class VOFS(Operations):
         @param path: vospace path to close reference to
         @param file_id: file_handle_id to close reference to
         """
-        vos.logger.debug("releasing file %d " % file_id)
+        logger.debug("releasing file %d " % file_id)
         fh = HandleWrapper.file_handle(file_id)
         fh.cache_file_handle.release()
         if fh.cache_file_handle.fileModified:
@@ -652,21 +656,21 @@ class VOFS(Operations):
     #@logExceptions()
     def rename(self, src, dest):
         """Rename a data node into a new container"""
-        vos.logger.debug("Original %s -> %s" % (src, dest))
+        logger.debug("Original %s -> %s" % (src, dest))
         #if not self.client.isfile(src):
         #   return -1
         #if not self.client.isdir(os.path.dirname(dest)):
         #    return -1
         try:
-            vos.logger.debug("Moving %s to %s" % (src, dest))
+            logger.debug("Moving %s to %s" % (src, dest))
             result = self.client.move(src, dest)
-            vos.logger.debug(str(result))
+            logger.debug(str(result))
             if result:
                 self.cache.renameFile(src, dest)
                 return 0
             return -1
         except Exception, e:
-            vos.logger.error("%s" % str(e))
+            logger.error("%s" % str(e))
             import re
             if re.search('NodeLocked', str(e)) is not None:
                 raise FuseOSError(EPERM)
@@ -676,7 +680,7 @@ class VOFS(Operations):
     def rmdir(self, path):
         node = self.getNode(path)
         if node and node.props.get('islocked', False):
-            vos.logger.debug("%s is locked." % path)
+            logger.debug("%s is locked." % path)
             raise FuseOSError(EPERM)
         self.client.delete(path)
 
@@ -700,7 +704,7 @@ class VOFS(Operations):
     #@logExceptions()
     def truncate(self, path, length, file_id=None):
         """Perform a file truncation to length bytes"""
-        vos.logger.debug("Attempting to truncate {0}({1}) to length {2}".format(path, file_id, length))
+        logger.debug("Attempting to truncate {0}({1}) to length {2}".format(path, file_id, length))
 
         if file_id is None:
             # Ensure the file exists.
@@ -717,7 +721,7 @@ class VOFS(Operations):
         else:
             fh = HandleWrapper.file_handle(file_id)
             if fh.read_only:
-                vos.logger.debug("file was not opened for writing")
+                logger.debug("file was not opened for writing")
                 raise FuseOSError(EPERM)
             fh.cache_file_handle.truncate(length)
         return
@@ -726,7 +730,7 @@ class VOFS(Operations):
     def unlink(self, path):
         node = self.getNode(path, force=False, limit=1)
         if node and node.props.get('islocked', False):
-            vos.logger.debug("%s is locked." % path)
+            logger.debug("%s is locked." % path)
             raise FuseOSError(EPERM)
         self.cache.unlinkFile(path)
         if node:
@@ -736,7 +740,7 @@ class VOFS(Operations):
     def write(self, path, data, size, offset, file_id=None):
 
         if self.opt.readonly:
-            vos.logger.debug("File system is readonly.. so writing 0 bytes\n")
+            logger.debug("File system is readonly.. so writing 0 bytes\n")
             return 0
 
         try:
@@ -745,9 +749,9 @@ class VOFS(Operations):
             raise FuseOSError(EIO)
 
         if fh.read_only:
-            vos.logger.debug("file was not opened for writing")
+            logger.debug("file was not opened for writing")
             raise FuseOSError(EPERM)
 
-        vos.logger.debug("%s -> %s" % (path, fh))
-        vos.logger.debug("%d --> %d" % (offset, offset + size))
+        logger.debug("%s -> %s" % (path, fh))
+        logger.debug("%d --> %d" % (offset, offset + size))
         return fh.cache_file_handle.write(data, size, offset)
