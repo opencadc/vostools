@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 """A FUSE based filesystem view of VOSpace."""
+import hashlib
 
 import time
 import vos
@@ -43,11 +44,37 @@ class MyIOProxy(IOProxy):
         """
         vos.logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
 
-        self.vofs.client.copy(self.cacheFile.cacheDataFile,
-                              self.vofs.getNode(self.cacheFile.path).uri)
-        node = self.vofs.getNode(self.cacheFile.path, force=True)
-        vos.logger.debug("attributes: %s " % str(node.attr))
-        return node.props.get("MD5")
+        (size, mtime) = self.cacheFile.getFileInfo()
+
+        vos.logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
+        dest_uri = self.vofs.getNode(self.cacheFile.path).uri
+        md5 = hashlib.md5()
+        BUFSIZE = Cache.IO_BLOCK_SIZE
+        vo_file_handle = self.vofs.client.open(dest_uri, mode=os.O_WRONLY, size=size)
+        cache_file_handle = open(self.cacheFile.cacheDataFile, 'r')
+        try:
+            while True:
+                buf = cache_file_handle.read(BUFSIZE)
+                if len(buf) == 0:
+                    break
+                if self.cacheFile.writeAborted:
+                    raise CacheAborted("Write to VOSpace aborted.")
+                vo_file_handle.write(buf)
+                md5.update(buf)
+        except Exception as e:
+            vos.logger.debug("{0}".format(e))
+            raise e
+        finally:
+            vo_file_handle.close()
+            cache_file_handle.close()
+
+        vo_md5 = self.vofs.getNode(dest_uri, force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+        if md5.hexdigest() != vo_md5:
+            raise OSError(EIO,
+                          "md5 sums of source ({0}) and destination ){1}) don't match".format(
+                              self.cacheFile.cacheDataFile, dest_uri))
+
+        return vo_md5
 
     @logExceptions()
     def readFromBacking(self, size=None, offset=0,
@@ -185,7 +212,7 @@ class HandleWrapper(object):
 
 
 class VOFS(Operations):
-    cacheTimeout = 1.0
+    cacheTimeout = 5.0
     """
     The VOFS filesystem operations class.  Requires the vos (VOSpace)
     python package.
@@ -201,6 +228,7 @@ class VOFS(Operations):
     listxattr = None
     removexattr = None
     setxattr = None
+    chmod = None
 
     def __init__(self, root, cache_dir, options, conn=None,
                  cache_limit=1024, cache_nodes=False,
@@ -273,7 +301,7 @@ class VOFS(Operations):
         return 0
 
     #@logExceptions()
-    def chmod(self, path, mode):
+    def no_chmod(self, path, mode):
         """
         Set the read/write groups on the VOSpace node based on chmod style
         modes.
@@ -505,9 +533,10 @@ class VOFS(Operations):
 
         if locked and not read_only:
             # file is locked, cannot write
-            e = FuseOSError(ENOENT)
-            e.strerror = "Cannot create locked file"
-            vos.logger.debug("Cannot create locked file: %s", path)
+            e = OSError(EPERM)
+            e.filename = path
+            e.strerror = "Cannot write to locked file"
+            vos.logger.debug("{0}".format(e))
             raise e
 
         my_proxy = MyIOProxy(self, path)
@@ -592,7 +621,9 @@ class VOFS(Operations):
 
     def flush(self, path, file_id):
 
+        vos.logger.debug("flushing {0}".format(file_id))
         fh = HandleWrapper.file_handle(file_id)
+
         try:
             fh.cache_file_handle.flush()
         except CacheRetry as ce:
@@ -681,15 +712,10 @@ class VOFS(Operations):
             fh = self.open(path, os.O_RDWR)
             try:
                 self.truncate(path, length, fh)
-            except Exception:
-                raise
             finally:
                 self.release(path, fh)
         else:
-            try:
-                fh = HandleWrapper.file_handle(file_id)
-            except KeyError:
-                raise FuseOSError(EIO)
+            fh = HandleWrapper.file_handle(file_id)
             if fh.read_only:
                 vos.logger.debug("file was not opened for writing")
                 raise FuseOSError(EPERM)
@@ -724,5 +750,4 @@ class VOFS(Operations):
 
         vos.logger.debug("%s -> %s" % (path, fh))
         vos.logger.debug("%d --> %d" % (offset, offset + size))
-
         return fh.cache_file_handle.write(data, size, offset)
