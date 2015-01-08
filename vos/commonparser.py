@@ -3,7 +3,6 @@ import logging
 import optparse
 import os
 import sys
-import vos
 from __version__ import version
 
 class CommonParser(optparse.OptionParser):
