@@ -763,7 +763,7 @@ class VOFile:
             if msg is not None:
                 msg = html2text.html2text(msg, self.url).strip()
             logger.debug("Error message: {0}".format(msg))
-            if self.resp.status in VOFile.errnos.keys():
+            if self.resp.status in VOFile.errnos.keys() or (msg is not None and "Node is busy" in msg):
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_token is None:
