@@ -40,6 +40,9 @@ except NameError:
 from __version__ import version
 
 logger = logging.getLogger('vos')
+logger.setLevel(logging.ERROR)
+connection_count_logger = logging.getLogger('connections')
+connection_count_logger.setLevel(logging.DEBUG)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
@@ -56,6 +59,7 @@ VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME","
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
+CONNECTION_COUNTER = 0
 
 
 class URLparse:
@@ -105,12 +109,14 @@ class Connection:
         if self.vospace_token is None:
             ## allow anonymous access if no certfile specified
             if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-                logger.critical(
+                self.logger.critical(
                     "Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
                 vospace_certfile = None
             self.vospace_certfile = vospace_certfile
 
         self.http_debug = http_debug
+        self.logger = logging.getLogger('http')
+        self.logger.setLevel(logging.ERROR)
 
     def get_connection(self, url):
         """Create an HTTPSConnection object and return.  Uses the client
@@ -119,8 +125,13 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         """
 
+        global CONNECTION_COUNTER
+        CONNECTION_COUNTER += 1
+
         parts = URLparse(url)
-        logger.debug("Trying to connect to %s://%s using %s" % (parts.scheme, parts.netloc, self.vospace_certfile))
+        connection_count_logger.debug("Opening connection {0} to {1}://{2} using {3}".foramt(CONNECTION_COUNTER,
+                                                                                             parts.scheme, parts.netloc,
+                                                                                             self.vospace_certfile))
 
         try:
             if parts.scheme == "https" and self.vospace_certfile is not None:
@@ -132,8 +143,8 @@ class Connection:
                 connection = httplib.HTTPConnection(parts.netloc,
                                                     timeout=CONNECTION_TIMEOUT)
         except httplib.NotConnected as e:
-            logger.error("HTTP connection to %s failed \n" % parts.netloc)
-            logger.error("%s \n" % (str(e)))
+            self.logger.error("HTTP connection to %s failed \n" % parts.netloc)
+            self.logger.error("%s \n" % (str(e)))
             raise OSError(errno.ECONNREFUSED, "VOSpace connection failed",
                           parts.netloc)
 
@@ -142,19 +153,20 @@ class Connection:
 
         # # Try to open this connection.
         start_time = time.time()
-        logger.debug("Opening the connection")
+        self.logger.debug("Opening the connection")
 
         while True:
             try:
+                self.logger.debug("Opening connection.")
                 connection.connect()
             except httplib.HTTPException as http_exception:
-                logger.critical("%s" % (str(http_exception)))
-                logger.critical("Retrying connection for {} seconds".format(MAX_RETRY_TIME))
+                self.logger.critical("%s" % (str(http_exception)))
+                self.logger.critical("Retrying connection for {} seconds".format(MAX_RETRY_TIME))
                 if time.time() - start_time > MAX_RETRY_TIME:
                     raise http_exception
             break
 
-        logger.debug("Returning connection object: {0}".format(connection))
+        self.logger.debug("Returning connection object: {0}".format(connection))
         return connection
 
 
@@ -728,8 +740,10 @@ class VOFile:
 
     def close(self):
         """close the connection"""
+        global CONNECTION_COUNTER
         if self.closed:
             return self.closed
+        connection_count_logger.debug("Closing http connection no. {0}.".format(CONNECTION_COUNTER))
         try:
             logger.debug("closing the connection.")
             if self.transEncode is not None:
@@ -789,13 +803,9 @@ class VOFile:
         """Open a connection to the given URL"""
         logger.debug("Opening %s (%s)" % (URL, method))
         self.url = URL
-        #logger.debug("Established connection")
         self.httpCon = self.connector.get_connection(URL)
-        #logger.debug("Established connection")
 
-        #self.httpCon.set_debuglevel(2)
         self.closed = False
-        #logger.debug("putting request")
         self.httpCon.putrequest(method, URL)
         userAgent = 'vos ' + version
         if "mountvofs" in sys.argv[0]:
@@ -808,8 +818,6 @@ class VOFile:
             self.httpCon.putheader(HEADER_DELEG_TOKEN,
                                    self.connector.vospace_token)
 
-            #logger.debug("sending headers for file of size: %s " %
-            #(str(self.size)))
         if method in ["PUT"]:
             try:
                 self.size = int(self.size)
@@ -826,17 +834,13 @@ class VOFile:
             contentType = "text/xml"
             if method == "PUT":
                 ext = os.path.splitext(urllib.splitquery(URL)[0])[1]
-                #logger.debug("Got extension %s" % (ext))
                 if ext in ['.fz', '.fits', 'fit']:
                     contentType = 'application/fits'
                 else:
                     contentType = mimetypes.guess_type(URL)[0]
-                    #logger.debug("Guessed content type: %s" % (contentType))
             if contentType is not None:
-                #logger.debug("Content-Type: %s" % str(contentType))
                 self.httpCon.putheader("Content-Type", contentType)
         if bytes is not None and method == "GET":
-            #logger.debug("Range: %s" % (bytes))
             self.httpCon.putheader("Range", bytes)
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.putheader("Expect", "100-continue")
