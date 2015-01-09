@@ -21,6 +21,7 @@ class CacheMetaData(object):
         """
 
         self.metaDataFile = metaDataFile
+        self.blocks = blocks is  None and 0 or blocks
         self.md5sum = md5sum
         self.size = size
         self.bitmap = None
@@ -31,25 +32,23 @@ class CacheMetaData(object):
                 #persisted bitmap still valid. Used that instead
                 self.bitmap = persisted.bitmap
                 self.size = persisted.size
+                self.md5sum = persisted.md5sum
             f.close()
 
-        if (self.bitmap is None):
-            if blocks is None:
-                self.bitmap = BitVector.BitVector(size=0)
-            else:
-                self.bitmap = BitVector.BitVector(size=blocks)
+        self.bitmap = self.bitmap is None and BitVector.BitVector(size=blocks) or self.bitmap
 
     def __str__(self):
-        """To create a print representation"""
-        # TODO this is pre Python2.6 format style.
-        # Do we need to use the new string formatting instead?
-        if self.md5sum is None:
-            return "%s (None, %s %s)" % (self.metaDataFile,
-                    self.size, self.bitmap)
-        else:
-            return "%s (%#x, %s %s)" % (self.metaDataFile, self.md5sum,
-                    self.size, self.bitmap)
+        """To create a print representation that is informative."""
+        return "CacheMetaData: metaDataFile=%r bitmap=%r md5sum=%r size=%r" % (self.metaDataFile,
+                                                                               self.bitmap,
+                                                                               self.md5sum,
+                                                                               self.size)
 
+    def __repr__(self):
+        return "CacheMetaData(metaDataFile=%r, blocks=%r, md5sum=%r, size=%r)" % (self.metaDataFile,
+                                                                                  self.blocks,
+                                                                                  self.md5sum,
+                                                                                  self.size)
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """
         startBlock = start
