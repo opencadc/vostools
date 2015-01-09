@@ -28,7 +28,7 @@ libc = ctypes.cdll.LoadLibrary(libcPath)
 _flush_thread_count = 0
 
 logger = logging.getLogger('cache')
-logger.setLevel(logger.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 
 # TODO optionally disable random reads - always read to the end of the file.
@@ -192,8 +192,8 @@ class Cache(object):
         fileHandle = self.getFileHandle(path, isNew, ioObject)
         logger.debug("Got filehandle: {0}".format(fileHandle))
         with fileHandle.fileCondition:
-            logger.debug("Opening file %s: isnew %s: id %d" % (path, isNew,
-                        id(fileHandle)))
+            logger.debug("Opening file {0}: isnew {1}: id {2}: Fully Cached {3}: Must Exist {4}: Trust MetaData {5}:".format(
+                path, isNew, id(fileHandle), fileHandle.fullyCached, mustExist, trustMetaData))
             # If this is a new file, initialize the cache state, otherwise
             # leave it alone.
             if fileHandle.fullyCached is None:
@@ -233,8 +233,13 @@ class Cache(object):
 
             # For an existing file, start a data transfer to get the size and
             # md5sum unless the information is available and is trusted.
-            if (fileHandle.refCount == 1 and not fileHandle.fileModified and 
+            logger.debug("Next step.")
+            logger.debug("RefCount: {0}, gotHeader: {1}, fileModified: {2}, trustMetaData: {3}".format(
+                fileHandle.refCount, fileHandle.gotHeader, fileHandle.fileModified, trustMetaData
+            ))
+            if ((fileHandle.refCount == 1 or not fileHandle.gotHeader) and not fileHandle.fileModified and
                     (fileHandle.metaData is None or not trustMetaData)):
+                logger.debug("Doing a readData.")
                 fileHandle.readData(0, 0, None)
                 while (not fileHandle.gotHeader and
                         fileHandle.readException is None):
@@ -263,6 +268,7 @@ class Cache(object):
 
     def getFileHandle(self, path, createFile, ioObject):
         """Find an existing file handle, or create one if necessary.
+        @rtype : FileHandle
         """
         with self.cacheLock:
             try:
@@ -272,6 +278,8 @@ class Cache(object):
                 isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
+            logger.debug("newFileHandle: {0}".format(newFileHandle))
+            logger.debug("isNewFileHandle: {0}".format(newFileHandle))
             if not isNewFileHandle and createFile:
                 # We got an old file handle, but are creating a new file.
                 # Mark the old file handle as obsolete and create a new
@@ -293,6 +301,7 @@ class Cache(object):
                     newFileHandle.refCount += 1
             else:
                 newFileHandle.refCount += 1
+            logger.debug("RefCount: {0}".format(newFileHandle.refCount))
         return newFileHandle
 
     @logExceptions()
@@ -767,6 +776,7 @@ class FileHandle(object):
         self.flushQueued = None
         self.flushException = None
         self.readThread = None
+        self.writeAborted = None
         self.gotHeader = False
         self.fileSize = None
         self.readException = None
@@ -823,17 +833,14 @@ class FileHandle(object):
         if self.ioObject.exception is not None:
             raise self.ioObject.exception
 
-        logger.debug("Flushing node %s: id %d: refCount %d: write_ref_cont %d: modified %s: "
-                         "obsolete: %s" %
-                         (self.path, id(self),
-                          self.refCount,
-                          self.write_ref_count,
-                          self.fileModified,
-                          self.obsolete))
+        logger.debug("Flushing node %s: id %d: refCount %d: modified %s: obsolete: %s" %
+                     (self.path, id(self),
+                      self.refCount,
+                      self.fileModified,
+                      self.obsolete))
         self.fileCondition.setTimeout()
         logger.debug("using the condition lock acquires the fileLock")
         with self.fileCondition:
-            self.write_ref_count -= 1
             logger.debug("Got the lock. Flushing: {0}".format(self.flushQueued))
 
             try:
@@ -851,14 +858,12 @@ class FileHandle(object):
                 logger.debug("{0}".format(e))
 
             # Tell any running read thread to exit
-            if self.write_ref_count == 0 and self.readThread is not None:
+            if self.readThread is not None:
                 self.readThread.aborted = True
 
             # If flushing is not already in progress, submit to the thread
             # queue.
-            if (self.flushQueued is None and self.write_ref_count == 0 and
-                    self.fileModified and not self.obsolete):
-
+            if self.flushQueued is None and self.fileModified and not self.obsolete:
                 self.refCount += 1
 
                 # Acquire the writer lock exclusively. This will prevent
