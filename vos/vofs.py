@@ -16,6 +16,7 @@ from logExceptions import logExceptions
 import logging
 
 logger = logging.getLogger('vofs')
+logger.setLevel(logging.DEBUG)
 
 
 def flag2mode(flags):
@@ -436,7 +437,6 @@ class VOFS(Operations):
         """
         Build some attributes for this file, we have to make-up some stuff
         """
-        logger.debug("getting attributes of {0}".format(path))
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         attr = self.cache.getAttr(path)
@@ -549,8 +549,6 @@ class VOFS(Operations):
 
         # new file in cache library or if no node information (node not in vospace).
         handle = self.cache.open(path, flags & os.O_WRONLY != 0, must_exist, my_proxy, self.cache_nodes)
-        if not read_only:
-            handle.write_ref_count += 1
         if flags & os.O_TRUNC != 0:
             handle.truncate(0)
         if node is not None:
