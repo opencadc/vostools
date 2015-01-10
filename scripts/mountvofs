@@ -49,12 +49,12 @@ if __name__ == "__main__":
     (opt, args) = parser.parse_args()
     parser.process_informational_options()
 
-    log_format = ("%(asctime)s %(thread)d vos-"+str(version)+"%(module)s.%(funcName)s.%(lineno)d %(message)s")
+    log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
 
     logging.basicConfig(level=logging.CRITICAL, format=log_format,
                         filename=os.path.abspath(opt.log))
 
-    logger = logging.getLogger('mountvofs')
+    logger = logging.getLogger('vofs')
     logger.setLevel(parser.log_level)
     logger.addHandler(logging.StreamHandler())
 
