@@ -45,6 +45,7 @@ connection_count_logger = logging.getLogger('connections')
 connection_count_logger.setLevel(logging.DEBUG)
 
 if sys.version_info[1] > 6:
+    connection_count_logger.addHandler(logging.NullHandler())
     logger.addHandler(logging.NullHandler())
 
 BUFSIZE = 8388608  # Size of read/write buffer
@@ -101,6 +102,11 @@ class Connection:
 
         The user must supply a valid certificate or connection will be 'anonymous'.
         """
+        self.http_debug = http_debug
+        self.logger = logging.getLogger('http')
+        self.logger.setLevel(logging.ERROR)
+        if sys.version_info[1] > 6:
+            self.logger.addHandler(logging.NullHandler())
 
         # # tokens trump certs. We should only ever have token or certfile
         ## set in order to avoid confusion.
@@ -114,9 +120,6 @@ class Connection:
                 vospace_certfile = None
             self.vospace_certfile = vospace_certfile
 
-        self.http_debug = http_debug
-        self.logger = logging.getLogger('http')
-        self.logger.setLevel(logging.ERROR)
 
     def get_connection(self, url):
         """Create an HTTPSConnection object and return.  Uses the client
@@ -129,7 +132,7 @@ class Connection:
         CONNECTION_COUNTER += 1
 
         parts = URLparse(url)
-        connection_count_logger.debug("Opening connection {0} to {1}://{2} using {3}".foramt(CONNECTION_COUNTER,
+        connection_count_logger.debug("Opening connection {0} to {1}://{2} using {3}".format(CONNECTION_COUNTER,
                                                                                              parts.scheme, parts.netloc,
                                                                                              self.vospace_certfile))
 
