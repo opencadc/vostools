@@ -4,6 +4,7 @@ import hashlib
 
 import time
 import vos
+import sys
 import urllib
 from fuse import Operations, FuseOSError
 from threading import Lock
@@ -16,7 +17,9 @@ from logExceptions import logExceptions
 import logging
 
 logger = logging.getLogger('vofs')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
+if sys.version_info[1] > 6:
+    logger.addHandler(logging.NullHandler())
 
 
 def flag2mode(flags):
@@ -216,7 +219,7 @@ class HandleWrapper(object):
 
 
 class VOFS(Operations):
-    cacheTimeout = 5.0
+    cacheTimeout = 30.0
     """
     The VOFS filesystem operations class.  Requires the vos (VOSpace)
     python package.
@@ -465,7 +468,7 @@ class VOFS(Operations):
             if "read-only mode" in str(io_error):
                 raise FuseOSError(EPERM)
             raise FuseOSError(getattr(io_error, 'errno', EFAULT))
-        self.chmod(path, mode)
+        # self.chmod(path, mode)
 
     #@logExceptions()
     def open(self, path, flags, *mode):
