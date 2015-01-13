@@ -45,6 +45,7 @@ if __name__ == "__main__":
                       default=10)
     parser.add_option("--secure_get", action="store_true", default=False,
                       help="Ensure HTTPS instead of HTTP is used to retrieve data (slower)")
+    parser.add_option("--nothreads", help="Only run in a single thread, causes some blocking.", action="store_true")
 
     (opt, args) = parser.parse_args()
     parser.process_informational_options()
@@ -91,6 +92,7 @@ if __name__ == "__main__":
                     mount,
                     fsname=root,
                     volname=root,
+                    nothreads=opt.nothreads,
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=readonly,
@@ -106,6 +108,7 @@ if __name__ == "__main__":
                          secure_get=opt.secure_get),
                     mount,
                     fsname=root,
+                    nothreads=opt.nothreads,
                     readonly=readonly,
                     allow_other=opt.allow_other,
                     foreground=opt.foreground)
