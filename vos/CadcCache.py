@@ -743,7 +743,7 @@ class FileHandle(object):
     def __init__(self, path, cache, ioObject):
         self.path = path
         self.cache = cache
-        logger.debug("creating a new File Handle for {} using cache: {}".format(path, cache))
+        logger.debug("creating a new File Handle for {0} using cache: {1}".format(path, cache))
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path)
         # TODO this part of the code assumed the VOSpace path serpartor and the local FS are the same. FIXME
