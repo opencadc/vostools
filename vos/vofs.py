@@ -17,7 +17,6 @@ from logExceptions import logExceptions
 import logging
 
 logger = logging.getLogger('vofs')
-logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -43,6 +42,12 @@ class MyIOProxy(IOProxy):
         self.md5 = None
         self.path = path
         self.condition = CacheCondition(None)
+
+    def __str__(self):
+        return "Path:{0}  Size:{1}  MD5:{2}  condition:{3}".format(self.path,
+                                                                   self.size,
+                                                                   self.md5,
+                                                                   self.condition)
 
     #@logExceptions()
     def writeToBacking(self):
@@ -287,10 +292,10 @@ class VOFS(Operations):
             return ret
         except Exception as all_exceptions:
             errno = EAGAIN
+            ret = str(all_exceptions)
             if getattr(all_exceptions, 'errno', None) is not None:
                 errno = all_exceptions.errno
             exception = FuseOSError(errno)
-            ret = str(exception)
             raise exception
         finally:
             logger.debug('<- {0} {1}'.format(op, repr(ret)))
@@ -470,7 +475,7 @@ class VOFS(Operations):
             raise FuseOSError(getattr(io_error, 'errno', EFAULT))
         # self.chmod(path, mode)
 
-    #@logExceptions()
+    # @logExceptions()
     def open(self, path, flags, *mode):
         """Open file with the desired modes
 
@@ -550,8 +555,13 @@ class VOFS(Operations):
             my_proxy.set_size(int(node.props.get('length')))
             my_proxy.set_md5(node.props.get('MD5'))
 
+        logger.debug("IO Proxy initialized:{0}  in backing.".format(my_proxy))
+
         # new file in cache library or if no node information (node not in vospace).
         handle = self.cache.open(path, flags & os.O_WRONLY != 0, must_exist, my_proxy, self.cache_nodes)
+
+        logger.debug("Creating file:{0}  in backing.".format(path))
+
         if flags & os.O_TRUNC != 0:
             handle.truncate(0)
         if node is not None:
