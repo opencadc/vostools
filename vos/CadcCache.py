@@ -17,10 +17,10 @@ import ctypes
 import ctypes.util
 import logging
 
-import vos
 from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
 from logExceptions import logExceptions
+import utils
 
 libcPath = ctypes.util.find_library('c')
 libc = ctypes.cdll.LoadLibrary(libcPath)
@@ -32,6 +32,10 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
+ZERO_LENGTH_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
+CACHE_DATA_SUBDIR = 'data'
+CACHE_METADATA_SUBDIR = 'metaData'
+CACHE_CHECK_INTERVAL = 10  # Not clear why this is so low.
 
 
 # TODO optionally disable random reads - always read to the end of the file.
@@ -95,7 +99,17 @@ class CacheCondition(object):
 
 class Cache(object):
     """
-    This class manages the cache for the vofs.
+    Manages the cache for the vofs.
+
+    The cache is the location where vofs will store the reads from VOSpace.  Once a file is written into the
+    cache subsequent reads from vofs will deliver the cache content rather than reconnecting to the server.
+
+    The cache maintains status of files stored in the cache area so that vofs can compare that information against
+    node info coming from the service.
+
+    The vofs calls will want a response within vofs.cacheTimeOut seconds so cache should raise a CacheTimeout before
+    the filesystem times out.
+
     """
     IO_BLOCK_SIZE = 2 ** 14
 
@@ -111,15 +125,18 @@ class Cache(object):
         @param maxFlushThreads: Maximum number of nodes to flush simultaneously
         """
 
-        sys.setcheckinterval(10)
-        logger.debug("check interval: %d" % sys.getcheckinterval())
+        # Why set a custom checkinterval ?
+        sys.setcheckinterval(CACHE_CHECK_INTERVAL)
+
         self.cacheDir = os.path.abspath(cacheDir)
-        self.dataDir = os.path.join(self.cacheDir, "data")
-        self.metaDataDir = os.path.join(self.cacheDir, "metaData")
+        self.dataDir = os.path.join(self.cacheDir, CACHE_DATA_SUBDIR)
+        self.metaDataDir = os.path.join(self.cacheDir, CACHE_METADATA_SUBDIR)
         self.timeout = timeout
         self.maxCacheSize = maxCacheSize
         self.read_only = read_only
         self.fileHandleDict = {}
+
+
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
         self.cacheLock = threading.RLock()
@@ -131,36 +148,10 @@ class Cache(object):
         self.maxFlushThreads = maxFlushThreads
         self.flushNodeQueue = None
 
-        if os.path.exists(self.cacheDir):
-            if not os.path.isdir(self.cacheDir):
-                raise CacheError("Path " + self.cacheDir + \
-                                 " is not a directory.")
-            if not os.access(self.cacheDir, os.R_OK | os.W_OK | os.X_OK):
-                raise CacheError("Existing path " + self.cacheDir + \
-                                 " does not have on of read, write or execute" +
-                                 " permission.")
-
-        if os.path.exists(self.dataDir):
-            if not os.path.isdir(self.dataDir):
-                raise CacheError("Path " + self.dataDir + \
-                                 " is not a directory.")
-            if not os.access(self.dataDir, os.R_OK | os.W_OK | os.X_OK):
-                raise CacheError("Existing path " + self.dataDir + \
-                                 " does not have on of read, write or execute" +
-                                 " permission.")
-        else:
-            os.makedirs(self.dataDir, stat.S_IRWXU)
-
-        if os.path.exists(self.metaDataDir):
-            if not os.path.isdir(self.metaDataDir):
-                raise CacheError("Path " + self.metaDataDir + \
-                                 " is not a directory.")
-            if not os.access(self.metaDataDir, os.R_OK | os.W_OK | os.X_OK):
-                raise CacheError("Existing path " + self.metaDataDir + \
-                                 " does not have on of read, write or execute" +
-                                 " permission.")
-        else:
-            os.makedirs(self.metaDataDir, stat.S_IRWXU)
+        # ensure that the cache areas exist and have the desired permissions.
+        utils.mkdir_p(self.dataDir, stat.S_IRWXU)
+        utils.mkdir_p(self.metaDataDir, stat.S_IRWXU)
+        logger.debug("Initialized data and meta data Cache areas: {0} {1}".format(self.dataDir, self.metaDataDir))
 
     def __enter__(self):
         """
@@ -176,12 +167,15 @@ class Cache(object):
         """
         pass
 
+    def __str__(self):
+        return "DataCache: {0}, MetaDataCache: {1}, CacheSize: {2}".format(self.dataDir, self.metaDataDir, self.determineCacheSize())
+
     # @logExceptions()
     def open(self, path, isNew, mustExist, ioObject, trustMetaData):
         """Open file with the desired modes
 
         Here we return a handle to the cached version of the file
-        which is updated if older and out of synce with VOSpace.
+        which is updated if older and out of sync with VOSpace.
 
         path - the path to the file.
 
@@ -192,6 +186,8 @@ class Cache(object):
 
         ioObject - the object that provides access to the backing store
         """
+        logger.debug("Getting filehandle for {0} {1} {2} {3} {4}".format(path, isNew, mustExist, ioObject, trustMetaData))
+        logger.debug(str(self))
 
         fileHandle = self.getFileHandle(path, isNew, ioObject)
         logger.debug("Got filehandle: {0}".format(fileHandle))
@@ -204,23 +200,18 @@ class Cache(object):
             if fileHandle.fullyCached is None:
                 if isNew:
                     fileHandle.fileModified = True
-                    fileHandle.fullyCached = True
-                    fileHandle.fileSize = 0
-                    fileHandle.gotHeader = True
+                    fileHandle.setHeader(0, ZERO_LENGTH_MD5)
                 elif os.path.exists(fileHandle.cacheMetaDataFile):
-                    fileHandle.metaData = CacheMetaData(
-                        fileHandle.cacheMetaDataFile, None, None, None)
-                    if (fileHandle.metaData.getNumReadBlocks() ==
-                            len(fileHandle.metaData.bitmap)):
+                    fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, None, None, None)
+                    if fileHandle.metaData.getNumReadBlocks() == len(fileHandle.metaData.bitmap):
                         fileHandle.fullyCached = True
-                        fileHandle.fileSize = os.path.getsize(
-                            fileHandle.cacheMetaDataFile)
+                        fileHandle.fileSize = os.path.getsize(fileHandle.cacheMetaDataFile)
                     else:
                         fileHandle.fullyCached = False
                         fileHandle.fileSize = fileHandle.metaData.size
                     if trustMetaData:
-                        fileHandle.gotHeader = True
-                        fileHandle.fileSize = fileHandle.metaData.size
+                        fileHandle.setHeader(fileHandle.metaData.size,
+                                             fileHandle.metaData.md5sum)
                     else:
                         fileHandle.gotHeader = False
                 else:
@@ -229,16 +220,15 @@ class Cache(object):
                     fileHandle.fullyCached = False
 
                 if (not fileHandle.fullyCached and
-                        (fileHandle.metaData is None or
-                                 fileHandle.metaData.getNumReadBlocks() == 0)):
+                        (fileHandle.metaData is None or fileHandle.metaData.getNumReadBlocks() == 0)):
                     # If the cache file should be empty, empty it.
                     with fileHandle.ioObject.cacheFileDescriptorLock:
                         os.ftruncate(fileHandle.ioObject.cacheFileDescriptor, 0)
                         os.fsync(fileHandle.ioObject.cacheFileDescriptor)
+                        fileHandle.fullyCached = True
 
             # For an existing file, start a data transfer to get the size and
             # md5sum unless the information is available and is trusted.
-            logger.debug("Next step.")
             logger.debug("RefCount: {0}, gotHeader: {1}, fileModified: {2}, trustMetaData: {3}".format(
                 fileHandle.refCount, fileHandle.gotHeader, fileHandle.fileModified, trustMetaData
             ))
@@ -254,8 +244,7 @@ class Cache(object):
                 # an ENOENT error is ok and not propegated. All other errors
                 # are propegated.
                 if not (isinstance(fileHandle.readException[1], IOError) and
-                                fileHandle.readException[1].errno == errno.ENOENT and
-                            not mustExist):
+                                fileHandle.readException[1].errno == errno.ENOENT and not mustExist):
                     raise fileHandle.readException[0], \
                         fileHandle.readException[1], \
                         fileHandle.readException[2]
@@ -273,8 +262,20 @@ class Cache(object):
 
     def getFileHandle(self, path, createFile, ioObject):
         """Find an existing file handle, or create one if necessary.
-        @rtype : FileHandle
+        @param path: location of the file, relative to cache root.
+        @param createFile: should the file be created if it doesn't exist
+        @param ioObject: the ioObject is used to read/write this file from the backing (VOSpace)
+        @rtype : FileHandle A file_like object that enables reading and writing to the cache object.
         """
+
+        logger.debug("Getting fileHandle for path:{0} createFile:{1} ioObject:{2}".format(path,
+                                                                                          createFile,
+                                                                                          ioObject))
+
+        if createFile and self.read_only:
+            raise OSError(EPERM, 'Create denied, cache marked readonly.')
+
+        # Lock so only one file referenced at a time, avoids race issues.
         with self.cacheLock:
             try:
                 newFileHandle = self.fileHandleDict[path]
@@ -283,8 +284,7 @@ class Cache(object):
                 isNewFileHandle = True
                 newFileHandle = FileHandle(path, self, ioObject)
                 self.fileHandleDict[path] = newFileHandle
-            logger.debug("newFileHandle: {0}".format(newFileHandle))
-            logger.debug("isNewFileHandle: {0}".format(newFileHandle))
+
             if not isNewFileHandle and createFile:
                 # We got an old file handle, but are creating a new file.
                 # Mark the old file handle as obsolete and create a new
@@ -309,7 +309,7 @@ class Cache(object):
             logger.debug("RefCount: {0}".format(newFileHandle.refCount))
         return newFileHandle
 
-    @logExceptions()
+    # @logExceptions()
     def checkCacheSpace(self):
         """Clear the oldest files until cache_size < cache_limit"""
 
@@ -743,25 +743,34 @@ class FileHandle(object):
     def __init__(self, path, cache, ioObject):
         self.path = path
         self.cache = cache
-        logger.debug("creating a new File Handle for %s" % path)
+        logger.debug("creating a new File Handle for {} using cache: {}".format(path, cache))
         if not os.path.isabs(path):
             raise ValueError("Path '%s' is not an absolute path." % path)
-        self.cacheDataFile = os.path.abspath(cache.dataDir + path)
-        self.cacheMetaDataFile = os.path.abspath(cache.metaDataDir + path)
+        # TODO this part of the code assumed the VOSpace path serpartor and the local FS are the same. FIXME
+        self.cacheDataFile = os.path.abspath(self.cache.dataDir + path)
+        self.cacheMetaDataFile = os.path.abspath(self.cache.metaDataDir + path)
         self.metaData = None
         self.ioObject = ioObject
         ioObject.setCacheFile(self)
+
         try:
             os.makedirs(os.path.dirname(self.cacheDataFile), stat.S_IRWXU)
-        except OSError:
-            pass
+        except OSError as oer:
+            if oer.errno == EEXIST:
+                pass
+            else:
+                raise
+
         with self.ioObject.cacheFileDescriptorLock:
             self.ioObject.cacheFileDescriptor = os.open(self.cacheDataFile,
                                                         os.O_RDWR | os.O_CREAT)
+            # Why is there an fstat here?
             info = os.fstat(self.ioObject.cacheFileDescriptor)
+
+        logger.debug("Created a cache file descriptor.")
         # When cache locks and file locks need to be held at the same time,
         # always acquire the cache lock first.
-        # Lock for modifing the FileHandle object.
+        # Lock for modifying the FileHandle object.
         self.fileLock = threading.RLock()
         self.fileCondition = CacheCondition(self.fileLock,
                                             timeout=cache.timeout)
@@ -781,6 +790,7 @@ class FileHandle(object):
         self.writeAborted = None
         self.gotHeader = False
         self.fileSize = None
+        self.md5sum = None
         self.readException = None
 
     def __enter__(self):
@@ -800,8 +810,7 @@ class FileHandle(object):
 
         # If the file had meta data and it hasn't change, abort the read
         # thread.
-        if self.metaData is not None and (self.metaData.md5sum is None or
-                                                  self.metaData.md5sum == md5):
+        if self.metaData is not None and self.metaData.md5sum == md5:
             with self.fileCondition:
                 if self.readThread is not None:
                     self.readThread.aborted = True
@@ -812,11 +821,14 @@ class FileHandle(object):
                                           md5, size)
             self.fullyCached = False
 
+        logger.debug("metaData: {0} fullCached: {1}".format(self.metaData, self.fullyCached))
+
         if not self.fullyCached and self.metaData.getNumReadBlocks() == 0:
             # If the cache file should be empty, empty it.
             with self.ioObject.cacheFileDescriptorLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, 0)
                 os.fsync(self.ioObject.cacheFileDescriptor)
+                self.fullyCached = True
         self.gotHeader = True
 
     def setReadException(self):
@@ -918,7 +930,7 @@ class FileHandle(object):
         logger.debug("Getting locks so we can do a deref and close.")
         with nested(self.cache.cacheLock, self.fileLock,
                     self.ioObject.cacheFileDescriptorLock):
-            logger.debug("Lock acquired now doing the re-reduction and close.")
+            logger.debug("Lock acquired now doing the ref-reduction and close.")
             self.refCount -= 1
             if self.refCount == 0:
                 logger.debug("Closing the cache object now.")
@@ -942,7 +954,7 @@ class FileHandle(object):
             info = os.fstat(self.ioObject.cacheFileDescriptor)
         return info.st_size, info.st_mtime
 
-    @logExceptions()
+    # @logExceptions()
     def flushNode(self):
         """Flush the file to the backing store.
         """
@@ -1266,7 +1278,7 @@ class CacheReadThread(threading.Thread):
             return False
         return True
 
-    @logExceptions()
+    # @logExceptions()
     def execute(self):
         try:
             self.fileHandle.readException = None
