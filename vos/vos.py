@@ -164,7 +164,7 @@ class Connection:
                 connection.connect()
             except httplib.HTTPException as http_exception:
                 self.logger.critical("%s" % (str(http_exception)))
-                self.logger.critical("Retrying connection for {} seconds".format(MAX_RETRY_TIME))
+                self.logger.critical("Retrying connection for {0} seconds".format(MAX_RETRY_TIME))
                 if time.time() - start_time > MAX_RETRY_TIME:
                     raise http_exception
             break
