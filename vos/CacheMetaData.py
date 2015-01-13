@@ -1,9 +1,11 @@
-import sys
+
 import os
 import cPickle as pickle
 
 import BitVector
+import logging
 
+logger = logging.getLogger('cache')
 
 class CacheMetaData(object):
 
@@ -21,21 +23,22 @@ class CacheMetaData(object):
         """
 
         self.metaDataFile = metaDataFile
-        self.blocks = blocks is  None and 0 or blocks
+        self.blocks = blocks is None and 0 or blocks
         self.md5sum = md5sum
         self.size = size
         self.bitmap = None
         if os.path.exists(self.metaDataFile):
             f = open(self.metaDataFile, 'rU')
             persisted = pickle.load(f)
-            if(self.md5sum is None or persisted.md5sum == self.md5sum):
+            if self.md5sum is None or persisted.md5sum == self.md5sum:
                 #persisted bitmap still valid. Used that instead
                 self.bitmap = persisted.bitmap
                 self.size = persisted.size
                 self.md5sum = persisted.md5sum
             f.close()
 
-        self.bitmap = self.bitmap is None and BitVector.BitVector(size=blocks) or self.bitmap
+        if self.bitmap is None:
+            self.bitmap = BitVector.BitVector(size=self.blocks)
 
     def __str__(self):
         """To create a print representation that is informative."""
