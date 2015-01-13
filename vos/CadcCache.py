@@ -1219,6 +1219,7 @@ class FileHandle(object):
                 self.fullyCached = True
                 self.fileSize = length
 
+    @logExceptions()
     def readData(self, startByte, mandatorySize, optionalSize):
         """Read the data range from the backing store in a thread"""
 
@@ -1241,7 +1242,8 @@ class CacheReadThread(threading.Thread):
             mandatorySize - mandatory size that needs to be read
             optionSize - optional size that can be read beyond the mandatory
             fileHandle - file handle """
-        threading.Thread.__init__(self, target=self.execute)
+        super(CacheReadThread, self).__init__(target=self.execute)
+        # threading.Thread.__init__(self, target=self.execute)
         self.startByte = start
         self.mandatoryEnd = start + mandatorySize
         self.optionSize = optionSize
@@ -1278,7 +1280,7 @@ class CacheReadThread(threading.Thread):
             return False
         return True
 
-    # @logExceptions()
+    @logExceptions()
     def execute(self):
         try:
             self.fileHandle.readException = None
@@ -1311,9 +1313,11 @@ class CacheReadThread(threading.Thread):
                             # smaller read window. Also it is not invalid for the file
                             # to be replaced in vospace, and for this client to
                             # continue to serve the existing file.
-        except:
+        except Exception as e:
             logger.error("Exception in thread started at:\n%s" % \
                          ''.join(traceback.format_list(self.traceback)))
+            logger.error(str(e))
+            logger.error(traceback.format_exc())
             self.fileHandle.setReadException()
             raise
         finally:
