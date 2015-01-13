@@ -746,7 +746,7 @@ class VOFile:
         global CONNECTION_COUNTER
         if self.closed:
             return self.closed
-        connection_count_logger.debug("Closing http connection no. {0}.".format(CONNECTION_COUNTER))
+        connection_count_logger.debug("Closing http connection".format(CONNECTION_COUNTER))
         try:
             logger.debug("closing the connection.")
             if self.transEncode is not None:
