@@ -12,13 +12,13 @@ import fnmatch
 import hashlib
 from contextlib import nested
 from cStringIO import StringIO
-import ssl
 import html2text
 import httplib
 import logging
 import mimetypes
 import os
 import re
+import ssl
 import stat
 import string
 import sys
@@ -42,7 +42,7 @@ from __version__ import version
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 connection_count_logger = logging.getLogger('connections')
-connection_count_logger.setLevel(logging.DEBUG)
+connection_count_logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     connection_count_logger.addHandler(logging.NullHandler())
@@ -104,9 +104,9 @@ class Connection:
         """
         self.http_debug = http_debug
         self.logger = logging.getLogger('http')
-        self.logger.setLevel(logging.ERROR)
         if sys.version_info[1] > 6:
             self.logger.addHandler(logging.NullHandler())
+        self.logger.setLevel(logging.ERROR)
 
         # # tokens trump certs. We should only ever have token or certfile
         ## set in order to avoid confusion.
@@ -119,7 +119,6 @@ class Connection:
                     "Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
                 vospace_certfile = None
             self.vospace_certfile = vospace_certfile
-
 
     def get_connection(self, url):
         """Create an HTTPSConnection object and return.  Uses the client
@@ -162,14 +161,19 @@ class Connection:
             try:
                 self.logger.debug("Opening connection.")
                 connection.connect()
+                break
             except httplib.HTTPException as http_exception:
                 self.logger.critical("%s" % (str(http_exception)))
                 self.logger.critical("Retrying connection for {0} seconds".format(MAX_RETRY_TIME))
                 if time.time() - start_time > MAX_RETRY_TIME:
                     raise http_exception
-            break
+            except Exception as e:
+                if getattr(e, 'errno', errno.EFAULT) == errno.ENOEXEC:
+                    self.logger.error("Failed to connect to VOSpace: No network available?")
+                else:
+                    self.logger.error(str(e))
+                break
 
-        self.logger.debug("Returning connection object: {0}".format(connection))
         return connection
 
 
@@ -1424,7 +1428,6 @@ class Client:
                                  " returns: %s" %
                                  (Client.VOTransfer, response.status))
                     return self.getNodeURL(uri, method=method, view=view,
-                                           full_negotiation=True,
                                            limit=limit, nextURI=nextURI, cutout=cutout)
             except Exception as e:
                 logger.debug(str(e))
@@ -1434,7 +1437,7 @@ class Client:
             logger.debug("Sending short cut url: %s" % (URL))
             return URL
 
-        # this is a GET that is not a 'data' or 'cutout' view.  Add possible additional args to URL.
+        ### this is a GET so we might have to stick some data onto the URL...
         fields = {}
         if limit is not None:
             fields['limit'] = limit
@@ -1648,7 +1651,8 @@ class Client:
         if URL is None:
             if target is not None:
                 logger.debug("%s is a link to %s" % (node.uri, target))
-                if (re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target) is not None):
+                if (re.search("^vos\://cadc\.nrc\.ca[!~]vospace", target)
+                    is not None):
                     # TODO
                     # the above re.search should use generic VOSpace uri
                     # search, not CADC specific. i
@@ -1711,6 +1715,7 @@ class Client:
                          followRedirect=False)
             con.write(str(node))
             transURL = con.read()
+            # logger.debug("Got back %s from $Client.VOProperties " % (con))
             # Start the job
             con = VOFile(transURL + "/phase", self.conn, method="POST",
                          followRedirect=False)
@@ -1722,6 +1727,9 @@ class Client:
             con.write(str(node))
             con.read()
         return 0
+        #f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
+        #f.write(str(node))
+        #f.close()
 
     def mkdir(self, uri):
         node = Node(self.fixURI(uri), node_type="vos:ContainerNode")
