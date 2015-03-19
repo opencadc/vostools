@@ -5,6 +5,8 @@ import os
 import sys
 from __version__ import version
 
+
+
 class CommonParser(optparse.OptionParser):
     """Class to hold and parse common command-line arguments for vos clients"""
 
@@ -50,3 +52,16 @@ class CommonParser(optparse.OptionParser):
             self.log_level = logging.WARNING
         else:
             self.log_level = logging.ERROR
+
+        log_format = "%(module)s: %(message)s"
+        if self.log_level < logging.INFO:
+            log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
+        logging.basicConfig(format=log_format)
+
+        if sys.version_info[1] > 6:
+            logger = logging.getLogger()
+            logger.addHandler(logging.NullHandler())
+
+
+
+
