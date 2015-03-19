@@ -829,6 +829,7 @@ class VOFile:
             try:
                 self.size = int(self.size)
                 self.httpCon.putheader("Content-Length", self.size)
+                self.httpCon.putheader("X-CADC-Content-Length", self.size)
             except TypeError as e:
                 self.size = None
                 self.transEncode = "chunked"
