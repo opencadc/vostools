@@ -17,6 +17,7 @@ from logExceptions import logExceptions
 import logging
 
 logger = logging.getLogger('vofs')
+logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 

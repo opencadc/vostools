@@ -1,7 +1,6 @@
 #!python
 """A FUSE based filesystem view of VOSpace."""
 
-import sys
 from sys import platform
 import os
 import logging
@@ -52,12 +51,19 @@ if __name__ == "__main__":
 
     log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
 
-    logging.basicConfig(level=logging.CRITICAL, format=log_format,
-                        filename=os.path.abspath(opt.log))
+    lf = logging.Formatter(fmt=log_format)
+    fh = logging.FileHandler(filename=os.path.abspath(opt.log))
+    fh.formatter = lf
 
     logger = logging.getLogger('vofs')
+    logger.handlers = []
     logger.setLevel(parser.log_level)
-    logger.addHandler(logging.StreamHandler())
+    logger.addHandler(fh)
+
+    vos_logger = logging.getLogger('vos')
+    vos_logger.handlers = []
+    vos_logger.setLevel(parser.log_level)
+    vos_logger.addHandler(fh)
 
     logger.debug("Checking connection to VOSpace ")
     if not os.access(opt.certfile, os.F_OK):
@@ -66,7 +72,7 @@ if __name__ == "__main__":
     else:
         certfile = os.path.abspath(opt.certfile)
 
-    conn = vos.Connection(vospace_certfile=certfile,vospace_token=opt.token)
+    conn = vos.Connection(vospace_certfile=certfile, vospace_token=opt.token)
     if conn.vospace_certfile:
         readonly = opt.readonly
         logger.debug("Got a certificate, connections should work")
@@ -99,7 +105,7 @@ if __name__ == "__main__":
                     allow_other=opt.allow_other,
                     noapplexattr=True,
                     noappledouble=True,
-                    debug=False,
+                    debug=opt.foreground,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
