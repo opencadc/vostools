@@ -1424,9 +1424,9 @@ class Client:
                 elif response.status == 409:
                     raise IOError(errno.EREMOTE, response.read(), url)
                 else:
-                    logger.error("GET/PUT shortcut not working. POST to %s"
-                                 " returns: %s" %
-                                 (Client.VOTransfer, response.status))
+                    logger.warning("GET/PUT shortcut not working. POST to %s"
+                                   " returns: %s.  Reverting to full negotiation" %
+                                   (Client.VOTransfer, response.status))
                     return self.getNodeURL(uri, method=method, view=view,
                                            limit=limit, nextURI=nextURI, cutout=cutout)
             except Exception as e:
