@@ -40,9 +40,9 @@ except NameError:
 from __version__ import version
 
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
+#logger.setLevel(logging.ERROR)
 connection_count_logger = logging.getLogger('connections')
-connection_count_logger.setLevel(logging.ERROR)
+#connection_count_logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     connection_count_logger.addHandler(logging.NullHandler())
