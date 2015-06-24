@@ -40,9 +40,9 @@ except NameError:
 from __version__ import version
 
 logger = logging.getLogger('vos')
-#logger.setLevel(logging.ERROR)
+logger.setLevel(logging.ERROR)
 connection_count_logger = logging.getLogger('connections')
-#connection_count_logger.setLevel(logging.ERROR)
+connection_count_logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     connection_count_logger.addHandler(logging.NullHandler())
@@ -115,7 +115,7 @@ class Connection:
         if self.vospace_token is None:
             ## allow anonymous access if no certfile specified
             if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-                self.logger.critical(
+                self.logger.warning(
                     "Could not read security certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
                 vospace_certfile = None
             self.vospace_certfile = vospace_certfile
@@ -782,17 +782,17 @@ class VOFile:
                          (self.resp.status, self.url))
             msg = self.resp.read()
             if msg is not None:
-                msg = html2text.html2text(msg, self.url).strip()
+                msg = html2text.html2text(msg, self.url).strip().replace('\n', ' ')
             logger.debug("Error message: {0}".format(msg))
+
             if self.resp.status in VOFile.errnos.keys() or (msg is not None and "Node is busy" in msg):
-                if msg is None or len(msg) == 0:
+                if msg is None or len(msg) == 0 and self.resp.status in msgs:
                     msg = msgs[self.resp.status]
                 if self.resp.status == 401 and self.connector.vospace_certfile is None and self.connector.vospace_token is None:
                     msg += " using anonymous access "
-            exception = IOError(VOFile.errnos.get(self.resp.status,
-                                            self.resp.status), msg, self.url)
+            exception = IOError(VOFile.errnos.get(self.resp.status, self.resp.status), msg)
             if self.resp.status == 500 and "read-only" in msg:
-                exception = IOError(errno.EPERM)
+                exception = IOError(errno.EPERM, "VOSpace in read-only mode.")
             raise exception
 
         # Get the file size. We use this 'X-CADC-Content-Length' as a
@@ -875,9 +875,8 @@ class VOFile:
             except (httplib.HTTPException, ssl.SSLError) as exception:
                 logger.debug("Caught {0}: {1}".format(type(exception), str(exception)))
                 raise exception
-            except IOError as exception:
-                logger.debug(type(exception))
-                logger.debug(str(exception))
+            except IOError as read_error:
+                pass
         if self.resp.status == 416:
             return ""
         # check the most likely response first
@@ -929,7 +928,7 @@ class VOFile:
                 if read_error is not None:
                     raise read_error
                 if self.resp.status == 404:
-                    raise IOError(errno.ENOENT, self.resp.read())
+                    raise IOError(errno.ENOENT, self.url)
                 else:
                     raise IOError(errno.EIO,
                                   "unexpected server response %s (%d)" %
@@ -1042,7 +1041,6 @@ class Client:
         self.nodeCache = NodeCache()
         self.cadc_short_cut = cadc_short_cut
         self.secure_get = secure_get
-
         return
 
 
@@ -1069,10 +1067,8 @@ class Client:
         dirname, basename = os.path.split(pathname)
         if not self.has_magic(pathname):
             if basename:
-                if self.access(pathname):
-                    yield pathname
-                else:
-                    raise IOError(errno.EACCES, "Permission denied: {0}".format(pathname))
+                self.getNode(pathname)
+                yield pathname
             else:
                 # Patterns ending with a slash should match only directories
                 if self.iglob(dirname):
@@ -1194,7 +1190,7 @@ class Client:
                 with self.nodeCache.volatile(srcNode.uri):
                     return self.copy(src, dest, sendMD5=sendMD5)
             else:
-                raise
+                raise e
         finally:
             fout.close()
             fin.close()
@@ -1311,8 +1307,7 @@ class Client:
                 # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
                 # on the firt call was less than 500, we likely got them
                 # all during the init
-                if (limit != 0 and node.isdir() and
-                            len(node.getNodeList()) > 500):
+                if (limit != 0 and node.isdir() and len(node.getNodeList()) > 500):
                     nextURI = None
                     while nextURI != node.getNodeList()[-1].uri:
                         nextURI = node.getNodeList()[-1].uri
@@ -1374,8 +1369,10 @@ class Client:
             return uri
 
         URL = None
+
         if (do_shortcut and ((method == 'GET' and
                                       view in ['data', 'cutout']) or method == "PUT")):
+
             ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
             direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
@@ -1415,7 +1412,6 @@ class Client:
             httpCon.request("POST", Client.VOTransfer, form, headers)
             try:
                 response = httpCon.getresponse()
-
                 if response.status == 303:
                     # Normal case is a redirect
                     URL = response.getheader('Location', None)
@@ -1425,13 +1421,13 @@ class Client:
                 elif response.status == 409:
                     raise IOError(errno.EREMOTE, response.read(), url)
                 else:
-                    logger.warning("GET/PUT shortcut not working. POST to %s"
-                                   " returns: %s.  Reverting to full negotiation" %
-                                   (Client.VOTransfer, response.status))
+                    logger.debug("GET/PUT shortcut not working. POST to %s"
+                                 "returns: %s.  Reverting to full negotiation" % (Client.VOTransfer, response.status))
                     return self.getNodeURL(uri, method=method, view=view,
                                            limit=limit, nextURI=nextURI, cutout=cutout)
             except Exception as e:
                 logger.debug(str(e))
+                raise e
             finally:
                 httpCon.close()
 
@@ -1552,6 +1548,7 @@ class Client:
                       'DuplicateNode.': errno.EEXIST,
                       'NodeLocked': errno.EPERM}
         jobURL = str.replace(url, "/results/transferDetails", "")
+
         try:
             phaseURL = jobURL + "/phase"
             sleepTime = 1
@@ -1592,6 +1589,7 @@ class Client:
             raise KeyboardInterrupt
         status = VOFile(phaseURL, self.conn, method="GET",
                         followRedirect=False).read()
+
         logger.debug("Phase:  %s" % (status))
         if status in ['COMPLETED']:
             return False
