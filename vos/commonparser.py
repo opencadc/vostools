@@ -39,24 +39,26 @@ class CommonParser(optparse.OptionParser):
         """Display version, set logging verbosity"""
         (opt, args) = self.parse_args()
 
+
         if opt.version:
             self.print_version()
             sys.exit(0)
 
         # Logger verbosity
-        if opt.verbose:
-            self.log_level = logging.INFO
-        elif opt.debug:
+        if opt.debug:
             self.log_level = logging.DEBUG
+        elif opt.verbose:
+            self.log_level = logging.INFO
         elif opt.warning:
             self.log_level = logging.WARNING
         else:
             self.log_level = logging.ERROR
 
+
         log_format = "%(module)s: %(message)s"
         if self.log_level < logging.INFO:
             log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
-        logging.basicConfig(format=log_format)
+        logging.basicConfig(format=log_format, level=self.log_level)
 
         if sys.version_info[1] > 6:
             logger = logging.getLogger()
