@@ -1529,7 +1529,7 @@ class Client:
         transfer_document = ElementTree.parse(con)
         logger.debug("Transfer Document: %s" % transfer_document)
         all_protocols = transfer_document.findall(Node.PROTOCOL)
-        if all_protocols is None:
+        if all_protocols is None or not len(all_protocols) > 0:
             return self.getTransferError(transURL, uri)
 
         result = []
