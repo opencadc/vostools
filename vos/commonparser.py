@@ -30,6 +30,7 @@ class CommonParser(optparse.OptionParser):
                         help="Print the version (%s)" % version)
         self.add_option("-d", "--debug", action="store_true", default=False,
                         help="Print debug level log messages")
+        self.add_option("--vos-debug", action="store_true", help="Turn on VOS module debugging")
         self.add_option("-v", "--verbose", action="store_true", default=False,
                         help="Print verbose level log messages")
         self.add_option("-w", "--warning", action="store_true", default=False,
@@ -39,24 +40,29 @@ class CommonParser(optparse.OptionParser):
         """Display version, set logging verbosity"""
         (opt, args) = self.parse_args()
 
+
         if opt.version:
             self.print_version()
             sys.exit(0)
 
         # Logger verbosity
-        if opt.verbose:
-            self.log_level = logging.INFO
-        elif opt.debug:
+        if opt.debug:
             self.log_level = logging.DEBUG
+        elif opt.verbose:
+            self.log_level = logging.INFO
         elif opt.warning:
             self.log_level = logging.WARNING
         else:
             self.log_level = logging.ERROR
 
+
         log_format = "%(module)s: %(message)s"
         if self.log_level < logging.INFO:
             log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
-        logging.basicConfig(format=log_format)
+        logging.basicConfig(format=log_format, level=self.log_level)
+
+        if opt.vos_debug:
+            logging.getLogger('vos').setLevel(logging.DEBUG)
 
         if sys.version_info[1] > 6:
             logger = logging.getLogger()

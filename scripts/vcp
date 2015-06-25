@@ -1,5 +1,6 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
+import traceback
 
 from vos import __version__
 from vos.commonparser import CommonParser
@@ -42,7 +43,7 @@ def get_node(filename):
 # TODO: Put these function in a separate module.
 
 def isdir(filename):
-    logger.debug("Doing an isdir on %s" % filename)
+    logging.debug("Doing an isdir on %s" % filename)
     if filename[0:4] == "vos:":
         return client.isdir(filename)
     else:
@@ -50,7 +51,7 @@ def isdir(filename):
 
 
 def islink(filename):
-    logger.debug("Doing an islink on %s" % filename)
+    logging.debug("Doing an islink on %s" % filename)
     if filename[0:4] == "vos:":
         try:
             return get_node(filename).islink()
@@ -61,7 +62,13 @@ def islink(filename):
 
 
 def access(filename, mode):
-    logger.debug("checking for access %s " % filename)
+    """
+    Check if the file can be accessed.
+    @param filename: name of file or vospace node to check
+    @param mode: what access mode should be checked: see os.access
+    @return: True/False
+    """
+    logging.debug("checking for access %s " % filename)
     if filename[0:4] == "vos:":
         try:
             node = get_node(filename)
@@ -74,7 +81,7 @@ def access(filename, mode):
 
 def listdir(dirname):
     """Walk through the directory structure a al os.walk"""
-    logger.debug("getting a dirlist %s " % dirname)
+    logging.debug("getting a dirlist %s " % dirname)
 
     if dirname[0:4] == "vos:":
         return client.listdir(dirname, force=True)
@@ -83,7 +90,7 @@ def listdir(dirname):
 
 
 def mkdir(filename):
-    logger.debug("Making directory %s " % filename)
+    logging.debug("Making directory %s " % filename)
     if filename[0:4] == 'vos:':
         return client.mkdir(filename)
     else:
@@ -103,7 +110,7 @@ def lglob(pathname):
 
 
 def get_md5(filename):
-    logger.debug("getting the MD5 for %s" % filename)
+    logging.debug("getting the MD5 for %s" % filename)
     if filename[0:4] == 'vos:':
         md5 = get_node(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
     else:
@@ -141,7 +148,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                 mkdir(destination_name)
             ## for all files in the current source directory copy them to the destination directory
             for filename in listdir(source_name):
-                logger.debug("%s -> %s" % (filename, source_name))
+                logging.debug("%s -> %s" % (filename, source_name))
                 copy(os.path.join(source_name, filename), os.path.join(destination_name, filename),
                      exclude, include, interrogate, overwrite, ignore)
         else:
@@ -155,7 +162,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
             if access(destination_name, os.F_OK) and not overwrite:
                 ### check if the MD5 of dest and source mathc, if they do then skip
                 if get_md5(destination_name) == get_md5(source_name):
-                    logger.info("%s matches %s, skipping" % (source_name, destination_name))
+                    logging.info("%s matches %s, skipping" % (source_name, destination_name))
                     return
 
             if not access(os.path.dirname(destination_name), os.F_OK):
@@ -180,7 +187,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                         continue
 
             if not skip:
-                logger.info("%s -> %s " % (source_name, destination_name))
+                logging.info("%s -> %s " % (source_name, destination_name))
             while not skip:
                 try:
                     client.copy(source_name, destination_name, sendMD5=True)
@@ -188,14 +195,14 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                 except Exception as client_exception:
                     if getattr(client_exception, 'errno', -1) == 104:
                         ### 104 is connection reset by peer.  Try again on this error
-                        logger.debug(str(client_exception))
+                        logging.warning(str(client_exception))
                         exit_code = getattr(client_exception, 'errno', -1)
                     elif getattr(client_exception, 'errno', -1) == errno.EIO:
                         ### retry on IO errors
-                        logger.warning(str(client_exception) + "\nRetrying")
+                        logging.warning(str(client_exception) + "\nRetrying")
                         pass
                     elif ignore:
-                        logger.error("Ignoring error: %s " % str(client_exception))
+                        logging.error("Ignoring error: %s " % str(client_exception))
                         skip = True
                     else:
                         raise client_exception
@@ -203,7 +210,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
         logging.debug(str(io_exception))
         if getattr(io_exception, 'errno', -1) == errno.EINVAL:
             # not a valid uri, just skip those...
-            logger.error("%s: Skipping" % str(io_exception))
+            logging.warning("%s: Skipping" % str(io_exception))
         else:
             raise io_exception
 
@@ -236,15 +243,13 @@ if __name__ == '__main__':
     if len(args) < 2:
         parser.error("Must give a source and a destination")
 
-    logger = logging.getLogger()
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel(parser.log_level)
-
     dest = args.pop()
     this_destination = dest
 
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
+
+
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token,
@@ -274,11 +279,11 @@ if __name__ == '__main__':
 
                 ## copying inside VOSpace not yet implemented
                 if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
-                    raise Exception("Can not (yet) copy from VOSpace to VOspace.")
+                    raise Exception("Can not (yet) copy from VOSpace to VOSpace.")
 
                 this_destination = dest
                 if isdir(source):
-                    logger.debug("%s is a directory or link to one" % source)
+                    logging.debug("%s is a directory or link to one" % source)
                     # To mimic unix fs behaviours if copying a directory and
                     # the destination directory exists then the actual
                     # destination in a recursive copy is the destination +
@@ -299,13 +304,16 @@ if __name__ == '__main__':
                      interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
 
     except KeyboardInterrupt as ke:
-        logger.info("Received keyboard interrupt. Execution aborted...\n")
+        logging.info("Received keyboard interrupt. Execution aborted...\n")
         exit_code = getattr(ke, 'errno', -1)
     except Exception as e:
         message = str(e)
-        logger.error(message)
         if re.search('NodeLocked', str(e)) is not None:
-            logger.error("Use vlock to unlock the node before copying to %s." % this_destination)
+            logging.error("Use vlock to unlock the node before copying to %s." % this_destination)
+        elif getattr(e, 'errno', -1) == errno.EREMOTE:
+            logging.error("Failure at remote server while copying %s -> %s" % str(source, dest))
+        else:
+            logging.error(message)
         exit_code = getattr(e, 'errno', -1)
 
     sys.exit(exit_code)
