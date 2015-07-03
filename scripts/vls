@@ -145,7 +145,10 @@ if __name__ == '__main__':
             name_string = item[0]
             if opt.long or opt.group:
                 for col in columns:
-                    sys.stdout.write(formats[col](item[1][col]))
+                    value = item[1].get(col, None)
+                    value = value is not None and value or ""
+                    if col in formats:
+                        sys.stdout.write(formats[col](value))
                 if item[1]["permissions"][0] == 'l':
                     name_string = "%s -> %s" % (name_string, item[1]['target'])
             sys.stdout.write("%s\n" % name_string)
