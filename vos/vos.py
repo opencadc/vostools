@@ -12,8 +12,9 @@ import fnmatch
 import hashlib
 from contextlib import nested
 from cStringIO import StringIO
+import traceback
+import requests
 import html2text
-import httplib
 import logging
 import mimetypes
 import os
@@ -40,7 +41,7 @@ except NameError:
 from __version__ import version
 
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 connection_count_logger = logging.getLogger('connections')
 connection_count_logger.setLevel(logging.ERROR)
 
@@ -90,23 +91,18 @@ class URLparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, vospace_certfile=None, vospace_token=None,
-                 http_debug=False):
+    def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False):
         """Setup the Certificate for later usage
 
         cerdServerURL -- the location of the cadc proxy certificate server
         vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
         vospace_token -- token string (alternative to vospace_certfile)
-        http_debug -- set True to generate httplib debug statements
+        http_debug -- set True to generate debug statements
 
         The user must supply a valid certificate or connection will be 'anonymous'.
         """
         self.http_debug = http_debug
-        self.logger = logging.getLogger('http')
-        if sys.version_info[1] > 6:
-            self.logger.addHandler(logging.NullHandler())
-        self.logger.setLevel(logging.ERROR)
 
         # # tokens trump certs. We should only ever have token or certfile
         ## set in order to avoid confusion.
@@ -120,6 +116,20 @@ class Connection:
                 vospace_certfile = None
             self.vospace_certfile = vospace_certfile
 
+        # create a requests session object that all requests will be made via.
+        session = requests.Session()
+        if self.vospace_certfile is not None:
+            session.cert = (self.vospace_certfile, self.vospace_certfile)
+        if self.vospace_token is not None:
+            session.headers.update(HEADER_DELEG_TOKEN, self.vospace_token)
+
+        user_agent = 'vos ' + version
+        if "vofs" in sys.argv[0]:
+            user_agent = 'vofs ' + version
+        session.headers.update({"User-Agent": user_agent})
+
+        self.session = session
+
     def get_connection(self, url):
         """Create an HTTPSConnection object and return.  Uses the client
         certificate if None given.
@@ -127,54 +137,7 @@ class Connection:
         uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
         """
 
-        global CONNECTION_COUNTER
-        CONNECTION_COUNTER += 1
-
-        parts = URLparse(url)
-        connection_count_logger.debug("Opening connection {0} to {1}://{2} using {3}".format(CONNECTION_COUNTER,
-                                                                                             parts.scheme, parts.netloc,
-                                                                                             self.vospace_certfile))
-
-        try:
-            if parts.scheme == "https" and self.vospace_certfile is not None:
-                connection = httplib.HTTPSConnection(parts.netloc,
-                                                     key_file=self.vospace_certfile,
-                                                     cert_file=self.vospace_certfile,
-                                                     timeout=CONNECTION_TIMEOUT)
-            else:
-                connection = httplib.HTTPConnection(parts.netloc,
-                                                    timeout=CONNECTION_TIMEOUT)
-        except httplib.NotConnected as e:
-            self.logger.error("HTTP connection to %s failed \n" % parts.netloc)
-            self.logger.error("%s \n" % (str(e)))
-            raise OSError(errno.ECONNREFUSED, "VOSpace connection failed",
-                          parts.netloc)
-
-        if self.http_debug:
-            connection.set_debuglevel(1)
-
-        # # Try to open this connection.
-        start_time = time.time()
-        self.logger.debug("Opening the connection")
-
-        while True:
-            try:
-                self.logger.debug("Opening connection.")
-                connection.connect()
-                break
-            except httplib.HTTPException as http_exception:
-                self.logger.critical("%s" % (str(http_exception)))
-                self.logger.critical("Retrying connection for {0} seconds".format(MAX_RETRY_TIME))
-                if time.time() - start_time > MAX_RETRY_TIME:
-                    raise http_exception
-            except Exception as e:
-                if getattr(e, 'errno', errno.EFAULT) == errno.ENOEXEC:
-                    self.logger.error("Failed to connect to VOSpace: No network available?")
-                else:
-                    self.logger.error(str(e))
-                break
-
-        return connection
+        return self.session
 
 
 class Node:
@@ -725,6 +688,9 @@ class VOFile:
         self.totalRetryDelay = 0
         self.retries = 0
         self.fileSize = None
+        self.session = None
+        self.resp = None
+        self.trans_encode = None
 
     def tell(self):
         return self._fpos
@@ -746,26 +712,19 @@ class VOFile:
         return
 
     def close(self):
-        """close the connection"""
-        global CONNECTION_COUNTER
-        if self.closed:
-            return self.closed
-        connection_count_logger.debug("Closing http connection".format(CONNECTION_COUNTER))
-        try:
-            logger.debug("closing the connection.")
-            if self.transEncode is not None:
-                self.httpCon.send('0\r\n\r\n')
-                logger.debug("End of document sent.")
-            logger.debug("getting response.")
-            self.resp = self.httpCon.getresponse()
-            logger.debug("checking response status.")
-            self.checkstatus()
-            logger.debug("Finishing close.")
-        finally:
-            self.closed = True
-            logger.debug("actually closing.")
-            self.httpCon.close()
-            logger.debug("closed.")
+        """close the connection."""
+
+        if not self.closed:
+            try:
+                if self.trans_encode is not None:
+                    self.httpCon.send('0\r\n\r\n')
+                    logger.debug("End of document sent.")
+                logger.debug("getting response.")
+                self.resp = self.connector.session.send(self.session)
+                logger.debug("checking response status.")
+                self.checkstatus()
+            finally:
+                self.closed = True
         return self.closed
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
@@ -810,54 +769,46 @@ class VOFile:
         """Open a connection to the given URL"""
         logger.debug("Opening %s (%s)" % (URL, method))
         self.url = URL
-        self.httpCon = self.connector.get_connection(URL)
+        self.method = method
+        self.httpCon = self.connector.session.prepare_request()
+        req = requests.Request(self.method, self.URL)
+        session = self.connector.session.prepare_request(req)
 
-        self.closed = False
-        self.httpCon.putrequest(method, URL)
-        userAgent = 'vos ' + version
-        if "mountvofs" in sys.argv[0]:
-            userAgent = 'vofs ' + version
-        self.httpCon.putheader("User-Agent", userAgent)
-        self.transEncode = None
+        self.trans_encode = None
 
-        # Add token to header if present
-        if self.connector.vospace_token:
-            self.httpCon.putheader(HEADER_DELEG_TOKEN,
-                                   self.connector.vospace_token)
-
+        # Try to send a content length hint if this is a PUT.
+        # otherwise send as a chunked PUT
         if method in ["PUT"]:
             try:
                 self.size = int(self.size)
-                self.httpCon.putheader("Content-Length", self.size)
-                self.httpCon.putheader("X-CADC-Content-Length", self.size)
+                session.headers.update({"Content-Length", self.size,
+                                        "X-CADC-Content-Length", self.size})
             except TypeError as e:
                 self.size = None
-                self.transEncode = "chunked"
-                self.httpCon.putheader("Transfer-Encoding", 'chunked')
+                self.trans_encode = "chunked"
         elif method in ["POST", "DELETE"]:
             self.size = None
-            self.httpCon.putheader("Transfer-Encoding", 'chunked')
-            self.transEncode = "chunked"
+            self.trans_encode = "chunked"
+
         if method in ["PUT", "POST", "DELETE"]:
-            contentType = "text/xml"
+            content_type = "text/xml"
             if method == "PUT":
                 ext = os.path.splitext(urllib.splitquery(URL)[0])[1]
                 if ext in ['.fz', '.fits', 'fit']:
-                    contentType = 'application/fits'
+                    content_type = 'application/fits'
                 else:
-                    contentType = mimetypes.guess_type(URL)[0]
-            if contentType is not None:
-                self.httpCon.putheader("Content-Type", contentType)
+                    content_type = mimetypes.guess_type(URL)[0]
+            if content_type is not None:
+                session.headers.update({"Content-Type": content_type})
         if bytes is not None and method == "GET":
-            self.httpCon.putheader("Range", bytes)
-        self.httpCon.putheader("Accept", "*/*")
-        self.httpCon.putheader("Expect", "100-continue")
+            session.headers.update({"Range": bytes})
+        session.headers.update({"Accept": "*/*",
+                                "Expect": "100-continue"})
 
         # set header if a partial read is possible
         if possible_partial_read and method == "GET":
-            self.httpCon.putheader("X-CADC-Partial-Read", "true")
-
-        self.httpCon.endheaders()
+            session.headers.update({"X-CADC-Partial-Read", "true"})
+        self.session = session
 
     def getFileInfo(self):
         """Return information harvested from the HTTP header"""
@@ -867,16 +818,10 @@ class VOFile:
         """return size bytes from the connection response"""
 
         #logger.debug("Starting to read file by closing http(s) connection")
+        if self.resp is None:
+            self.resp = self.connector.session.send(self.session)
 
         read_error = None
-        if not self.closed:
-            try:
-                self.close()
-            except (httplib.HTTPException, ssl.SSLError) as exception:
-                logger.debug("Caught {0}: {1}".format(type(exception), str(exception)))
-                raise exception
-            except IOError as read_error:
-                pass
         if self.resp.status == 416:
             return ""
         # check the most likely response first
@@ -976,7 +921,7 @@ class VOFile:
         if not self.httpCon or self.closed:
             raise OSError(errno.ENOTCONN, "no connection for write", self.url)
         ### If we are sending chunked then we need to frame the transfer
-        if self.transEncode is not None:
+        if self.trans_encode is not None:
             self.httpCon.send('%X\r\n' % len(buf))
             self.httpCon.send(buf + '\r\n')
         else:
@@ -1368,10 +1313,7 @@ class Client:
         if server is None:
             return uri
 
-        URL = None
-
-        if (do_shortcut and ((method == 'GET' and
-                                      view in ['data', 'cutout']) or method == "PUT")):
+        if do_shortcut and ((method == 'GET' and view in ['data', 'cutout']) or method == "PUT"):
 
             ## only get here if do_shortcut == True
             # find out the URL to the CADC data server
@@ -1380,15 +1322,10 @@ class Client:
             # We override the GET protocol to use HTTP (faster)
             # unless a secure_get is requested.
             protocol = {
-                'GET':
-                    {'https':
-                         (self.secure_get and
-                          Client.VO_HTTPSGET_PROTOCOL) or
-                         Client.VO_HTTPGET_PROTOCOL,
-                     'http': Client.VO_HTTPGET_PROTOCOL},
-                'PUT':
-                    {'https': Client.VO_HTTPSPUT_PROTOCOL,
-                     'http': Client.VO_HTTPPUT_PROTOCOL}}
+                'GET': {'https': (self.secure_get and Client.VO_HTTPSGET_PROTOCOL) or Client.VO_HTTPGET_PROTOCOL,
+                        'http': Client.VO_HTTPGET_PROTOCOL},
+                'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
+                        'http': Client.VO_HTTPPUT_PROTOCOL}}
 
             url = "%s://%s%s" % (self.protocol, SERVER, "")
             logger.debug("URL: %s" % (url))
@@ -1408,28 +1345,19 @@ class Client:
             if self.conn.vospace_token:
                 headers[HEADER_DELEG_TOKEN] = self.conn.vospace_token
 
-            httpCon = self.conn.get_connection(url)
-            httpCon.request("POST", Client.VOTransfer, form, headers)
-            try:
-                response = httpCon.getresponse()
-                if response.status == 303:
-                    # Normal case is a redirect
-                    URL = response.getheader('Location', None)
-                elif response.status == 404:
-                    # The file doesn't exist
-                    raise IOError(errno.ENOENT, response.read(), url)
-                elif response.status == 409:
-                    raise IOError(errno.EREMOTE, response.read(), url)
-                else:
-                    logger.debug("GET/PUT shortcut not working. POST to %s"
-                                 "returns: %s.  Reverting to full negotiation" % (Client.VOTransfer, response.status))
-                    return self.getNodeURL(uri, method=method, view=view,
-                                           limit=limit, nextURI=nextURI, cutout=cutout)
-            except Exception as e:
-                logger.debug(str(e))
-                raise e
-            finally:
-                httpCon.close()
+            response = self.conn.session.get(Client.VOTransfer, params=form, headers=headers)
+            if response.status_code == 303:
+                # Normal case is a redirect
+                URL = response.getheader('Location', None)
+            elif response.status_code == 404:
+                # The file doesn't exist
+                raise IOError(errno.ENOENT, response.read(), url)
+            elif response.status_code == 409:
+                raise IOError(errno.EREMOTE, response.read(), url)
+            else:
+                logger.debug("Reverting to full negotiation")
+                return self.getNodeURL(uri, method=method, view=view, full_negotiation=True,
+                                       limit=limit, nextURI=nextURI, cutout=cutout)
 
             logger.debug("Sending short cut url: %s" % (URL))
             return URL
@@ -1495,10 +1423,11 @@ class Client:
         """Build the transfer XML document"""
         protocol = {"pullFromVoSpace": "%sget" % (self.protocol),
                     "pushToVoSpace": "%sput" % (self.protocol)}
+
         views = {"defaultview": "%s#%s" % (Node.IVOAURL, "defaultview"),
                  "data": "ivo://cadc.nrc.ca/vospace/view#data",
-                 "cutout": "ivo://cadc.nrc.ca/vospace/view#cutout"
-        }
+                 "cutout": "ivo://cadc.nrc.ca/vospace/view#cutout"}
+
         transfer_xml = ElementTree.Element("transfer")
         transfer_xml.attrib['xmlns'] = Node.VOSNS
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
@@ -1513,20 +1442,25 @@ class Client:
             "%s#%s" % (Node.IVOAURL, protocol[direction])
         logger.debug(ElementTree.tostring(transfer_xml))
         url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransfer)
-        con = VOFile(url, self.conn, method="POST", followRedirect=False)
-        con.write(ElementTree.tostring(transfer_xml))
-        transURL = con.read()
-        logger.debug("Got back %s from trasnfer " % (transURL))
-        con = StringIO(VOFile(transURL, self.conn, method="GET",
-                              followRedirect=True).read())
-        con.seek(0)
-        logger.debug(con.read())
+        print url
+        data = ElementTree.tostring(transfer_xml)
+        print data
+        resp = self.conn.session.post(url,
+                                      data=data,
+                                      allow_redirects=False)
+        print resp.headers
+        print resp.status_code
+        print resp.url
+        transfer_URL = resp.content
+        logger.debug("Got back %s from transfer URL: %s" % transfer_URL)
+        print transfer_URL
+        con = self.conn.session.get(transfer_URL, stream=True).raw
         con.seek(0)
         transfer_document = ElementTree.parse(con)
         logger.debug("Transfer Document: %s" % transfer_document)
         all_protocols = transfer_document.findall(Node.PROTOCOL)
         if all_protocols is None or not len(all_protocols) > 0:
-            return self.getTransferError(transURL, uri)
+            return self.getTransferError(transfer_URL, uri)
 
         result = []
         for protocol in all_protocols:
