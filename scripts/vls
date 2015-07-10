@@ -96,7 +96,9 @@ if __name__ == '__main__':
     (opt, args) = parser.parse_args()
     # We disabled -h/--help so vls can have a -h option.
     # Here we re-enable it but only with --help
-    opt.help and (parser.print_help() or sys.exit(0))
+    if opt.help:
+        parser.print_help()
+        sys.exit(0)
     parser.process_informational_options()
 
     if not len(args) > 0:
