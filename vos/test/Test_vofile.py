@@ -178,7 +178,7 @@ class TestVOFile(unittest2.TestCase):
         assert(1 == vofile.retries)
         
     @patch.object(Connection,'get_connection')
-    def test_checkstatus(self,mock_get_connection):
+    def test_checkstatus(self, mock_get_connection):
         # Verify the md5sum and size are extracted from the HTTP header
         conn = Connection()
         # test successful - use first url
@@ -186,7 +186,7 @@ class TestVOFile(unittest2.TestCase):
         mockHttpResponse200 = Mock(name="HttpResponse200")
         mockHttpResponse200.getheader = Mock(side_effect=SideEffect({
                 ('Content-MD5', None): 12345,
-                ('Content-Length', 0): 10,
+                ('Content-Length', 10): 10, ('X-CADC-Content-Length', 0): 10,
                 }, name="mockHttpResponse200.getheader"))
         mockHttpResponse200.status = 200
         vofile.resp = mockHttpResponse200
