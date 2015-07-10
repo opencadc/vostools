@@ -766,6 +766,8 @@ class VOFile:
             logger.debug("actually closing.")
             self.httpCon.close()
             logger.debug("closed.")
+        if self.resp is None:
+            raise IOError(errno.ECONNREFUSED, "Failed connection to VOServer.")
         return self.closed
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
@@ -799,7 +801,7 @@ class VOFile:
         # fallback to work around a server-side Java bug that limits
         # 'Content-Length' to a signed 32-bit integer (~2 gig files)
         self.size = self.resp.getheader("Content-Length", 
-                                        self.resp.getheader("X-CADC-Content-Length",0))
+                                        self.resp.getheader("X-CADC-Content-Length", 0))
 
         if self.resp.status == 200:
             self.md5sum = self.resp.getheader("Content-MD5", None)
