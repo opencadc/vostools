@@ -54,6 +54,11 @@ def get_terminal_size():
 
 def size_format(size):
     """Format a size value for listing"""
+    try:
+        size = float(size)
+    except Exception as ex:
+        logger.debug(str(ex))
+        size = 0.0
     if opt.human:
         size_unit = ['B', 'K', 'M', 'G', 'T']
         try:
