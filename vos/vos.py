@@ -873,10 +873,10 @@ class VOFile(object):
     def read(self, size=None):
         """return size bytes from the connection response"""
 
-        logger.debug("Starting to read file by sending http[s] request: {0}".format(self.request))
         if self.resp is None:
             try:
-                self.resp = self.connector.session.send(self.request)
+                logger.debug("Intializing read by sending request: {0}".format(self.request))
+                self.resp = self.connector.session.send(self.request, stream=True)
                 self.checkstatus()
             except Exception as ex:
                 logger.debug("Error on read: {}".format(ex))
@@ -890,12 +890,12 @@ class VOFile(object):
             return ""
         # check the most likely response first
         if self.resp.status_code == 200:
-            buff = self.resp.content
+            buff = self.resp.raw.read(size)
             size = size is not None and size < len(buff) and size or len(buff)
             logger.debug("Sending back {0} bytes".format(size))
             return buff[:size]
         if self.resp.status_code == 206:
-            buff = self.resp.content
+            buff = self.resp.raw.read(size)
             size = size is not None and size < len(buff) and size or len(buff)
             self._fpos += size
             return buff[:size]
