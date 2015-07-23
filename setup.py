@@ -34,5 +34,5 @@ setup(name="vos",
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        ],    
-)
+        ], requires=['requests']
+      )

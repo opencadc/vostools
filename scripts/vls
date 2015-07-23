@@ -75,8 +75,6 @@ def date_format(epoch):
         return time.strftime('%b %d  %Y ', time_tuple)
     return time.strftime('%b %d %H:%S ', time_tuple)
 
-
-
 if __name__ == '__main__':
 
     parser = CommonParser(usage, description=description, add_help_option=False)
@@ -128,7 +126,7 @@ if __name__ == '__main__':
             if not node[0:4] == "vos:" :
                 raise IOError(errno.EBADF, "Invalid node name", node)
             logger.debug("getting listing of: %s" % str(node))
-            infoList = client.getInfoList(node)
+            infoList = client.get_info_list(node)
         except Exception as e:
             logger.error(getattr(e, 'strerror', 'error'))
             sys.exit(getattr(e, 'errno', errno.ENOMSG))

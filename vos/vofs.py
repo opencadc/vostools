@@ -56,38 +56,9 @@ class MyIOProxy(IOProxy):
         Write a file in the cache to the remote file.
         """
         logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
-
-        (size, mtime) = self.cacheFile.getFileInfo()
-
         logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
-        dest_uri = self.vofs.getNode(self.cacheFile.path).uri
-        md5 = hashlib.md5()
-        BUFSIZE = Cache.IO_BLOCK_SIZE
-        vo_file_handle = self.vofs.client.open(dest_uri, mode=os.O_WRONLY, size=size)
-        cache_file_handle = open(self.cacheFile.cacheDataFile, 'r')
-        try:
-            while True:
-                buf = cache_file_handle.read(BUFSIZE)
-                if len(buf) == 0:
-                    break
-                if self.cacheFile.writeAborted:
-                    raise CacheAborted("Write to VOSpace aborted.")
-                vo_file_handle.write(buf)
-                md5.update(buf)
-        except Exception as e:
-            logger.debug("{0}".format(e))
-            raise e
-        finally:
-            vo_file_handle.close()
-            cache_file_handle.close()
-
-        vo_md5 = self.vofs.getNode(dest_uri, force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
-        if md5.hexdigest() != vo_md5:
-            raise OSError(EIO,
-                          "md5 sums of source ({0}) and destination ){1}) don't match".format(
-                              self.cacheFile.cacheDataFile, dest_uri))
-
-        return vo_md5
+        dest_uri = self.vofs.get_node(self.cacheFile.path).uri
+        return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
 
     @logExceptions()
     def readFromBacking(self, size=None, offset=0,
@@ -108,20 +79,16 @@ class MyIOProxy(IOProxy):
         logger.debug("reading range: %s" % (str(byte_range)))
 
         if self.lastVOFile is None:
-            logger.debug("Opening a new vo file on %s",
-                             self.cacheFile.path)
+            logger.debug("Opening a new vo file on {}".format(self.cacheFile.path))
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
-                                                    mode=os.O_RDONLY, view="data", size=size, range=byte_range,
+                                                    mode=os.O_RDONLY, view="data", size=size, byte_range=byte_range,
                                                     possible_partial_read=True)
         else:
-            logger.debug("Opening a existing vo file on %s",
-                             self.lastVOFile.URLs[self.lastVOFile.urlIndex])
+            logger.debug("Opening a existing vo file on {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
             self.lastVOFile.open(
-                self.lastVOFile.URLs[self.lastVOFile.urlIndex],
-                bytes=byte_range, possible_partial_read=True)
+                self.lastVOFile.URLs[self.lastVOFile.urlIndex], byte_range=byte_range, possible_partial_read=True)
         try:
-            logger.debug("reading from %s" % (
-                str(self.lastVOFile.URLs[self.lastVOFile.urlIndex])))
+            logger.debug("reading from {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
             while True:
                 try:
                     buff = self.lastVOFile.read(block_size)
@@ -135,19 +102,20 @@ class MyIOProxy(IOProxy):
                     logger.debug("Error while reading: {0}".format(io_error))
                     self.lastVOFile = self.vofs.client.open(
                         self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                        size=size, range=byte_range, full_negotiation=True, possible_partial_read=True)
+                        size=size, byte_range=byte_range, full_negotiation=True, possible_partial_read=True)
                     buff = self.lastVOFile.read(block_size)
 
                 if not self.cacheFile.gotHeader:
-                    info = self.lastVOFile.getFileInfo()
+                    info = self.lastVOFile.get_file_info()
+                    logger.debug("Got info: {}".format(info))
                     self.cacheFile.setHeader(info[0], info[1])
 
                 if buff is None:
                     logger.debug("buffer for {0} is None".format(self.cacheFile.path))
                 else:
                     logger.debug("Writing: {0} bytes at {1} to cache for {2}".format(len(buff),
-                                                                                         offset,
-                                                                                         self.cacheFile.path))
+                                                                                     offset,
+                                                                                     self.cacheFile.path))
                 if not buff:
                     break
                 try:
@@ -166,7 +134,7 @@ class MyIOProxy(IOProxy):
 
     def get_md5(self):
         if self.md5 is None:
-            node = self.vofs.getNode(self.path)
+            node = self.vofs.get_node(self.path)
             self.set_size(int(node.props.get('length')))
             self.set_md5(node.props.get('MD5'))
 
@@ -174,7 +142,7 @@ class MyIOProxy(IOProxy):
 
     def getSize(self):
         if self.size is None:
-            node = self.vofs.getNode(self.path)
+            node = self.vofs.get_node(self.path)
             self.set_size(int(node.props.get('length')))
             self.set_md5(node.props.get('MD5'))
 
@@ -272,7 +240,7 @@ class VOFS(Operations):
         # All communication with the VOSpace goes through this client
         # connection.
         try:
-            self.client = vos.Client(rootNode=root, conn=conn,
+            self.client = vos.Client(root_node=root, conn=conn,
                                      cadc_short_cut=True, secure_get=secure_get)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
@@ -421,7 +389,7 @@ class VOFS(Operations):
 
         fh.cache_file_handle.fsync()
 
-    def getNode(self, path, force=False, limit=0):
+    def get_node(self, path, force=False, limit=0):
         """Use the client and pull the node from VOSpace.
 
         Currently force=False is the default... so we never check
@@ -437,9 +405,11 @@ class VOFS(Operations):
 
         ## Pull the node meta data from VOSpace.
         logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
-        node = self.client.getNode(path, force=force, limit=limit)
-
+        node = self.client.get_node(path, force=force, limit=limit)
+        logger.debug("Got node {0}".format(node))
         return node
+
+    getNode = get_node
 
     #@logExceptions()
     def getattr(self, path, file_id=None):
@@ -449,7 +419,7 @@ class VOFS(Operations):
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         attr = self.cache.getAttr(path)
-        return attr is not None and attr or self.getNode(path, limit=0, force=False).attr
+        return attr is not None and attr or self.get_node(path, limit=0, force=False).attr
 
     def init(self, path):
         """Called on filesystem initialization. (Path is always /)
@@ -463,11 +433,6 @@ class VOFS(Operations):
         """Create a container node in the VOSpace at the correct location.
 
         set the mode after creation. """
-
-        #parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
-        #if parent_node and parent_node.props.get('islocked', False):
-        #    logger.debug("Parent node of %s is locked." % path)
-        #    raise FuseOSError(EPERM)
         try:
             self.client.mkdir(path)
         except IOError as io_error:
@@ -503,7 +468,7 @@ class VOFS(Operations):
             # see if this node already exists in the cache; if not get info
             # from vospace
             try:
-                node = self.getNode(path)
+                node = self.get_node(path)
             except IOError as e:
                 if e.errno == 404:
                     # file does not exist
@@ -522,20 +487,20 @@ class VOFS(Operations):
 
         if not read_only and node and not locked:
             if node.type == "vos:DataNode":
-                parent_node = self.getNode(os.path.dirname(path), force=False, limit=1)
+                parent_node = self.get_node(os.path.dirname(path), force=False, limit=1)
                 if parent_node.props.get('islocked', False):
                     logger.debug("%s is locked by parent node." % path)
                     locked = True
             elif node.type == "vos:LinkNode":
                 try:
-                    # sometimes targetNodes aren't internal... so then not
+                    # sometimes target_nodes aren't internal... so then not
                     # locked
-                    target_node = self.getNode(node.target, force=False, limit=1)
+                    target_node = self.get_node(node.target, force=False, limit=1)
                     if target_node.props.get('islocked', False):
                         logger.debug("{0} target node is locked.".format(path))
                         locked = True
                     else:
-                        target_parent_node = self.getNode(os.path.dirname(node.target), force=False, limit=1)
+                        target_parent_node = self.get_node(os.path.dirname(node.target), force=False, limit=1)
                         if target_parent_node.props.get('islocked', False):
                             logger.debug("{0} parent node is locked.".format(path))
                             locked = True
@@ -601,7 +566,7 @@ class VOFS(Operations):
 
         Currently doesn't provide correct capabilty for VOSpace FS.
         """
-        return self.getNode(path).name+"?link="+urllib.quote_plus(self.getNode(path).target)
+        return self.get_node(path).name+"?link="+urllib.quote_plus(self.getNode(path).target)
 
     #@logExceptions()
     def readdir(self, path, file_id):
@@ -619,7 +584,7 @@ class VOFS(Operations):
                 self.condition.wait()
         return ['.', '..'] + [e.name.encode('utf-8') for e in self.getNode(path,
                                                                            force=False,
-                                                                           limit=None).getNodeList()]
+                                                                           limit=None).node_list]
 
     #@logExceptions()
     def load_dir(self, path):
@@ -627,7 +592,7 @@ class VOFS(Operations):
         This should always be run in a thread."""
         try:
             logger.debug("Starting getNodeList thread")
-            self.getNode(path, force=True, limit=None).getNodeList()
+            self.getNode(path, force=True, limit=None).node_list
             logger.debug("Got listing for {0}".format(path))
         finally:
             self.loading_dir[path] = False
@@ -707,9 +672,10 @@ class VOFS(Operations):
             n_bytes = int(node.props.get('quota', 2 ** 33))
             used = int(node.props.get('length', 2 ** 33))
             free = n_bytes - used
+        logger.debug("Got properties: {0}".format(node.props))
         sfs = {'f_bsize': block_size, 'f_frsize': block_size, 'f_blocks': int(n_bytes / block_size),
                'f_bfree': int(free / block_size), 'f_bavail': int(free / block_size),
-               'f_files': len(node.getNodeList()), 'f_ffree': 2 * 10, 'f_favail': 2 * 10, 'f_flags': 0,
+               'f_files': len(node.node_list), 'f_ffree': 2 * 10, 'f_favail': 2 * 10, 'f_flags': 0,
                'f_namemax': 256}
         return sfs
 

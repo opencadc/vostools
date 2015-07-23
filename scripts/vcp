@@ -35,7 +35,7 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 
 def get_node(filename):
     """Get node, from cache if possible"""
-    return client.getNode(filename, limit=None)
+    return client.get_node(filename, limit=None)
 
 
 # here are a series of methods that choose between calling the system version or the vos version of various
@@ -124,11 +124,13 @@ def get_md5(filename):
         md5 = md5.hexdigest()
     return md5
 
+
 def lglob(pathname):
     if pathname[0:4] == "vos:":
         return client.glob(pathname)
     else:
         return glob.glob(pathname)
+
 
 def copy(source_name, destination_name, exclude=None, include=None, interrogate=False, overwrite=False, ignore=False):
     """
@@ -190,16 +192,16 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                 logging.info("%s -> %s " % (source_name, destination_name))
             while not skip:
                 try:
-                    client.copy(source_name, destination_name, sendMD5=True)
+                    client.copy(source_name, destination_name, send_md5=True)
                     break
                 except Exception as client_exception:
                     if getattr(client_exception, 'errno', -1) == 104:
-                        ### 104 is connection reset by peer.  Try again on this error
+                        # 104 is connection reset by peer.  Try again on this error
                         logging.warning(str(client_exception))
                         exit_code = getattr(client_exception, 'errno', -1)
                     elif getattr(client_exception, 'errno', -1) == errno.EIO:
-                        ### retry on IO errors
-                        logging.warning(str(client_exception) + "\nRetrying")
+                        # retry on IO errors
+                        logging.warning("{0}: Retrying".format(client_exception))
                         pass
                     elif ignore:
                         logging.error("Ignoring error: %s " % str(client_exception))

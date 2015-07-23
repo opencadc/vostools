@@ -3,11 +3,11 @@
 
 
 import vos
-import time
-import os, sys, logging
+import sys
+import logging
 from vos.commonparser import CommonParser
 import signal
-from vos import vos, __version__
+from vos import __version__
 
 def signal_handler(signum, frame):
     raise KeyboardInterrupt, "SIGINT signal handler"
@@ -30,11 +30,9 @@ Version: %s """ % (__version__.version)
 
     logger = logging.getLogger()
     logger.setLevel(parser.log_level)
-    logger.addHandler(logging.StreamHandler())
-
 
     if len(args) != 2:
-        parser.error("You must supply a source and desitination")
+        parser.error("You must supply a source and destination")
 
     try:
         client = vos.Client(vospace_certfile=opt.certfile,

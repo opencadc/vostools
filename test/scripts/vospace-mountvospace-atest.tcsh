@@ -183,6 +183,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo -n "copy cache test data to container"
     rm foo.dat >& /dev/null
     cat /dev/zero | head -c $CACHETEST_FSIZE_BYTES /dev/zero > foo.dat
+    ls -l foo.dat
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
         $CPCMD $CERTFILE foo.dat $CONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
@@ -199,12 +200,12 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     set FS_LAST = `${STATCMD} $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1
     if( $FS_LAST != $CACHETEST_FSIZE_BYTES ) then
         # The last file should now be cached
-        echo " [FAIL]" && exit -1
+        echo " last file wrong size [FAIL]" && exit -1
     endif
 
     if( -e $VOS_CACHE/data/$TIMESTAMP/foo1.dat ) then
         # The first file should now be evicted from the cache
-        echo " [FAIL]" && exit -1
+        echo " first file still exists [FAIL]" && exit -1
     endif
 
     rm $MCONTAINER/foo*.dat >& /dev/null || echo " [FAIL]" && exit -1

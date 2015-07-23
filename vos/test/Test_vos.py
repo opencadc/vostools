@@ -51,17 +51,17 @@ class TestVos(unittest.TestCase):
     def test_getNode(self):
         client = Client()
         uri =  'vos://cadc.nrc.ca!vospace'
-        myNode = client.getNode(uri, limit=0, force=False)
+        myNode = client.get_node(uri, limit=0, force=False)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 0)
+        self.assertEqual(len(myNode.node_list()), 0)
 
-        myNode = client.getNode(uri, limit=2, force=True)
+        myNode = client.get_node(uri, limit=2, force=True)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 2)
+        self.assertEqual(len(myNode.node_list()), 2)
 
-        myNode = client.getNode(uri, limit=2, force=False)
+        myNode = client.get_node(uri, limit=2, force=False)
         self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.getNodeList()), 2)
+        self.assertEqual(len(myNode.node_list()), 2)
 
     def test_move(self):
         client = Client()
@@ -71,9 +71,9 @@ class TestVos(unittest.TestCase):
         with patch('vos.vos.VOFile') as mockVOFile:
             mockVOFile.write=Mock()
             mockVOFile.read=Mock()
-            client.getTransferError=Mock(return_value=False)
+            client.get_transfer_error=Mock(return_value=False)
             self.assertTrue(client.move(uri1, uri2))
-            client.getTransferError=Mock(return_value=True)
+            client.get_transfer_error=Mock(return_value=True)
             self.assertFalse(client.move(uri1, uri2))
 
     def test_delete(self):

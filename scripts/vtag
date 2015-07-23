@@ -26,7 +26,7 @@ def vtag(node,props):
 
     """
     client = vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
-    node = client.getNode(node)
+    node = client.get_node(node)
     if len(props) == 0 : 
         ## print all properties
         return pprint.pprint(node.props)
@@ -52,7 +52,7 @@ def vtag(node,props):
             raise ValueError("Illigal keyword of value character ('=') used: %s" % ( '='.join(prop)))
 
     if changed:
-        client.addProps(node)
+        client.add_props(node)
     return 0
 
 

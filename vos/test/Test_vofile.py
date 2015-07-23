@@ -192,7 +192,7 @@ class TestVOFile(unittest2.TestCase):
         vofile.resp = mockHttpResponse200
 
         self.assertTrue(vofile.checkstatus())
-        self.assertEqual(vofile.getFileInfo(), (10, 12345))
+        self.assertEqual(vofile.get_file_info(), (10, 12345))
 
         
         

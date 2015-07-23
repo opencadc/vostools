@@ -27,11 +27,11 @@ class ClientTest(unittest.TestCase):
     def test_getNodeURL_viewdata(self):
         self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
 
-        url = self.undertest.getNodeURL(TEST_URI_1, view="data")
+        url = self.undertest.get_node_url(TEST_URI_1, view="data")
         assert_that(url, equal_to(TEST_ENDPOINT))
         self.undertest.transfer.assert_called_with(TEST_URI_1, "pullFromVoSpace")
 
-        url = self.undertest.getNodeURL(TEST_URI_1, view="data", method="PUT")
+        url = self.undertest.get_node_url(TEST_URI_1, view="data", method="PUT")
         assert_that(url, equal_to(TEST_ENDPOINT))
         self.undertest.transfer.assert_called_with(TEST_URI_1, "pushToVoSpace")
 
@@ -50,7 +50,7 @@ class ClientTest(unittest.TestCase):
         self.undertest = vos.Client(vospace_certfile="", conn=conn, cadc_short_cut=True)
         self.undertest.transfer = Mock(return_value=TEST_ENDPOINT)
 
-        url = self.undertest.getNodeURL(TEST_URI_2, view="data")
+        url = self.undertest.get_node_url(TEST_URI_2, view="data")
         assert_that(not self.undertest.transfer.called)
         http_response.getheader.assert_called_once_with("Location", ANY)
         assert_that(url, equal_to(shortcut_url))
@@ -60,7 +60,7 @@ class ClientTest(unittest.TestCase):
                                                     "/data/pub/CFHT/1616220")
 
         uri = "vos://cadc.nrc.ca~vospace/OSSOS/dbimages/1616220/1616220o.fits.fz"
-        url = self.undertest.getNodeURL(uri, view="cutout",
+        url = self.undertest.get_node_url(uri, view="cutout",
                                         cutout="[1][100:300,200:400]")
 
         assert_that(url,
@@ -72,7 +72,7 @@ class ClientTest(unittest.TestCase):
                                                     "/data/pub/CFHT/1616220?RUNID=abc123")
 
         uri = "vos://cadc.nrc.ca~vospace/OSSOS/dbimages/1616220/1616220o.fits.fz"
-        url = self.undertest.getNodeURL(uri, view="cutout",
+        url = self.undertest.get_node_url(uri, view="cutout",
                                         cutout="[1][100:300,200:400]")
 
         assert_that(url,

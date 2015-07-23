@@ -78,7 +78,7 @@ class ThreadCopy(Process):
                         logger.debug("Getting node info from VOSpace")
                         logger.debug(str(nodeDict.keys()))
                         logger.debug(str(dest))
-                        node = self.client.getNode(dest, limit=None)
+                        node = self.client.get_node(dest, limit=None)
                         destMD5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
                         destLength = node.attr['st_size']
                         destTime = node.attr['st_ctime']
@@ -101,8 +101,8 @@ class ThreadCopy(Process):
                     pass
             logger.info("%s -> %s" % (src, dest))
             try:
-                self.client.copy(src, dest, sendMD5=True)
-                node = self.client.getNode(dest, limit=None)
+                self.client.copy(src, dest, send_md5=True)
+                node = self.client.get_node(dest, limit=None)
                 destMD5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
                 destLength = node.attr['st_size']
                 destTime = node.attr['st_ctime']
@@ -308,7 +308,7 @@ if __name__ == '__main__':
                 if os.path.basename(filename) != os.path.basename(dest):
                     thisRoot = os.path.join(dest, os.path.basename(filename))
             mkdirs(thisRoot)
-            nodeDict[thisRoot] = client.getNode(thisRoot, limit=None)
+            nodeDict[thisRoot] = client.get_node(thisRoot, limit=None)
             try:
                 buildFileList(filename, destRoot=thisRoot, recursive=opt.recursive, ignore=opt.exclude)
             except Exception as e:

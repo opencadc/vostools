@@ -904,11 +904,10 @@ class TestCadcCache(unittest.TestCase):
         self.assertTrue(os.path.isdir(testDir))
         self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
         os.chmod(testDir, stat.S_IRUSR)
-        try:
-            with self.assertRaises(CadcCache.CacheError) as cm:
-                CadcCache.Cache(testDir, 100)
-        finally:
-            os.chmod(testDir, stat.S_IRWXU)
+
+        self.assertIsInstance(CadcCache.Cache(testDir, 100), CadcCache.Cache)
+        self.assertTrue(os.access(testDir, os.R_OK | os.W_OK | os.X_OK))
+        os.chmod(testDir, stat.S_IRWXU)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor3(self):
@@ -917,9 +916,9 @@ class TestCadcCache(unittest.TestCase):
         # create the file
         open(testDir, 'a').close()
 
-        with self.assertRaises(CadcCache.CacheError) as cm:
+        with self.assertRaises(OSError) as cm:
             CadcCache.Cache(testDir, 100)
-
+        print cm
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -928,25 +927,24 @@ class TestCadcCache(unittest.TestCase):
         os.mkdir(testDir)
         open(testDir + "/data", 'a').close()
 
-        with self.assertRaises(CadcCache.CacheError) as cm:
+        with self.assertRaises(OSError) as cm:
             CadcCache.Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor5(self):
-        """ Constructor with a read-only directory where the cache data directory should be."""
+        """ Constructor with a read-only directory where the cache data directory should be.
+
+        Constructor should reset the permissions on that directory."""
         os.mkdir(testDir)
-        os.mkdir(testDir + "/data")
-        os.chmod(testDir + "/data", stat.S_IRUSR)
+        cache_dir = os.path.join(testDir, 'data')
+        os.mkdir(cache_dir)
+        os.chmod(cache_dir, stat.S_IRUSR)
 
-        try:
-            with self.assertRaises(CadcCache.CacheError) as cm:
-                CadcCache.Cache(testDir, 100)
-
-            self.assertTrue(str(cm.exception).find("permission") > 0)
-        finally:
-            os.chmod(testDir + "/data/", stat.S_IRWXU)
+        cm = CadcCache.Cache(testDir, 100)
+        self.assertIsInstance(cm, CadcCache.Cache)
+        self.assertEquals(os.stat(cache_dir).st_mode & stat.S_IRWXU, stat.S_IRWXU)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor6(self):
@@ -956,26 +954,24 @@ class TestCadcCache(unittest.TestCase):
         os.mkdir(testDir)
         open(testDir + "/metaData", 'a').close()
 
-        with self.assertRaises(CadcCache.CacheError) as cm:
+        with self.assertRaises(OSError) as cm:
             CadcCache.Cache(testDir, 100)
 
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor7(self):
-        """ Constructor with a read-only directory where the cache meta data 
+        """ Constructor with a read-only directory where the cache meta data
             directory should be."""
         os.mkdir(testDir)
-        os.mkdir(testDir + "/metaData")
-        os.chmod(testDir + "/metaData", stat.S_IRUSR)
+        meta_data_dir = os.path.join(testDir, 'metaData')
+        os.mkdir(meta_data_dir)
+        os.chmod(meta_data_dir, stat.S_IRUSR)
 
-        try:
-            with self.assertRaises(CadcCache.CacheError) as cm:
-                CadcCache.Cache(testDir, 100)
-
-            self.assertTrue(str(cm.exception).find("permission") > 0)
-        finally:
-            os.chmod(testDir + "/metaData/", stat.S_IRWXU)
+        cm = CadcCache.Cache(testDir, 100)
+        self.assertIsInstance(cm, CadcCache.Cache)
+        self.assertEquals(os.stat(meta_data_dir).st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        os.chmod(meta_data_dir, stat.S_IRWXU)
 
     def setUp_testDirectory(self):
         directories = [ "dir1", "dir2", "dir3" ]
@@ -1152,7 +1148,7 @@ class TestCadcCache(unittest.TestCase):
             info = os.stat(fh.cacheDataFile)
             fh.release()
             ioObject.writeToBacking.assert_called_once_with()
-            testCache.flushNodeQueue.join()
+            testObject.flushNodeQueue.join()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_03_release4(self):

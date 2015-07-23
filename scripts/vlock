@@ -43,9 +43,9 @@ exit_code = 0
 
 try:
     client = vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
-    node = client.getNode(args[0])
+    node = client.get_node(args[0])
     if lock is not None:
-        if node.changeProp(Node.ISLOCKED, lock) > 0:
+        if node.change_prop(Node.ISLOCKED, lock) > 0:
             logger.info("setting lock to %s" % (lock))
             client.update(node)
     else:

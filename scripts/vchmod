@@ -39,8 +39,6 @@ if __name__ == '__main__':
     parser.process_informational_options()
 
     logger = logging.getLogger()
-    logger.setLevel(parser.log_level)
-    logger.addHandler(logging.StreamHandler())
 
     if len(args) < 2:
         parser.error("Requires mode and node arguments")
@@ -95,17 +93,18 @@ if __name__ == '__main__':
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
-        node = client.getNode(cmdArgs['node'])
+        node = client.get_node(cmdArgs['node'])
         if opt.recursive:
             node.props.clear()
-            node.clearProps()
+            node.clear_properties()
             # del node.node.findall(vos.Node.PROPERTIES)[0:]
         if 'readgroup' in props:
             node.chrgrp(props['readgroup'])
         if 'writegroup' in props:
             node.chwgrp(props['writegroup'])
         if 'ispublic' in props:
-            node.setPublic(props['ispublic'])
+            node.set_public(props['ispublic'])
+        logger.debug("Node: {0}".format(node))
         returnCode = client.update(node, opt.recursive)
     except KeyboardInterrupt as ke:
         logger.error("Received keyboard interrupt. Execution aborted...\n")
