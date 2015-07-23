@@ -1,7 +1,5 @@
 #!/usr/bin/env python2.7
 """A FUSE based filesystem view of VOSpace."""
-import hashlib
-
 import time
 import vos
 import sys
@@ -21,7 +19,6 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
-
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
     m = md[flags & (O_RDONLY | O_WRONLY | O_RDWR)]
@@ -31,7 +28,6 @@ def flag2mode(flags):
         m = m.replace('w', 'a', 1)
 
     return m
-
 
 class MyIOProxy(IOProxy):
     def __init__(self, vofs, path):
@@ -260,10 +256,8 @@ class VOFS(Operations):
             ret = getattr(self, op)(*args)
             return ret
         except Exception as all_exceptions:
-            errno = EAGAIN
             ret = str(all_exceptions)
-            if getattr(all_exceptions, 'errno', None) is not None:
-                errno = all_exceptions.errno
+            errno = getattr(all_exceptions, 'errno', EAGAIN)
             exception = FuseOSError(errno)
             raise exception
         finally:
@@ -592,7 +586,7 @@ class VOFS(Operations):
         This should always be run in a thread."""
         try:
             logger.debug("Starting getNodeList thread")
-            self.getNode(path, force=True, limit=None).node_list
+            node_list = self.getNode(path, force=True, limit=None).node_list
             logger.debug("Got listing for {0}".format(path))
         finally:
             self.loading_dir[path] = False
