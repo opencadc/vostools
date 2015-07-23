@@ -57,8 +57,7 @@ class MyIOProxy(IOProxy):
         return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
 
     @logExceptions()
-    def readFromBacking(self, size=None, offset=0,
-                        block_size=Cache.IO_BLOCK_SIZE):
+    def readFromBacking(self, size=None, offset=0, block_size=Cache.IO_BLOCK_SIZE):
         """
         Read from VOSpace into cache
         """
@@ -566,7 +565,7 @@ class VOFS(Operations):
     def readdir(self, path, file_id):
         """Send a list of entries in this directory"""
         logger.debug("Getting directory list for {0}".format(path))
-        ## reading from VOSpace can be slow, we'll do this in a thread
+        # reading from VOSpace can be slow, we'll do this in a thread
         import thread
         with self.condition:
             if not self.loading_dir.get(path, False):
