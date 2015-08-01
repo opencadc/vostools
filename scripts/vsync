@@ -143,7 +143,7 @@ def mkdirs(dirs):
         logger.info("Made directory %s " % (dirs))
         goodDirs.append(dirs)
         return
-    except IOError as e:
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise e
 

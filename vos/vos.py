@@ -136,7 +136,7 @@ class Connection:
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_token is not None:
-            session.headers.update(HEADER_DELEG_TOKEN, self.vospace_token)
+            session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
 
         user_agent = 'vos ' + version
         if "vofs" in sys.argv[0]:
@@ -791,9 +791,9 @@ class VOFile(object):
                         self.connector.vospace_certfile is None and
                         self.connector.vospace_token is None):
                     msg += " using anonymous access "
-            exception = IOError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
+            exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
-                exception = IOError(errno.EPERM, "VOSpace in read-only mode.")
+                exception = OSError(errno.EPERM, "VOSpace in read-only mode.")
             raise exception
 
         # Get the file size. We use this 'X-CADC-Content-Length' as a
@@ -883,7 +883,7 @@ class VOFile(object):
                 raise ex
 
         if self.resp is None:
-            raise IOError(errno.EFAULT, "No response from VOServer")
+            raise OSError(errno.EFAULT, "No response from VOServer")
 
         read_error = None
         if self.resp.status_code == 416:
@@ -904,7 +904,7 @@ class VOFile(object):
             logger.debug("Got redirect URL: {0}".format(url))
             self.url = url
             if not url:
-                raise IOError(errno.ENOENT,
+                raise OSError(errno.ENOENT,
                               "Got 303 on {0} but no Location value in header? [{1}]".format(self.url,
                                                                                              self.resp.content),
                               self.url)
@@ -938,9 +938,9 @@ class VOFile(object):
                 if read_error is not None:
                     raise read_error
                 if self.resp.status_code == 404:
-                    raise IOError(errno.ENOENT, self.url)
+                    raise OSError(errno.ENOENT, self.url)
                 else:
-                    raise IOError(errno.EIO,
+                    raise OSError(errno.EIO,
                                   "unexpected server response %s (%d)" %
                                   (self.resp.reason, self.resp.status_code), self.url)
             if self.urlIndex < len(self.URLs):
@@ -975,7 +975,7 @@ class VOFile(object):
             self.open(self.URLs[self.urlIndex], "GET")
             return self.read(size)
         else:
-            raise IOError(self.resp.status_code,
+            raise OSError(self.resp.status_code,
                           "failed to connect to server after multiple attempts {0} {1}".format(self.resp.reason,
                                                                                                self.resp.status_code),
                           self.url)
@@ -1135,7 +1135,7 @@ class Client:
             if self.access(os.path.join(dirname, basename)):
                 return [basename]
             else:
-                raise IOError(errno.EACCES, "Permission denied: {0}".format(os.path.join(dirname, basename)))
+                raise OSError(errno.EACCES, "Permission denied: {0}".format(os.path.join(dirname, basename)))
         return []
 
     magic_check = re.compile('[*?[]')
@@ -1215,7 +1215,7 @@ class Client:
                 break
 
         if not success:
-            raise IOError(errno.EFAULT, "Failed copying {0} -> {1}".format(source, destination))
+            raise OSError(errno.EFAULT, "Failed copying {0} -> {1}".format(source, destination))
 
         return send_md5 and destination_md5 or destination_size
 
@@ -1250,7 +1250,7 @@ class Client:
                         "(\[\d*:?\d*,?\d*:?\d*\])?)", parts.path)
         filename = os.path.basename(path.group('filename'))
         if not re.match("^[_\-\(\)=\+!,;:@&\*\$\.\w~]*$", filename):
-            raise IOError(errno.EINVAL, "Illegal vospace container name",
+            raise OSError(errno.EINVAL, "Illegal vospace container name",
                           filename)
         path = path.group('filename')
         # insert the default VOSpace server if none given
@@ -1423,11 +1423,11 @@ class Client:
             url = response.headers.get('Location', None)
         elif response.status_code == 404:
             # The file doesn't exist
-            raise IOError(errno.ENOENT, response.content, url)
+            raise OSError(errno.ENOENT, response.content, url)
         elif response.status_code == 409:
-            raise IOError(errno.EREMOTE, response.content, url)
+            raise OSError(errno.EREMOTE, response.content, url)
         elif response.status_code == 413:
-            raise IOError(errno.E2BIG, response.content, url)
+            raise OSError(errno.E2BIG, response.content, url)
         else:
             logger.debug("Reverting to full negotiation")
             return self.get_node_url(uri,
@@ -1670,7 +1670,7 @@ class Client:
         if head:
             method = "HEAD"
         if not method:
-            raise IOError(errno.EOPNOTSUPP, "Invalid access mode", mode)
+            raise OSError(errno.EOPNOTSUPP, "Invalid access mode", mode)
 
         if uri is not None and view in ['data', 'cutout']:
             # Check if this is a target node.
@@ -1680,7 +1680,7 @@ class Client:
                     target = node.node.findtext(Node.TARGET)
                     logger.debug("%s is a link to %s" % (node.uri, target))
                     if target is None:
-                        raise IOError(errno.ENOENT, "No target for link")
+                        raise OSError(errno.ENOENT, "No target for link")
                     else:
                         if re.search("^vos://(.+\.)+(.+)+[!~]vospace", target) is not None:
                             # This is a link to another VOSpace node so lets open that instead.
@@ -1697,7 +1697,7 @@ class Client:
                                           size=size,
                                           byte_range=byte_range,
                                           possible_partial_read=possible_partial_read)
-            except IOError as e:
+            except OSError as e:
                 if e.errno in [2, 404]:
                     pass
                 else:
@@ -1708,7 +1708,7 @@ class Client:
                                     limit=limit, next_uri=next_uri, cutout=cutout,
                                     full_negotiation=full_negotiation)
             if url is None:
-                raise IOError(errno.EREMOTE)
+                raise OSError(errno.EREMOTE)
 
         return VOFile(url, self.conn, method=method, size=size, byte_range=byte_range,
                       possible_partial_read=possible_partial_read)

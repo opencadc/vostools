@@ -87,14 +87,14 @@ class MyIOProxy(IOProxy):
             while True:
                 try:
                     buff = self.lastVOFile.read(block_size)
-                except IOError as io_error:
+                except OSError as os_error:
                     # existing URLs do not work anymore. Try another
                     # transfer, forcing a full negotiation. This
                     # handles the case that we tried a short cut URL
                     # and it failed, so now we can try the full URL
                     # list. If it still fails let the error propagate
                     # to client
-                    logger.debug("Error while reading: {0}".format(io_error))
+                    logger.debug("Error while reading: {0}".format(os_error))
                     self.lastVOFile = self.vofs.client.open(
                         self.cacheFile.path, mode=os.O_RDONLY, view="data",
                         size=size, byte_range=byte_range, full_negotiation=True, possible_partial_read=True)
@@ -428,10 +428,10 @@ class VOFS(Operations):
         set the mode after creation. """
         try:
             self.client.mkdir(path)
-        except IOError as io_error:
-            if "read-only mode" in str(io_error):
+        except OSError as os_error:
+            if "read-only mode" in str(os_error):
                 raise FuseOSError(EPERM)
-            raise FuseOSError(getattr(io_error, 'errno', EFAULT))
+            raise FuseOSError(getattr(os_error, 'errno', EFAULT))
         # self.chmod(path, mode)
 
     # @logExceptions()
@@ -462,7 +462,7 @@ class VOFS(Operations):
             # from vospace
             try:
                 node = self.get_node(path)
-            except IOError as e:
+            except OSError as e:
                 if e.errno == 404:
                     # file does not exist
                     if not flags & os.O_CREAT:

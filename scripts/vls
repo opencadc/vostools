@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
         try:
             if not node[0:4] == "vos:" :
-                raise IOError(errno.EBADF, "Invalid node name", node)
+                raise OSError(errno.EBADF, "Invalid node name", node)
             logger.debug("getting listing of: %s" % str(node))
             infoList = client.get_info_list(node)
         except Exception as e:

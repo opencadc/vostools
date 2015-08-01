@@ -6,37 +6,52 @@ from mock import Mock, MagicMock, patch
 import vos
 from vos.vos import Client, Connection
 
+
 class Object(object):
     pass
+
 
 class TestVos(unittest.TestCase):
     """Test the vos Client class.
     """
 
+    def off_test_quota(self):
+        """
+        Test that a 413 raised by the server gets a reasonable error to the user.
+        @return:
+        """
+        with patch('vos.vos.VOFile') as mockVOFile:
+            mockVOFile.open = Mock()
+            mockVOFile.read = Mock()
+            mockVOFile.write = Mock()
+        client = Client()
+        client.conn = Mock()
+        client.transfer(uri='vos:test', direction="pushToVoSpace")
+
     def test_init(self):
         # No parameters uses cert in ~/.ssl giving authenticated / https
         with patch('os.access'):
             client = Client()
-        self.assertEqual(client.protocol,"https")
+        self.assertEqual(client.protocol, "https")
         self.assertTrue(client.conn.vospace_certfile)
         self.assertIsNone(client.conn.vospace_token)
 
         # Supplying an empty string for certfile implies anonymous / http
         client = Client(vospace_certfile='')
-        self.assertEqual(client.protocol,"http")
+        self.assertEqual(client.protocol, "http")
         self.assertIsNone(client.conn.vospace_certfile)
         self.assertIsNone(client.conn.vospace_token)
 
         # Specifying a certfile implies authenticated / https
         with patch('os.access'):
             client = Client(vospace_certfile='/path/to/cert')
-        self.assertEqual(client.protocol,"https")
+        self.assertEqual(client.protocol, "https")
         self.assertTrue(client.conn.vospace_certfile)
         self.assertIsNone(client.conn.vospace_token)
 
         # Specifying a token implies authenticated / http
         client = Client(vospace_token='a_token_string')
-        self.assertEqual(client.protocol,"http")
+        self.assertEqual(client.protocol, "http")
         self.assertIsNone(client.conn.vospace_certfile)
         self.assertTrue(client.conn.vospace_token)
 
@@ -44,56 +59,51 @@ class TestVos(unittest.TestCase):
         with patch('os.access'):
             client = Client(vospace_certfile='/path/to/cert',
                             vospace_token='a_token_string')
-        self.assertEqual(client.protocol,"http")
+        self.assertEqual(client.protocol, "http")
         self.assertIsNone(client.conn.vospace_certfile)
         self.assertTrue(client.conn.vospace_token)
 
     def test_getNode(self):
+        """
+
+        @return:
+        """
         client = Client()
-        uri =  'vos://cadc.nrc.ca!vospace'
-        myNode = client.get_node(uri, limit=0, force=False)
-        self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.node_list()), 0)
+        uri = 'vos://cadc.nrc.ca!vospace'
+        my_node = client.get_node(uri, limit=0, force=False)
+        self.assertEqual(uri, my_node.uri)
+        self.assertEqual(len(my_node.node_list), 0)
 
-        myNode = client.get_node(uri, limit=2, force=True)
-        self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.node_list()), 2)
+        my_node = client.get_node(uri, limit=2, force=True)
+        self.assertEqual(uri, my_node.uri)
+        self.assertEqual(len(my_node.node_list), 2)
 
-        myNode = client.get_node(uri, limit=2, force=False)
-        self.assertEqual(uri, myNode.uri)
-        self.assertEqual(len(myNode.node_list()), 2)
+        my_node = client.get_node(uri, limit=2, force=False)
+        self.assertEqual(uri, my_node.uri)
+        self.assertEqual(len(my_node.node_list), 2)
 
     def test_move(self):
         client = Client()
-        uri1 =  'notvos://cadc.nrc.ca!vospace/nosuchfile1'
-        uri2 =  'notvos://cadc.nrc.ca!vospace/nosuchfile2'
+        uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1'
+        uri2 = 'notvos://cadc.nrc.ca!vospace/nosuchfile2'
 
-        with patch('vos.vos.VOFile') as mockVOFile:
-            mockVOFile.write=Mock()
-            mockVOFile.read=Mock()
-            client.get_transfer_error=Mock(return_value=False)
-            self.assertTrue(client.move(uri1, uri2))
-            client.get_transfer_error=Mock(return_value=True)
-            self.assertFalse(client.move(uri1, uri2))
+        with self.assertRaises(OSError):
+            client.move(uri1, uri2)
 
     def test_delete(self):
         client = Client()
-        uri1 =  'notvos://cadc.nrc.ca!vospace/nosuchfile1'
-
-        myObject=Object()
-        myObject.close = Mock()
-        client.open = Mock(return_value=myObject)
+        uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1?limit=0'
+        url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1?limit=0'
+        client.conn.session.delete = Mock()
         client.delete(uri1)
-        client.open.assert_called_once_with(uri1, mode=os.O_TRUNC)
-        myObject.close.assert_called_once_with()
-
-
+        client.conn.session.delete.assert_called_once_with(url)
 
 
 def run():
     suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVos)
     allTests = unittest.TestSuite([suite1])
-    return(unittest.TextTestRunner(verbosity=2).run(allTests))
+    return (unittest.TextTestRunner(verbosity=2).run(allTests))
+
 
 if __name__ == "__main__":
     run()

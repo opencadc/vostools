@@ -168,10 +168,10 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                     return
 
             if not access(os.path.dirname(destination_name), os.F_OK):
-                raise IOError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
+                raise OSError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
 
             if not isdir(os.path.dirname(destination_name)) and not islink(os.path.dirname(destination_name)):
-                raise IOError(errno.ENOTDIR,
+                raise OSError(errno.ENOTDIR,
                               "vcp: %s is not a ContainerNode or LinkNode" % os.path.dirname(destination_name))
 
             skip = False
@@ -208,13 +208,13 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                         skip = True
                     else:
                         raise client_exception
-    except IOError as io_exception:
-        logging.debug(str(io_exception))
-        if getattr(io_exception, 'errno', -1) == errno.EINVAL:
+    except OSError as os_exception:
+        logging.debug(str(os_exception))
+        if getattr(os_exception, 'errno', -1) == errno.EINVAL:
             # not a valid uri, just skip those...
-            logging.warning("%s: Skipping" % str(io_exception))
+            logging.warning("%s: Skipping" % str(os_exception))
         else:
-            raise io_exception
+            raise os_exception
 
 
 def signal_handler(signum, frame):
