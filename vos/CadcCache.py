@@ -243,7 +243,7 @@ class Cache(object):
                 # If the file doesn't exist and is not required to exist, then
                 # an ENOENT error is ok and not propegated. All other errors
                 # are propegated.
-                if not (isinstance(fileHandle.readException[1], IOError) and
+                if not (isinstance(fileHandle.readException[1], EnvironmentError) and
                                 fileHandle.readException[1].errno == errno.ENOENT and not mustExist):
                     raise fileHandle.readException[0], \
                         fileHandle.readException[1], \
@@ -357,8 +357,7 @@ class Cache(object):
 
     def determineCacheSize(self):
         """Determine how much disk space is being used by the local cache"""
-        # TODO This needs to be cleaned up. There has to be a more efficient
-        # way to clean up the cache.
+        # TODO This needs to be cleaned up. There has to be a more efficient way to clean up the cache.
 
         start_path = self.dataDir
         total_size = 0
@@ -370,17 +369,16 @@ class Cache(object):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 with self.cacheLock:
-                    inFileHandleDict = (fp[len(self.dataDir):] not in
-                                        self.fileHandleDict)
+                    inFileHandleDict = fp[len(self.dataDir):] not in self.fileHandleDict
                 try:
                     osStat = os.stat(fp)
                 except:
                     continue
-                if (inFileHandleDict and oldest_time > osStat.st_atime):
+                if inFileHandleDict and oldest_time > osStat.st_atime:
                     oldest_time = osStat.st_atime
                     oldest_file = fp
                 total_size += osStat.st_size
-        return (oldest_file, total_size)
+        return oldest_file, total_size
 
     def unlinkFile(self, path):
         """Remove a file from the cache."""
