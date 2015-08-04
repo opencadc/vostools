@@ -19,6 +19,7 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
+
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
     m = md[flags & (O_RDONLY | O_WRONLY | O_RDWR)]
@@ -29,7 +30,12 @@ def flag2mode(flags):
 
     return m
 
+
 class MyIOProxy(IOProxy):
+
+    def delNode(self, force=False):
+        raise NotImplementedError("MyIOProxy.delNode")
+
     def __init__(self, vofs, path):
         super(MyIOProxy, self).__init__()
         self.vofs = vofs
@@ -46,7 +52,7 @@ class MyIOProxy(IOProxy):
                                                                    self.md5,
                                                                    self.condition)
 
-    #@logExceptions()
+    @logExceptions()
     def writeToBacking(self):
         """
         Write a file in the cache to the remote file.
@@ -203,8 +209,9 @@ class VOFS(Operations):
     getxattr = None
     listxattr = None
     removexattr = None
-    setxattr = None
-    chmod = None
+
+    def setxattr(self, path, name, value, options, position=0):
+        logger.warning("Extended attributes not supported: {} {} {} {} {}".format(path, name, value, options, position))
 
     def __init__(self, root, cache_dir, options, conn=None,
                  cache_limit=1024, cache_nodes=False,
@@ -236,7 +243,7 @@ class VOFS(Operations):
         # connection.
         try:
             self.client = vos.Client(root_node=root, conn=conn,
-                                     cadc_short_cut=True, secure_get=secure_get)
+                                     transfer_shortcut=True, secure_get=secure_get)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
@@ -256,13 +263,14 @@ class VOFS(Operations):
             return ret
         except Exception as all_exceptions:
             ret = str(all_exceptions)
-            errno = getattr(all_exceptions, 'errno', EAGAIN)
+            errno = getattr(all_exceptions, 'errno', None)
+            errno = errno is not None and errno or EAGAIN
             exception = FuseOSError(errno)
             raise exception
         finally:
             logger.debug('<- {0} {1}'.format(op, repr(ret)))
 
-    #@logExceptions()
+    @logExceptions()
     def access(self, path, mode):
         """Check if path is accessible.
 
@@ -274,8 +282,8 @@ class VOFS(Operations):
             return -1
         return 0
 
-    #@logExceptions()
-    def no_chmod(self, path, mode):
+    @logExceptions()
+    def chmod(self, path, mode):
         """
         Set the read/write groups on the VOSpace node based on chmod style
         modes.
@@ -315,44 +323,35 @@ class VOFS(Operations):
             # is not conventional Unix behaviour. The mtime of the parent
             # directory would be changed.
             self.getattr(path)['st_ctime'] = time.time()
-            ## if node.chmod returns false then no changes were made.
+            # if node.chmod returns false then no changes were made.
             self.client.update(node)
             self.getNode(path, force=True)
 
-    #@logExceptions()
+    @logExceptions()
     def create(self, path, flags, fi=None):
         """Create a node. Currently ignores the ownership mode
         @param path: the container/dataNode in VOSpace to be created
         @param flags: Read/Write settings (eg. 600)
         """
 
-        logger.debug("Creating a node: %s with flags %s" %
-                         (path, str(flags)))
+        logger.debug("Creating a node: {0} with flags {1}".format(path, str(flags)))
 
         # Create is handle by the client.
-        # This should fail if the basepath doesn't exist
-        try:
-            self.client.open(path, os.O_CREAT).close()
+        # This should fail if the base path doesn't exist
+        self.client.open(path, os.O_CREAT).close()
 
-            node = self.getNode(path)
-            parent = self.getNode(os.path.dirname(path))
+        node = self.getNode(path)
+        parent = self.getNode(os.path.dirname(path))
+        print node, parent
+        # Force inheritance of group settings.
+        node.groupread = parent.groupread
+        node.groupwrite = parent.groupwrite
+        if node.chmod(flags):
+            # chmod returns True if the mode changed but doesn't do update.
+            self.client.update(node)
+            self.getNode(path, force=True)
 
-            # Force inheritance of group settings.
-            node.groupread = parent.groupread
-            node.groupwrite = parent.groupwrite
-            if node.chmod(flags):
-                # chmod returns True if the mode changed but doesn't do update.
-                self.client.update(node)
-                self.getNode(path, force=True)
-
-        except Exception as e:
-            logger.error(str(e))
-            logger.error("Error trying to create Node {0}".format(path))
-            f = FuseOSError(getattr(e, 'errno', EIO))
-            f.strerror = getattr(e, 'strerror', 'failed to create {0}'.format(path))
-            raise f
-
-        ## now we can just open the file in the usual way and return the handle
+        # now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
     def destroy(self, path):
@@ -366,7 +365,7 @@ class VOFS(Operations):
         self.cache.flushNodeQueue.join()
         self.cache.flushNodeQueue = None
 
-    #@logExceptions()
+    @logExceptions()
     def fsync(self, path, data_sync, file_id):
         if self.opt.readonly:
             logger.debug("File system is readonly, no sync allowed")
@@ -396,7 +395,7 @@ class VOFS(Operations):
         @param limit: Number of child nodes to retrieve per request, if limit  is None then get max returned by service.
         """
 
-        ## Pull the node meta data from VOSpace.
+        # Pull the node meta data from VOSpace.
         logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
         node = self.client.get_node(path, force=force, limit=limit)
         logger.debug("Got node {0}".format(node))
@@ -404,7 +403,7 @@ class VOFS(Operations):
 
     getNode = get_node
 
-    #@logExceptions()
+    # @logExceptions()
     def getattr(self, path, file_id=None):
         """
         Build some attributes for this file, we have to make-up some stuff
@@ -421,7 +420,7 @@ class VOFS(Operations):
         """
         self.cache.flushNodeQueue = FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
 
-    #@logExceptions()
+    # @logExceptions()
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
 
@@ -527,14 +526,14 @@ class VOFS(Operations):
             handle.setHeader(my_proxy.getSize(), my_proxy.get_md5())
         return HandleWrapper(handle, read_only).get_id()
 
-    #@logExceptions()
+    @logExceptions()
     def read(self, path, size=0, offset=0, file_id=None):
         """
         Read the required bytes from the file and return a buffer containing
         the bytes.
         """
 
-        ## Read from the requested file_handle, which was set during 'open'
+        # Read from the requested file_handle, which was set during 'open'
         if file_id is None:
             raise FuseOSError(EIO)
 
@@ -547,7 +546,7 @@ class VOFS(Operations):
 
         return fh.cache_file_handle.read(size, offset)
 
-    #@logExceptions()
+    @logExceptions()
     def readlink(self, path):
         """
         Return a string representing the path to which the symbolic link
@@ -561,7 +560,7 @@ class VOFS(Operations):
         """
         return self.get_node(path).name+"?link="+urllib.quote_plus(self.getNode(path).target)
 
-    #@logExceptions()
+    @logExceptions()
     def readdir(self, path, file_id):
         """Send a list of entries in this directory"""
         logger.debug("Getting directory list for {0}".format(path))
@@ -579,20 +578,22 @@ class VOFS(Operations):
                                                                            force=False,
                                                                            limit=None).node_list]
 
-    #@logExceptions()
+    @logExceptions()
     def load_dir(self, path):
         """Load the dirlist from VOSpace.
+
         This should always be run in a thread."""
         try:
             logger.debug("Starting getNodeList thread")
             node_list = self.getNode(path, force=True, limit=None).node_list
-            logger.debug("Got listing for {0}".format(path))
+            logger.debug("Got listing {0} for {1}".format(node_list, path))
         finally:
             self.loading_dir[path] = False
             with self.condition:
                 self.condition.notify_all()
         return
 
+    @logExceptions()
     def flush(self, path, file_id):
 
         logger.debug("flushing {0}".format(file_id))
@@ -606,8 +607,7 @@ class VOFS(Operations):
             pass
         return 0
 
-
-    #@logExceptions()
+    @logExceptions()
     def release(self, path, file_id):
         """Close the file.
 
@@ -623,14 +623,10 @@ class VOFS(Operations):
                 pass
         return fh.release()
 
-    #@logExceptions()
+    @logExceptions()
     def rename(self, src, dest):
         """Rename a data node into a new container"""
         logger.debug("Original %s -> %s" % (src, dest))
-        #if not self.client.isfile(src):
-        #   return -1
-        #if not self.client.isdir(os.path.dirname(dest)):
-        #    return -1
         try:
             logger.debug("Moving %s to %s" % (src, dest))
             result = self.client.move(src, dest)
@@ -643,10 +639,10 @@ class VOFS(Operations):
             logger.error("%s" % str(e))
             import re
             if re.search('NodeLocked', str(e)) is not None:
-                raise FuseOSError(EPERM)
-            return -1
+                raise OSError(EPERM)
+            raise
 
-    #@logExceptions()
+    @logExceptions()
     def rmdir(self, path):
         node = self.getNode(path)
         if node and node.props.get('islocked', False):
@@ -654,7 +650,7 @@ class VOFS(Operations):
             raise FuseOSError(EPERM)
         self.client.delete(path)
 
-    #@logExceptions()
+    @logExceptions()
     def statfs(self, path):
         node = self.getNode(path)
         block_size = 512
@@ -672,7 +668,7 @@ class VOFS(Operations):
                'f_namemax': 256}
         return sfs
 
-    #@logExceptions()
+    @logExceptions()
     def truncate(self, path, length, file_id=None):
         """Perform a file truncation to length bytes"""
         logger.debug("Attempting to truncate {0}({1}) to length {2}".format(path, file_id, length))
@@ -697,7 +693,7 @@ class VOFS(Operations):
             fh.cache_file_handle.truncate(length)
         return
 
-    #@logExceptions()
+    @logExceptions()
     def unlink(self, path):
         node = self.getNode(path, force=False, limit=1)
         if node and node.props.get('islocked', False):
