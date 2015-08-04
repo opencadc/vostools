@@ -255,7 +255,7 @@ if __name__ == '__main__':
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token,
-                            cadc_short_cut=opt.quick)
+                            transfer_shortcut=opt.quick)
         for source_pattern in args:
             # define this empty cutout string.  Then we strip possible cutout strings off the end of the
             # pattern before matching.  This allows cutouts on the vos service.
