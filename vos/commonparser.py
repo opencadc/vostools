@@ -55,7 +55,7 @@ class CommonParser(optparse.OptionParser):
         else:
             self.log_level = logging.ERROR
 
-        log_format = "%(module)s: %(message)s"
+        log_format = "%(levelname)s %(module)s: %(message)s"
         if self.log_level < logging.INFO:
             log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
         logging.basicConfig(format=log_format, level=self.log_level)
