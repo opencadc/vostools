@@ -12,8 +12,9 @@ def logExceptions():
             try:
                 return func(*args, **kwds)
             except Exception as e:
-                logging.error("Exception throw: %s %s" % (type(e), str(e)))
-                logging.error(traceback.format_exc())
+                logger = logging.getLogger('exceptions')
+                logger.error("Exception throw: %s %s" % (type(e), str(e)))
+                logger.error(traceback.format_exc())
                 raise
         return wrapper
     return decorator
