@@ -2,8 +2,7 @@
    service.
 
    Connections to VOSpace are made using a SSL X509 certificat which is
-   stored in a .pem file. The certificate is supplied by the user or by the
-   CADC credential server
+   stored in a .pem file.
 """
 
 import copy
@@ -12,7 +11,6 @@ import fnmatch
 import hashlib
 from cStringIO import StringIO
 import requests
-
 requests.packages.urllib3.disable_warnings()
 import html2text
 import logging
@@ -49,13 +47,25 @@ MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not sent by server.
 MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
 CONNECTION_TIMEOUT = 30  # seconds before HTTP connection should drop, should be less than DAEMON timeout in vofs
-SERVER = os.getenv('VOSPACE_WEBSERVICE', 'www.canfar.phys.uvic.ca')
-CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
-VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", os.path.join(os.getenv("HOME", "."), '.ssl/cadcproxy.pem'))
-VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 
+VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
+HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
+HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
 CONNECTION_COUNTER = 0
+
+
+def convert_vospace_time_to_seconds(str_date):
+    """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
+
+    :param str_date: string to parse into a VOSpace time
+    :type str_date: str
+    :return: A datetime object for the provided string date
+    :rtype: datetime
+    """
+    right = str_date.rfind(":")+3
+    mtime = time.mktime(time.strptime(str_date[0:right], '%Y-%m-%dT%H:%M:%S'))
+    return mtime - time.mktime(time.gmtime()) + time.mktime(time.localtime())
 
 
 def compute_md5(filename, block_size=BUFSIZE):
@@ -109,7 +119,6 @@ class Connection:
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False):
         """Setup the Certificate for later usage
 
-        cerdServerURL -- the location of the cadc proxy certificate server
         vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
         vospace_token -- token string (alternative to vospace_certfile)
@@ -149,10 +158,10 @@ class Connection:
         """Create an HTTPSConnection object and return.  Uses the client
         certificate if None given.
 
-        uri  -- a VOSpace uri (vos://cadc.nrc.ca~vospace/path)
+        uri  -- a VOSpace uri
         """
         if url is not None:
-            raise NotImplemented("Connections are no longer set per URL.")
+            raise OSError(errno.ENOSYS, "Connections are no longer set per URL.")
         return self.session
 
 
@@ -160,8 +169,6 @@ class Node(object):
     """A VOSpace node"""
 
     IVOAURL = "ivo://ivoa.net/vospace/core"
-    CADCURL = "ivo://cadc.nrc.ca/vospace/core"
-    ISLOCKED = CADCURL + "#islocked"
 
     VOSNS = "http://www.ivoa.net/xml/VOSpace/v2.0"
     XSINS = "http://www.w3.org/2001/XMLSchema-instance"
@@ -187,7 +194,6 @@ class Node(object):
         """
         self.uri = None
         self.name = None
-        self.node = node
         self.target = None
         self.groupread = None
         self.groupwrite = None
@@ -198,6 +204,7 @@ class Node(object):
         self.attr = {}
         self.xattr = {}
         self._node_list = None
+        self._endpoints = None
 
         if not subnodes:
             subnodes = []
@@ -213,6 +220,7 @@ class Node(object):
         if node is None:
             raise LookupError("no node found or created?")
 
+        self.node = node
         self.node.set('xmlns:vos', self.VOSNS)
         self.update()
 
@@ -221,6 +229,12 @@ class Node(object):
             return False
 
         return self.props == node.props
+
+    @property
+    def endpoints(self):
+        if not self._endpoints:
+            self._endpoints = EndPoints(self.uri)
+        return self._endpoints
 
     def update(self):
         """Update the convience links of this node as we update the xml file"""
@@ -233,6 +247,7 @@ class Node(object):
             self.target = self.node.findtext(Node.TARGET)
 
         self.uri = self.node.get('uri')
+
         self.name = os.path.basename(self.uri)
         for propertiesNode in self.node.findall(Node.PROPERTIES):
             self.set_props(propertiesNode)
@@ -240,11 +255,13 @@ class Node(object):
         if self.props.get('ispublic', 'false') == 'true':
             self.is_public = True
         self.is_locked = False
-        if self.props.get(Node.ISLOCKED, 'false') == 'true':
+        if self.props.get(self.endpoints.islocked, 'false') == 'true':
             self.is_locked = True
         self.groupwrite = self.props.get('groupwrite', '')
         self.groupread = self.props.get('groupread', '')
+        logger.debug("Setting file attributes via setattr")
         self.setattr()
+        logger.debug("Setting file x-attributes via setxattr")
         self.setxattr()
 
     def set_property(self, key, value):
@@ -278,17 +295,16 @@ class Node(object):
 
         self.attr = {}
 
-        # Only one date provided by VOSpace, so use this as all possible
-        # dates.
-        string_date = self.props.get('date', None)
+        # Only one date provided by VOSpace, so use this as all possible dates.
+
         access_time = time.time()
-        if not string_date:
+        if not self.props.get('date', None):
             modified_time = access_time
         else:
             # mktime is expecting a localtime but we're sending a UT date, so
             # some correction will be needed
-            modified_time = time.mktime(time.strptime(string_date[0:-4], '%Y-%m-%dT%H:%M:%S'))
-            modified_time = modified_time - time.mktime(time.gmtime()) + time.mktime(time.localtime())
+            modified_time = convert_vospace_time_to_seconds(self.props.get('date'))
+
         self.attr['st_ctime'] = attr.get('st_ctime', modified_time)
         self.attr['st_mtime'] = attr.get('st_mtime', modified_time)
         self.attr['st_atime'] = access_time
@@ -336,28 +352,29 @@ class Node(object):
         self.attr['st_blocks'] = self.attr['st_size'] / 512
 
     def setxattr(self, attrs=None):
-        """Initialize the attributes using the properties sent with the node"""
+        """Initialize the attributes using the properties sent with the node."""
         if attrs is not None:
-            raise NotImplemented("Extended attributes are not set.")
+            raise OSError(errno.ENOSYS, "No externally set extended Attributes for vofs yet.")
+
         for key in self.props:
             if key in Client.vosProperties:
                 continue
             self.xattr[key] = self.props[key]
+
         return
 
     def chwgrp(self, group):
         """Set the groupwrite value for this node"""
-        if group is not None and group.count(CADC_GMS_PREFIX) > 3:
-            raise AttributeError("Exceeded max of 4 write groups: " +
-                                 group.replace(CADC_GMS_PREFIX, ""))
+        if group is not None and group.split(" ") > 3:
+            raise AttributeError("Exceeded max of 4 write groups: " + group)
         self.groupwrite = group
         return self.change_prop('groupwrite', group)
 
     def chrgrp(self, group):
         """Set the groupread value for this node"""
-        if group is not None and group.count(CADC_GMS_PREFIX) > 3:
-            raise AttributeError("Exceeded max of 4 read groups: " +
-                                 group.replace(CADC_GMS_PREFIX, ""))
+        if group is not None and group.count(" ") > 3:
+            raise AttributeError("Exceeded max of 4 read groups: " + group)
+
         self.groupread = group
         return self.change_prop('groupread', group)
 
@@ -407,7 +424,7 @@ class Node(object):
     @staticmethod
     def set_prop():
         """Build the XML for a given node"""
-        raise NotImplemented()
+        raise NotImplementedError('No set prop.')
 
     def change_prop(self, key, value):
         """Change the node property 'key' to 'value'.
@@ -442,7 +459,7 @@ class Node(object):
             if found:
                 return changed
         # must not have had this kind of property already, so set value
-        property_node = ElementTree.SubElement(properties, Node.PROPERTY)
+        property_node = ElementTree.SubElement(properties[0], Node.PROPERTY)
         property_node.attrib['readOnly'] = "false"
         property_node.attrib['uri'] = uri
         property_node.text = value
@@ -455,7 +472,7 @@ class Node(object):
         translates unix style MODE to voSpace and updates the properties...
 
         This function is quite limited.  We can make a file publicly
-        readable and we can set turn off group read/write permissions,
+        readable and we can turn on/off group read/write permissions,
         that's all. """
 
         changed = 0
@@ -498,6 +515,8 @@ class Node(object):
         if not properties:
             properties = {}
 
+        endpoints = EndPoints(uri)
+
         # Build the root node called 'node'
         node = ElementTree.Element("node")
         node.attrib["xmlns"] = Node.VOSNS
@@ -535,12 +554,12 @@ class Node(object):
         ElementTree.SubElement(provides, "view").attrib['uri'] = \
             "%s#%s" % (Node.IVOAURL, 'defaultview')
         ElementTree.SubElement(provides, "view").attrib['uri'] = \
-            "%s#%s" % (Node.CADCURL, 'rssview')
+            "%s#%s" % (endpoints.core, 'rssview')
 
         # Only DataNode can have a dataview...
         if node_type == "vos:DataNode":
             ElementTree.SubElement(provides, "view").attrib['uri'] = \
-                "%s#%s" % (Node.CADCURL, 'dataview')
+                "%s#%s" % (endpoints.core, 'dataview')
 
         # if this is a container node then add directory contents
         if node_type == "vos:ContainerNode":
@@ -566,12 +585,11 @@ class Node(object):
 
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props[Node.ISLOCKED] == "true"
+        return self.props[self.endpoints.islocked] == "true"
 
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
-        date = time.mktime(time.strptime(self.props['date'][0:-4],
-                                         '%Y-%m-%dT%H:%M:%S'))
+        date = convert_vospace_time_to_seconds(self.props['date'])
         creator = string.lower(re.search('CN=([^,]*)',
                                          self.props.get('creator', 'CN=unknown_000,'))
                                .groups()[0].replace(' ', '_'))
@@ -593,7 +611,7 @@ class Node(object):
         read_group = self.props.get('groupread', 'NONE')
         if read_group != 'NONE':
             perm[4] = 'r'
-        is_locked = self.props.get(Node.ISLOCKED, "false")
+        is_locked = self.props.get(self.endpoints.islocked, "false")
         return {"permissions": string.join(perm, ''),
                 "creator": creator,
                 "readGroup": read_group,
@@ -796,11 +814,11 @@ class VOFile(object):
                 exception = OSError(errno.EPERM, "VOSpace in read-only mode.")
             raise exception
 
-        # Get the file size. We use this 'X-CADC-Content-Length' as a
+        # Get the file size. We use this HEADER-CONTENT-LENGTH as a
         # fallback to work around a server-side Java bug that limits
         # 'Content-Length' to a signed 32-bit integer (~2 gig files)
         try:
-            self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get("X-CADC-Content-Length", 0)))
+            self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
         except:
             self.size = 0
 
@@ -835,7 +853,7 @@ class VOFile(object):
             try:
                 self.size = int(self.size)
                 request.headers.update({"Content-Length": self.size,
-                                        "X-CADC-Content-Length": self.size})
+                                        HEADER_CONTENT_LENGTH: self.size})
             except TypeError:
                 self.size = None
                 self.trans_encode = "chunked"
@@ -860,7 +878,7 @@ class VOFile(object):
 
         # set header if a partial read is possible
         if possible_partial_read and method == "GET":
-            request.headers.update({"X-CADC-Partial-Read": "true"})
+            request.headers.update({HEADER_PARTIAL_READ: "true"})
         try:
             self.request = self.connector.session.prepare_request(request)
         except Exception as ex:
@@ -983,33 +1001,121 @@ class VOFile(object):
     @staticmethod
     def write(buf):
         """write buffer to the connection"""
-        raise NotImplemented("Write of buffer to VOFile not implemented")
+        raise OSError(errno.ENOSYS, "Write to a vospace file is not supported, use copy instead.")
+
+
+class EndPoints(object):
+
+    CADC_SERVER = 'www.canfar.phys.uvic.ca'
+    NOAO_TEST_SERVER = "dldev1.tuc.noao.edu:8080/vospace-2.0"
+    DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
+    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
+
+    VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
+                 'cadc.nrc.ca~vospace': CADC_SERVER,
+                 'datalab.noao.edu!vospace': NOAO_TEST_SERVER,
+                 'datalab.noao.edu~vospace': NOAO_TEST_SERVER}
+
+    VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
+                  'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace',
+                  'datalab.noao.edu!vosapce': 'ivo://datalab.noao.edu/vosapce'}
+
+    VONodes = "vospace/nodes"
+
+    VOProperties = {NOAO_TEST_SERVER: "/vospace/nodeprops",
+                    CADC_SERVER: "/vospace/nodeprops"}
+
+    VOTransfer = {NOAO_TEST_SERVER: '/vospace/sync',
+                  CADC_SERVER: '/vospace/synctrans'}
+
+    def __init__(self, uri):
+        """
+        Based on the URI return the various sever endpoints that will be
+        associated with this uri.
+
+        :param uri:
+        """
+        self.netloc = URLParser(uri).netloc
+
+    @property
+    def properties(self):
+        return "{0}/{1}".format(self.uri, EndPoints.VOProperties.get(self.server))
+
+    @property
+    def uri(self):
+        return "ivo://{0}".format(self.netloc).replace("!", "/").replace("~", "/")
+
+    @property
+    def view(self):
+        return "{0}/view".format(self.uri)
+
+    @property
+    def core(self):
+        return "{0}/core".format(self.uri)
+
+    @property
+    def islocked(self):
+        return "{0}#islocked".format(self.uri)
+
+    @property
+    def server(self):
+        """
+
+        :return: The network location of the VOSpace server.
+        """
+        return (EndPoints.VOSPACE_WEBSERVICE is not None and EndPoints.VOSPACE_WEBSERVICE or
+                EndPoints.VOServers.get(self.netloc, None))
+
+    @property
+    def transfer(self):
+        """
+        The transfer service endpoint.
+        :return: service location of the transfer service.
+        :rtype: str
+        """
+        if self.server in EndPoints.VOTransfer:
+            end_point = EndPoints.VOTransfer[self.server]
+        else:
+            end_point = "/vospace/synctrans"
+        return "{0}/{1}".format(self.server, end_point)
+
+    @property
+    def nodes(self):
+        """
+
+        :return: The Node service endpoint.
+        """
+        return "{0}/{1}".format(self.server, EndPoints.VONodes)
 
 
 class Client:
     """The Client object does the work"""
 
-    VOServers = {'cadc.nrc.ca!vospace': SERVER,
-                 'cadc.nrc.ca~vospace': SERVER}
-
-    VOTransferEndPoint = '/vospace/synctrans'
-    VOPropertiesEndPoint = '/vospace/nodeprops'
     VO_HTTPGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpget'
     VO_HTTPPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpput'
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
 
-    # reserved vospace properties, do not use these for extended property names
+    #  reserved vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length",
                      "creator", "date", "groupread", "groupwrite", "ispublic"]
 
+    VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", None)
+    if VOSPACE_CERTFILE is None:
+        for certfile in ['cadcproxy.pem', 'vospaceproxy.pem']:
+            certpath = os.path.join(os.getenv("HOME", "."), '.ssl/cadcproxy.pem')
+            certfilepath = os.path.join(certpath, certfile)
+            if os.access(certfilepath, os.R_OK):
+                VOSPACE_CERTFILE = certfilepath
+            break
+
     def __init__(self, vospace_certfile=None, root_node=None, conn=None,
-                 cadc_short_cut=False, http_debug=False,
+                 transfer_shortcut=False, http_debug=False,
                  secure_get=False, vospace_token=None):
         """This could/should be expanded to set various defaults
 
-        :param vospace_certfile: CADC x509 proxy certificate file location. Overrides certfile in conn.
+        :param vospace_certfile: x509 proxy certificate file location. Overrides certfile in conn.
         :type vospace_certfile: str
         :param vospace_token: token string (alternative to vospace_certfile)
         :type vospace_token: str
@@ -1017,8 +1123,8 @@ class Client:
         :type root_node: str
         :param conn: a connection pool object for this Client
         :type conn: Session
-        :param cadc_short_cut: if True then just assumed data web service urls
-        :type cadc_short_cut: bool
+        :param transfer_shortcut: if True then just assumed data web service urls
+        :type transfer_shortcut: bool
         :param http_debug: turn on http debugging.
         :type http_debug: bool
         :param secure_get: Use HTTPS: ie. transfer contents of files using SSL encryption.
@@ -1026,7 +1132,7 @@ class Client:
         """
 
         if not isinstance(conn, Connection):
-            vospace_certfile = vospace_certfile is None and VOSPACE_CERTFILE or vospace_certfile
+            vospace_certfile = vospace_certfile is None and Client.VOSPACE_CERTFILE or vospace_certfile
             conn = Connection(vospace_certfile=vospace_certfile,
                               vospace_token=vospace_token,
                               http_debug=http_debug)
@@ -1044,20 +1150,19 @@ class Client:
             self.protocol = "https"
 
         self.conn = conn
-        self.VOSpaceServer = "cadc.nrc.ca!vospace"
         self.rootNode = root_node
         self.nodeCache = NodeCache()
-        self.cadc_short_cut = cadc_short_cut
+        self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
         return
 
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
 
-    The pattern may contain simple shell-style wildcards a la
-    fnmatch. However, unlike fnmatch, filenames starting with a
-    dot are special cases that are not matched by '*' and '?'
-    patterns.
+        The pattern may contain simple shell-style wildcards a la
+        fnmatch. However, unlike fnmatch, filenames starting with a
+        dot are special cases that are not matched by '*' and '?'
+        patterns.
 
         """
         return list(self.iglob(pathname))
@@ -1221,7 +1326,7 @@ class Client:
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't
-        then add the CADC vospace authority
+        then add the vospace authority
 
         """
         parts = URLParser(uri)
@@ -1256,9 +1361,11 @@ class Client:
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
-            host = self.VOSpaceServer
+            host = EndPoints.DEFAULT_VOSPACE_URI
         path = os.path.normpath(path).strip('/')
-        return "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
+        uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
+        logger.debug("Returning URI: {}".format(uri))
+        return uri
 
     def get_node(self, uri, limit=0, force=False):
         """connect to VOSpace and download the definition of vospace node
@@ -1348,11 +1455,12 @@ class Client:
         uri = self.fix_uri(uri)
         logger.debug("Getting URL for: " + str(uri))
 
+        endpoints = EndPoints(uri)
+
         parts = URLParser(uri)
 
         # see if we have a VOSpace server that goes with this URI in our look up list
-        server = Client.VOServers.get(parts.netloc, None)
-        if server is None:
+        if endpoints.server is None:
             # Since we don't know how to get URLs for this server we should just return the uri.
             return uri
 
@@ -1360,7 +1468,7 @@ class Client:
         if full_negotiation is not None:
             do_shortcut = not full_negotiation
         else:
-            do_shortcut = self.cadc_short_cut
+            do_shortcut = self.transfer_shortcut
 
         if not do_shortcut and method == 'GET' and view in ['data', 'cutout']:
             return self._get(uri, view=view, cutout=cutout)
@@ -1383,11 +1491,14 @@ class Client:
             data = ""
             if len(fields) > 0:
                 data = "?" + urllib.urlencode(fields)
-            url = "%s://%s/vospace/nodes/%s%s" % (self.protocol, server, parts.path.strip('/'), data)
+            url = "%s://%s/%s%s" % (self.protocol,
+                                    endpoints.nodes,
+                                    parts.path.strip('/'),
+                                    data)
             logger.debug("URL: %s (%s)" % (url, method))
             return url
 
-        # This is the CADC shortcut. We do a GET request on the service with the parameters sent as arguments.
+        # This is the shortcut. We do a GET request on the service with the parameters sent as arguments.
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
 
@@ -1399,11 +1510,12 @@ class Client:
                     'http': Client.VO_HTTPPUT_PROTOCOL}}
 
         # build the url for that will request the url that provides access to the node.
-        url = "%s://%s%s" % (self.protocol, server, Client.VOTransferEndPoint)
+
+        url = "%s://%s" % (self.protocol, endpoints.transfer)
         logger.debug("URL: %s" % url)
 
         args = {
-            'TARGET': self.fix_uri(uri),
+            'TARGET': uri,
             'DIRECTION': direction[method],
             'PROTOCOL': protocol[method][self.protocol],
             'view': view}
@@ -1449,10 +1561,13 @@ class Client:
         :param link_uri: the vospace node to create that will be a link to src_uri
         :type link_uri: str
         """
+        link_uri = self.fix_uri(link_uri)
+        src_uri = self.fix_uri(src_uri)
         if self.isdir(link_uri):
             link_uri = os.path.join(link_uri, os.path.basename(src_uri))
-        link_node = Node(self.fix_uri(link_uri), node_type="vos:LinkNode")
-        ElementTree.SubElement(link_node.node, "target").text = self.fix_uri(src_uri)
+        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri):
+            link_node = Node(link_uri, node_type="vos:LinkNode")
+            ElementTree.SubElement(link_node.node, "target").text = src_uri
         url = self.get_node_url(link_uri)
         data = str(link_node)
         size = len(data)
@@ -1469,60 +1584,45 @@ class Client:
         :return did the move succeed?
         :rtype bool
         """
-        logger.debug("Moving %s to %s" % (src_uri, destination_uri))
-        with self.nodeCache.volatile(self.fix_uri(src_uri)), self.nodeCache.volatile(self.fix_uri(destination_uri)):
-            transfer = ElementTree.Element("vos:transfer")
-            transfer.attrib['xmlns:vos'] = Node.VOSNS
-            ElementTree.SubElement(transfer, "vos:target").text = self.fix_uri(src_uri)
-            ElementTree.SubElement(transfer, "vos:direction").text = \
-                self.fix_uri(destination_uri)
-            ElementTree.SubElement(transfer, "vos:keepBytes").text = "false"
-
-            url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransferEndPoint)
-            xml_string = ElementTree.tostring(transfer)
-            logging.debug("Sending transfer document: {0}".format(xml_string))
-            resp = self.conn.session.post(url,
-                                          allow_redirects=False,
-                                          data=xml_string,
-                                          headers={'Content-Type': "text/xml"})
-            transfer_job_url = resp.headers.get('Location', None)
-            if transfer_job_url is None:
-                raise OSError(errno.EFAULT, "Failed to get transfer job result. Got: {0}".format(resp.content))
-            logging.debug("Move job at: {0}".format(transfer_job_url))
-            if transfer_job_url is not None and not self.get_transfer_error(transfer_job_url, src_uri):
-                return True
-        return False
+        src_uri = self.fix_uri(src_uri)
+        destination_uri = self.fix_uri(destination_uri)
+        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(destination_uri):
+            return self.transfer(src_uri, destination_uri, view='move')
 
     def _get(self, uri, view="defaultview", cutout=None):
         if view is None:
             view = "defaultview"
-        return self.transfer(uri, "pullFromVoSpace", view, cutout)
+        with self.nodeCache.volatile(uri):
+            return self.transfer(uri, "pullFromVoSpace", view, cutout)
 
     def _put(self, uri):
-        return self.transfer(uri, "pushToVoSpace")
+        with self.nodeCache.volatile(uri):
+            return self.transfer(uri, "pushToVoSpace")
 
     def transfer(self, uri, direction, view="defaultview", cutout=None):
         """Build the transfer XML document"""
+        endpoints = EndPoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
                     "pushToVoSpace": "{0}put".format(self.protocol)}
-
-        views = {"defaultview": "%s#%s" % (Node.IVOAURL, "defaultview"),
-                 "data": "ivo://cadc.nrc.ca/vospace/view#data",
-                 "cutout": "ivo://cadc.nrc.ca/vospace/view#cutout"}
 
         transfer_xml = ElementTree.Element("vos:transfer")
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
         ElementTree.SubElement(transfer_xml, "vos:target").text = uri
         ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
-        ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = \
-            views.get(view, views["defaultview"])
-        if cutout is not None:
-            ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = \
-                cutout
-        ElementTree.SubElement(transfer_xml, "vos:protocol").attrib['uri'] = \
-            "%s#%s" % (Node.IVOAURL, protocol[direction])
+
+        if view == 'move':
+            ElementTree.SubElement(transfer_xml, "vos:keepBytes").text = "false"
+        else:
+            ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = endpoints.view+"#{0}".format(view)
+            if cutout is not None and view == 'cutout':
+                ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = cutout
+            ElementTree.SubElement(transfer_xml, "vos:protocol").attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
+                                                                                                  protocol[direction])
+
         logger.debug(ElementTree.tostring(transfer_xml))
-        url = "%s://%s%s" % (self.protocol, SERVER, Client.VOTransferEndPoint)
+        url = "{0}://{1}".format(self.protocol,
+                                 endpoints.transfer)
+
         data = ElementTree.tostring(transfer_xml)
         resp = self.conn.session.post(url,
                                       data=data,
@@ -1533,7 +1633,13 @@ class Client:
         if resp.status_code != 303:
             raise OSError(resp.status_code, "Failed to get transfer service response.")
         transfer_url = resp.headers.get('Location', None)
-        logger.debug("Got back from transfer URL: %s" % transfer_url)
+        logging.debug("Got back from transfer URL: %s" % transfer_url)
+
+        # For a move this is the end of the transaction.
+        if view == 'move':
+            return not self.get_transfer_error(transfer_url, uri)
+
+        # for get or put we need the protocol value
         xml_string = self.conn.session.get(transfer_url).content
         transfer_document = ElementTree.fromstring(xml_string)
         logger.debug("Transfer Document: %s" % transfer_document)
@@ -1746,9 +1852,9 @@ class Client:
            be changed in the node itself as well as all its children. """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
+        endpoints = node.endpoints
         if recursive:
-            property_url = "%s://%s%s" % (self.protocol, SERVER,
-                                          Client.VOPropertiesEndPoint)
+            property_url = "{0}//{1}".format(self.protocol, endpoints.properties)
             logger.debug("prop URL: {0}".format(property_url))
             try:
                 resp = self.conn.session.post(property_url,
@@ -1778,21 +1884,24 @@ class Client:
         return 0
 
     def mkdir(self, uri):
-        node = Node(self.fix_uri(uri), node_type="vos:ContainerNode")
+        uri = self.fix_uri(uri)
+        node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         response = self.conn.session.put(url, data=str(node))
         return response.status_code == 200
 
     def delete(self, uri):
         """Delete the node"""
+        uri = self.fix_uri(uri)
         logger.debug("delete {0}".format(uri))
-        with self.nodeCache.volatile(self.fix_uri(uri)):
+        with self.nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
             return self.conn.session.delete(url)
 
     def get_info_list(self, uri):
         """Retrieve a list of tuples of (NodeName, Info dict)"""
         info_list = {}
+        uri = self.fix_uri(uri)
         logger.debug(str(uri))
         node = self.get_node(uri, limit=None)
         logger.debug(str(node))
@@ -1874,7 +1983,7 @@ class Client:
         get an error.
         """
         if not code:
-            raise NotImplemented("Use of 'code' values nolonger supported.")
+            raise OSError(errno.ENOSYS, "Use of 'code' option values no longer supported.")
         try:
             node = self.get_node(uri)
             return node.type == 'vos:ContainerNode'
