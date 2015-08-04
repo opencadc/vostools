@@ -365,15 +365,16 @@ class Node(object):
 
     def chwgrp(self, group):
         """Set the groupwrite value for this node"""
-        if group is not None and group.split(" ") > 3:
-            raise AttributeError("Exceeded max of 4 write groups: " + group)
+        logger.debug("Setting groups to: {0}".format(group))
+        if group is not None and len(group.split()) > 3:
+            raise AttributeError("Exceeded max of 4 write groups: {0}<-".format(group.split()))
         self.groupwrite = group
         return self.change_prop('groupwrite', group)
 
     def chrgrp(self, group):
         """Set the groupread value for this node"""
-        if group is not None and group.count(" ") > 3:
-            raise AttributeError("Exceeded max of 4 read groups: " + group)
+        if group is not None and len(group.split()) > 3:
+            raise AttributeError("Exceeded max of 4 read groups: {0}<-".format(group))
 
         self.groupread = group
         return self.change_prop('groupread', group)
@@ -1590,16 +1591,14 @@ class Client:
             return self.transfer(src_uri, destination_uri, view='move')
 
     def _get(self, uri, view="defaultview", cutout=None):
-        if view is None:
-            view = "defaultview"
         with self.nodeCache.volatile(uri):
             return self.transfer(uri, "pullFromVoSpace", view, cutout)
 
     def _put(self, uri):
         with self.nodeCache.volatile(uri):
-            return self.transfer(uri, "pushToVoSpace")
+            return self.transfer(uri, "pushToVoSpace", view="defaultview")
 
-    def transfer(self, uri, direction, view="defaultview", cutout=None):
+    def transfer(self, uri, direction, view=None, cutout=None):
         """Build the transfer XML document"""
         endpoints = EndPoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
@@ -1613,13 +1612,16 @@ class Client:
         if view == 'move':
             ElementTree.SubElement(transfer_xml, "vos:keepBytes").text = "false"
         else:
-            ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = endpoints.view+"#{0}".format(view)
-            if cutout is not None and view == 'cutout':
-                ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = cutout
+            if view == 'defaultview':
+                ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = "ivo://ivoa.net/vospace/core#defaultview"
+            elif view is not None:
+                ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = endpoints.view+"#{0}".format(view)
+                if cutout is not None and view == 'cutout':
+                    ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = cutout
             ElementTree.SubElement(transfer_xml, "vos:protocol").attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
                                                                                                   protocol[direction])
 
-        logger.debug(ElementTree.tostring(transfer_xml))
+        logging.debug(ElementTree.tostring(transfer_xml))
         url = "{0}://{1}".format(self.protocol,
                                  endpoints.transfer)
 
@@ -1642,7 +1644,7 @@ class Client:
         # for get or put we need the protocol value
         xml_string = self.conn.session.get(transfer_url).content
         transfer_document = ElementTree.fromstring(xml_string)
-        logger.debug("Transfer Document: %s" % transfer_document)
+        logging.debug("Transfer Document: %s" % xml_string)
         all_protocols = transfer_document.findall(Node.PROTOCOL)
         if all_protocols is None or not len(all_protocols) > 0:
             return self.get_transfer_error(transfer_url, uri)
@@ -1676,7 +1678,7 @@ class Client:
             phase = VOFile(phase_url, self.conn, method="GET",
                            follow_redirect=False).read()
             # do not remove the line below. It is used for testing
-            logger.debug("Job URL: " + job_url + "/phase")
+            logging.debug("Job URL: " + job_url + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
                 # poll the job. Sleeping time in between polls is doubling
                 # each time until it gets to 32sec
@@ -1695,11 +1697,11 @@ class Client:
                     sys.stdout.write("\r                    \n")
                 else:
                     time.sleep(sleep_time)
-                phase = self.conn.session.get(phase_url, follow_redirect=False).read()
-                logger.debug("Async transfer Phase for url %s: %s " % (url, phase))
+                phase = self.conn.session.get(phase_url, allow_redirects=False).content
+                logging.debug("Async transfer Phase for url %s: %s " % (url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
-            logger.error("Received keyboard interrupt")
+            logging.error("Received keyboard interrupt")
             self.conn.session.post(job_url + "/phase",
                                    allow_redirects=False,
                                    data="PHASE=ABORT",
