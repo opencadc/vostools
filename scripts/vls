@@ -8,6 +8,7 @@ from vos.commonparser import CommonParser
 import os
 import sys
 import time
+from requests.exceptions import SSLError
 from vos import vos, __version__
 
 usage = "%prog vos:VOSpace/Node"
@@ -127,9 +128,14 @@ if __name__ == '__main__':
                 raise OSError(errno.EBADF, "Invalid node name", node)
             logger.debug("getting listing of: %s" % str(node))
             infoList = client.get_info_list(node)
+        except SSLError as error:
+            logger.error(str(error))
+            sys.exit(errno.EPERM)
         except Exception as e:
-            logger.error(getattr(e, 'strerror', 'error'))
-            sys.exit(getattr(e, 'errno', errno.ENOMSG))
+            logger.error("{}".format(e))
+            errno = getattr(e, 'errno', None)
+            errno = errno is not None and errno or errno.ENOMSG
+            sys.exit(errno)
 
         if sortKey:
             try:
@@ -147,4 +153,3 @@ if __name__ == '__main__':
                 if item[1]["permissions"][0] == 'l':
                     name_string = "%s -> %s" % (name_string, item[1]['target'])
             sys.stdout.write("%s\n" % name_string)
-
