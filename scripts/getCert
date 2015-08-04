@@ -9,8 +9,11 @@ import signal
 import sys
 import urllib2
 import vos
+from vos.vos import EndPoints
 
-def getCert(certHost=vos.vos.SERVER, certfile=None,
+SERVER = EndPoints.CADC_SERVER
+
+def getCert(certHost=SERVER, certfile=None,
             certQuery="/cred/proxyCert?daysValid=",daysValid=2):
     """Access the cadc certificate server"""
 
