@@ -14,6 +14,8 @@ from vos import vos, __version__
 usage = "%prog vos:VOSpace/Node"
 description = """lists file size and ownership of VOSpace/Node. Node can be dataNode, containerNode or linkNode."""
 
+CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
+
 
 def get_terminal_size():
     """Get the size of the terminal
@@ -115,8 +117,8 @@ if __name__ == '__main__':
 
     formats = {'permissions': lambda value: "%-11s" % value,
                'creator': lambda value: " %-20s" % value,
-               'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
-               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+               'readGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
+               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
                'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value == "true"],
                'size': size_format,
                'date': date_format}
