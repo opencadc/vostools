@@ -89,7 +89,7 @@ def compute_md5(filename, block_size=BUFSIZE):
     return md5.hexdigest()
 
 
-class URLParser:
+class URLParser(object):
     """ Parse out the structure of a URL.
 
     There is a difference between the 2.5 and 2.7 version of the
@@ -113,7 +113,7 @@ class URLParser:
                                                        self.netloc, self.path)
 
 
-class Connection:
+class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False):
@@ -1089,7 +1089,7 @@ class EndPoints(object):
         return "{0}/{1}".format(self.server, EndPoints.VONodes)
 
 
-class Client:
+class Client(object):
     """The Client object does the work"""
 
     VO_HTTPGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpget'
@@ -1105,7 +1105,7 @@ class Client:
     VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", None)
     if VOSPACE_CERTFILE is None:
         for certfile in ['cadcproxy.pem', 'vospaceproxy.pem']:
-            certpath = os.path.join(os.getenv("HOME", "."), '.ssl/cadcproxy.pem')
+            certpath = os.path.join(os.getenv("HOME", "."), '.ssl')
             certfilepath = os.path.join(certpath, certfile)
             if os.access(certfilepath, os.R_OK):
                 VOSPACE_CERTFILE = certfilepath
