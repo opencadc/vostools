@@ -80,7 +80,7 @@ class MyIOProxy(IOProxy):
         logger.debug("reading range: %s" % (str(byte_range)))
 
         if self.lastVOFile is None:
-            logger.debug("Opening a new vo file on {}".format(self.cacheFile.path))
+            logger.debug("Opening a new vo file on {0}".format(self.cacheFile.path))
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
                                                     mode=os.O_RDONLY, view="data", size=size, byte_range=byte_range,
                                                     possible_partial_read=True)
@@ -108,7 +108,7 @@ class MyIOProxy(IOProxy):
 
                 if not self.cacheFile.gotHeader:
                     info = self.lastVOFile.get_file_info()
-                    logger.debug("Got info: {}".format(info))
+                    logger.debug("Got info: {0}".format(info))
                     self.cacheFile.setHeader(info[0], info[1])
 
                 if buff is None:
@@ -211,7 +211,7 @@ class VOFS(Operations):
     removexattr = None
 
     def setxattr(self, path, name, value, options, position=0):
-        logger.warning("Extended attributes not supported: {} {} {} {} {}".format(path, name, value, options, position))
+        logger.warning("Extended attributes not supported: {0} {1} {2} {3} {4}".format(path, name, value, options, position))
 
     def __init__(self, root, cache_dir, options, conn=None,
                  cache_limit=1024, cache_nodes=False,
