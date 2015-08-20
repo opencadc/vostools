@@ -4,6 +4,13 @@ import traceback
 
 from vos import __version__
 from vos.commonparser import CommonParser
+from vos.vos import EndPoints
+try:
+    from xml.etree.ElementTree import ParseError
+except:
+    from exceptions import SyntaxError as ParseError
+  
+
 import logging
 import sys
 import vos
@@ -13,6 +20,7 @@ import hashlib
 import signal
 import re
 import glob
+import traceback
 
 exit_code = 0
 
@@ -308,13 +316,18 @@ if __name__ == '__main__':
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
         exit_code = getattr(ke, 'errno', -1)
+    except ParseError as pe:
+        exit_code = errno.EREMOTE
+        logging.error("Failure at server while copying {0} -> {1}".format(source, dest))
     except Exception as e:
         message = str(e)
         if re.search('NodeLocked', str(e)) is not None:
             logging.error("Use vlock to unlock the node before copying to %s." % this_destination)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
-            logging.error("Failure at remote server while copying %s -> %s" % str(source, dest))
+            logging.error("Failure at remote server while copying {0} -> {1}".format(source, dest))
         else:
+            logging.debug("Exception throw: %s %s" % (type(e), str(e)))
+            logging.debug(traceback.format_exc())
             logging.error(message)
         exit_code = getattr(e, 'errno', -1)
 
