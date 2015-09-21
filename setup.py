@@ -5,7 +5,7 @@ import os
 from vos.__version__ import version
 
 if sys.version_info[0] > 2:
-    print 'The caom2 package is only compatible with Python version 2.n'
+    print "The vos package is only compatible with Python version 2.n"
     sys.exit(-1)
 
 ## Build the list of scripts to be installed.

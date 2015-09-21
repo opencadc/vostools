@@ -14,7 +14,7 @@ from vos import vos, __version__
 usage = "%prog vos:VOSpace/Node"
 description = """lists file size and ownership of VOSpace/Node. Node can be dataNode, containerNode or linkNode."""
 
-CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
+CADC_GMS_PREFIX = vos.CADC_GMS_PREFIX
 
 
 def get_terminal_size():
@@ -134,10 +134,11 @@ if __name__ == '__main__':
             logger.error(str(error))
             sys.exit(errno.EPERM)
         except Exception as e:
-            logger.error("{}".format(e))
-            errno = getattr(e, 'errno', None)
-            errno = errno is not None and errno or errno.ENOMSG
-            sys.exit(errno)
+            logger.debug("{0}: {1}".format(type(e), str(e)))
+            logger.error("{0}".format(e))
+            err_no = getattr(e, 'errno', None)
+            err_no = err_no is not None and err_no or errno.ENOMSG
+            sys.exit(err_no)
 
         if sortKey:
             try:

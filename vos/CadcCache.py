@@ -1208,7 +1208,7 @@ class FileHandle(object):
             # Ensure the required part of the file is in cache.
             if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
-            with self.fileLock, self.ioObject.cacheFileDescriptorLock:
+            with nest(self.fileLock, self.ioObject.cacheFileDescriptorLock):
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
                 self.fileModified = True

@@ -5,6 +5,7 @@
    stored in a .pem file.
 """
 
+from contextlib import nested
 import copy
 import errno
 import fnmatch
@@ -55,6 +56,7 @@ HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
 HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
 CONNECTION_COUNTER = 0
 
+CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -90,7 +92,7 @@ def compute_md5(filename, block_size=BUFSIZE):
     return md5.hexdigest()
 
 
-class URLParser:
+class URLParser(object):
     """ Parse out the structure of a URL.
 
     There is a difference between the 2.5 and 2.7 version of the
@@ -102,10 +104,12 @@ class URLParser:
         self.netloc = None
         self.args = None
         self.path = None
-        m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?"
+        m = re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
                      "(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
         self.scheme = m.group('scheme')
         self.netloc = m.group('netloc')
+        self.server = m.group('server')
+        self.service = m.group('service')
         self.path = (m.group('path') is not None and m.group('path')) or ''
         self.args = (m.group('args') is not None and m.group('args')) or ''
 
@@ -114,7 +118,7 @@ class URLParser:
                                                        self.netloc, self.path)
 
 
-class Connection:
+class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False):
@@ -899,7 +903,7 @@ class VOFile(object):
                 self.resp = self.connector.session.send(self.request, stream=True)
                 self.checkstatus()
             except Exception as ex:
-                logger.debug("Error on read: {}".format(ex))
+                logger.debug("Error on read: {0}".format(ex))
                 raise ex
 
         if self.resp is None:
@@ -1037,7 +1041,11 @@ class EndPoints(object):
 
         :param uri:
         """
-        self.netloc = URLParser(uri).netloc
+        self.uri_parts = URLParser(uri)
+
+    @property
+    def netloc(self):
+        return self.uri_parts.netloc
 
     @property
     def properties(self):
@@ -1050,6 +1058,10 @@ class EndPoints(object):
     @property
     def view(self):
         return "{0}/view".format(self.uri)
+
+    @property
+    def cutout(self):
+	return "ivo://{0}/{1}#{2}".format(self.uri_parts.server, 'view','cutout')
 
     @property
     def core(self):
@@ -1090,7 +1102,7 @@ class EndPoints(object):
         return "{0}/{1}".format(self.server, EndPoints.VONodes)
 
 
-class Client:
+class Client(object):
     """The Client object does the work"""
 
     VO_HTTPGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpget'
@@ -1106,7 +1118,7 @@ class Client:
     VOSPACE_CERTFILE = os.getenv("VOSPACE_CERTFILE", None)
     if VOSPACE_CERTFILE is None:
         for certfile in ['cadcproxy.pem', 'vospaceproxy.pem']:
-            certpath = os.path.join(os.getenv("HOME", "."), '.ssl/cadcproxy.pem')
+            certpath = os.path.join(os.getenv("HOME", "."), '.ssl')
             certfilepath = os.path.join(certpath, certfile)
             if os.access(certfilepath, os.R_OK):
                 VOSPACE_CERTFILE = certfilepath
@@ -1300,7 +1312,9 @@ class Client:
                 get_url = get_urls.pop(0)
                 try:
                     with open(destination, 'w') as fout:
-                        fout.write(self.conn.session.get(get_url).content)
+                        response = self.conn.session.get(get_url, timeout=(2,5))
+                        response.raise_for_status()
+                        fout.write(response.content)
                     destination_size = os.stat(destination).st_size
                     if check_md5:
                         destination_md5 = compute_md5(destination)
@@ -1381,7 +1395,7 @@ class Client:
             host = EndPoints.DEFAULT_VOSPACE_URI
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
-        logger.debug("Returning URI: {}".format(uri))
+        logger.debug("Returning URI: {0}".format(uri))
         return uri
 
     def get_node(self, uri, limit=0, force=False):
@@ -1582,7 +1596,7 @@ class Client:
         src_uri = self.fix_uri(src_uri)
         if self.isdir(link_uri):
             link_uri = os.path.join(link_uri, os.path.basename(src_uri))
-        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri):
+        with nested(self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri)):
             link_node = Node(link_uri, node_type="vos:LinkNode")
             ElementTree.SubElement(link_node.node, "target").text = src_uri
         url = self.get_node_url(link_uri)[0]
@@ -1603,7 +1617,7 @@ class Client:
         """
         src_uri = self.fix_uri(src_uri)
         destination_uri = self.fix_uri(destination_uri)
-        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(destination_uri):
+        with nested(self.nodeCache.volatile(src_uri), self.nodeCache.volatile(destination_uri)):
             return self.transfer(src_uri, destination_uri, view='move')
 
     def _get(self, uri, view="defaultview", cutout=None):
@@ -1631,9 +1645,12 @@ class Client:
             if view == 'defaultview':
                 ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = "ivo://ivoa.net/vospace/core#defaultview"
             elif view is not None:
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = endpoints.view+"#{0}".format(view)
+                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
+                vos_view.attrib['uri'] = endpoints.view+"#{0}".format(view)
                 if cutout is not None and view == 'cutout':
-                    ElementTree.SubElement(transfer_xml, "cutout").attrib['uri'] = cutout
+                    param = ElementTree.SubElement(vos_view, "vos:param")
+                    param.attrib['uri'] = endpoints.cutout
+                    param.text = cutout
             ElementTree.SubElement(transfer_xml, "vos:protocol").attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
                                                                                                   protocol[direction])
 
@@ -1659,14 +1676,10 @@ class Client:
 
         # for get or put we need the protocol value
         xml_string = self.conn.session.get(transfer_url).content
-        transfer_document = ElementTree.fromstring(xml_string)
         logging.debug("Transfer Document: %s" % xml_string)
-        try:
-           all_protocols = transfer_document.findall(Node.PROTOCOL)
-        except Exception as ex:
-           logger.debug(str(ex))
-           raise 
-        logger.debug(str(all_protocols))
+        transfer_document = ElementTree.fromstring(xml_string)
+        logging.debug("XML version: {}".format(ElementTree.tostring(transfer_document)))
+        all_protocols = transfer_document.findall(Node.PROTOCOL)
         if all_protocols is None or not len(all_protocols) > 0:
             return self.get_transfer_error(transfer_url, uri)
 
@@ -1674,6 +1687,10 @@ class Client:
         for protocol in all_protocols:
             for node in protocol.findall(Node.ENDPOINT):
                 result.append(node.text)
+        # if this is a connection to the 'rc' server then we reverse the
+        # urllist to test the fail-over process
+        if endpoints.server.startswith('rc'):
+            result.reverse()
         return result
 
     def get_transfer_error(self, url, uri):
