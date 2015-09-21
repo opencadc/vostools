@@ -39,6 +39,7 @@ except NameError:
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
+
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -1270,6 +1271,7 @@ class Client:
         destination_size = None
         destination_md5 = None
         source_md5 = None
+        get_node_url_retried = False
 
         if source[0:4] == "vos:":
             check_md5 = False
@@ -1285,9 +1287,17 @@ class Client:
                 source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
-            if not isinstance(get_urls, list):
-                get_urls = [get_urls]
-            for get_url in get_urls:
+            while not success:
+                # If there are no urls available, drop through to full negotiation if that wasn't already tried
+                if len(get_urls) == 0 :
+                    if self.transfer_shortcut and not get_node_url_retried:
+                       get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view, full_negotiation=True)
+                       # remove the first one as we already tried that one.
+                       get_urls.pop(0)
+                       get_node_url_retried = True
+                    else:
+                       break
+                get_url = get_urls.pop(0)
                 try:
                     with open(destination, 'w') as fout:
                         fout.write(self.conn.session.get(get_url).content)
@@ -1295,18 +1305,24 @@ class Client:
                     if check_md5:
                         destination_md5 = compute_md5(destination)
                         assert destination_md5 == source_md5
+                    success = True
                 except Exception as ex:
                     logging.debug("Failed to GET {0}".format(get_url))
                     logging.debug("Got error {0}".format(ex))
                     continue
-                success = True
-                break
         else:
             source_md5 = compute_md5(source)
             put_urls = self.get_node_url(destination, 'PUT')
-            if not isinstance(put_urls, list):
-                put_urls = [put_urls]
-            for put_url in put_urls:
+            while not success:
+                if len(put_urls) == 0 :
+                    if self.transfer_shortcut and not get_node_url_retried:
+                       put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
+                       # remove the first one as we already tried that one.
+                       put_urls.pop(0)
+                       get_node_url_retried = True
+                else:
+                    break
+                put_url = put_urls.pop(0)
                 try:
                     with open(source, 'r') as fin:
                         self.conn.session.put(put_url, data=fin)
@@ -1552,7 +1568,7 @@ class Client:
                                      cutout=cutout)
 
         logger.debug("Sending short cut url: {0}".format(url))
-        return url
+        return [url]
 
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.
@@ -1569,10 +1585,10 @@ class Client:
         with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri):
             link_node = Node(link_uri, node_type="vos:LinkNode")
             ElementTree.SubElement(link_node.node, "target").text = src_uri
-        url = self.get_node_url(link_uri)
+        url = self.get_node_url(link_uri)[0]
         data = str(link_node)
         size = len(data)
-        self.conn.session.put(url, data=data, size=size)
+        self.conn.session.put(url, data=data, header={'size': size})
         return True
 
     def move(self, src_uri, destination_uri):
@@ -1645,7 +1661,12 @@ class Client:
         xml_string = self.conn.session.get(transfer_url).content
         transfer_document = ElementTree.fromstring(xml_string)
         logging.debug("Transfer Document: %s" % xml_string)
-        all_protocols = transfer_document.findall(Node.PROTOCOL)
+        try:
+           all_protocols = transfer_document.findall(Node.PROTOCOL)
+        except Exception as ex:
+           logger.debug(str(ex))
+           raise 
+        logger.debug(str(all_protocols))
         if all_protocols is None or not len(all_protocols) > 0:
             return self.get_transfer_error(transfer_url, uri)
 
@@ -1833,18 +1854,32 @@ class Client:
         node.node = node.create(node.uri, node_type=node.type,
                                 properties=new_props)
         # Now write these new properties to the node location.
-        url = self.get_node_url(node.uri, method='GET')
+        urls = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url,
-                               headers={'size': size},
-                               data=data)
+        while len(urls) > 0:
+            url = urls.pop(0)
+            try:
+                self.conn.session.post(url,
+                                       headers={'size': size},
+                                       data=data)
+                break
+            except:
+                if len(urls) == 0:
+                    raise
 
     def create(self, node):
-        url = self.get_node_url(node.uri, method='PUT')
+        urls = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
-        self.conn.session.put(url, data=data, headers={'size': size})
+        while len(urls) > 0 :
+            url = urls.pop(0)
+            try:
+                self.conn.session.put(url, data=data, headers={'size': size})
+                break
+            except:
+                if len(urls) == 0:
+                    raise
         return True
 
     def update(self, node, recursive=False):
