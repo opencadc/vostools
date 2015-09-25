@@ -1311,10 +1311,13 @@ class Client(object):
                        break
                 get_url = get_urls.pop(0)
                 try:
+                    response = self.conn.session.get(get_url, timeout=(2,5), stream=True)
+                    response.raise_for_status()
                     with open(destination, 'w') as fout:
-                        response = self.conn.session.get(get_url, timeout=(2,5))
-                        response.raise_for_status()
-                        fout.write(response.content)
+                        for chunk in response.iter_content(chunk_size=512*1024):
+                            if chunk:
+                                fout.write(chunk)
+                                fout.flush()
                     destination_size = os.stat(destination).st_size
                     if check_md5:
                         destination_md5 = compute_md5(destination)
