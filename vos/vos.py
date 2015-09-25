@@ -1871,32 +1871,16 @@ class Client(object):
         node.node = node.create(node.uri, node_type=node.type,
                                 properties=new_props)
         # Now write these new properties to the node location.
-        urls = self.get_node_url(node.uri, method='GET')
+        url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        while len(urls) > 0:
-            url = urls.pop(0)
-            try:
-                self.conn.session.post(url,
-                                       headers={'size': size},
-                                       data=data)
-                break
-            except:
-                if len(urls) == 0:
-                    raise
+        self.conn.session.post(url, headers={'size': size}, data=data)
 
     def create(self, node):
-        urls = self.get_node_url(node.uri, method='PUT')
+        url = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
-        while len(urls) > 0 :
-            url = urls.pop(0)
-            try:
-                self.conn.session.put(url, data=data, headers={'size': size})
-                break
-            except:
-                if len(urls) == 0:
-                    raise
+        self.conn.session.put(url, data=data, headers={'size': size})
         return True
 
     def update(self, node, recursive=False):
