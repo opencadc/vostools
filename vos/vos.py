@@ -12,7 +12,6 @@ import fnmatch
 import hashlib
 from cStringIO import StringIO
 import requests
-requests.packages.urllib3.disable_warnings()
 import html2text
 import logging
 import mimetypes
@@ -57,6 +56,8 @@ CONNECTION_COUNTER = 0
 
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
+requests.packages.urllib3.disable_warnings()
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -1608,14 +1609,9 @@ class Client(object):
         data = str(link_node)
         size = len(data)
 
-        urls = self.get_node_url(link_uri, method='PUT')
-        while len(urls) > 0:
-            url = urls.pop(0)
-            try:
-                self.conn.session.put(url, data=data, headers={'size': size})
-                return True
-            except:
-                pass
+        url = self.get_node_url(link_uri)
+        logger.debug("Got linkNode URL: {0}".format(url))
+        self.conn.session.put(url, data=data, headers={'size': size})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri
