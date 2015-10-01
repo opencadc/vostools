@@ -1681,7 +1681,7 @@ class Client(object):
         xml_string = self.conn.session.get(transfer_url).content
         logging.debug("Transfer Document: %s" % xml_string)
         transfer_document = ElementTree.fromstring(xml_string)
-        logging.debug("XML version: {}".format(ElementTree.tostring(transfer_document)))
+        logging.debug("XML version: {0}".format(ElementTree.tostring(transfer_document)))
         all_protocols = transfer_document.findall(Node.PROTOCOL)
         if all_protocols is None or not len(all_protocols) > 0:
             return self.get_transfer_error(transfer_url, uri)
