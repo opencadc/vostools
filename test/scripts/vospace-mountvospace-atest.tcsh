@@ -47,7 +47,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     ## define the local cache size, number, and size of files to test exceeding the cache
     set VOS_CACHE = "/tmp/vos_cache"
     set CACHETEST_LIMIT = 10    # in MB
-    set CACHETEST_NFILES = 5
+    set CACHETEST_NFILES = 10
     set CACHETEST_FSIZE = 3     # CACHETEST_FSIZE * CACHETEST_NFILES should be > CACHETEST_LIMIT
 
     @ CACHETEST_FSIZE_BYTES = $CACHETEST_FSIZE * 1000000
@@ -112,7 +112,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "check that https protocol not used for anonymous mount "
-    set HAVEHTTPS = `grep -c https $ANONLOGFILE`
+    set HAVEHTTPS = `grep -v https_test $ANONLOGFILE | grep -c https`
     if ( $HAVEHTTPS != 0 ) then
 	 echo " [FAIL]" 
          echo "HAVEHTTPS: ${?HAVEHTTPS} ${HAVEHTTPS} "
@@ -186,6 +186,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     ls -l foo.dat
     foreach i ( `seq $CACHETEST_NFILES` )
         echo -n "."
+        echo "$CPCMD $CERTFILE foo.dat $CONTAINER/foo$i.dat "
         $CPCMD $CERTFILE foo.dat $CONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
     end
     rm foo.dat >& /dev/null
@@ -193,8 +194,9 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     echo -n "access test data to exceed cache"
     foreach i ( `seq $CACHETEST_NFILES` )
+        sleep 1
         echo -n "."
-        $MD5CMD $MCONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
+        $MD5CMD $MCONTAINER/foo$i.dat || echo " [FAIL]" && exit -1
     end
 
     set FS_LAST = `${STATCMD} $VOS_CACHE/data/$TIMESTAMP/foo$i.dat` || echo " [FAIL]" && exit -1
@@ -203,6 +205,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
         echo " last file wrong size [FAIL]" && exit -1
     endif
 
+    ls -l $VOS_CACHE/data/$TIMESTAMP/
     if( -e $VOS_CACHE/data/$TIMESTAMP/foo1.dat ) then
         # The first file should now be evicted from the cache
         echo " first file still exists [FAIL]" && exit -1

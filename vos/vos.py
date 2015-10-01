@@ -1597,16 +1597,25 @@ class Client(object):
         """
         link_uri = self.fix_uri(link_uri)
         src_uri = self.fix_uri(src_uri)
+
+        # if the link_uri points at an existing directory then we try and make a link into that directory
         if self.isdir(link_uri):
             link_uri = os.path.join(link_uri, os.path.basename(src_uri))
+
         with nested(self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri)):
             link_node = Node(link_uri, node_type="vos:LinkNode")
             ElementTree.SubElement(link_node.node, "target").text = src_uri
-        url = self.get_node_url(link_uri)[0]
         data = str(link_node)
         size = len(data)
-        self.conn.session.put(url, data=data, header={'size': size})
-        return True
+
+        urls = self.get_node_url(link_uri, method='PUT')
+        while len(urls) > 0:
+            url = urls.pop(0)
+            try:
+                self.conn.session.put(url, data=data, headers={'size': size})
+                return True
+            except:
+                pass
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri

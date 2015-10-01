@@ -78,6 +78,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "create link to target container"
+    echo $LNCMD $CERT $CONTAINER/target $CONTAINER/clink 
     $LNCMD $CERT $CONTAINER/target $CONTAINER/clink >& /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 
