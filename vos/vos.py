@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 from cStringIO import StringIO
 import requests
+
 requests.packages.urllib3.disable_warnings()
 import html2text
 import logging
@@ -40,7 +41,6 @@ except NameError:
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
-
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -58,6 +58,7 @@ CONNECTION_COUNTER = 0
 
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
+
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
 
@@ -66,7 +67,7 @@ def convert_vospace_time_to_seconds(str_date):
     :return: A datetime object for the provided string date
     :rtype: datetime
     """
-    right = str_date.rfind(":")+3
+    right = str_date.rfind(":") + 3
     mtime = time.mktime(time.strptime(str_date[0:right], '%Y-%m-%dT%H:%M:%S'))
     return mtime - time.mktime(time.gmtime()) + time.mktime(time.localtime())
 
@@ -812,8 +813,8 @@ class VOFile(object):
                 if msg is None or len(msg) == 0 and self.resp.status_code in msgs:
                     msg = msgs[self.resp.status_code]
                 if (self.resp.status_code == 401 and
-                        self.connector.vospace_certfile is None and
-                        self.connector.vospace_token is None):
+                            self.connector.vospace_certfile is None and
+                            self.connector.vospace_token is None):
                     msg += " using anonymous access "
             exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
@@ -1011,7 +1012,6 @@ class VOFile(object):
 
 
 class EndPoints(object):
-
     CADC_SERVER = 'www.canfar.phys.uvic.ca'
     NOAO_TEST_SERVER = "dldev1.tuc.noao.edu:8080/vospace-2.0"
     DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
@@ -1061,7 +1061,7 @@ class EndPoints(object):
 
     @property
     def cutout(self):
-	return "ivo://{0}/{1}#{2}".format(self.uri_parts.server, 'view','cutout')
+        return "ivo://{0}/{1}#{2}".format(self.uri_parts.server, 'view', 'cutout')
 
     @property
     def core(self):
@@ -1301,20 +1301,21 @@ class Client(object):
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
-                if len(get_urls) == 0 :
+                if len(get_urls) == 0:
                     if self.transfer_shortcut and not get_node_url_retried:
-                       get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view, full_negotiation=True)
-                       # remove the first one as we already tried that one.
-                       get_urls.pop(0)
-                       get_node_url_retried = True
+                        get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view,
+                                                     full_negotiation=True)
+                        # remove the first one as we already tried that one.
+                        get_urls.pop(0)
+                        get_node_url_retried = True
                     else:
-                       break
+                        break
                 get_url = get_urls.pop(0)
                 try:
-                    response = self.conn.session.get(get_url, timeout=(2,5), stream=True)
+                    response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
                     response.raise_for_status()
                     with open(destination, 'w') as fout:
-                        for chunk in response.iter_content(chunk_size=512*1024):
+                        for chunk in response.iter_content(chunk_size=512 * 1024):
                             if chunk:
                                 fout.write(chunk)
                                 fout.flush()
@@ -1331,12 +1332,12 @@ class Client(object):
             source_md5 = compute_md5(source)
             put_urls = self.get_node_url(destination, 'PUT')
             while not success:
-                if len(put_urls) == 0 :
+                if len(put_urls) == 0:
                     if self.transfer_shortcut and not get_node_url_retried:
-                       put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
-                       # remove the first one as we already tried that one.
-                       put_urls.pop(0)
-                       get_node_url_retried = True
+                        put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
+                        # remove the first one as we already tried that one.
+                        put_urls.pop(0)
+                        get_node_url_retried = True
                 else:
                     break
                 put_url = put_urls.pop(0)
@@ -1646,10 +1647,11 @@ class Client(object):
             ElementTree.SubElement(transfer_xml, "vos:keepBytes").text = "false"
         else:
             if view == 'defaultview':
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib['uri'] = "ivo://ivoa.net/vospace/core#defaultview"
+                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
+                    'uri'] = "ivo://ivoa.net/vospace/core#defaultview"
             elif view is not None:
                 vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = endpoints.view+"#{0}".format(view)
+                vos_view.attrib['uri'] = endpoints.view + "#{0}".format(view)
                 if cutout is not None and view == 'cutout':
                     param = ElementTree.SubElement(vos_view, "vos:param")
                     param.attrib['uri'] = endpoints.cutout
