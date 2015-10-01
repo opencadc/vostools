@@ -23,7 +23,7 @@ set certFile = "/tmp/cert.pem"
 foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo "*************** test with $pythonVersion ************************"
 
-    set GETCERTCMD = "$pythonVersion $CADC_ROOT/scripts/getCert --daysValid=1 --dest=$certFile"
+    set GETCERTCMD = "$pythonVersion $CADC_ROOT/scripts/getCert --daysValid=1 --cert-file=$certFile"
     set TESTCMD = "$pythonVersion $CADC_ROOT/scripts/vls --cert=$certFile vos:/CADCRegtest1/cadcVOFSTest_DONOTDELETE"
 
     echo
