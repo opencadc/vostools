@@ -21,18 +21,14 @@ if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
 
-(opt,args)=parser.parse_args()
+(opt, args)=parser.parse_args()
 parser.process_informational_options()
 
 logger = logging.getLogger()
 logger.setLevel(parser.log_level)
-logger.addHandler(logging.StreamHandler())
-
-
-
 
 try:
-    client=vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
+    client=vos.Client(vospace_certfile=opt.certfile, vospace_token=opt.token)
 except Exception as e:
     logger.error("Connection failed:  %s" %  (str(e)))
     sys.exit(e.errno)
@@ -41,7 +37,7 @@ for arg in args:
     if arg[0:4]!="vos:":
         logger.error("%s is not a valid VOSpace handle" % (arg))
     try:
-        if client.isfile(arg) or client.getNode(arg).islink():
+        if client.isfile(arg) or client.get_node(arg).islink():
             logger.info("deleting %s" %(arg))
             client.delete(arg)
         elif client.isdir(arg):

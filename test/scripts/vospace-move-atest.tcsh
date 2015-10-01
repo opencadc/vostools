@@ -124,8 +124,10 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "check no write permission on source data node (fail)"
+    echo "$MVCMD $CERT2 $CONTAINER/b $CONTAINER/d "
     $MVCMD $CERT2 $CONTAINER/b $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
     echo -n " verify "
+    echo " $LSCMD $CERT $CONTAINER/b"
     $LSCMD $CERT $CONTAINER/b > /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
 

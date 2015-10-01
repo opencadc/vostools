@@ -52,9 +52,17 @@ if __name__ == "__main__":
     log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
 
     lf = logging.Formatter(fmt=log_format)
-    fh = logging.FileHandler(filename=os.path.abspath(opt.log))
+    fh = logging.FileHandler(filename=os.path.abspath('/tmp/vos.exceptions'))
     fh.formatter = lf
 
+    # send the 'logException' statements to a seperate log file.
+    logger = logging.getLogger('exceptions')
+    logger.handlers = []
+    logger.setLevel(logging.ERROR)
+    logger.addHandler(fh)
+
+    fh = logging.FileHandler(filename=os.path.abspath(opt.log))
+    fh.formatter = lf
     logger = logging.getLogger('vofs')
     logger.handlers = []
     logger.setLevel(parser.log_level)

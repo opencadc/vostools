@@ -72,7 +72,7 @@ class Cantop(object):
         @return: Table
         """
         url = self.server+self.endpoint
-        f = cStringIO.StringIO(self.client.open(uri=None, URL=url).read())
+        f = cStringIO.StringIO(self.client.open(uri=None, url=url).read())
         f.seek(0)
         logging.debug(f.read())
         f.seek(0)

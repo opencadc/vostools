@@ -243,7 +243,7 @@ class Cache(object):
                 # If the file doesn't exist and is not required to exist, then
                 # an ENOENT error is ok and not propegated. All other errors
                 # are propegated.
-                if not (isinstance(fileHandle.readException[1], IOError) and
+                if not (isinstance(fileHandle.readException[1], EnvironmentError) and
                                 fileHandle.readException[1].errno == errno.ENOENT and not mustExist):
                     raise fileHandle.readException[0], \
                         fileHandle.readException[1], \
@@ -318,23 +318,18 @@ class Cache(object):
         # multiple threads do this is bad. It should also be done on a
         # schedule to allow for files which grow.
         (oldest_file, cacheSize) = self.determineCacheSize()
-        while (cacheSize / 1024 / 1024 > self.maxCacheSize and
-                       oldest_file is not None):
+        while (cacheSize / 1024 / 1024 > self.maxCacheSize and oldest_file is not None):
             with self.cacheLock:
                 if oldest_file[len(self.dataDir):] not in self.fileHandleDict:
-                    logger.debug("Removing file %s from the local cache" %
-                                 oldest_file)
+                    logger.debug("Removing file %s from the local cache" % oldest_file)
                     try:
                         os.unlink(oldest_file)
-                        os.unlink(self.metaDataDir +
-                                  oldest_file[len(self.dataDir):])
+                        os.unlink(self.metaDataDir + oldest_file[len(self.dataDir):])
                     except OSError:
                         pass
                     self.removeEmptyDirs(os.path.dirname(oldest_file))
-                    self.removeEmptyDirs(os.path.dirname(self.metaDataDir +
-                                                         oldest_file[len(self.dataDir):]))
-            # TODO - Tricky - have to get a path to the meta data given
-            # the path to the data. metaData.remove(oldest_file)
+                    self.removeEmptyDirs(os.path.dirname(self.metaDataDir + oldest_file[len(self.dataDir):]))
+            # TODO - Tricky - have to get a path to the meta data given the path to the data.
             (oldest_file, cacheSize) = self.determineCacheSize()
 
     def removeEmptyDirs(self, dirName):
@@ -351,14 +346,13 @@ class Cache(object):
                 elif e.errno == ENOENT:
                     pass
                 else:
-                    raise
+                    raise e
 
             thisDir = os.path.dirname(thisDir)
 
     def determineCacheSize(self):
         """Determine how much disk space is being used by the local cache"""
-        # TODO This needs to be cleaned up. There has to be a more efficient
-        # way to clean up the cache.
+        # TODO This needs to be cleaned up. There has to be a more efficient way to clean up the cache.
 
         start_path = self.dataDir
         total_size = 0
@@ -370,17 +364,16 @@ class Cache(object):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 with self.cacheLock:
-                    inFileHandleDict = (fp[len(self.dataDir):] not in
-                                        self.fileHandleDict)
+                    inFileHandleDict = fp[len(self.dataDir):] not in self.fileHandleDict
                 try:
                     osStat = os.stat(fp)
                 except:
                     continue
-                if (inFileHandleDict and oldest_time > osStat.st_atime):
+                if inFileHandleDict and oldest_time > osStat.st_atime:
                     oldest_time = osStat.st_atime
                     oldest_file = fp
                 total_size += osStat.st_size
-        return (oldest_file, total_size)
+        return oldest_file, total_size
 
     def unlinkFile(self, path):
         """Remove a file from the cache."""
@@ -855,6 +848,8 @@ class FileHandle(object):
         self.fileCondition.setTimeout()
         logger.debug("using the condition lock acquires the fileLock")
         with self.fileCondition:
+            if self.refCount > 1:
+                raise OSError(errno.EBUSY, "File refcount indicates files handle busy.")
             logger.debug("Got the lock. Flushing: {0}".format(self.flushQueued))
 
             try:
@@ -922,8 +917,9 @@ class FileHandle(object):
         delete our reference to this cache object.
         """
 
+        if self.refCount == 1:
+            self.flush()
         self.deref()
-
         return 0
 
     def deref(self):
@@ -1212,7 +1208,7 @@ class FileHandle(object):
             # Ensure the required part of the file is in cache.
             if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
-            with nested(self.fileLock, self.ioObject.cacheFileDescriptorLock):
+            with nest(self.fileLock, self.ioObject.cacheFileDescriptorLock):
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
                 self.fileModified = True

@@ -2,6 +2,7 @@ import sys, os
 import unittest
 from vos.CacheMetaData import CacheMetaData
 
+
 class TestCacheMetaData(unittest.TestCase):
     TEST_CACHE_PATH = "/tmp/.cacheMetadataTest/"
     
@@ -17,9 +18,8 @@ class TestCacheMetaData(unittest.TestCase):
                 os.remove(os.path.join(root, name))
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
-        
 
-    def testPersist(self):      
+    def testPersist(self):
        
        #create file
        file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
@@ -62,83 +62,83 @@ class TestCacheMetaData(unittest.TestCase):
        
 
     def testRange(self):
-       """ To test getRange functionality """
+        """ To test getRange functionality """
 
-       #first file
-       file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
-               0x2345, 1025)
-       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1", file1.metaDataFile)
-       self.assertEquals(10, file1.bitmap.length())
-       self.assertEquals(0x2345, file1.md5sum)
-       self.assertEquals(1025, file1.size)
-       
-       #bitvector should be "0000000000"
-       self.assertEquals(0, file1.getNumReadBlocks())
-       self.assertEquals(10, file1.bitmap.length())
-       
-       file1.setReadBlock(1)
-       self.assertEquals(1, file1.getBit(1))
-       self.assertEquals(1, file1.bitmap.count_bits())
-       self.assertEquals("0100000000", str(file1.bitmap))
-       
-       file1.setReadBlock(5)
-       self.assertEquals(1, file1.getBit(5))
-       self.assertEquals(2, file1.bitmap.count_bits())
-       self.assertEquals(5, file1.getNextReadBlock(2))
-       self.assertEquals(5, file1.getNextReadBlock(5))
-       self.assertEquals("0100010000", str(file1.bitmap))
-       
-       #perform some tests on 0100010
-       self.assertEquals((0, 0),  file1.getRange(0, 0))
-       self.assertEquals((2, 4), file1.getRange(2, 5))
-       # same thing using negative index
-       self.assertEquals((2, 4), file1.getRange(2, -5))
-       self.assertEquals((2, 4), file1.getRange(-8, -5))
-       self.assertEquals((2, 4), file1.getRange(-8, 5))
-       
-       file1.setReadBlock(2)
-       file1.setReadBlock(4)
-       self.assertEquals("0110110000", str(file1.bitmap))
-       self.assertEquals((3, 3), file1.getRange(2, 5))
-       
-       file1.setReadBlock(3)
-       self.assertEquals("0111110000", str(file1.bitmap))
-       self.assertEquals((None, None), file1.getRange(2, 5))
-       
-       expected = 0
-       try:
-          file1.getRange(8, -7)
-       except ValueError:
-           expected = 1 
-       
-       self.assertEquals(1, expected)
-       
-       expected = 0
-       try:
-          file1.setReadBlocks(8, -7)
-       except ValueError:
-           expected = 1 
-           
-       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1" + 
-                " (0x2345, 1025 0111110000)", str(file1))
-       
-       self.assertEquals(1, expected)
-       file1.persist()
-       self.assertTrue(os.path.exists(TestCacheMetaData.TEST_CACHE_PATH + "file1"))
-       file1.delete()
-       self.assertTrue(not os.path.exists(TestCacheMetaData.TEST_CACHE_PATH + "file1"))
-       
-       file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", 
-                10, 0x2345, 1024)
-       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file2.metaDataFile)
-       self.assertEquals(10, file2.bitmap.length())
-       self.assertEquals(0x2345, file2.md5sum)
-       file2.persist()
-       file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
-               10, 0x2345, 1025)
-       self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file3.metaDataFile)
-       self.assertEquals(10, file3.bitmap.length())
-       self.assertEquals(0x2345, file3.md5sum)
+        # first file
+        file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345, 1025)
+        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "file1", file1.metaDataFile)
+        self.assertEquals(10, file1.bitmap.length())
+        self.assertEquals(0x2345, file1.md5sum)
+        self.assertEquals(1025, file1.size)
+
+        # bitvector should be "0000000000"
+        self.assertEquals(0, file1.getNumReadBlocks())
+        self.assertEquals(10, file1.bitmap.length())
+
+        file1.setReadBlock(1)
+        self.assertEquals(1, file1.getBit(1))
+        self.assertEquals(1, file1.bitmap.count_bits())
+        self.assertEquals("0100000000", str(file1.bitmap))
+
+        file1.setReadBlock(5)
+        self.assertEquals(1, file1.getBit(5))
+        self.assertEquals(2, file1.bitmap.count_bits())
+        self.assertEquals(5, file1.getNextReadBlock(2))
+        self.assertEquals(5, file1.getNextReadBlock(5))
+        self.assertEquals("0100010000", str(file1.bitmap))
+
+        # perform some tests on 0100010
+        self.assertEquals((0, 0), file1.getRange(0, 0))
+        self.assertEquals((2, 4), file1.getRange(2, 5))
+        # same thing using negative index
+        self.assertEquals((2, 4), file1.getRange(2, -5))
+        self.assertEquals((2, 4), file1.getRange(-8, -5))
+        self.assertEquals((2, 4), file1.getRange(-8, 5))
+
+        file1.setReadBlock(2)
+        file1.setReadBlock(4)
+        self.assertEquals("0110110000", str(file1.bitmap))
+        self.assertEquals((3, 3), file1.getRange(2, 5))
+
+        file1.setReadBlock(3)
+        self.assertEquals("0111110000", str(file1.bitmap))
+        self.assertEquals((None, None), file1.getRange(2, 5))
+
+        expected = 0
+        try:
+            file1.getRange(8, -7)
+        except ValueError:
+            expected = 1
+
+        self.assertEquals(1, expected)
+
+        expected = 0
+        try:
+            file1.setReadBlocks(8, -7)
+        except ValueError:
+            expected = 1
+
+        file1_repr = "CacheMetaData(metaDataFile='{}file1', " \
+               "blocks=10, md5sum=9029, size=1025)".format(TestCacheMetaData.TEST_CACHE_PATH)
+        self.assertEquals(file1_repr, repr(file1))
+
+        self.assertEquals(1, expected)
+        file1.persist()
+        self.assertTrue(os.path.exists(TestCacheMetaData.TEST_CACHE_PATH + "file1"))
+        file1.delete()
+        self.assertTrue(not os.path.exists(TestCacheMetaData.TEST_CACHE_PATH + "file1"))
+
+        file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
+                              10, 0x2345, 1024)
+        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file2.metaDataFile)
+        self.assertEquals(10, file2.bitmap.length())
+        self.assertEquals(0x2345, file2.md5sum)
+        file2.persist()
+        file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
+                              10, 0x2345, 1025)
+        self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1", file3.metaDataFile)
+        self.assertEquals(10, file3.bitmap.length())
+        self.assertEquals(0x2345, file3.md5sum)
        
        
        

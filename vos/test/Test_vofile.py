@@ -65,9 +65,9 @@ class TestVOFile(unittest2.TestCase):
         mockHttpRequest.getresponse.return_value = mockHttpResponse
         conn.get_connection.return_value = mockHttpRequest
         vofile = vos.VOFile(["Some URL"], conn, "GET")
-        # set number of retries to 1 and check the IOError was thrown
+        # set number of retries to 1 and check the OSError was thrown
         vofile.maxRetries = 1
-        with self.assertRaises(IOError) as cm:
+        with self.assertRaises(OSError) as cm:
             vofile.read()
         mockHttpResponse.getheader.assert_called_with("Retry-After", 5)
         # 1 retry -> getheader in HttpResponse was called 4 times in the order shown below.
@@ -192,7 +192,7 @@ class TestVOFile(unittest2.TestCase):
         vofile.resp = mockHttpResponse200
 
         self.assertTrue(vofile.checkstatus())
-        self.assertEqual(vofile.getFileInfo(), (10, 12345))
+        self.assertEqual(vofile.get_file_info(), (10, 12345))
 
         
         

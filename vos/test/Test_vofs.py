@@ -38,8 +38,8 @@ class MyFileHandle2(FileHandle):
         super(MyFileHandle2, self).__init__(path, cache, anIOProxy)
     def readData(self, start, mandatory, optional):
         try:
-            raise IOError(ENOENT, "No such file")
-        except IOError:
+            raise OSError(ENOENT, "No such file")
+        except OSError:
             self.setReadException()
         with self.fileCondition:
             self.fileCondition.notify_all()
@@ -71,7 +71,7 @@ class TestVOFS(unittest.TestCase):
 
         # Client connection fails
         with patch('vos.Client.__init__') as mock1:
-            e = IOError()
+            e = OSError()
             e.errno = EIO
             mock1.side_effect = e
             with self.assertRaises(FuseOSError):
@@ -179,7 +179,7 @@ class TestVOFS(unittest.TestCase):
         
         # getNode return not found
         myVofs.getNode = Mock()
-        myVofs.getNode.side_effect = IOError(404, "NoFile")
+        myVofs.getNode.side_effect = OSError(404, "NoFile")
         with patch('vos.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle2(file, myVofs.cache, 
                     None)
@@ -199,7 +199,7 @@ class TestVOFS(unittest.TestCase):
             with self.assertRaises(FuseOSError):
                 fh = myVofs.open( file2, os.O_RDWR, None)
 
-            myVofs.getNode.side_effect = IOError(ENOENT, "no file")
+            myVofs.getNode.side_effect = OSError(ENOENT, "no file")
             # Open where getNode returns an error
             with self.assertRaises(FuseOSError):
                 fh = myVofs.open( file2, os.O_RDWR, None)
@@ -450,7 +450,7 @@ class TestVOFS(unittest.TestCase):
                 ('islocked', False): False,
                 }, name="node.props.get") )
         node.type = "vos:ContainerNode"
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         testfs.rmdir(path)
         testfs.client.delete.assert_called_once_with(path)
         
@@ -474,7 +474,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client = Object()
         node = Object()
         node.getNodeList = Mock(return_value = ())
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         self.assertEqual(testfs.readdir(path, None), ['.', '..'])
 
         # Try again with a timeout
@@ -491,7 +491,7 @@ class TestVOFS(unittest.TestCase):
         node = Object()
         node.getNodeList = Mock(return_value = ())
         testfs.condition.notify_all = Mock(wraps=testfs.condition.notify_all)
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         testfs.load_dir(path)
         testfs.condition.notify_all.assert_called_once_with()
 
@@ -565,7 +565,7 @@ class TestVOFS(unittest.TestCase):
                 ('MD5',): 12354,
                 }, name="node.props.get") )
         node.type = "vos:DataNode"
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         with patch('vos.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
             fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
@@ -593,7 +593,7 @@ class TestVOFS(unittest.TestCase):
                 ('MD5',): 12354,
                 }, name="node.props.get") )
         node.type = "vos:DataNode"
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         # Try flushing on a read-only file.
         with patch('vos.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
@@ -625,7 +625,7 @@ class TestVOFS(unittest.TestCase):
             mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
             myopt.readonly = True
             testfs.client = Object()
-            testfs.client.getNode = Mock(return_value = node)
+            testfs.client.get_node = Mock(return_value = node)
             fh = testfs.open( file, os.O_RDONLY, None)
             HandleWrapper.file_handle(fh).cacheFileHandle.fsync = \
                     Mock(wraps=HandleWrapper.file_handle(fh).cacheFileHandle.
@@ -698,7 +698,7 @@ class TestVOFS(unittest.TestCase):
         node.type = "vos:DataNode"
         node.uri = "vos:/dir1/dir2/file"
         testfs.client = Object()
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         testfs.client.close = Mock()
         testfs.client.read = Mock(side_effect = mock_read)
         testfs.client.copy = Mock()
@@ -829,13 +829,13 @@ class TestVOFS(unittest.TestCase):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node = Mock(spec=vos.Node)
         testfs.client = Object()
-        testfs.client.getNode = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value = node)
         node = testfs.getNode(file, force=True, limit=10)
-        testfs.client.getNode.assert_called_once_with(file, force=True, limit=10)
+        testfs.client.get_node.assert_called_once_with(file, force=True, limit=10)
 
-        err = IOError()
+        err = OSError()
         err.errno = 1
-        testfs.client.getNode = Mock(side_effect=err)
+        testfs.client.get_node = Mock(side_effect=err)
         with self.assertRaises(FuseOSError):
             node = testfs.getNode(file, force=True, limit=10)
 
@@ -983,18 +983,18 @@ class TestMyIOProxy(unittest.TestCase):
                     vos_VOFILE.read.reset_mock()
                     callCount[0] = 0
                     self.assertTrue(testProxy.lastVOFile is not None)
-                    testProxy.lastVOFile.read = Mock(side_effect=IOError)
+                    testProxy.lastVOFile.read = Mock(side_effect=OSError)
                     # This throws an exception because read will be called
                     # twice, the first is caught and error handling occurs, the
                     # second is not caught.
-                    with self.assertRaises(IOError):
+                    with self.assertRaises(OSError):
                         testProxy.readFromBacking(None, 1)
                     self.assertEqual(client.open.call_count, 2)
                     vos_VOFILE.open.assert_called_with("url0", 
                             bytes="bytes=1-")
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 2)
-                    self.assertTrue(type(testProxy.exception) is IOError)
+                    self.assertTrue(type(testProxy.exception) is OSError)
                     testProxy.exception = None
 
                 except Exception as e:
@@ -1035,7 +1035,7 @@ class TestMyIOProxy(unittest.TestCase):
         node = vos.Node("vos:/anode", properties = \
                 {"MD5": "1234", "length": "1"})
         testProxy.vofs = Object()
-        testProxy.vofs.getNode = Mock(side_effect=SideEffect({
+        testProxy.vofs.get_node = Mock(side_effect=SideEffect({
                 ('vos:/anode',): node, }
                  , name="testfs.getNode")) 
         self.assertEqual(testProxy.get_md5(), "1234")
@@ -1049,7 +1049,7 @@ class TestMyIOProxy(unittest.TestCase):
         node = vos.Node("vos:/anode", properties = \
                 {"MD5": "1234", "length": "1"})
         testProxy.vofs = Object()
-        testProxy.vofs.getNode = Mock(side_effect=SideEffect({
+        testProxy.vofs.get_node = Mock(side_effect=SideEffect({
                 ('vos:/anode',): node, }
                  , name="testfs.getNode")) 
         self.assertEqual(testProxy.getSize(), 1)

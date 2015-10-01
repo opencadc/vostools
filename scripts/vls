@@ -8,10 +8,13 @@ from vos.commonparser import CommonParser
 import os
 import sys
 import time
+from requests.exceptions import SSLError
 from vos import vos, __version__
 
 usage = "%prog vos:VOSpace/Node"
 description = """lists file size and ownership of VOSpace/Node. Node can be dataNode, containerNode or linkNode."""
+
+CADC_GMS_PREFIX = vos.CADC_GMS_PREFIX
 
 
 def get_terminal_size():
@@ -80,8 +83,6 @@ def date_format(epoch):
         return time.strftime('%b %d  %Y ', time_tuple)
     return time.strftime('%b %d %H:%S ', time_tuple)
 
-
-
 if __name__ == '__main__':
 
     parser = CommonParser(usage, description=description, add_help_option=False)
@@ -123,8 +124,8 @@ if __name__ == '__main__':
 
     formats = {'permissions': lambda value: "%-11s" % value,
                'creator': lambda value: " %-20s" % value,
-               'readGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
-               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(vos.CADC_GMS_PREFIX, "") + "'"),
+               'readGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
+               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
                'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value == "true"],
                'size': size_format,
                'date': date_format}
@@ -133,12 +134,18 @@ if __name__ == '__main__':
 
         try:
             if not node[0:4] == "vos:" :
-                raise IOError(errno.EBADF, "Invalid node name", node)
+                raise OSError(errno.EBADF, "Invalid node name", node)
             logger.debug("getting listing of: %s" % str(node))
-            infoList = client.getInfoList(node)
+            infoList = client.get_info_list(node)
+        except SSLError as error:
+            logger.error(str(error))
+            sys.exit(errno.EPERM)
         except Exception as e:
-            logger.error(getattr(e, 'strerror', 'error'))
-            sys.exit(getattr(e, 'errno', errno.ENOMSG))
+            logger.debug("{0}: {1}".format(type(e), str(e)))
+            logger.error("{0}".format(e))
+            err_no = getattr(e, 'errno', None)
+            err_no = err_no is not None and err_no or errno.ENOMSG
+            sys.exit(err_no)
 
         if sortKey:
             try:
@@ -159,4 +166,3 @@ if __name__ == '__main__':
                 if item[1]["permissions"][0] == 'l':
                     name_string = "%s -> %s" % (name_string, item[1]['target'])
             sys.stdout.write("%s\n" % name_string)
-

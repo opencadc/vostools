@@ -5,6 +5,7 @@ from optparse import OptionParser
 import sys
 import os
 import logging
+from vos.commonparser import CommonParser
 from vos import vos, __version__
 
 
@@ -24,31 +25,21 @@ def _cat(vospace_uri, cert_filename=None):
 
 
 if __name__ == '__main__':
+
     usage = "%prog [options] vos:VOSpace/node_name"
     description = "Writes the content of vos:VOSpace/node_name to stdout."
 
-    parser = OptionParser(usage, description=description, version=__version__.version)
-    parser.add_option("-v", "--verbose", action="store_true")
-    parser.add_option("-d", "--debug",
-                      action="store_true",
-                      help="set this option to get help solving connection issues")
-    parser.add_option("--certfile",
-                      help="location of your CADC security certificate file",
-                      default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+    parser = CommonParser(usage, description=description)
     parser.add_option("-q", help="run quietly, exit on error without message", action="store_true")
 
     (opt, args) = parser.parse_args()
+    parser.process_informational_options()
 
     if not len(args) > 0:
         parser.error("no argument given")
 
     logger = logging.getLogger()
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel(logging.ERROR)
-    if opt.verbose:
-        logger.setLevel(logging.INFO)
-    elif opt.debug:
-        logger.setLevel(logging.DEBUG)
+
     exit_code = 0
 
     for uri in args:
@@ -56,6 +47,7 @@ if __name__ == '__main__':
             _cat(uri, cert_filename=opt.certfile)
         except Exception as e:
             exit_code = getattr(e, 'errno', -1)
-            logger.error(getattr(e, 'strerror', uri))
+            if not opt.q:
+                logger.error(str(e))
 
     sys.exit(exit_code)

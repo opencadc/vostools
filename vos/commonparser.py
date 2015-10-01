@@ -16,6 +16,7 @@ class CommonParser(optparse.OptionParser):
 
         # inherit the VOS client version
         self.version = version
+        self.log_level = logging.ERROR
 
         # now add on the common parameters
         self.add_option("--certfile",
@@ -40,7 +41,6 @@ class CommonParser(optparse.OptionParser):
         """Display version, set logging verbosity"""
         (opt, args) = self.parse_args()
 
-
         if opt.version:
             self.print_version()
             sys.exit(0)
@@ -55,14 +55,15 @@ class CommonParser(optparse.OptionParser):
         else:
             self.log_level = logging.ERROR
 
-
-        log_format = "%(module)s: %(message)s"
+        log_format = "%(levelname)s %(module)s: %(message)s"
         if self.log_level < logging.INFO:
             log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
         logging.basicConfig(format=log_format, level=self.log_level)
 
         if opt.vos_debug:
-            logging.getLogger('vos').setLevel(logging.DEBUG)
+            logger = logging.getLogger('vos')
+            logger.setLevel(logging.DEBUG)
+
 
         if sys.version_info[1] > 6:
             logger = logging.getLogger()

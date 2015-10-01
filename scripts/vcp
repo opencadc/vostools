@@ -4,6 +4,13 @@ import traceback
 
 from vos import __version__
 from vos.commonparser import CommonParser
+from vos.vos import EndPoints
+try:
+    from xml.etree.ElementTree import ParseError
+except:
+    from exceptions import SyntaxError as ParseError
+  
+
 import logging
 import sys
 import vos
@@ -13,6 +20,7 @@ import hashlib
 import signal
 import re
 import glob
+import traceback
 
 exit_code = 0
 
@@ -35,7 +43,7 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 
 def get_node(filename):
     """Get node, from cache if possible"""
-    return client.getNode(filename, limit=None)
+    return client.get_node(filename, limit=None)
 
 
 # here are a series of methods that choose between calling the system version or the vos version of various
@@ -124,11 +132,13 @@ def get_md5(filename):
         md5 = md5.hexdigest()
     return md5
 
+
 def lglob(pathname):
     if pathname[0:4] == "vos:":
         return client.glob(pathname)
     else:
         return glob.glob(pathname)
+
 
 def copy(source_name, destination_name, exclude=None, include=None, interrogate=False, overwrite=False, ignore=False):
     """
@@ -166,10 +176,10 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                     return
 
             if not access(os.path.dirname(destination_name), os.F_OK):
-                raise IOError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
+                raise OSError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
 
             if not isdir(os.path.dirname(destination_name)) and not islink(os.path.dirname(destination_name)):
-                raise IOError(errno.ENOTDIR,
+                raise OSError(errno.ENOTDIR,
                               "vcp: %s is not a ContainerNode or LinkNode" % os.path.dirname(destination_name))
 
             skip = False
@@ -190,29 +200,29 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                 logging.info("%s -> %s " % (source_name, destination_name))
             while not skip:
                 try:
-                    client.copy(source_name, destination_name, sendMD5=True)
+                    client.copy(source_name, destination_name, send_md5=True)
                     break
                 except Exception as client_exception:
                     if getattr(client_exception, 'errno', -1) == 104:
-                        ### 104 is connection reset by peer.  Try again on this error
+                        # 104 is connection reset by peer.  Try again on this error
                         logging.warning(str(client_exception))
                         exit_code = getattr(client_exception, 'errno', -1)
                     elif getattr(client_exception, 'errno', -1) == errno.EIO:
-                        ### retry on IO errors
-                        logging.warning(str(client_exception) + "\nRetrying")
+                        # retry on IO errors
+                        logging.warning("{0}: Retrying".format(client_exception))
                         pass
                     elif ignore:
                         logging.error("Ignoring error: %s " % str(client_exception))
                         skip = True
                     else:
                         raise client_exception
-    except IOError as io_exception:
-        logging.debug(str(io_exception))
-        if getattr(io_exception, 'errno', -1) == errno.EINVAL:
+    except OSError as os_exception:
+        logging.debug(str(os_exception))
+        if getattr(os_exception, 'errno', -1) == errno.EINVAL:
             # not a valid uri, just skip those...
-            logging.warning("%s: Skipping" % str(io_exception))
+            logging.warning("%s: Skipping" % str(os_exception))
         else:
-            raise io_exception
+            raise os_exception
 
 
 def signal_handler(signum, frame):
@@ -253,7 +263,7 @@ if __name__ == '__main__':
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token,
-                            cadc_short_cut=opt.quick)
+                            transfer_shortcut=opt.quick)
         for source_pattern in args:
             # define this empty cutout string.  Then we strip possible cutout strings off the end of the
             # pattern before matching.  This allows cutouts on the vos service.
@@ -306,13 +316,18 @@ if __name__ == '__main__':
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
         exit_code = getattr(ke, 'errno', -1)
+    except ParseError as pe:
+        exit_code = errno.EREMOTE
+        logging.error("Failure at server while copying {0} -> {1}".format(source, dest))
     except Exception as e:
         message = str(e)
         if re.search('NodeLocked', str(e)) is not None:
             logging.error("Use vlock to unlock the node before copying to %s." % this_destination)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
-            logging.error("Failure at remote server while copying %s -> %s" % str(source, dest))
+            logging.error("Failure at remote server while copying {0} -> {1}".format(source, dest))
         else:
+            logging.debug("Exception throw: %s %s" % (type(e), str(e)))
+            logging.debug(traceback.format_exc())
             logging.error(message)
         exit_code = getattr(e, 'errno', -1)
 
