@@ -12,7 +12,6 @@ import fnmatch
 import hashlib
 from cStringIO import StringIO
 import requests
-
 requests.packages.urllib3.disable_warnings()
 import html2text
 import logging
@@ -1338,8 +1337,8 @@ class Client(object):
                         # remove the first one as we already tried that one.
                         put_urls.pop(0)
                         get_node_url_retried = True
-                else:
-                    break
+                    else:
+                        break
                 put_url = put_urls.pop(0)
                 try:
                     with open(source, 'r') as fin:
