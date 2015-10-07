@@ -1424,7 +1424,7 @@ class Client(object):
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
-                if uri[0:4] == 'vos:':
+                if uri.startswith('vos:'):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read()
                     xml_file = StringIO(vo_xml_string)
@@ -1488,6 +1488,28 @@ class Client(object):
         :type full_negotiation: bool
         """
         uri = self.fix_uri(uri)
+
+        if view in ['data', 'cutout'] and method == 'GET':
+            node = self.get_node(uri, limit=0)
+            if node.islink():
+                target = node.node.findtext(Node.TARGET)
+                logger.debug("%s is a link to %s" % (node.uri, target))
+                if target is None:
+                        raise OSError(errno.ENOENT, "No target for link")
+                else:
+                    if re.search("^vos://(.+\.)+(.+)+[!~]vospace", target) is None:
+                        # This is not a link to another VOSpace node so lets just return the target as the url
+                        if cutout is not None:
+                            url = "{}?cutout={}".format(target, cutout)
+                        else:
+                            url = target
+                        logger.debug("Returning URL: {}".format(url))
+                        return [url]
+                logger.debug("Getting URLs for: {}".format(target))
+                return self.get_node_url(target, method=method, view=view, limit=limit, next_uri=next_uri,
+                                         cutout=cutout,
+                                         full_negotiation=full_negotiation)
+
         logger.debug("Getting URL for: " + str(uri))
 
         endpoints = EndPoints(uri)
