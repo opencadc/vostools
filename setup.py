@@ -8,11 +8,12 @@ if sys.version_info[0] > 2:
     print "The vos package is only compatible with Python version 2.n"
     sys.exit(-1)
 
-## Build the list of scripts to be installed.
+# Build the list of scripts to be installed.
+
 script_dir = 'scripts'
 scripts = []
 for script in os.listdir(script_dir):
-    if script[-1] in [ "~", "#"]:
+    if script[-1] in ["~", "#"]:
         continue
     scripts.append(os.path.join(script_dir,script))
 
@@ -35,5 +36,6 @@ setup(name="vos",
         'Operating System :: POSIX',
         'Programming Language :: Python',
         ],
-      requires=['requests']
+      requires=['requests (>=2.7)'],
+      provides=['vos']
       )
