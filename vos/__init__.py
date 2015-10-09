@@ -1,1 +1,1 @@
-from vos import Connection, Client
+from vos import Client, Connection, Node, VOFile
