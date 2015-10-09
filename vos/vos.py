@@ -203,7 +203,6 @@ class Node(object):
         self.target = None
         self.groupread = None
         self.groupwrite = None
-        self.is_locked = None
         self.is_public = None
         self.type = None
         self.props = {}
@@ -260,9 +259,7 @@ class Node(object):
         self.is_public = False
         if self.props.get('ispublic', 'false') == 'true':
             self.is_public = True
-        self.is_locked = False
-        if self.props.get(self.endpoints.islocked, 'false') == 'true':
-            self.is_locked = True
+        logger.debug("{0} {1} -> {2}".format(self.uri, self.endpoints.islocked, self.props))
         self.groupwrite = self.props.get('groupwrite', '')
         self.groupread = self.props.get('groupread', '')
         logger.debug("Setting file attributes via setattr")
@@ -590,9 +587,19 @@ class Node(object):
             return True
         return False
 
+    @property
+    def is_locked(self):
+        return self.islocked()
+
+    @is_locked.setter
+    def is_locked(self, lock):
+        if lock == self.is_locked:
+            return
+        self.change_prop(self.endpoints.islocked, lock and "true" or "false")
+
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props[self.endpoints.islocked] == "true"
+        return self.props.get(self.endpoints.islocked, "false") == "true"
 
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
@@ -1069,7 +1076,7 @@ class EndPoints(object):
 
     @property
     def islocked(self):
-        return "{0}#islocked".format(self.uri)
+        return "{0}#islocked".format(self.core)
 
     @property
     def server(self):
@@ -1297,7 +1304,6 @@ class Client(object):
                 cutout = None
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
-
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
@@ -1313,6 +1319,7 @@ class Client(object):
                 get_url = get_urls.pop(0)
                 try:
                     response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
+                    source_md5 = response.headers.get('Content-MD5', source_md5)
                     response.raise_for_status()
                     with open(destination, 'w') as fout:
                         for chunk in response.iter_content(chunk_size=512 * 1024):
@@ -1322,6 +1329,7 @@ class Client(object):
                     destination_size = os.stat(destination).st_size
                     if check_md5:
                         destination_md5 = compute_md5(destination)
+                        logger.debug("{0} {1}".format(source_md5, destination_md5))
                         assert destination_md5 == source_md5
                     success = True
                 except Exception as ex:
@@ -1495,17 +1503,17 @@ class Client(object):
                 target = node.node.findtext(Node.TARGET)
                 logger.debug("%s is a link to %s" % (node.uri, target))
                 if target is None:
-                        raise OSError(errno.ENOENT, "No target for link")
-                else:
-                    if re.search("^vos://(.+\.)+(.+)+[!~]vospace", target) is None:
-                        # This is not a link to another VOSpace node so lets just return the target as the url
-                        if cutout is not None:
-                            url = "{}?cutout={}".format(target, cutout)
-                        else:
-                            url = target
-                        logger.debug("Returning URL: {}".format(url))
-                        return [url]
-                logger.debug("Getting URLs for: {}".format(target))
+                    raise OSError(errno.ENOENT, "No target for link")
+                parts = URLParser(target)
+                if parts.scheme != "vos":
+                    # This is not a link to another VOSpace node so lets just return the target as the url
+                    url = target
+                    if cutout is not None:
+                        url = "{0}?cutout={1}".format(target, cutout)
+                        logger.debug("Line 3.1.2")
+                    logger.debug("Returning URL: {0}".format(url))
+                    return [url]
+                logger.debug("Getting URLs for: {0}".format(target))
                 return self.get_node_url(target, method=method, view=view, limit=limit, next_uri=next_uri,
                                          cutout=cutout,
                                          full_negotiation=full_negotiation)
@@ -1859,12 +1867,13 @@ class Client(object):
                     if target is None:
                         raise OSError(errno.ENOENT, "No target for link")
                     else:
-                        if re.search("^vos://(.+\.)+(.+)+[!~]vospace", target) is not None:
+                        parts = URLParser(target)
+                        if parts.scheme == 'vos':
                             # This is a link to another VOSpace node so lets open that instead.
                             return self.open(target, mode, view, head, url, limit,
                                              next_uri, size, cutout, byte_range)
                         else:
-                            # A target external to VOSpace, open the target directly
+                            # A target external link
                             # TODO Need a way of passing along authentication.
                             if cutout is not None:
                                 target = "{0}?cutout={1}".format(target, cutout)
@@ -1957,7 +1966,7 @@ class Client(object):
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         response = self.conn.session.put(url, data=str(node))
-        return response.status_code == 200
+        response.raise_for_status()
 
     def delete(self, uri):
         """Delete the node"""
@@ -1965,7 +1974,8 @@ class Client(object):
         logger.debug("delete {0}".format(uri))
         with self.nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
-            return self.conn.session.delete(url)
+            response = self.conn.session.delete(url)
+            response.raise_for_status()
 
     def get_info_list(self, uri):
         """Retrieve a list of tuples of (NodeName, Info dict)"""
