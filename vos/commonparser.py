@@ -60,11 +60,9 @@ class CommonParser(optparse.OptionParser):
             log_format = ("%(levelname)s %(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
         logging.basicConfig(format=log_format, level=self.log_level)
 
-
         if opt.vos_debug:
             logger = logging.getLogger('vos')
             logger.setLevel(logging.DEBUG)
-
 
         if sys.version_info[1] > 6:
             logger = logging.getLogger()
