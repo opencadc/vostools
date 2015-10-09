@@ -5,12 +5,12 @@ Version 2.1 provides a significant improvement in performance and stability over
 WARNING: 2.1 module vos  is NOT fully backward compatible with 1.X.
 
 
- if your scripts use the 'VOFile.write' method, they will no longer work.  There are not many cases where you might
- be using this function and this issue is expected to impact a minimal number of users.
+************************************ VOFile.write method disabled *****************************************************
 
+Scripts that use the 'VOFile.write' method will no longer work.  There are not many cases where
+VOFile.write might be used and this issue is expected to impact a minimal number of users.
 
-eg.  if you has code like the following:
-
+Code using the 'write' method similar to the following:
 
 import vos
 fobj = vos.Client().open('vos:MyVOSpace/file.txt', 'w')
@@ -39,3 +39,4 @@ vos.Client().copy(fobj.name, 'vos:MyVOSpace/file.txt')
 fobf.close()
 
 
+***********************************************************************************************************************
