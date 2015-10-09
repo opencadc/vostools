@@ -4,7 +4,7 @@
 from vos.commonparser import CommonParser
 import logging
 import sys
-import vos
+from vos import vos
 
 usage = """
   vln vos:VOSpaceSource vos:VOSpaceTarget

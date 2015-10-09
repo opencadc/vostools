@@ -2,8 +2,8 @@
 
 import curses
 import logging
-from vos import cantop
-from vos import commonparser
+from vos.vos import cantop
+from vos.vos import commonparser
 import os
 
 if __name__ == '__main__':

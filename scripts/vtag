@@ -27,24 +27,26 @@ def vtag(node,props):
     """
     client = vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
     node = client.get_node(node)
-    if len(props) == 0 : 
-        ## print all properties
+    if len(props) == 0:
+        # print all properties
+        for key in node.props:
+            print key, node.props[key]
         return pprint.pprint(node.props)
 
     changed = False
     for prop in props:
         prop = prop.split('=')
-        if len(prop)==1:
-            ## get one property
+        if len(prop) == 1:
+            # get one property
             logger.debug("just print this one out %s" % (prop[0]))
             pprint.pprint(node.props.get(prop[0], None))
-        elif len(prop)==2:
-            ## update properties
+        elif len(prop) == 2:
+            # update properties
             key, value = prop
             logger.debug("%s %s" % ( len(key), len(value)))
             if len(value) == 0 :
                 value = None
-            logger.debug("%s: %s -> %s" % ( key, node.props.get(key,None), value))
+            logger.debug("%s: %s -> %s" % ( key, node.props.get(key, None), value))
             if value != node.props.get(key,None):
                 node.props[key] = value
                 changed = True
@@ -62,7 +64,8 @@ if __name__ == '__main__':
 
     from vos.commonparser import CommonParser
     import logging, sys
-    import vos, os
+    from vos import vos
+    import os
     ## handle interupts nicely
     import signal
     signal.signal(signal.SIGINT, signal_handler)

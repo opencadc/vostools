@@ -3,6 +3,7 @@
 import traceback
 
 from vos import __version__
+from vos import vos
 from vos.commonparser import CommonParser
 from vos.vos import EndPoints
 try:
@@ -13,7 +14,6 @@ except:
 
 import logging
 import sys
-import vos
 import errno
 import os
 import hashlib

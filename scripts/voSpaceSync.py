@@ -5,7 +5,7 @@ DROPBOX_REV_TAG = "revision"
 VOSPACE_REV_TAG = "ivo://gpi/dropbox#revision"
 
 import dropbox
-import vos
+from vos import vos
 import os
 from cStringIO import StringIO
 import sys

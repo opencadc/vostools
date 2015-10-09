@@ -5,7 +5,7 @@ from sys import platform
 import os
 import logging
 
-import vos
+from vos import vos
 import vos.fuse
 from vos.fuse import FUSE
 from vos.__version__ import version

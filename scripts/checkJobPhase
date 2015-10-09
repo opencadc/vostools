@@ -11,7 +11,7 @@ This script is used to retrieve the state of a job using X509 authentication.
 
 
 import sys
-import vos
+from vos import vos
 from vos.commonparser import CommonParser
 import os
 import logging

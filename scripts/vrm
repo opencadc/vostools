@@ -2,7 +2,7 @@
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
-import vos
+from vos import vos
 import time
 import os, sys, logging
 from vos.commonparser import CommonParser

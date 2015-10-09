@@ -2,7 +2,6 @@
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
-import vos
 from vos.commonparser import CommonParser
 import time
 import os, sys, logging
@@ -21,12 +20,8 @@ if len(sys.argv) == 1:
         parser.print_help()
         sys.exit()
 
-(opt,args)=parser.parse_args()
+(opt, args) = parser.parse_args()
 parser.process_informational_options()
-
-logger = logging.getLogger()
-logger.setLevel(parser.log_level)
-logger.addHandler(logging.StreamHandler())
 
 try:
     client=vos.Client(vospace_certfile=opt.certfile,
@@ -38,20 +33,20 @@ except Exception as e:
 try:
    for arg in args:
       if arg[0:4]!="vos:":
-          logger.error("%s is not a valid VOSpace handle" % (arg))
+          logging.error("%s is not a valid VOSpace handle" % (arg))
           sys.exit(-1)
       if client.isdir(arg):
-          logger.info("deleting %s" %(arg))
+          logging.info("deleting %s" %(arg))
           client.delete(arg)
       elif client.isfile(arg):
-          logger.error("%s is a file" % (arg))
+          logging.error("%s is a file" % (arg))
           sys.exit(-1)
       else:
-          logger.error("%s file not found" % (arg))
+          logging.error("%s file not found" % (arg))
           sys.exit(-1)
 except Exception as e:
     import re
     if re.search('NodeLocked', str(e)) != None:
-       logger.error("Use vlock to unlock %s before removing." %(arg))
-    logger.error("Connection failed:  %s" %  (str(e)))
+       logging.error("Use vlock to unlock %s before removing." %(arg))
+    logging.error("Connection failed:  %s" %  (str(e)))
     sys.exit(-1)
