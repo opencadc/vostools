@@ -110,7 +110,7 @@ First looks for an entry in the users .netrc matching the realm {0}, the user is
             retry=False
         except OSError as ose:
             if ose.errno != 401:
-               sys.stderr.write(str(ex))
+               sys.stderr.write(str(ose))
                return(getattr(ex, 'errno', 1))
             else:
                sys.stderr.write("Access denied\n")
