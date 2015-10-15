@@ -11,7 +11,7 @@ try:
 except:
     from exceptions import SyntaxError as ParseError
   
-
+import requests
 import logging
 import sys
 import errno
@@ -81,8 +81,9 @@ def access(filename, mode):
         try:
             node = get_node(filename)
             return node is not None
-        except:
-            return False
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                return False
     else:
         return os.access(filename, mode)
 
