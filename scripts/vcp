@@ -170,7 +170,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                     if ans != 'y':
                         raise Exception("File exists")
 
-            if access(destination_name, os.F_OK) and not overwrite:
+            if not overwrite and access(destination_name, os.F_OK):
                 ### check if the MD5 of dest and source mathc, if they do then skip
                 if get_md5(destination_name) == get_md5(source_name):
                     logging.info("%s matches %s, skipping" % (source_name, destination_name))
