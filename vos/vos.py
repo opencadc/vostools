@@ -149,7 +149,8 @@ class Connection(object):
         # create a requests session object that all requests will be made via.
         session = requests.Session()
         if self.vospace_certfile is not None:
-            session.cert = (self.vospace_certfile, self.vospace_certfile)
+            session.cert = self.vospace_certfile
+            session.verify = False
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
 
