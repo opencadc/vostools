@@ -116,6 +116,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
     echo " [OK]"
 
     echo -n "delete test container as CADCAuthtest2 (denied)"
+    echo "$RMDIRCMD $CERT2 $CONTAINER"
     $RMDIRCMD $CERT2 $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
     echo -n " verify "
     $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1

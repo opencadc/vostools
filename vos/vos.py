@@ -27,6 +27,7 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from __version__ import version
+import netrc
 
 try:
     _unicode = unicode
@@ -151,6 +152,10 @@ class Connection(object):
         if self.vospace_certfile is not None:
             session.cert = self.vospace_certfile
             session.verify = False
+        if self.vospace_certfile is None:
+            auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
+            if auth is not None:
+                session.auth = (auth[0], auth[2])
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
 
@@ -1023,7 +1028,7 @@ class EndPoints(object):
     CADC_SERVER = 'www.canfar.phys.uvic.ca'
     NOAO_TEST_SERVER = "dldev1.tuc.noao.edu:8080/vospace-2.0"
     DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
-    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
+    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', CADC_SERVER)
 
     VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
                  'cadc.nrc.ca~vospace': CADC_SERVER,
@@ -1034,13 +1039,13 @@ class EndPoints(object):
                   'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace',
                   'datalab.noao.edu!vosapce': 'ivo://datalab.noao.edu/vosapce'}
 
-    VONodes = "vospace/nodes"
+    VONodes = "vospace/auth/nodes"
 
     VOProperties = {NOAO_TEST_SERVER: "/vospace/nodeprops",
                     CADC_SERVER: "/vospace/nodeprops"}
 
     VOTransfer = {NOAO_TEST_SERVER: '/vospace/sync',
-                  CADC_SERVER: '/vospace/synctrans'}
+                  CADC_SERVER: '/vospace/auth/synctrans'}
 
     def __init__(self, uri):
         """
@@ -1098,7 +1103,7 @@ class EndPoints(object):
         if self.server in EndPoints.VOTransfer:
             end_point = EndPoints.VOTransfer[self.server]
         else:
-            end_point = "/vospace/synctrans"
+            end_point = "/vospace/auth/synctrans"
         return "{0}/{1}".format(self.server, end_point)
 
     @property
@@ -1691,23 +1696,29 @@ class Client(object):
                     param = ElementTree.SubElement(vos_view, "vos:param")
                     param.attrib['uri'] = endpoints.cutout
                     param.text = cutout
-            ElementTree.SubElement(transfer_xml, "vos:protocol").attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                                                                  protocol[direction])
+            protocol_element = ElementTree.SubElement(transfer_xml, "vos:protocol")
+            protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL, protocol[direction])
 
         logging.debug(ElementTree.tostring(transfer_xml))
         url = "{0}://{1}".format(self.protocol,
                                  endpoints.transfer)
+        logging.debug("Sending to : {}".format(url))
 
         data = ElementTree.tostring(transfer_xml)
         resp = self.conn.session.post(url,
                                       data=data,
                                       allow_redirects=False,
                                       headers={'Content-Type': 'text/xml'})
+
         logging.debug("{0}".format(resp))
         logging.debug("{0}".format(resp.content))
         if resp.status_code != 303:
             raise OSError(resp.status_code, "Failed to get transfer service response.")
         transfer_url = resp.headers.get('Location', None)
+
+        if self.conn.session.auth is not None and "auth" not in transfer_url:
+            transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
+
         logging.debug("Got back from transfer URL: %s" % transfer_url)
 
         # For a move this is the end of the transaction.
@@ -1715,7 +1726,11 @@ class Client(object):
             return not self.get_transfer_error(transfer_url, uri)
 
         # for get or put we need the protocol value
-        xml_string = self.conn.session.get(transfer_url).content
+        xfer_resp = self.conn.session.get(transfer_url, allow_redirects=False)
+        xfer_url = xfer_resp.headers.get('Location', None)
+        if self.conn.session.auth is not None and "auth" not in xfer_url:
+            xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
+        xml_string = self.conn.session.get(xfer_url).content
         logging.debug("Transfer Document: %s" % xml_string)
         transfer_document = ElementTree.fromstring(xml_string)
         logging.debug("XML version: {0}".format(ElementTree.tostring(transfer_document)))

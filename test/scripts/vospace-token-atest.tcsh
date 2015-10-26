@@ -72,6 +72,7 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
 
     echo -n "create containers"
 
+    echo $MKDIRCMD --token="$TOKEN" -p $CONTAINER/A 
     $MKDIRCMD --token="$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
     $MKDIRCMD --token="$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
