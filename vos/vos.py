@@ -12,6 +12,7 @@ import fnmatch
 import hashlib
 from cStringIO import StringIO
 import requests
+from requests.exceptions import HTTPError
 import html2text
 import logging
 import mimetypes
@@ -34,8 +35,9 @@ try:
 except NameError:
     # If Python is built without Unicode support, the unicode type
     # will not exist. Fake one.
-    class _unicode(object):
+    class Unicode(object):
         pass
+    _unicode = unicode
 
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
@@ -59,6 +61,7 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
 requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -150,15 +153,13 @@ class Connection(object):
         # create a requests session object that all requests will be made via.
         session = requests.Session()
         if self.vospace_certfile is not None:
-            session.cert = self.vospace_certfile
-            session.verify = False
+            session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
             auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
             if auth is not None:
                 session.auth = (auth[0], auth[2])
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
-
         user_agent = 'vos ' + version
         if "vofs" in sys.argv[0]:
             user_agent = 'vofs ' + version
@@ -170,7 +171,7 @@ class Connection(object):
         """Create an HTTPSConnection object and return.  Uses the client
         certificate if None given.
 
-        uri  -- a VOSpace uri
+        :param url: a VOSpace uri
         """
         if url is not None:
             raise OSError(errno.ENOSYS, "Connections are no longer set per URL.")
@@ -274,7 +275,11 @@ class Node(object):
         self.setxattr()
 
     def set_property(self, key, value):
-        """Given a dictionary of props build a properties sub-element"""
+        """Create a key/value pair Node.PROPERTY element.
+
+        :param key: the property key
+        :param value: the property value
+        """
         properties = self.node.find(Node.PROPERTIES)
         uri = "%s#%s" % (Node.IVOAURL, key)
         ElementTree.SubElement(properties, Node.PROPERTY,
@@ -293,10 +298,10 @@ class Node(object):
         return "".join(data)
 
     def setattr(self, attr=None):
-        """return a dictionary of attributes associated with the file stored
-        at node
+        """return / augment a dictionary of attributes associated with the Node
 
-        These attributes are determind from the node on VOSpace.
+        These attributes are determined from the node on VOSpace.
+        :param attr: the  dictionary that holds the attributes
         """
         if not attr:
             attr = {}
@@ -361,7 +366,10 @@ class Node(object):
         self.attr['st_blocks'] = self.attr['st_size'] / 512
 
     def setxattr(self, attrs=None):
-        """Initialize the attributes using the properties sent with the node."""
+        """Initialize the extended attributes using the Node properties that are not part of the core set.
+
+        :param attrs: An input list of attributes being sent from an external source, not supported.
+        """
         if attrs is not None:
             raise OSError(errno.ENOSYS, "No externally set extended Attributes for vofs yet.")
 
@@ -373,7 +381,10 @@ class Node(object):
         return
 
     def chwgrp(self, group):
-        """Set the groupwrite value for this node"""
+        """Set the groupwrite value to group for this node
+
+        :param group: the uri of he group to give write access to.
+        """
         logger.debug("Setting groups to: {0}".format(group))
         if group is not None and len(group.split()) > 3:
             raise AttributeError("Exceeded max of 4 write groups: {0}<-".format(group.split()))
@@ -381,7 +392,10 @@ class Node(object):
         return self.change_prop('groupwrite', group)
 
     def chrgrp(self, group):
-        """Set the groupread value for this node"""
+        """Set the groupread value to group for this node
+
+        :param group: the uri of the group to give read access to.
+        """
         if group is not None and len(group.split()) > 3:
             raise AttributeError("Exceeded max of 4 read groups: {0}<-".format(group))
 
@@ -389,12 +403,20 @@ class Node(object):
         return self.change_prop('groupread', group)
 
     def set_public(self, value):
-        # logger.debug("Setting value of ispublic to %s" % (str(value)))
+        """
+        :param value: should the is_public flag be set? (true/false)
+
+        :type value: str
+        """
         return self.change_prop('ispublic', value)
 
     @staticmethod
     def fix_prop(prop):
-        """Check if prop is a well formed uri and if not then make into one"""
+        """Check if prop is a well formed uri and if not then make into one
+
+        :param prop: the  property to expand into a  IVOA uri value for a property.
+        :rtype str
+        """
         (url, tag) = urllib.splittag(prop)
         if tag is None and url in ['title',
                                    'creator',
@@ -483,7 +505,10 @@ class Node(object):
 
         This function is quite limited.  We can make a file publicly
         readable and we can turn on/off group read/write permissions,
-        that's all. """
+        that's all.
+
+        :param mode: a stat MODE bit
+        """
 
         changed = 0
 
@@ -688,14 +713,22 @@ class Node(object):
         return info.items()
 
     def set_props(self, props):
-        """Set the properties of node, given the properties element of that node"""
+        """Set the SubElement Node PROPERTY values of the given xmlx ELEMENT provided using the Nodes props dictionary.
+
+        :param props: the xmlx element to set the Node PROPERTY of.
+        """
         for property_node in props.findall(Node.PROPERTY):
             self.props[self.get_prop_name(property_node.get('uri'))] = self.get_prop_value(property_node)
         return
 
     @staticmethod
     def get_prop_name(prop):
-        """parse the property uri and get the name of the property"""
+        """parse the property uri and get the name of the property (strips off the url and just returns the tag)
+        if this is an IVOA property, otherwise sends back the entry uri.
+
+        :param prop: the uri of the property to get the name of.
+
+        """
         (url, prop_name) = urllib.splittag(prop)
         if url == Node.IVOAURL:
             return prop_name
@@ -703,7 +736,10 @@ class Node(object):
 
     @staticmethod
     def get_prop_value(prop):
-        """Pull out the value part of node"""
+        """Pull out the value part of PROPERTY Element.
+
+        :param prop: an XML Element that represents a Node PROPERTY.
+        """
         return prop.text
 
 
@@ -807,7 +843,11 @@ class VOFile(object):
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
                                  416, 402, 408, 412, 504)):
-        """check the response status"""
+        """check the response status.  If the status code doesn't match a value from the codes list then
+        raise an Exception.
+
+        :param codes: a list of http status_codes that are NOT failures but require some additional action.
+        """
         msgs = {404: "Node Not Found",
                 401: "Not Authorized",
                 409: "Conflict",
@@ -826,8 +866,8 @@ class VOFile(object):
                 if msg is None or len(msg) == 0 and self.resp.status_code in msgs:
                     msg = msgs[self.resp.status_code]
                 if (self.resp.status_code == 401 and
-                            self.connector.vospace_certfile is None and
-                            self.connector.vospace_token is None):
+                        self.connector.vospace_certfile is None and
+                        self.connector.session.auth is None and self.connector.vospace_token is None):
                     msg += " using anonymous access "
             exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
@@ -839,7 +879,7 @@ class VOFile(object):
         # 'Content-Length' to a signed 32-bit integer (~2 gig files)
         try:
             self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
-        except:
+        except ValueError:
             self.size = 0
 
         if self.resp.status_code == 200:
@@ -909,7 +949,10 @@ class VOFile(object):
         return self.totalFileSize, self.md5sum
 
     def read(self, size=None):
-        """return size bytes from the connection response"""
+        """return size bytes from the connection response
+
+        :param size: number of bytes to read from the file.
+        """
 
         if self.resp is None:
             try:
@@ -997,7 +1040,7 @@ class VOFile(object):
         try:
             # see if there is a Retry-After in the head...
             ras = int(self.resp.getheader("Retry-After", 5))
-        except:
+        except ValueError:
             ras = self.currentRetryDelay
             if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
                 self.currentRetryDelay *= 2
@@ -1020,8 +1063,11 @@ class VOFile(object):
 
     @staticmethod
     def write(buf):
-        """write buffer to the connection"""
-        raise OSError(errno.ENOSYS, "Write to a vospace file is not supported, use copy instead.")
+        """write buffer to the connection
+
+        :param buf: string to write to the file.
+        """
+        raise OSError(errno.ENOSYS, "Direct write to a VOSpaceFile is not supported, use copy instead.")
 
 
 class EndPoints(object):
@@ -1039,21 +1085,22 @@ class EndPoints(object):
                   'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace',
                   'datalab.noao.edu!vosapce': 'ivo://datalab.noao.edu/vosapce'}
 
-    VONodes = "vospace/auth/nodes"
+    VONodes = "nodes"
 
-    VOProperties = {NOAO_TEST_SERVER: "/vospace/nodeprops",
-                    CADC_SERVER: "/vospace/nodeprops"}
+    VOProperties = {NOAO_TEST_SERVER: "nodeprops",
+                    CADC_SERVER: "nodeprops"}
 
-    VOTransfer = {NOAO_TEST_SERVER: '/vospace/sync',
-                  CADC_SERVER: '/vospace/auth/synctrans'}
+    VOTransfer = {NOAO_TEST_SERVER: 'sync',
+                  CADC_SERVER: 'synctrans'}
 
-    def __init__(self, uri):
+    def __init__(self, uri, basic_auth=False):
         """
         Based on the URI return the various sever endpoints that will be
         associated with this uri.
 
         :param uri:
         """
+        self.service = basic_auth and 'vospace/auth' or 'vospace'
         self.uri_parts = URLParser(uri)
 
     @property
@@ -1062,7 +1109,7 @@ class EndPoints(object):
 
     @property
     def properties(self):
-        return "{0}/{1}".format(self.uri, EndPoints.VOProperties.get(self.server))
+        return "{0}/{1}/{2}".format(self.uri, self.service, EndPoints.VOProperties.get(self.server))
 
     @property
     def uri(self):
@@ -1103,8 +1150,8 @@ class EndPoints(object):
         if self.server in EndPoints.VOTransfer:
             end_point = EndPoints.VOTransfer[self.server]
         else:
-            end_point = "/vospace/auth/synctrans"
-        return "{0}/{1}".format(self.server, end_point)
+            end_point = "synctrans"
+        return "{0}/{1}/{2}".format(self.server, self.service, end_point)
 
     @property
     def nodes(self):
@@ -1112,7 +1159,7 @@ class EndPoints(object):
 
         :return: The Node service endpoint.
         """
-        return "{0}/{1}".format(self.server, EndPoints.VONodes)
+        return "{0}/{1}/{2}".format(self.server, self.service, EndPoints.VONodes)
 
 
 class Client(object):
@@ -1181,15 +1228,18 @@ class Client(object):
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
+
         return
 
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la
-        fnmatch. However, unlike fnmatch, filenames starting with a
+        fnmatch. However, unlike fnmatch, file names starting with a
         dot are special cases that are not matched by '*' and '?'
         patterns.
+
+        :param pathname: path to glob.
 
         """
         return list(self.iglob(pathname))
@@ -1374,8 +1424,9 @@ class Client(object):
         return send_md5 and destination_md5 or destination_size
 
     def fix_uri(self, uri):
-        """given a uri check if the authority part is there and if it isn't
-        then add the vospace authority
+        """given a uri check if the authority part is there and if it isn't then add the VOSpace authority
+
+        :param uri: The string that should be parsed into a proper URI, if possible.
 
         """
         parts = URLParser(uri)
@@ -1417,12 +1468,14 @@ class Client(object):
         return uri
 
     def get_node(self, uri, limit=0, force=False):
-        """connect to VOSpace and download the definition of vospace node
+        """connect to VOSpace and download the definition of VOSpace node
 
-        :param uri:   -- a voSpace node in the format vos:/vospaceName/nodeName
+        :param uri:   -- a voSpace node in the format vos:/VOSpaceName/nodeName
         :type uri: str
         :param limit: -- load children nodes in batches of limit
         :type limit: int, None
+        :param force: force getting the node from the service, rather than returning a cached version.
+
         :return: The VOSpace Node
         :rtype: Node
 
@@ -1526,7 +1579,7 @@ class Client(object):
 
         logger.debug("Getting URL for: " + str(uri))
 
-        endpoints = EndPoints(uri)
+        endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
 
         parts = URLParser(uri)
 
@@ -1573,7 +1626,7 @@ class Client(object):
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
 
-        # On GET verride the protocol to be http (faster) unless a secure_get is requested.
+        # On GET override the protocol to be http (faster) unless a secure_get is requested.
         protocol = {
             'GET': {'https': (self.secure_get and Client.VO_HTTPSGET_PROTOCOL) or Client.VO_HTTPGET_PROTOCOL,
                     'http': Client.VO_HTTPGET_PROTOCOL},
@@ -1673,8 +1726,13 @@ class Client(object):
             return self.transfer(uri, "pushToVoSpace", view="defaultview")
 
     def transfer(self, uri, direction, view=None, cutout=None):
-        """Build the transfer XML document"""
-        endpoints = EndPoints(uri)
+        """Build the transfer XML document
+        :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
+        :param uri: the uri to transfer from or to VOSpace.
+        :param view: which view of the node (data/default/cutout/etc.) is being transferred
+        :param cutout: a special parameter added to the 'cutout' view request. e.g. '[0][1:10,1:10]'
+        """
+        endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
                     "pushToVoSpace": "{0}put".format(self.protocol)}
 
@@ -1749,7 +1807,10 @@ class Client(object):
         return result
 
     def get_transfer_error(self, url, uri):
-        """Follow a transfer URL to the Error message"""
+        """Follow a transfer URL to the Error message
+        :param url: The URL of the transfer request that had the error.
+        :param uri: The uri that we were trying to transfer (get or put).
+        """
         error_codes = {'NodeNotFound': errno.ENOENT,
                        'RequestEntityTooLarge': errno.E2BIG,
                        'PermissionDenied': errno.EACCES,
@@ -1917,8 +1978,13 @@ class Client(object):
 
     def add_props(self, node):
         """Given a node structure do a POST of the XML to the VOSpace to
-           update the node properties"""
-        # Make a copy of currnet local state, then get a copy of what's on the server and then update just the changes.
+           update the node properties
+
+            Makes a new copy of current local state, then gets a copy of what's on the server and
+            then updates server with differences.
+
+           :param node: the Node object to add some properties to.
+           """
         new_props = copy.deepcopy(node.props)
         old_props = self.get_node(node.uri, force=True).props
         for prop in old_props:
@@ -1933,6 +1999,12 @@ class Client(object):
         self.conn.session.post(url, headers={'size': size}, data=data)
 
     def create(self, node):
+        """
+        Create a (Container/Link/Data) Node on the VOSpace server.
+
+        :param node: the Node that we are going to create on the server.
+        :type node: bool
+        """
         url = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
@@ -1943,7 +2015,11 @@ class Client(object):
         """Updates the node properties on the server. For non-recursive
            updates, node's properties are updated on the server. For
            recursive updates, node should only contain the properties to
-           be changed in the node itself as well as all its children. """
+           be changed in the node itself as well as all its children.
+
+           :param node: the node to update.
+           :param recursive: should this update be applied to all children? (True/False)
+           """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
         endpoints = node.endpoints
@@ -1978,14 +2054,28 @@ class Client(object):
         return 0
 
     def mkdir(self, uri):
+        """
+        Create a ContainerNode on the service.  Raise OSError(EEXIST) if the container exists.
+
+        :param uri: The URI of the ContainerNode to create on the service.
+        :type uri: str
+        """
         uri = self.fix_uri(uri)
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
-        response = self.conn.session.put(url, data=str(node))
-        response.raise_for_status()
+        try:
+            response = self.conn.session.put(url, data=str(node))
+            response.raise_for_status()
+        except HTTPError as http_error:
+            if http_error.response.status_code != 409:
+                raise http_error
+            else:
+                raise OSError(errno.EEXIST, 'ContainerNode {0} already exists'.format(uri))
 
     def delete(self, uri):
-        """Delete the node"""
+        """Delete the node
+        :param uri: The (Container/Link/Data)Node to delete from the service.
+        """
         uri = self.fix_uri(uri)
         logger.debug("delete {0}".format(uri))
         with self.nodeCache.volatile(uri):
@@ -1994,7 +2084,9 @@ class Client(object):
             response.raise_for_status()
 
     def get_info_list(self, uri):
-        """Retrieve a list of tuples of (NodeName, Info dict)"""
+        """Retrieve a list of tuples of (NodeName, Info dict)
+        :param uri: the Node to get info about.
+        """
         info_list = {}
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
@@ -2016,7 +2108,11 @@ class Client(object):
     def listdir(self, uri, force=False):
         """
         Walk through the directory structure a la os.walk.
-        Setting force=True will make sure no caching of results are used.
+        Setting force=True will make sure no cached results are used.
+        Follows LinksNodes to their destination location.
+
+        :param force: don't use cached values, retrieve from service.
+        :param uri: The ContainerNode to get a listing of.
         :rtype [str]
         """
         # logger.debug("getting a listing of %s " % (uri))
@@ -2031,60 +2127,64 @@ class Client(object):
             names.append(thisNode.name)
         return names
 
-    def isdir(self, uri):
-        """Check to see if the given uri points at a containerNode or is
-           a link to one.
+    def _node_type(self, uri):
+        """
+        Recursively follow links until the base Node is found.
+        :param uri: the VOSpace uri to recursively get the type of.
+        :return: the type of Node
+        :rtype: str
+        """
+        node = self.get_node(uri, limit=0)
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            if uri[0:4] == "vos:":
+                node = self.get_node(uri, limit=0)
+            else:
+                return "vos:DataNode"
+        return node.type
 
-           uri: a vospace URI
-           """
-        try:
-            node = self.get_node(uri, limit=0)
-            while node.type == "vos:LinkNode":
-                uri = node.target
-                if uri[0:4] == "vos:":
-                    node = self.get_node(uri, limit=0)
-                else:
-                    return False
-            if node.type == "vos:ContainerNode":
-                return True
-        except:
-            pass
-        return False
+    def isdir(self, uri):
+        """
+        Check to see if the given uri is or is a link to a containerNode.
+
+        :param uri: a VOSpace Node URI to test.
+        :rtype: bool
+        """
+        return self._node_type(uri) == "vos:ContainerNode"
 
     def isfile(self, uri):
-        try:
-            return self.status(uri)
-        except:
-            return False
+        """
+        Check if the given uri is or is a link to a DataNode
+
+        :param uri: the VOSpace Node URI to test.
+        :rtype: bool
+        """
+        return self._node_type(uri) == "vos:DataNode"
 
     def access(self, uri, mode=os.O_RDONLY):
-        """Test if the give vospace uri can be access if the given mode.
+        """Test if the give VOSpace uri can be accessed in the way requested.
 
-        uri:  a vospace location.
-        mode: os.O_RDONLY
-
+        :param uri:  a VOSpace location.
+        :param mode: os.O_RDONLY
         """
-        try:
-            vofile = self.open(uri, mode=mode)
-            return isinstance(vofile, VOFile)
-        except Exception as ex:
-            logger.debug("Exception on access check.  mode: {0} Exception: {1}".format(mode, ex))
-            return False
+        return isinstance(self.open(uri, mode=mode), VOFile)
 
     def status(self, uri, code=None):
         """Check to see if this given uri points at a containerNode.
 
         This is done by checking the view=data header and seeing if you
         get an error.
+        :param uri: the VOSpace (Container/Link/Data)Node to check access status on.
+        :param code: NOT SUPPORTED.
         """
         if not code:
             raise OSError(errno.ENOSYS, "Use of 'code' option values no longer supported.")
-        try:
-            node = self.get_node(uri)
-            return node.type == 'vos:ContainerNode'
-        except Exception as ex:
-            logger.debug("Exception on status check: {0}".format(ex))
+        self.get_node(uri)
+        return True
 
     def get_job_status(self, url):
-        """ Returns the status of a job """
+        """ Returns the status of a job
+        :param url: the URL of the UWS job to get status of.
+        :rtype: str
+        """
         return VOFile(url, self.conn, method="GET", follow_redirect=False).read()
