@@ -2024,7 +2024,7 @@ class Client(object):
         url = self.get_node_url(node.uri)
         endpoints = node.endpoints
         if recursive:
-            property_url = "{0}//{1}".format(self.protocol, endpoints.properties)
+            property_url = "{0}//{1}".format(self.protocol, endpoints.nodes)
             logger.debug("prop URL: {0}".format(property_url))
             try:
                 resp = self.conn.session.post(property_url,

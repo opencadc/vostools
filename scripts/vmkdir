@@ -2,8 +2,6 @@
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
-import vos
-import time
 import os, sys, logging
 from vos.commonparser import CommonParser
 from vos import vos, __version__
@@ -24,14 +22,11 @@ if len(sys.argv) == 1:
 (opt,args)=parser.parse_args()
 parser.process_informational_options()
 
-logger = logging.getLogger()
-logger.setLevel(parser.log_level)
-logger.addHandler(logging.StreamHandler())
 
 if len(args)>1:
     parser.error("Only one directory can be built per call")
 
-logger.info("Creating ContainerNode (directory) %s" % ( args[0]))
+logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
 
 try:
 
@@ -50,8 +45,8 @@ try:
         client.mkdir(thisDir)
 
 except Exception as e:
-    logger.error(str(e))
-    sys.exit(getattr(e,'errno',-1))
+    logging.error(str(e))
+    sys.exit(getattr(e, 'errno', -1))
 
 
 sys.exit(0)

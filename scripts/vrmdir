@@ -28,7 +28,7 @@ try:
                       vospace_token=opt.token)
 except Exception as e:
     logging.error("Connection failed:  %s" %  (str(e)))
-    sys.exit(e.__getattribute__('errno',-1))
+    sys.exit(e.__getattribute__('errno', -1))
 
 try:
    for arg in args:
