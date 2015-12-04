@@ -1109,7 +1109,7 @@ class EndPoints(object):
 
     @property
     def properties(self):
-        return "{0}/{1}/{2}".format(self.uri, self.service, EndPoints.VOProperties.get(self.server))
+        return "{0}/{1}/{2}".format(self.server, self.service, EndPoints.VOProperties.get(self.server))
 
     @property
     def uri(self):
@@ -2024,7 +2024,7 @@ class Client(object):
         url = self.get_node_url(node.uri)
         endpoints = node.endpoints
         if recursive:
-            property_url = "{0}//{1}".format(self.protocol, endpoints.nodes)
+            property_url = "{0}://{1}".format(self.protocol, endpoints.properties)
             logger.debug("prop URL: {0}".format(property_url))
             try:
                 resp = self.conn.session.post(property_url,
@@ -2150,7 +2150,12 @@ class Client(object):
         :param uri: a VOSpace Node URI to test.
         :rtype: bool
         """
-        return self._node_type(uri) == "vos:ContainerNode"
+        try:
+            return self._node_type(uri) == "vos:ContainerNode"
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                return False
+            raise ex
 
     def isfile(self, uri):
         """
@@ -2159,7 +2164,12 @@ class Client(object):
         :param uri: the VOSpace Node URI to test.
         :rtype: bool
         """
-        return self._node_type(uri) == "vos:DataNode"
+        try:
+            return self._node_type(uri) == "vos:DataNode"
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                return False
+            raise ex
 
     def access(self, uri, mode=os.O_RDONLY):
         """Test if the give VOSpace uri can be accessed in the way requested.
