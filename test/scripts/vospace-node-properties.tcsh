@@ -156,13 +156,13 @@ foreach pythonVersion ($CADC_PYTHON_TEST_TARGETS)
         sleep 3
         set jobURL = `grep "nodeprops/" $logFile | head -n 1 | awk '{print $NF}'`
     end
-    #echo $jobURL
+    echo $jobURL
     kill -s INT $chmodPID 
     # give kill a chance to complete
     sleep 2 
     #rm $logFile >& /dev/null
     #verify job has been aborted
-    set phase = `$CHECKJOB $CERT $jobURL/phase`
+    set phase = `$CHECKJOB $CERT $jobURL`
     if $phase != 'ABORTED' then
         echo " [FAIL]" && exit -1
     else
