@@ -7,6 +7,8 @@ if sys.version_info[0] > 2:
 
 # Build the list of scripts to be installed.
 
+dependencies = ['requests >= 2.8']
+
 script_dir = 'scripts'
 scripts = []
 for script in os.listdir(script_dir):
@@ -22,7 +24,7 @@ except:
     has_setuptools = False
 
 setup(name="vos",
-      version='2.1.2a',
+      version='2.1.3',
       url="https://github.com/ijiraq/cadcVOFS",
       description="Tools for interacting with CADC VOSpace.",
       author="JJ Kavelaars, Norm Hill, Adrian Demain, Ed Chapin and others",
@@ -40,5 +42,10 @@ setup(name="vos",
           'License :: OSI Approved :: GNU Affero General Public License v3',
           'Operating System :: POSIX',
           'Programming Language :: Python',
-      ], requires=['requests', 'requests']
+      ],
+      install_requires=dependencies
       )
+
+
+
+
