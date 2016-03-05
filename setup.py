@@ -22,7 +22,7 @@ except:
     has_setuptools = False
 
 setup(name="vos",
-      version='2.1.2',
+      version='2.1.2a',
       url="https://github.com/ijiraq/cadcVOFS",
       description="Tools for interacting with CADC VOSpace.",
       author="JJ Kavelaars, Norm Hill, Adrian Demain, Ed Chapin and others",
