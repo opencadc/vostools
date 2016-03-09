@@ -54,5 +54,5 @@ for arg in args:
         if re.search('NodeLocked',str(e)) != None:
             logger.error("Use vlock to unlock %s before deleting." % (arg))
         exit_code = getattr(e, 'errno', -1)
-        logger.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),exit_code))
+        logger.error("Failed trying to delete {0}: {1}".format( arg, str(e)))
         sys.exit(exit_code)
