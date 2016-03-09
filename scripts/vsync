@@ -144,7 +144,8 @@ def mkdirs(dirs):
         goodDirs.append(dirs)
         return
     except OSError as e:
-        if e.errno != errno.EEXIST:
+        exit_code = getattr(e, 'errno', -1)
+        if exit_code != errno.EEXIST:
             raise e
 
     ## OK, must already have existed, add to list

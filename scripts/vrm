@@ -31,7 +31,8 @@ try:
     client=vos.Client(vospace_certfile=opt.certfile, vospace_token=opt.token)
 except Exception as e:
     logger.error("Connection failed:  %s" %  (str(e)))
-    sys.exit(e.errno)
+    exit_code = getattr(e, 'errno', -1)
+    sys.exit(exit_code)
 
 for arg in args:
     if arg[0:4]!="vos:":
@@ -52,5 +53,6 @@ for arg in args:
         import re
         if re.search('NodeLocked',str(e)) != None:
             logger.error("Use vlock to unlock %s before deleting." % (arg))
-        logger.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),e.errno))
-        sys.exit(e.errno)
+        exit_code = getattr(e, 'errno', -1)
+        logger.error("Failed trying to delete %s: %s (%d)" %(arg,str(e),exit_code))
+        sys.exit(exit_code)
