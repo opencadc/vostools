@@ -155,9 +155,12 @@ class Connection(object):
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
-            auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
-            if auth is not None:
-                session.auth = (auth[0], auth[2])
+            try:
+                auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
+                if auth is not None:
+                    session.auth = (auth[0], auth[2])
+             except:
+                 pass
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
         user_agent = 'vos ' + version
@@ -981,7 +984,7 @@ class VOFile(object):
             self._fpos += size
             return buff[:size]
         elif self.resp.status_code == 303 or self.resp.status_code == 302:
-            url = self.resp.getheader('Location', None)
+            url = self.resp.headers.get('Location', None)
             logger.debug("Got redirect URL: {0}".format(url))
             self.url = url
             if not url:
@@ -1039,7 +1042,7 @@ class VOFile(object):
         logger.error("Message from VOSpace {0}: {1}".format(self.url, msg))
         try:
             # see if there is a Retry-After in the head...
-            ras = int(self.resp.getheader("Retry-After", 5))
+            ras = int(self.resp.headers.get("Retry-After", 5))
         except ValueError:
             ras = self.currentRetryDelay
             if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
@@ -1502,15 +1505,15 @@ class Client(object):
                     header = self.open(None, url=uri, mode=os.O_RDONLY, head=True)
                     header.read()
                     logger.debug("Got http headers: {0}".format(header.resp.headers))
-                    properties = {'type': header.resp.getheader('Content-type', 'txt'),
+                    properties = {'type': header.resp.headers.get('Content-Type', 'txt'),
                                   'date': time.strftime(
                                       '%Y-%m-%dT%H:%M:%S GMT',
-                                      time.strptime(header.resp.getheader('date', None),
+                                      time.strptime(header.resp.headers.get('Date', None),
                                                     '%a, %d %b %Y %H:%M:%S GMT')),
                                   'groupwrite': None,
                                   'groupread': None,
                                   'ispublic': URLParser(uri).scheme == 'https' and 'true' or 'false',
-                                  'length': header.resp.getheader('content-length', 0)}
+                                  'length': header.resp.headers.get('Content-Length', 0)}
                     node = Node(node=uri, node_type=Node.DATA_NODE, properties=properties)
                     logger.debug(str(node))
                 else:
@@ -1579,9 +1582,12 @@ class Client(object):
 
         logger.debug("Getting URL for: " + str(uri))
 
+        parts = URLParser(uri)
+        if parts.scheme.startswith('http'):
+            return [uri]
+
         endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
 
-        parts = URLParser(uri)
 
         # see if we have a VOSpace server that goes with this URI in our look up list
         if endpoints.server is None:
