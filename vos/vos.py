@@ -159,8 +159,8 @@ class Connection(object):
                 auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
                 if auth is not None:
                     session.auth = (auth[0], auth[2])
-             except:
-                 pass
+            except:
+                pass
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
         user_agent = 'vos ' + version
@@ -387,6 +387,7 @@ class Node(object):
         """Set the groupwrite value to group for this node
 
         :param group: the uri of he group to give write access to.
+        :type group: str
         """
         logger.debug("Setting groups to: {0}".format(group))
         if group is not None and len(group.split()) > 3:
@@ -398,6 +399,7 @@ class Node(object):
         """Set the groupread value to group for this node
 
         :param group: the uri of the group to give read access to.
+        :type group: str
         """
         if group is not None and len(group.split()) > 3:
             raise AttributeError("Exceeded max of 4 read groups: {0}<-".format(group))
