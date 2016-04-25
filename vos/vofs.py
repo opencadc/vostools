@@ -90,38 +90,30 @@ class MyIOProxy(IOProxy):
                 self.lastVOFile.URLs[self.lastVOFile.urlIndex], byte_range=byte_range, possible_partial_read=True)
         try:
             logger.debug("reading from {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
-            while True:
-                try:
-                    buff = self.lastVOFile.read(block_size)
-                except OSError as os_error:
-                    # existing URLs do not work anymore. Try another
-                    # transfer, forcing a full negotiation. This
-                    # handles the case that we tried a short cut URL
-                    # and it failed, so now we can try the full URL
-                    # list. If it still fails let the error propagate
-                    # to client
-                    logger.debug("Error while reading: {0}".format(os_error))
-                    self.lastVOFile = self.vofs.client.open(
-                        self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                        size=size, byte_range=byte_range, full_negotiation=True, possible_partial_read=True)
-                    buff = self.lastVOFile.read(block_size)
+            try:
+                resp = self.lastVOFile.read(return_response=True)
+            except OSError as os_error:
+                # existing URLs do not work anymore. Try another
+                # transfer, forcing a full negotiation. This
+                # handles the case that we tried a short cut URL
+                # and it failed, so now we can try the full URL
+                # list. If it still fails let the error propagate
+                # to client
+                self.lastVOFile = self.vofs.client.open(
+                    self.cacheFile.path, mode=os.O_RDONLY, view="data",
+                    size=size, byte_range=byte_range, full_negotiation=True, possible_partial_read=True)
+                resp = self.lastVOFile.read(return_response=True)
 
-                if not self.cacheFile.gotHeader:
-                    info = self.lastVOFile.get_file_info()
-                    logger.debug("Got info: {0}".format(info))
-                    self.cacheFile.setHeader(info[0], info[1])
+            if not self.cacheFile.gotHeader:
+                info = self.lastVOFile.get_file_info()
+                logger.debug("Got info: {0}".format(info))
+                self.cacheFile.setHeader(info[0], info[1])
 
-                if buff is None:
-                    logger.debug("buffer for {0} is None".format(self.cacheFile.path))
-                else:
-                    logger.debug("Writing: {0} bytes at {1} to cache for {2}".format(len(buff),
-                                                                                     offset,
-                                                                                     self.cacheFile.path))
-                if not buff:
-                    break
+            for buff in resp.iter_content(block_size):
                 try:
                     self.writeToCache(buff, offset)
-                except CacheAborted:
+                except CacheAborted as ca:
+                    logger.debug("Aboring write to cache: {0}".format(ca))
                     # The transfer was aborted.
                     break
                 offset += len(buff)
@@ -130,6 +122,7 @@ class MyIOProxy(IOProxy):
             raise e
         finally:
             self.lastVOFile.close()
+            self.lastVOFile = None
 
         logger.debug("Wrote: %d bytes to cache for %s" % (offset, self.cacheFile.path))
 
@@ -398,7 +391,7 @@ class VOFS(Operations):
         # Pull the node meta data from VOSpace.
         logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
         node = self.client.get_node(path, force=force, limit=limit)
-        logger.debug("Got node {0}".format(node))
+        logger.debug("Got node {0}".format(node.name))
         return node
 
     getNode = get_node
@@ -539,12 +532,18 @@ class VOFS(Operations):
 
         logger.debug("reading range: %s %d %d %d" % (path, size, offset, file_id))
 
-        try:
-            fh = HandleWrapper.file_handle(file_id)
-        except KeyError:
-            raise FuseOSError(EIO)
-
-        return fh.cache_file_handle.read(size, offset)
+        while True:
+            try:
+                fh = HandleWrapper.file_handle(file_id)
+            except KeyError as e:
+                logger.debug(str(e))
+                raise FuseOSError(EIO)
+            with self.condition:
+                bytes = fh.cache_file_handle.read(size, offset)
+            # Send back if we got bytes or we've read to end of file already.
+            if len(bytes) > 0 or not fh.cache_file_handle.metaData.size - offset > 0:
+                break
+        return bytes
 
     @logExceptions()
     def readlink(self, path):

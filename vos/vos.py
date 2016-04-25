@@ -953,7 +953,7 @@ class VOFile(object):
         """Return information harvested from the HTTP header"""
         return self.totalFileSize, self.md5sum
 
-    def read(self, size=None):
+    def read(self, size=None, return_response=False):
         """return size bytes from the connection response
 
         :param size: number of bytes to read from the file.
@@ -975,16 +975,14 @@ class VOFile(object):
         if self.resp.status_code == 416:
             return ""
         # check the most likely response first
-        if self.resp.status_code == 200:
-            buff = self.resp.raw.read(size)
-            size = size is not None and size < len(buff) and size or len(buff)
-            logger.debug("Sending back {0} bytes".format(size))
-            return buff[:size]
-        if self.resp.status_code == 206:
-            buff = self.resp.raw.read(size)
-            size = size is not None and size < len(buff) and size or len(buff)
-            self._fpos += size
-            return buff[:size]
+        if self.resp.status_code == 200 or self.resp.status_code == 206:
+            if return_response:
+                return self.resp
+            else:
+                buff = self.resp.raw.read(size)
+                size = size is not None and size < len(buff) and size or len(buff)
+                # logger.debug("Sending back {0} bytes".format(size))
+                return buff[:size]
         elif self.resp.status_code == 303 or self.resp.status_code == 302:
             url = self.resp.headers.get('Location', None)
             logger.debug("Got redirect URL: {0}".format(url))
@@ -995,6 +993,9 @@ class VOFile(object):
                                                                                              self.resp.content),
                               self.url)
             if self.followRedirect:
+                # We open this new URL without the byte range and partial read as we are following a service
+                # redirect and that service redirect is to the object that satisfies the original request.
+                # TODO seperate out making the transfer reqest and reading the response content.
                 self.open(url, "GET")
                 # logger.debug("Following redirected URL:  %s" % (URL))
                 return self.read(size)
