@@ -1363,7 +1363,6 @@ class Client(object):
                                      "(?P<dec>[\-\+]?\d*(\.\d*)?),"
                                      "(?P<rad>\d*(\.\d*)?)\))$",
                                      source)
-            logging.debug("{} matched: {}".format(source, ra_dec_match.groups()))
 
             if match is not None:
                 view = 'cutout'
