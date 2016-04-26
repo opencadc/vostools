@@ -1357,10 +1357,24 @@ class Client(object):
         if source[0:4] == "vos:":
             check_md5 = False
             match = re.search("([^\[\]]*)(\[.*\])$", source)
+            ra_dec_match = re.search("([^\(\)]*)"
+                                     "(?P<cutout>\("
+                                     "(?P<ra>[\-\+]?\d*(\.\d*)?),"
+                                     "(?P<dec>[\-\+]?\d*(\.\d*)?),"
+                                     "(?P<rad>\d*(\.\d*)?)\))$",
+                                     source)
+            logging.debug("{} matched: {}".format(source, ra_dec_match.groups()))
+
             if match is not None:
                 view = 'cutout'
                 source = match.group(1)
                 cutout = match.group(2)
+            elif ra_dec_match is not None:
+                view = 'cutout'
+                source = ra_dec_match.group(1)
+                cutout = "CIRCLE ICRS {} {} {}".format(ra_dec_match.group('ra'),
+                                                  ra_dec_match.group('dec'),
+                                                  ra_dec_match.group('rad'))
             else:
                 view = 'data'
                 cutout = None
@@ -1459,6 +1473,9 @@ class Client(object):
         # Check for 'cutout' syntax values.
         path = re.match("(?P<filename>[^\[]*)(?P<ext>(\[\d*:?\d*\])?"
                         "(\[\d*:?\d*,?\d*:?\d*\])?)", parts.path)
+        # check for 'ra_dec' syntax too.
+        path = re.match("(?P<filename>[^\(]*)(?P<cutout>\((?P<ra>[\-\+]?\d*(\.\d*)?),(?P<dec>[\-\+]?\d*(\.\d*)?),(?P<rad>\d*(\.\d*)?)\))?", path.group('filename'))
+        logger.debug("Match : {}".format(path.groupdict()))
         filename = os.path.basename(path.group('filename'))
         if not re.match("^[_\-\(\)=\+!,;:@&\*\$\.\w~]*$", filename):
             raise OSError(errno.EINVAL, "Illegal vospace container name",
@@ -1497,7 +1514,7 @@ class Client(object):
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
-                if uri.startswith('vos:'):
+                if uri.startswith('vos:') or uri.startswith('ad:'):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read()
                     xml_file = StringIO(vo_xml_string)
