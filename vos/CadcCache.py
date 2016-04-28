@@ -28,9 +28,13 @@ libc = ctypes.cdll.LoadLibrary(libcPath)
 _flush_thread_count = 0
 
 logger = logging.getLogger('cache')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
+
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# logger.addHandler(ch)
 
 ZERO_LENGTH_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 CACHE_DATA_SUBDIR = 'data'
@@ -203,6 +207,7 @@ class Cache(object):
                     fileHandle.setHeader(0, ZERO_LENGTH_MD5)
                 elif os.path.exists(fileHandle.cacheMetaDataFile):
                     fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, None, None, None)
+                    print "CadcCache.open - new CacheMetaData"
                     if fileHandle.metaData.getNumReadBlocks() == len(fileHandle.metaData.bitmap):
                         fileHandle.fullyCached = True
                         fileHandle.fileSize = os.path.getsize(fileHandle.cacheMetaDataFile)
@@ -812,6 +817,7 @@ class FileHandle(object):
         if self.metaData is None or self.metaData.md5sum != md5:
             self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlock,
                                           md5, size)
+            print "FileHandle.setHeader - new CacheMetaData"
             self.fullyCached = False
 
         logger.debug("metaData: {0} fullCached: {1}".format(self.metaData, self.fullyCached))
@@ -916,7 +922,10 @@ class FileHandle(object):
 
         delete our reference to this cache object.
         """
-
+        print "release path: {0}".format(self.path)
+        print "release cache: {0}".format(self.cache)
+        print "release filesize: {0}".format(self.fileSize)
+        print "release refCount: {0}".format(self.refCount)
         if self.refCount == 1:
             self.flush()
         self.deref()
@@ -973,6 +982,7 @@ class FileHandle(object):
 
             # Get the md5sum of the cached file
             size, mtime = self.getFileInfo()
+            print "FileHandle.flushNode size={0}, mtime={1}".format(size, mtime)
 
             # Write the file to vospace.
 
@@ -982,9 +992,16 @@ class FileHandle(object):
 
             # Update the meta data md5
             blocks, numBlocks = self.ioObject.blockInfo(0, size)
-            self.metaData = CacheMetaData(self.cacheMetaDataFile,
-                                          numBlocks, md5, size)
+            print "FileHandle.flushNode blocks={0}, numBlocks={1}".format(blocks, numBlocks)
+
+            print "FileHandle.flushNode cacheMetaData is None {0}".format(self.metaData is None)
+
+            self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks, md5, size)
+            print "FileHandle.flushNode - new CacheMetaData"
+
             if numBlocks > 0:
+                print "FileHandle.flushNode.numBlocks={0}".format(numBlocks)
+                print "FileHandle.flushNode.setReadBlocks({0},{1})".format(0, numBlocks-1)
                 self.metaData.setReadBlocks(0, numBlocks - 1)
             self.metaData.md5sum = md5
             self.metaData.persist()
@@ -1208,7 +1225,7 @@ class FileHandle(object):
             # Ensure the required part of the file is in cache.
             if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
-            with nest(self.fileLock, self.ioObject.cacheFileDescriptorLock):
+            with nested(self.fileLock, self.ioObject.cacheFileDescriptorLock):
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
                 self.fileModified = True

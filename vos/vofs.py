@@ -60,7 +60,9 @@ class MyIOProxy(IOProxy):
         logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
         logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
         dest_uri = self.vofs.get_node(self.cacheFile.path).uri
-        return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
+        foo = self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
+        return foo
+        # return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
 
     @logExceptions()
     def readFromBacking(self, size=None, offset=0, block_size=Cache.IO_BLOCK_SIZE):
@@ -411,7 +413,7 @@ class VOFS(Operations):
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         attr = self.cache.getAttr(path)
-        return attr is not None and attr or self.get_node(path, limit=0, force=False).attr
+        return attr is not None and attr or self.getNode(path, limit=0, force=False).attr
 
     def init(self, path):
         """Called on filesystem initialization. (Path is always /)

@@ -1011,6 +1011,7 @@ class VOFile(object):
                 # go to the next URL
                 self.urlIndex += 1
                 self.open(self.URLs[self.urlIndex], "GET")
+                self.resp = None
                 return self.read(size)
         else:
             self.URLs.pop(self.urlIndex)  # remove url from list
@@ -1054,6 +1055,7 @@ class VOFile(object):
             self.retries += 1
             time.sleep(int(ras))
             self.open(self.URLs[self.urlIndex], "GET")
+            self.resp = None
             return self.read(size)
         else:
             raise OSError(self.resp.status_code,
