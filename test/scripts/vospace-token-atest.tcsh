@@ -26,7 +26,7 @@ else
      set UMOUNTCMD = 'fusermount -u'
 endif
 
-set ACCESS_PAGE=${VOSPACE_WEBSERVICE}/access/login
+set ACCESS_PAGE=${VOSPACE_WEBSERVICE}/ac/login
 echo "Using access page: $ACCESS_PAGE"
 set VOS_BASE = "vos://cadc.nrc.ca~vospace"
 
