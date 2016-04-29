@@ -21,7 +21,6 @@ class CacheMetaData(object):
         md5sum - md5sum of the file. If None, the file must exist.
         size - Size of the file. If None, the file must exist.
         """
-        print "\n\n\nCacheMetaData.init({0},{1},{2},{3})".format(metaDataFile, blocks, md5sum, size)
         self.metaDataFile = metaDataFile
         self.blocks = blocks is None and 0 or blocks
         self.md5sum = md5sum
@@ -35,12 +34,10 @@ class CacheMetaData(object):
                 self.bitmap = persisted.bitmap
                 self.size = persisted.size
                 self.md5sum = persisted.md5sum
-                print "CacheMetaData.init user persisted bitmap, size={0}, len={1}".format(self.size, self.bitmap.size)
             f.close()
 
         if self.bitmap is None:
             self.bitmap = BitVector.BitVector(size=self.blocks)
-            print "CacheMetaData.init set bitmap size={0}, len={1}".format(blocks, self.bitmap.size)
 
     def __str__(self):
         """To create a print representation that is informative."""
@@ -56,7 +53,6 @@ class CacheMetaData(object):
                                                                                   self.size)
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """
-        print "CacheMetaData.setReadBlocks({0},{1}), size={2}, bms={3}".format(start, end, self.size, self.bitmap.size)
         startBlock = start
         endBlock = end
         if start < 0:
@@ -68,21 +64,17 @@ class CacheMetaData(object):
                     (startBlock, endBlock))
         for i in range(startBlock, endBlock + 1):
             self.setReadBlock(i)
-        print "CacheMetaData.setReadBlocks bitmap size={0}".format(self.size)
 
     def setReadBlock(self, block):
         """ To mark a block as read """
-        print "CacheMetaData.setReadBlock({0}), size={1}, bms={2}".format(block, self.size, self.bitmap.size)
         self.bitmap[block] = 1
 
     def getBit(self, position):
         """ To return the value of the bit at position """
-        print "CacheMetaData.getBit({0}), size={1}, bms={2}".format(position, self.size, self.bitmap.size)
         return self.bitmap[position]
 
     def getNumReadBlocks(self):
         """ To return the number of read blocks """
-        print "CacheMetaData.getNumReadBlocks = {0}, size={1}, bms={2}".format(self.bitmap.count_bits_sparse(), self.size, self.bitmap.size)
         return self.bitmap.count_bits_sparse()
 
     def getRange(self, start, end):
@@ -96,7 +88,6 @@ class CacheMetaData(object):
             Note: The returned tuple for when all the blocks in the requested
             interval are already downloaded is (None, None)
             """
-        print "CacheMetaData.getRange({0},{1}), size={1}, bms={2}".format(start, end, self.size, self.bitmap.size)
         startBlock = start
         endBlock = end
         if start < 0:
@@ -127,19 +118,16 @@ class CacheMetaData(object):
         value is the first block that is already read or -1 if none of the
         subsequent blocks is read
         """
-        print "CacheMetaData.getNextReadBlock({0}), size={1}, bms={2}".format(start, self.size, self.bitmap.size)
         return self.bitmap.next_set_bit(start)
 
     def delete(self):
         """ To delete bitmap information both from persistence layer
             and from current object """
-        print "CacheMetaData.delete {0}, size={1}, bms={2}".format(self.metaDataFile, self.size, self.bitmap.size)
         os.remove(self.metaDataFile)
         self.bitmap.reset(0)
 
     def persist(self):
         """To persist cache file metadata for the current file """
-        print "CacheMetaData.persist {0}, size={1}, bms={2}".format(self.metaDataFile, self.size, self.bitmap.size)
         if not os.path.exists(os.path.dirname(self.metaDataFile)):
             os.makedirs(os.path.dirname(self.metaDataFile))
         f = open(self.metaDataFile, 'w+')
@@ -149,5 +137,4 @@ class CacheMetaData(object):
     @staticmethod
     def deleteCacheMetaData(metaDataFile):
         """ To delete an existing cache metadata file """
-        print "CacheMetaData.deleteCacheMetaDat({0})".format(metaDataFile)
         os.remove(metaDataFile)

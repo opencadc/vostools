@@ -42,13 +42,13 @@
                     target="test_executable"/>
 </target>
 
-<target name="test_executable" depends="compile">
+<target name="test_executable">
     <echo message="test ${build}/lib using ${python.executable}"/>
     <apply executable="${python.executable}"
            dir="vos/test"
            failonerror="true">
         <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
-        <fileset dir="vos/test" includes="Test*.py"/>
+        <fileset dir="vos/test" includes="Test_vofile.py" excludes="TestAll.py"/>
     </apply>
 </target>
 

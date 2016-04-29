@@ -1446,14 +1446,10 @@ class BitVector( object ):
 
     def _setbit(self, posn, val):                                
         'Set the bit at the designated position to the value shown'
-        print "BitVector._setbit({0},{1})".format(posn, val)
-        print "BitVector._setbit size {0}".format(self.size)
         if val not in (0, 1):                                      
             raise ValueError( "incorrect value for a bit" )        
         if isinstance( posn, (tuple) ):                            
             posn = posn[0]
-        print "posn >= self.size={0}".format(posn >= self.size)
-        print "posn < -self.size={0}".format(posn < -self.size)
         if posn >= self.size or posn < -self.size:
             raise ValueError( "index range error" )                
         if posn < 0: posn = self.size + posn                       
@@ -1886,7 +1882,6 @@ class BitVector( object ):
         argument types are checked in the _setbit() method.
         '''      
         # The following section is for slice assignment:
-        print("BitVector.__setitem__({0},{1})".format(pos, item))
         if isinstance( pos, slice ):                                 
             if (not isinstance( item, BitVector )):                  
                 raise TypeError('''For slice assignment,

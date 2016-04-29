@@ -1,16 +1,20 @@
 # Test the vos module
 import requests
-import unittest2
+import unittest2 as unittest
 from mock import Mock, MagicMock, patch
 
 from vos import vos, Connection
+
+# To run individual tests, set the value of skipTests to True, and comment
+# out the @unittest.skipIf line at the top of the test to be run.
+skipTests = True
 
 
 class Object(object):
     pass
 
 
-class TestVOFile(unittest2.TestCase):
+class TestVOFile(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestVOFile, self).__init__(*args, **kwargs)
@@ -21,8 +25,8 @@ class TestVOFile(unittest2.TestCase):
             ('X-CADC-Content-Length', 0): 10,
         }
 
-    @patch.object(Connection,'get_connection')
-    def test_retry_successfull(self,mock_get_connection):
+    @patch.object(Connection, 'get_connection')
+    def test_retry_successfull(self, mock_get_connection):
         # this tests the read function when first HTTP request returns a 503 but the second one 
         # is successfull and returns a 200
 
@@ -59,8 +63,8 @@ class TestVOFile(unittest2.TestCase):
         # expected = [call('Content-Length', 0), call('Retry-After', 5)]
         # self.assertEquals( expected, mockHttpResponse503.getheader.call_args_list)
 
-    @patch.object(Connection, 'get_connection')
-    def test_fail_max_retry(self, mock_get_connection):
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_fail_max_retry(self):
         # this tests the read function when HTTP requests keep returning 503s
         # read call fails when it reaches the maximum number of retries, in this case set to 2
 
@@ -88,8 +92,9 @@ class TestVOFile(unittest2.TestCase):
         # expected = [call('Content-Length', 0), call('Retry-After', 5), call('Content-Length', 0), call('Retry-After', 5)]
         # self.assertEquals( expected, mockHttpResponse.getheader.call_args_list)
 
-    @patch.object(Connection,'get_connection')
-    def test_retry_412_successfull(self,mock_get_connection):
+    @patch.object(Connection, 'get_connection')
+    @unittest.skipIf(skipTests, "Individual tests")
+    def test_retry_412_successfull(self, mock_get_connection):
         # this tests the read function when first HTTP request returns a 412 but the second one 
         # is successful and returns a 200
 
@@ -120,8 +125,8 @@ class TestVOFile(unittest2.TestCase):
         # expected = [call('Content-Length', 0)]
         # self.assertEquals( expected, mockHttpResponse412.getheader.call_args_list)
 
-    @patch.object(Connection, 'get_connection')
-    def test_multiple_urls(self, mock_get_connection):
+    @unittest.skipIf(False, "Individual tests")
+    def test_multiple_urls(self):
         
         transfer_urls = ['http://url1.ca', 'http://url2.ca', 'http://url3.ca']
 
@@ -174,9 +179,9 @@ class TestVOFile(unittest2.TestCase):
         vofile = vos.VOFile(transfer_urls, conn, "GET")
         with self.assertRaises(OSError) as ex:
             vofile.read()
-        # assert(vofile.url == transfer_urls[2])
-        # assert(vofile.urlIndex == 1)
-        # assert(len(vofile.URLs) == 2)
+        assert(vofile.url == transfer_urls[2])
+        assert(vofile.urlIndex == 1)
+        assert(len(vofile.URLs) == 2)
 
         # all urls busy first time, first one successful second time
         self.responses = [mock_resp_503, mock_resp_503, mock_resp_503, mock_resp_200]
@@ -215,8 +220,8 @@ class TestVOFile(unittest2.TestCase):
 
         
 def run():
-    suite = unittest2.TestLoader().loadTestsFromTestCase(TestVOFile)
-    return unittest2.TextTestRunner(verbosity=2).run(suite)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestVOFile)
+    return unittest.TextTestRunner(verbosity=2).run(suite)
 
 if __name__ == "__main__":
     run()

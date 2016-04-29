@@ -345,20 +345,21 @@ class TestVOFS(unittest.TestCase):
         # Get the attributes from vospace.
         node = Object()
         testfs.cache.getAttr = Mock(return_value=None)
-        node.attr="attributes"
+        node.attr = "attributes"
         testfs.getNode = Mock(return_value=node)
-        self.assertEqual(testfs.getattr("/a/file/path"), "attributes")
-        testfs.getNode.assert_called_once_with("/a/file/path", limit=0,
-                force=False)
-        testfs.cache.getAttr.assert_called_once_with("/a/file/path")
+        testfs.get_node = Mock(return_value=node)
+        self.assertEqual(testfs.getattr("vos:/a/file/path"), "attributes")
+        testfs.get_node.assert_called_once_with("vos:/a/file/path", limit=0, force=False)
+        testfs.cache.getAttr.assert_called_once_with("vos:/a/file/path")
 
         # Get attributes from a file modified in the cache.
         testfs.cache.getAttr.reset_mock()
         testfs.getNode.reset_mock()
+        testfs.get_node.reset_mock()
         self.assertFalse(testfs.getNode.called)
         testfs.cache.getAttr = Mock(return_value="different")
-        self.assertEqual(testfs.getattr("/a/file/path2"), "different")
-        testfs.cache.getAttr.assert_called_once_with("/a/file/path2")
+        self.assertEqual(testfs.getattr("vos:/a/file/path2"), "different")
+        testfs.cache.getAttr.assert_called_once_with("vos:/a/file/path2")
         self.assertFalse(testfs.getNode.called)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -486,14 +487,16 @@ class TestVOFS(unittest.TestCase):
         node.groupread = "group"
         node.groupwrite = "group"
         node.attr = {'st_ctime': 1}
+        testfs.get_node = Mock(return_value=node)
         testfs.getNode = Mock(return_value=node)
         node.chmod = Mock(return_value=True)
         testfs.client.update = Mock()
-        mocks = (testfs.getNode, node.chmod, testfs.client.update)
+        mocks = (testfs.get_node, testfs.getNode, node.chmod, testfs.client.update)
 
-        testfs.chmod("/a/file/path", stat.S_IRUSR)
+        testfs.chmod("vos:/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 4)
+        self.assertEqual(testfs.getNode.call_count, 3)
+        self.assertEqual(testfs.get_node.call_count, 1)
 
         # Try again with unknown groups.
         node.groupread = "NONE"
@@ -502,9 +505,10 @@ class TestVOFS(unittest.TestCase):
         for mock in mocks:
             mock.reset_mock()
 
-        testfs.chmod("/a/file/path", stat.S_IRUSR)
+        testfs.chmod("vos:/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 4)
+        self.assertEqual(testfs.getNode.call_count, 3)
+        self.assertEqual(testfs.get_node.call_count, 1)
 
         # And again with a failure from client update
         for mock in mocks:
@@ -516,7 +520,8 @@ class TestVOFS(unittest.TestCase):
             testfs.chmod("/a/file/path", stat.S_IRUSR)
         self.assertEqual(e.exception.errno, EIO)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 3)
+        self.assertEqual(testfs.getNode.call_count, 2)
+        self.assertEqual(testfs.get_node.call_count, 1)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_access(self):
@@ -981,8 +986,7 @@ class TestMyIOProxy(unittest.TestCase):
                 finally:
                     testProxy.cacheFile.readThread = None
 
-
-    @unittest.skipIf(skipTests, "Individual tests")    
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_readFromBackingErrorHandling(self):
         client = Object
         vos_VOFILE = Object()
