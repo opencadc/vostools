@@ -10,3 +10,4 @@ MANIFEST
 .svn
 *.pyc
 .idea/
+.DS_Store

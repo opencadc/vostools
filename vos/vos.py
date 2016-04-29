@@ -159,9 +159,12 @@ class Connection(object):
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
-            auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
-            if auth is not None:
-                session.auth = (auth[0], auth[2])
+            try:
+                auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
+                if auth is not None:
+                    session.auth = (auth[0], auth[2])
+            except:
+                pass
         if self.vospace_token is not None:
             session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
         user_agent = 'vos ' + version
@@ -388,6 +391,7 @@ class Node(object):
         """Set the groupwrite value to group for this node
 
         :param group: the uri of he group to give write access to.
+        :type group: str
         """
         logger.debug("Setting groups to: {0}".format(group))
         if group is not None and len(group.split()) > 3:
@@ -399,6 +403,7 @@ class Node(object):
         """Set the groupread value to group for this node
 
         :param group: the uri of the group to give read access to.
+        :type group: str
         """
         if group is not None and len(group.split()) > 3:
             raise AttributeError("Exceeded max of 4 read groups: {0}<-".format(group))
@@ -952,7 +957,7 @@ class VOFile(object):
         """Return information harvested from the HTTP header"""
         return self.totalFileSize, self.md5sum
 
-    def read(self, size=None):
+    def read(self, size=None, return_response=False):
         """return size bytes from the connection response
 
         :param size: number of bytes to read from the file.
@@ -974,18 +979,16 @@ class VOFile(object):
         if self.resp.status_code == 416:
             return ""
         # check the most likely response first
-        if self.resp.status_code == 200:
-            buff = self.resp.raw.read(size)
-            size = size is not None and size < len(buff) and size or len(buff)
-            logger.debug("Sending back {0} bytes".format(size))
-            return buff[:size]
-        if self.resp.status_code == 206:
-            buff = self.resp.raw.read(size)
-            size = size is not None and size < len(buff) and size or len(buff)
-            self._fpos += size
-            return buff[:size]
+        if self.resp.status_code == 200 or self.resp.status_code == 206:
+            if return_response:
+                return self.resp
+            else:
+                buff = self.resp.raw.read(size)
+                size = size is not None and size < len(buff) and size or len(buff)
+                # logger.debug("Sending back {0} bytes".format(size))
+                return buff[:size]
         elif self.resp.status_code == 303 or self.resp.status_code == 302:
-            url = self.resp.getheader('Location', None)
+            url = self.resp.headers.get('Location', None)
             logger.debug("Got redirect URL: {0}".format(url))
             self.url = url
             if not url:
@@ -994,6 +997,9 @@ class VOFile(object):
                                                                                              self.resp.content),
                               self.url)
             if self.followRedirect:
+                # We open this new URL without the byte range and partial read as we are following a service
+                # redirect and that service redirect is to the object that satisfies the original request.
+                # TODO seperate out making the transfer reqest and reading the response content.
                 self.open(url, "GET")
                 # logger.debug("Following redirected URL:  %s" % (URL))
                 return self.read(size)
@@ -1044,7 +1050,7 @@ class VOFile(object):
         logger.error("Message from VOSpace {0}: {1}".format(self.url, msg))
         try:
             # see if there is a Retry-After in the head...
-            ras = int(self.resp.getheader("Retry-After", 5))
+            ras = int(self.resp.headers.get("Retry-After", 5))
         except ValueError:
             ras = self.currentRetryDelay
             if (self.currentRetryDelay * 2) < MAX_RETRY_DELAY:
@@ -1357,10 +1363,23 @@ class Client(object):
         if source[0:4] == "vos:":
             check_md5 = False
             match = re.search("([^\[\]]*)(\[.*\])$", source)
+            ra_dec_match = re.search("([^\(\)]*)"
+                                     "(?P<cutout>\("
+                                     "(?P<ra>[\-\+]?\d*(\.\d*)?),"
+                                     "(?P<dec>[\-\+]?\d*(\.\d*)?),"
+                                     "(?P<rad>\d*(\.\d*)?)\))$",
+                                     source)
+
             if match is not None:
                 view = 'cutout'
                 source = match.group(1)
                 cutout = match.group(2)
+            elif ra_dec_match is not None:
+                view = 'cutout'
+                source = ra_dec_match.group(1)
+                cutout = "CIRCLE ICRS {} {} {}".format(ra_dec_match.group('ra'),
+                                                  ra_dec_match.group('dec'),
+                                                  ra_dec_match.group('rad'))
             else:
                 view = 'data'
                 cutout = None
@@ -1459,6 +1478,9 @@ class Client(object):
         # Check for 'cutout' syntax values.
         path = re.match("(?P<filename>[^\[]*)(?P<ext>(\[\d*:?\d*\])?"
                         "(\[\d*:?\d*,?\d*:?\d*\])?)", parts.path)
+        # check for 'ra_dec' syntax too.
+        path = re.match("(?P<filename>[^\(]*)(?P<cutout>\((?P<ra>[\-\+]?\d*(\.\d*)?),(?P<dec>[\-\+]?\d*(\.\d*)?),(?P<rad>\d*(\.\d*)?)\))?", path.group('filename'))
+        logger.debug("Match : {}".format(path.groupdict()))
         filename = os.path.basename(path.group('filename'))
         if not re.match("^[_\-\(\)=\+!,;:@&\*\$\.\w~]*$", filename):
             raise OSError(errno.EINVAL, "Illegal vospace container name",
@@ -1497,7 +1519,7 @@ class Client(object):
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
-                if uri.startswith('vos:'):
+                if uri.startswith('vos:') or uri.startswith('ad:'):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read()
                     xml_file = StringIO(vo_xml_string)
@@ -1508,15 +1530,15 @@ class Client(object):
                     header = self.open(None, url=uri, mode=os.O_RDONLY, head=True)
                     header.read()
                     logger.debug("Got http headers: {0}".format(header.resp.headers))
-                    properties = {'type': header.resp.getheader('Content-type', 'txt'),
+                    properties = {'type': header.resp.headers.get('Content-Type', 'txt'),
                                   'date': time.strftime(
                                       '%Y-%m-%dT%H:%M:%S GMT',
-                                      time.strptime(header.resp.getheader('date', None),
+                                      time.strptime(header.resp.headers.get('Date', None),
                                                     '%a, %d %b %Y %H:%M:%S GMT')),
                                   'groupwrite': None,
                                   'groupread': None,
                                   'ispublic': URLParser(uri).scheme == 'https' and 'true' or 'false',
-                                  'length': header.resp.getheader('content-length', 0)}
+                                  'length': header.resp.headers.get('Content-Length', 0)}
                     node = Node(node=uri, node_type=Node.DATA_NODE, properties=properties)
                     logger.debug(str(node))
                 else:
@@ -1585,9 +1607,12 @@ class Client(object):
 
         logger.debug("Getting URL for: " + str(uri))
 
+        parts = URLParser(uri)
+        if parts.scheme.startswith('http'):
+            return [uri]
+
         endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
 
-        parts = URLParser(uri)
 
         # see if we have a VOSpace server that goes with this URI in our look up list
         if endpoints.server is None:

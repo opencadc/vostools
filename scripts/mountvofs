@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     vos_logger = logging.getLogger('vos')
     vos_logger.handlers = []
-    vos_logger.setLevel(parser.log_level)
+    vos_logger.setLevel(logging.ERROR)
     vos_logger.addHandler(fh)
 
     logger.debug("Checking connection to VOSpace ")

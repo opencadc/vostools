@@ -23,8 +23,11 @@ except:
     from distutils.core import setup
     has_setuptools = False
 
+
+from vos import __version__
+
 setup(name="vos",
-      version='2.1.3',
+      version=__version__.version,
       url="https://github.com/ijiraq/cadcVOFS",
       description="Tools for interacting with CADC VOSpace.",
       author="JJ Kavelaars, Norm Hill, Adrian Demain, Ed Chapin and others",
