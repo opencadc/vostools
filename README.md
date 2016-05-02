@@ -62,3 +62,40 @@ import vos
 client = vos.Client()
 client.listdir('vos:jkavelaars')
 ```
+
+## Development
+A virtual environment (**venv**) is recommended to set up external dependencies without installing them system-wide. Following [these instructions](http://docs.python-guide.org/en/latest/dev/virtualenvs/), install **virtualenv**:
+```
+$ pip install virtualenv
+```
+
+Next, create, and activate a local **venv** (this example uses **bash**):
+```
+$ virtualenv venv
+$ source venv/bin/activate
+
+```
+
+Finally, use **pip** to install missing external dependencies into this subdirectory:
+```
+$ pip install -r requirements.txt
+```
+
+After successfully installing the external dependencies, the unit tests are invoked by running
+```
+$ ant test
+```
+
+Each time you resume work on the project and want to use the **venv** (e.g., from a new shell), simply re-activate it:
+```
+$ source venv/bin/activate
+```
+When done, just issue a 
+```
+$ deactivate
+```
+command to deactivate the virtual environment.
+
+
+### Integration Tests
+The integration tests are, at present, designed to run only at CADC. Tests assume that scripts have been installed (e.g., into the **venv**). You will also need to set `CADCTESTCERTS` to the location of test certificates, and possibly set `CADC_WEBSERVICE` to the host name of a test web service.
