@@ -98,4 +98,37 @@ command to deactivate the virtual environment.
 
 
 ### Integration Tests
-The integration tests are, at present, designed to run only at CADC. Tests assume that scripts have been installed (e.g., into the **venv**). You will also need to set `CADCTESTCERTS` to the location of test certificates, and possibly set `CADC_WEBSERVICE` to the host name of a test web service.
+The integration tests are, at present, designed to run only at CADC. Tests assume that scripts have been installed (e.g., into the **venv**). 
+Note: the integration tests run only on tcsh.
+
+Start the tcsh and activate the **venv**
+
+```
+$ source venv/bin/activate.csh
+```
+
+Set the python binary for testing. Before using **virtualenv** this was used to test on multiple version of python. With **venv**, just set it to the default version of python on that **venv**:
+
+```
+$ setenv CADC_PYTHON_TEST_TARGETS python
+```
+
+Set the path to the vos script locatio
+
+```
+$ setenv CACD_ROOT <vos directory>
+```
+
+Finally, add the development vos to the **PYTHONPATH**:
+
+```
+$ setenv PYTHONPATH $CADC_ROOT:$PYTHONPATH
+```
+CADC_ROOT
+
+Now, it's time to run the test:
+
+```
+$ cd test/scripts
+$ ./vospace-all.tcsh
+```
