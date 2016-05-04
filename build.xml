@@ -28,12 +28,12 @@
 
 
 <!-- Where and how to identify installed versions of python -->
-<property name="pythonbin" value="/usr/bin"/>
+<property name="pythonbin" value="./venv/bin"/>
 <!-- This version would allow ant to do the build for all versions of python2
      in /usr/bin.
      <property name="pythonpattern" value="python2.?"/>
      For cadcVOFS, we only want python2.7 -->
-<property name="pythonpattern" value="python2.7"/>
+<property name="pythonpattern" value="python"/>
 
 <target name="test">
     <foreachversion executablebin="${pythonbin}"
@@ -47,7 +47,7 @@
     <apply executable="${python.executable}"
            dir="vos/test"
            failonerror="true">
-        <env key="PYTHONPATH" value="${build}/lib:${env.PYTHONPATH}"/>
+        <env key="PYTHONPATH" value="${basedir}:${env.PYTHONPATH}"/>
         <fileset dir="vos/test" includes="Test*.py"/>
     </apply>
 </target>
