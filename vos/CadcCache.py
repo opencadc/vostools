@@ -201,7 +201,7 @@ class Cache(object):
             #         path, isNew, id(fileHandle), fileHandle.fullyCached, mustExist, trustMetaData))
             # If this is a new file, initialize the cache state, otherwise
             # leave it alone.
-            if fileHandle.fullyCached is None:
+            if not fileHandle.fullyCached:
                 if isNew:
                     fileHandle.fileModified = True
                     fileHandle.setHeader(0, ZERO_LENGTH_MD5)

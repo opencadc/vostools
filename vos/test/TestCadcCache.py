@@ -131,30 +131,33 @@ class TestIOProxy(unittest.TestCase):
             testIOProxy.cacheFile.fileCondition = \
                     CadcCache.CacheCondition(testIOProxy.cacheFile.fileLock)
             testIOProxy.cacheFile.path = "atestfile"
+            testIOProxy.cacheFileDescriptor = 1
 
             # Write to beginning of the file
-            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write:
+            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write, \
+                 patch('os.fsync') as mock_fsync:
                 mock_lseek.return_value = 0
                 mock_write.return_value = 3
+                mock_fsync.return_value = 0
                 testIOProxy.cacheFile.fileSize = 3
                 self.assertEqual(3, testIOProxy.writeToCache("abc", 0))
-                testIOProxy.cacheFile.metaData.setReadBlocks.\
-                        assert_called_once_with(0,0)
-                mock_lseek.assert_called_once_with(None, 0, os.SEEK_SET)
-                mock_write.assert_called_once_with(None, "abc")
+                testIOProxy.cacheFile.metaData.setReadBlocks.assert_called_once_with(0, 0)
+                mock_lseek.assert_called_once_with(1, 0, os.SEEK_SET)
+                mock_write.assert_called_once_with(1, "abc")
+                mock_fsync.assert_called_once_with(1)
 
             # Write to after the beginning of the output
-            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write:
+            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write, \
+                 patch('os.fsync') as mock_fsync:
                 mock_lseek.return_value = 0
                 mock_write.return_value = 3
+                mock_fsync.return_value = 1
                 testIOProxy.cacheFile.fileSize = testCache.IO_BLOCK_SIZE + 3
                 testIOProxy.currentWriteOffset = 0
-                self.assertEqual(3, testIOProxy.writeToCache("abc",
-                    testCache.IO_BLOCK_SIZE))
-                mock_lseek.assert_called_with(None, testCache.IO_BLOCK_SIZE, 
-                        os.SEEK_SET)
-                mock_lseek.assert_called_once_with(None, 
-                        testCache.IO_BLOCK_SIZE, os.SEEK_SET)
+                self.assertEqual(3, testIOProxy.writeToCache("abc", testCache.IO_BLOCK_SIZE))
+                mock_lseek.assert_called_with(1, testCache.IO_BLOCK_SIZE, os.SEEK_SET)
+                mock_lseek.assert_called_once_with(1, testCache.IO_BLOCK_SIZE, os.SEEK_SET)
+                mock_fsync.assert_called_once_with(1)
 
             # Test an erroneous seek to the middle of a block
             with patch('os.lseek'), patch('os.write') as mocks:
@@ -173,49 +176,49 @@ class TestIOProxy(unittest.TestCase):
                     testIOProxy.writeToCache("abcdef", 0)
 
             # Write a partial block of data.
-            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write:
+            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write, \
+                 patch('os.fsync') as mock_fsync:
                 mock_lseek.return_value = 0
+                mock_fsync.return_value = 1
                 testIOProxy.currentWriteOffset = 0
-                testIOProxy.cacheFile.fileSize = \
-                        testCache.IO_BLOCK_SIZE * 2 + 10
+                testIOProxy.cacheFile.fileSize = testCache.IO_BLOCK_SIZE * 2 + 10
                 testIOProxy.currentWriteOffset = 0
                 mock_write.return_value = 6
                 testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 self.assertEqual(testIOProxy.writeToCache("abcdef", 0), 6)
-                self.assertEqual( testIOProxy.cacheFile.metaData.
-                        setReadBlocks.call_count, 0)
-                mock_lseek.assert_called_once_with(None, 0, os.SEEK_SET)
-
+                self.assertEqual(testIOProxy.cacheFile.metaData.setReadBlocks.call_count, 0)
+                mock_lseek.assert_called_once_with(1, 0, os.SEEK_SET)
+                mock_fsync.assert_called_once_with(1)
 
             # Write the second block, and the first 10 bytes of the third block
             # (to the nd of file). This should result in the second and third
             # blocks being marked complete.
-            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write:
+            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write, \
+                 patch('os.fsync') as mock_fsync:
                 testIOProxy.currentWriteOffset = 0
-                testIOProxy.cacheFile.fileSize = \
-                        (testCache.IO_BLOCK_SIZE * 2) + 10
+                testIOProxy.cacheFile.fileSize = (testCache.IO_BLOCK_SIZE * 2) + 10
                 mock_lseek.return_value = 0
                 mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
+                mock_fsync.return_value = 1
                 buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
                 testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 self.assertEqual(testCache.IO_BLOCK_SIZE + 10, 
                         testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE))
-                testIOProxy.cacheFile.metaData.setReadBlocks.\
-                        assert_called_once_with(1,2)
+                testIOProxy.cacheFile.metaData.setReadBlocks.assert_called_once_with(1, 2)
 
             # do a write which gets aborted
             testIOProxy.cacheFile.readThread.aborted = True
-            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write:
-                testIOProxy.cacheFile.fileSize = \
-                        (testCache.IO_BLOCK_SIZE * 2) + 10
+            with patch('os.lseek') as mock_lseek, patch('os.write') as mock_write, \
+                 patch('os.fsync') as mock_fsync:
+                testIOProxy.cacheFile.fileSize = (testCache.IO_BLOCK_SIZE * 2) + 10
                 mock_lseek.return_value = 0
                 mock_write.return_value = testCache.IO_BLOCK_SIZE + 10
+                mock_fsync.return_value = 1
                 buffer = bytearray(testCache.IO_BLOCK_SIZE + 10)
                 testIOProxy.cacheFile.metaData.setReadBlocks.call_count = 0
                 with self.assertRaises(CadcCache.CacheAborted):
                         testIOProxy.writeToCache(buffer, testCache.IO_BLOCK_SIZE)
-                testIOProxy.cacheFile.metaData.setReadBlocks.\
-                        assert_called_once_with(1,2)
+                testIOProxy.cacheFile.metaData.setReadBlocks.assert_called_once_with(1,2)
 
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -463,7 +466,7 @@ class TestCacheCondtion(unittest.TestCase):
         cond.release()
         self.assertTrue(cond.acquire(blocking=0))
         cond.release()
-        cond.setTimeout()
+        cond.set_timeout()
         self.assertTrue(cond.threadSpecificData.endTime is not None)
         with cond:
             self.assertFalse(cond.acquire(False))
@@ -471,7 +474,7 @@ class TestCacheCondtion(unittest.TestCase):
                 cond.wait()
                 cond.wait()
 
-        cond.clearTimeout()
+        cond.clear_timeout()
         self.assertTrue(cond.threadSpecificData.endTime is None)
 
         # A wait without a timeout set.
@@ -484,7 +487,7 @@ class TestCacheCondtion(unittest.TestCase):
 
         # A wait with a timeout set.
         cond = CadcCache.CacheCondition(lock, 30)
-        cond.setTimeout()
+        cond.set_timeout()
         self.assertTrue(cond.threadSpecificData.endTime is not None)
         with cond:
             t1 = threading.Thread(target=self.notifyAfter1S, args=[cond])
@@ -767,25 +770,21 @@ class TestCadcCache(unittest.TestCase):
 
             # Try to get the attribute of an existing, open and modified file.
             # This should return the cache file attributes.
-            with testCache.open("/dir1/dir2/file", True, False, testIOProxy, 
-                    False) as fh:
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy, False) as fh:
                 self.assertTrue(fh.fileModified)
-                self.assertTrue(os.path.exists(testCache.dataDir + 
-                        "/dir1/dir2/file"))
-                attribs = testCache.getAttr( "/dir1/dir2/file")
+                self.assertTrue(os.path.exists(testCache.dataDir + "/dir1/dir2/file"))
+                attribs = testCache.getAttr("/dir1/dir2/file")
                 self.assertTrue(attribs is not None)
                 fsAttribs = os.stat(fh.cacheDataFile )
                 self.assertEqual(fsAttribs.st_ino, attribs["st_ino"])
             # The file is closed but still exists. Not attribute information
             # should be returned since VOSpace is the better source.
-            self.assertTrue(os.path.exists(testCache.dataDir + 
-                    "/dir1/dir2/file"))
+            self.assertTrue(os.path.exists(testCache.dataDir + "/dir1/dir2/file"))
             self.assertEqual(testCache.getAttr("/dir1/dir2/file"), None)
 
             # Test when a file is opened but not modified. Should return none
             # since vospace is the better source for information.
-            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, 
-                    False) as fh:
+            with testCache.open("/dir1/dir2/file", False, False, testIOProxy, False) as fh:
                 self.assertFalse(fh.fileModified)
                 self.assertEqual(testCache.getAttr("/dir1/dir2/file"), None)
             testCache.flushNodeQueue.join()
@@ -957,19 +956,16 @@ class TestCadcCache(unittest.TestCase):
             testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyForTest()
             ioObject2 = IOProxyForTest()
-            fh = testObject.open("/dir1/dir2/file", True, False, ioObject, 
-                    False)
+            fh = testObject.open("/dir1/dir2/file", True, False, ioObject, False)
             self.assertTrue(fh.fullyCached)
             self.assertTrue(fh.fileModified)
             fh.release()
 
-            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
-                    True)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, True)
             #existing meta data should be there 
             self.assertTrue(fh.fullyCached)
             self.assertFalse(fh.fileModified)
-            fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2, 
-                    False)
+            fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2, False)
             self.assertTrue(fh2.fullyCached)
             self.assertTrue(fh2.fileModified)
             #meta data deleted.
@@ -985,38 +981,29 @@ class TestCadcCache(unittest.TestCase):
         testObject.flushNodeQueue = CadcCache.FlushNodeQueue()
         ioObject = IOProxyForTest()
         ioObject2 = IOProxyForTest()
-        fh = testObject.open("/dir1/dir2/file", True, False, ioObject,
-                False)
+        fh = testObject.open("/dir1/dir2/file", True, False, ioObject, False)
         self.assertTrue(fh.fullyCached)
         self.assertTrue(fh.fileModified)
         fh.release()
 
-        fh = testObject.open("/dir1/dir2/file", False, False, ioObject,
-                False)
-        fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2,
-                False)
+        fh = testObject.open("/dir1/dir2/file", False, False, ioObject, False)
+        fh2 = testObject.open("/dir1/dir2/file", True, False, ioObject2, False)
         fh.release()
         fh2.release()
 
         # Reading from backing returns an IO EACCES io error.
-        ioObject.readFromBacking = Mock(side_effect=OSError(errno.EACCES,
-                "Access denied *EXPECTED*"))
+        ioObject.readFromBacking = Mock(side_effect=OSError(errno.EACCES, "Access denied *EXPECTED*"))
         with self.assertRaises(OSError) :
-            fh = testObject.open("/dir1/dir2/file", False, False,
-                    ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, False, ioObject, False)
 
         # Reading from backing returns an IO ENOENT io error.
-        ioObject.readFromBacking = Mock(side_effect=OSError(errno.ENOENT,
-                "No such file *EXPECTED*"))
+        ioObject.readFromBacking = Mock(side_effect=OSError(errno.ENOENT, "No such file *EXPECTED*"))
         with self.assertRaises(OSError) :
-            fh = testObject.open("/dir1/dir2/file", False, True,
-                    ioObject, False)
+            fh = testObject.open("/dir1/dir2/file", False, True, ioObject, False)
 
         # The file doesn't exist and was created.
-        ioObject.readFromBacking = Mock(side_effect=OSError(errno.ENOENT,
-                "No such file *EXPECTED*"))
-        fh = testObject.open("/dir1/dir2/file3", False, False,
-                ioObject, False)
+        ioObject.readFromBacking = Mock(side_effect=OSError(errno.ENOENT, "No such file *EXPECTED*"))
+        fh = testObject.open("/dir1/dir2/file3", False, False, ioObject, False)
         self.assertTrue(fh.fullyCached)
         self.assertEqual(fh.fileSize, 0)
         self.assertTrue(fh.gotHeader)
@@ -1024,10 +1011,8 @@ class TestCadcCache(unittest.TestCase):
 
         # checkCacheSpace throws an exception. The test is that open does
         # not throw an exception even though checkCacheSpace does.
-        testObject.checkCacheSpace = Mock(side_effect=OSError(errno.ENOENT,
-                "checkCacheSpaceError *EXPECTED*"))
-        fh = testObject.open("/dir1/dir2/file3", False, False,
-                ioObject, False)
+        testObject.checkCacheSpace = Mock(side_effect=OSError(errno.ENOENT, "checkCacheSpaceError *EXPECTED*"))
+        fh = testObject.open("/dir1/dir2/file3", False, False, ioObject, False)
         self.assertTrue(fh.fullyCached)
         self.assertEqual(fh.fileSize, 0)
         self.assertTrue(fh.gotHeader)
@@ -1049,7 +1034,7 @@ class TestCadcCache(unittest.TestCase):
             fh = testObject.open("/dir1/dir2/file", False, False, ioObject, 
                     False)
             fh.fileModified = True
-            fh.fileCondition.setTimeout = Mock(side_effect=Exception("failed"))
+            fh.fileCondition.set_timeout = Mock(side_effect=Exception("failed"))
             with self.assertRaises(Exception) as cm:
                 fh.release()
 
@@ -1298,10 +1283,9 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(self.testdir, 100) as testCache:
             testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyFor100K()
-            with testCache.open("/dir1/dir2/file", True, False, ioObject, 
-                    False) as fh:
-                fh.write( "abcd", 4, 30000)
-                data = fh.read( 4, 30000)
+            with testCache.open("/dir1/dir2/file", True, False, ioObject, False) as fh:
+                fh.write("abcd", 4, 30000)
+                data = fh.read(4, 30000)
                 self.assertEqual(data[:], "abcd")
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1406,7 +1390,7 @@ class TestCadcCache(unittest.TestCase):
             fh.readThread = CadcCache.CacheReadThread(0, 0, 0, fh)
             fh.readThread.isNewReadBest = Mock()
             fh.readThread.isNewReadBest.side_effect = sideEffectTrue
-            fh.fileCondition.setTimeout()
+            fh.fileCondition.set_timeout()
             fh.metaData.delete()
             fh.fullyCached = False
             with self.assertRaises(CadcCache.CacheRetry):
@@ -1438,7 +1422,7 @@ class TestCadcCache(unittest.TestCase):
                 fh.readThread = CadcCache.CacheReadThread(0, 0, 0, fh)
                 fh.readThread.isNewReadBest = Mock()
                 fh.readThread.isNewReadBest.side_effect = sideEffectTrue
-                fh.fileCondition.setTimeout()
+                fh.fileCondition.set_timeout()
                 fh.metaData.delete()
                 t1 = threading.Thread(target=self.notifyReMockRange,
                                       args=[fh.fileCondition, fh])
@@ -1458,7 +1442,7 @@ class TestCadcCache(unittest.TestCase):
                 fh.readThread=CadcCache.CacheReadThread(0,0,0,fh)
                 fh.readThread.isNewReadBest = Mock()
                 fh.readThread.isNewReadBest.side_effect = sideEffectFalse
-                fh.fileCondition.setTimeout()
+                fh.fileCondition.set_timeout()
                 fh.metaData.delete()
                 t1 = threading.Thread(target=self.notifyReMockRange,
                         args=[fh.fileCondition,fh])
@@ -1473,7 +1457,7 @@ class TestCadcCache(unittest.TestCase):
             # condition wait, which throws an exception.
             with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
-                fh.fileCondition.setTimeout()
+                fh.fileCondition.set_timeout()
                 fh.metaData.delete()
                 t1 = threading.Thread(target=self.notifyAfter1S,
                         args=[fh.fileCondition,fh])
@@ -1486,7 +1470,7 @@ class TestCadcCache(unittest.TestCase):
             # file because some data near the end of the file has been cached.
             with testCache.open("/dir1/dir2/file", False, False, ioObject,
                     False) as fh:
-                fh.fileCondition.setTimeout()
+                fh.fileCondition.set_timeout()
                 fh.metaData.delete()
                 t1 = threading.Thread(target=self.notifyAfter1S,
                         args=[fh.fileCondition,fh])

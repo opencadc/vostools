@@ -347,15 +347,13 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.getAttr = Mock(return_value=None)
         node.attr = "attributes"
         testfs.getNode = Mock(return_value=node)
-        testfs.get_node = Mock(return_value=node)
         self.assertEqual(testfs.getattr("vos:/a/file/path"), "attributes")
-        testfs.get_node.assert_called_once_with("vos:/a/file/path", limit=0, force=False)
+        testfs.getNode.assert_called_once_with("vos:/a/file/path", limit=0, force=False)
         testfs.cache.getAttr.assert_called_once_with("vos:/a/file/path")
 
         # Get attributes from a file modified in the cache.
         testfs.cache.getAttr.reset_mock()
         testfs.getNode.reset_mock()
-        testfs.get_node.reset_mock()
         self.assertFalse(testfs.getNode.called)
         testfs.cache.getAttr = Mock(return_value="different")
         self.assertEqual(testfs.getattr("vos:/a/file/path2"), "different")
@@ -434,6 +432,7 @@ class TestVOFS(unittest.TestCase):
                 ('islocked', False): False,
                 }, name="node.props.get") )
         node.type = "vos:ContainerNode"
+        node.name = "testNode"
         testfs.client.get_node = Mock(return_value = node)
         testfs.rmdir(path)
         testfs.client.delete.assert_called_once_with(path)
@@ -457,6 +456,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client = Object()
         node = Object()
         node.node_list = []
+        node.name = "testNode"
         testfs.client.get_node = Mock(return_value=node)
         self.assertEqual(testfs.readdir(path, None), ['.', '..'])
 
@@ -487,16 +487,15 @@ class TestVOFS(unittest.TestCase):
         node.groupread = "group"
         node.groupwrite = "group"
         node.attr = {'st_ctime': 1}
-        testfs.get_node = Mock(return_value=node)
+        node.name = "testNode"
         testfs.getNode = Mock(return_value=node)
         node.chmod = Mock(return_value=True)
         testfs.client.update = Mock()
-        mocks = (testfs.get_node, testfs.getNode, node.chmod, testfs.client.update)
+        mocks = (testfs.getNode, node.chmod, testfs.client.update)
 
         testfs.chmod("vos:/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 3)
-        self.assertEqual(testfs.get_node.call_count, 1)
+        self.assertEqual(testfs.getNode.call_count, 4)
 
         # Try again with unknown groups.
         node.groupread = "NONE"
@@ -507,8 +506,7 @@ class TestVOFS(unittest.TestCase):
 
         testfs.chmod("vos:/a/file/path", stat.S_IRUSR)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 3)
-        self.assertEqual(testfs.get_node.call_count, 1)
+        self.assertEqual(testfs.getNode.call_count, 4)
 
         # And again with a failure from client update
         for mock in mocks:
@@ -520,8 +518,7 @@ class TestVOFS(unittest.TestCase):
             testfs.chmod("/a/file/path", stat.S_IRUSR)
         self.assertEqual(e.exception.errno, EIO)
         testfs.client.update.assert_called_once_with(node)
-        self.assertEqual(testfs.getNode.call_count, 2)
-        self.assertEqual(testfs.get_node.call_count, 1)
+        self.assertEqual(testfs.getNode.call_count, 3)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_access(self):
@@ -552,20 +549,18 @@ class TestVOFS(unittest.TestCase):
                 ('islocked', False): False,
                 ('length',): 10,
                 ('MD5',): 12354,
-                }, name="node.props.get") )
+                }, name="node.props.get"))
         node.type = "vos:DataNode"
-        testfs.client.get_node = Mock(return_value = node)
+        node.name = "testNode"
+        testfs.client.get_node = Mock(return_value=node)
         with patch('vos.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(file, testfs.cache, None)
-            fh = testfs.open( file, os.O_RDWR | os.O_CREAT, None)
+            fh = testfs.open(file, os.O_RDWR | os.O_CREAT, None)
             HandleWrapper.file_handle(fh).cache_file_handle.fsync = \
-                    Mock(wraps=HandleWrapper.file_handle(fh).cache_file_handle.
-                    fsync)
+                Mock(wraps=HandleWrapper.file_handle(fh).cache_file_handle.fsync)
             testfs.fsync(file, False, fh)
-            HandleWrapper.file_handle(fh).cache_file_handle.fsync.\
-                    assert_called_once_with()
-            HandleWrapper.file_handle(fh).cache_file_handle.fsync.\
-                    assert_called_once_with()
+            HandleWrapper.file_handle(fh).cache_file_handle.fsync.assert_called_once_with()
+            HandleWrapper.file_handle(fh).cache_file_handle.fsync.assert_called_once_with()
         
     @unittest.skipIf(skipTests, "Individual tests")
     def test_fsync2(self):
@@ -685,6 +680,7 @@ class TestVOFS(unittest.TestCase):
                 }, name="node.props.get") )
         node.type = "vos:DataNode"
         node.uri = "vos:/dir1/dir2/file"
+        node.name = "testNode"
         testfs.client = Object()
         testfs.client.get_node = Mock(return_value = node)
         testfs.client.close = Mock()
@@ -815,8 +811,9 @@ class TestVOFS(unittest.TestCase):
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node = Mock(spec=vos.Node)
+        node.name = "testNode"
         testfs.client = Object()
-        testfs.client.get_node = Mock(return_value = node)
+        testfs.client.get_node = Mock(return_value=node)
         node = testfs.getNode(file, force=True, limit=10)
         testfs.client.get_node.assert_called_once_with(file, force=True, limit=10)
 
@@ -993,12 +990,17 @@ class TestMyIOProxy(unittest.TestCase):
         vos_VOFILE.URLs = ["url0", "URL1"]
         vos_VOFILE.urlIndex = 0
         vos_VOFILE.open = Mock()
-        returns = ["something", ""]
-        def side_effect(*args):
+        mock_resp1 = Mock()
+        mock_resp1.iter_content = Mock(return_value="bar")
+        mock_resp2 = Mock()
+        mock_resp2.iter_content = Mock(return_value="foo")
+        returns = [mock_resp1, mock_resp2]
+
+        def side_effect(*args, **kwds):
             return returns.pop(0)
         vos_VOFILE.read = MagicMock(side_effect=side_effect)
         vos_VOFILE.close = Mock()
-        client.open = Mock(return_value = vos_VOFILE)
+        client.open = Mock(return_value=vos_VOFILE)
         myVofs = Mock()
         myVofs.client = client
         testProxy = vofs.MyIOProxy(myVofs, None)

@@ -1,10 +1,10 @@
 # Test the vos Client class
 
-import os
 import unittest
-from mock import Mock, MagicMock, patch
-import vos
-from vos.vos import Client, Connection
+
+from mock import Mock, patch
+
+from vos.vos import Client
 
 
 class Object(object):

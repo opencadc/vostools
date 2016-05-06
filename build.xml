@@ -48,7 +48,7 @@
            dir="vos/test"
            failonerror="true">
         <env key="PYTHONPATH" value="${basedir}:${env.PYTHONPATH}"/>
-        <fileset dir="vos/test" includes="Test*.py"/>
+        <fileset dir="vos/test" includes="Test*.py" excludes="TestAll.py"/>
     </apply>
 </target>
 
