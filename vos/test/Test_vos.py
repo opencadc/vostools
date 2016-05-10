@@ -2,9 +2,9 @@
 
 import unittest
 
-from mock import Mock, patch
+from mock import Mock, patch, MagicMock
 
-from vos.vos import Client
+from vos.vos import Client, Connection
 
 
 class Object(object):
@@ -68,11 +68,49 @@ class TestVos(unittest.TestCase):
 
         @return:
         """
+        uri = "vos://cadc.nrc.ca!vospace/stuff"
+        xml = """
+        <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
+                  xmlns:vos='http://www.ivoa.net/xml/VOSpace/v2.0'
+                  xs:type='vos:ContainerNode'
+                  uri='{0}'>
+            <vos:properties>
+                <vos:property uri='ivo://ivoa.net/vospace/core#description'>
+                    Stuff
+                </vos:property>
+            </vos:properties>
+            <vos:accepts/>
+            <vos:provides/>
+            <vos:capabilities/>
+            {1}
+        </vos:node>
+        """
+
+        nodes = """
+            <vos:nodes>
+                <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file123" xs:type="vos:DataNode">
+                    <vos:properties>
+                        <vos:property uri='ivo://ivoa.net/vospace/core#date'>2016-05-10T09:52:13</vos:property>
+                    </vos:properties>
+                </vos:node>
+                <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file456" xs:type="vos:DataNode">
+                    <vos:properties>
+                        <vos:property uri='ivo://ivoa.net/vospace/core#date'>2016-05-19T09:52:14</vos:property>
+                    </vos:properties>
+                </vos:node>
+            </vos:nodes>
+        """
+
+        mock_vofile = Mock()
         client = Client()
-        uri = 'vos://cadc.nrc.ca!vospace'
+        client.open = Mock(return_value=mock_vofile)
+
+        mock_vofile.read = Mock(return_value=xml.format(uri, ''))
         my_node = client.get_node(uri, limit=0, force=False)
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 0)
+
+        mock_vofile.read = Mock(return_value=xml.format(uri, nodes))
 
         my_node = client.get_node(uri, limit=2, force=True)
         self.assertEqual(uri, my_node.uri)
@@ -83,7 +121,13 @@ class TestVos(unittest.TestCase):
         self.assertEqual(len(my_node.node_list), 2)
 
     def test_move(self):
-        client = Client()
+        mock_resp_403 = Mock(name="mock_resp_303")
+        mock_resp_403.status_code = 403
+
+        conn = Connection()
+        conn.session.post = Mock(return_value=mock_resp_403)
+        client = Client(conn=conn)
+
         uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1'
         uri2 = 'notvos://cadc.nrc.ca!vospace/nosuchfile2'
 

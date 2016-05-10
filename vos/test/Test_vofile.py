@@ -71,7 +71,6 @@ class TestVOFile(unittest.TestCase):
 
         # mock the 503 responses
         mock_resp = Mock(name="503 resp")
-        # mock_resp.headers = {'Content-Length': 10, 'Retry-After': 3}
         mock_resp.status_code = 503
         mock_resp.content = "Testing"
 
