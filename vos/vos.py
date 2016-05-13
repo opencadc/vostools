@@ -234,7 +234,7 @@ class Node(object):
             node_type = Node.DATA_NODE
 
         if type(node) == unicode or type(node) == str:
-            node = self.create(node.get('uri'), node_type, properties, subnodes=subnodes)
+            node = self.create(node, node_type, properties, subnodes=subnodes)
 
         if node is None:
             raise LookupError("no node found or created?")
