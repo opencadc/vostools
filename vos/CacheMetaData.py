@@ -21,7 +21,6 @@ class CacheMetaData(object):
         md5sum - md5sum of the file. If None, the file must exist.
         size - Size of the file. If None, the file must exist.
         """
-
         self.metaDataFile = metaDataFile
         self.blocks = blocks is None and 0 or blocks
         self.md5sum = md5sum

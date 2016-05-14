@@ -1449,15 +1449,15 @@ class BitVector( object ):
         if val not in (0, 1):                                      
             raise ValueError( "incorrect value for a bit" )        
         if isinstance( posn, (tuple) ):                            
-            posn = posn[0]                                         
-        if  posn >= self.size or posn < -self.size:                
+            posn = posn[0]
+        if posn >= self.size or posn < -self.size:
             raise ValueError( "index range error" )                
         if posn < 0: posn = self.size + posn                       
         block_index = posn // 16                                   
         shift = posn & 15                                          
         cv = self.vector[block_index]                              
         if ( cv >> shift ) & 1 != val:                             
-            self.vector[block_index] = cv ^ (1 << shift)           
+            self.vector[block_index] = cv ^ (1 << shift)
 
     def _getbit(self, pos):                                      
         'Get the bit from the designated position'

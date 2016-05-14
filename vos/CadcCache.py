@@ -32,6 +32,10 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# logger.addHandler(ch)
+
 ZERO_LENGTH_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 CACHE_DATA_SUBDIR = 'data'
 CACHE_METADATA_SUBDIR = 'metaData'
@@ -197,7 +201,7 @@ class Cache(object):
             #         path, isNew, id(fileHandle), fileHandle.fullyCached, mustExist, trustMetaData))
             # If this is a new file, initialize the cache state, otherwise
             # leave it alone.
-            if fileHandle.fullyCached is None:
+            if not fileHandle.fullyCached:
                 if isNew:
                     fileHandle.fileModified = True
                     fileHandle.setHeader(0, ZERO_LENGTH_MD5)
@@ -936,7 +940,6 @@ class FileHandle(object):
 
         delete our reference to this cache object.
         """
-
         if self.refCount == 1:
             self.flush()
         self.deref()
@@ -995,15 +998,14 @@ class FileHandle(object):
             size, mtime = self.getFileInfo()
 
             # Write the file to vospace.
-
             with self.ioObject.cacheFileDescriptorLock:
                 os.fsync(self.ioObject.cacheFileDescriptor)
             md5 = self.ioObject.writeToBacking()
 
             # Update the meta data md5
             blocks, numBlocks = self.ioObject.blockInfo(0, size)
-            self.metaData = CacheMetaData(self.cacheMetaDataFile,
-                                          numBlocks, md5, size)
+            self.metaData = CacheMetaData(self.cacheMetaDataFile, numBlocks, md5, size)
+
             if numBlocks > 0:
                 self.metaData.setReadBlocks(0, numBlocks - 1)
             self.metaData.md5sum = md5

@@ -10,6 +10,7 @@ endif
 
 if (! ${?TMPDIR} ) then
         echo "TMPDIR env variable not set, using /tmp"
+        set TMPDIR = "/tmp"
 else
         echo "Using ${TMPDIR} for temporary files"
 endif

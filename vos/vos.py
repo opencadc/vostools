@@ -45,6 +45,10 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# logger.addHandler(ch)
+
 BUFSIZE = 8388608  # Size of read/write buffer
 MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not sent by server.
@@ -1017,6 +1021,7 @@ class VOFile(object):
                 # go to the next URL
                 self.urlIndex += 1
                 self.open(self.URLs[self.urlIndex], "GET")
+                self.resp = None
                 return self.read(size)
         else:
             self.URLs.pop(self.urlIndex)  # remove url from list
@@ -1060,6 +1065,7 @@ class VOFile(object):
             self.retries += 1
             time.sleep(int(ras))
             self.open(self.URLs[self.urlIndex], "GET")
+            self.resp = None
             return self.read(size)
         else:
             raise OSError(self.resp.status_code,

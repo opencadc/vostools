@@ -1,8 +1,9 @@
 # Test the NodeCache class
 
 import unittest
-from mock import Mock, MagicMock, patch
+
 from vos.NodeCache import NodeCache
+
 
 class TestNodeCache(unittest.TestCase):
     """Test the NodeCache class.
@@ -23,7 +24,6 @@ class TestNodeCache(unittest.TestCase):
         self.assertFalse('a' in nodeCache)
         self.assertEqual(len(nodeCache), 1)
         self.assertEqual(nodeCache['a'], None)
-
 
     def test_01_volatile(self):
         """ test marking part of the tree as volatile"""
@@ -94,7 +94,6 @@ class TestNodeCache(unittest.TestCase):
         self.assertEqual( nodeCache['/a/b/c'], 'd')
         self.assertEqual(len(nodeCache.watchedNodes), 0)
 
-
     def test_02_watchnvolatile(self):
         """test watch and volitile working together."""
 
@@ -152,7 +151,6 @@ class TestNodeCache(unittest.TestCase):
             with nodeCache.watch('/a/e/f/g') as w:
                 w.insert('d')
                 self.assertTrue('/a/e/f/g' in nodeCache)
-
 
 
 def run():
