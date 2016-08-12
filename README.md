@@ -73,7 +73,10 @@ Next, create, and activate a local **venv** (this example uses **bash**):
 ```
 $ virtualenv venv
 $ source venv/bin/activate
-
+```
+Make sure the setuptools is up to date
+```
+pip install --upgrade setuptools
 ```
 
 Finally, use **pip** to install missing external dependencies into this subdirectory:
@@ -83,7 +86,7 @@ $ pip install -r requirements.txt
 
 After successfully installing the external dependencies, the unit tests are invoked by running
 ```
-$ ant test
+$ py.test [-v]
 ```
 
 Each time you resume work on the project and want to use the **venv** (e.g., from a new shell), simply re-activate it:
