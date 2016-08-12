@@ -89,6 +89,15 @@ After successfully installing the external dependencies, the unit tests are invo
 $ py.test [-v]
 ```
 
+To obtain a coverage report use the following commands:
+```
+$ py.test --cov-report term-missing --cov=vos [-v] #command line report which includes missing lines
+
+or
+
+py.test --cov-report html:cov_html --cov=vos [-v] # html reports in the cov_html directory
+```
+
 Each time you resume work on the project and want to use the **venv** (e.g., from a new shell), simply re-activate it:
 ```
 $ source venv/bin/activate
