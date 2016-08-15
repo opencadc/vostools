@@ -1,4 +1,4 @@
-requests==2.9.1
+setuptools>=17.1
 argparse==1.4.0
 coverage==4.2
 funcsigs==1.0.2
@@ -13,5 +13,5 @@ pytest-cov==2.3.1
 six==1.10.0
 traceback2==1.4.0
 unittest2==1.1.0
--e git+git@github.com:canfar/vos.git@2d480f9cb898d806e5a9d2c3d4b1268dfe19531f#egg=vos-dev
 wsgiref==0.1.2
+-e .

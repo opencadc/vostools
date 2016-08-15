@@ -24,13 +24,13 @@ except:
     has_setuptools = False
 
 
-from vos import __version__
+execfile('vos/__version__.py')
 
 setup(name="vos",
-      version=__version__.version,
+      version=version,
       url="https://github.com/ijiraq/cadcVOFS",
       description="Tools for interacting with CADC VOSpace.",
-      author="JJ Kavelaars, Norm Hill, Adrian Demain, Ed Chapin and others",
+      author="JJ Kavelaars, Norm Hill, Adrian Damian, Ed Chapin and others",
       maintainer="JJ Kavelaars",
       maintainer_email="jj.kavelaars@nrc-cnrc.gc.ca",
       long_description="""a module and scripts designed for accessing IVAO VOSpace 2.0 compatible services""",
