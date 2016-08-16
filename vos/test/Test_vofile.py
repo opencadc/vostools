@@ -1,3 +1,4 @@
+from builtins import object
 # Test the vos module
 import requests
 import unittest2 as unittest

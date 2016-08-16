@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import copy
 import os
 import shutil
@@ -1001,7 +1004,7 @@ class TestMyIOProxy(unittest.TestCase):
                     testProxy.exception = None
 
                 except Exception as e:
-                    print "unexpected exception", e
+                    print("unexpected exception", e)
 
                 finally:
                     testProxy.cacheFile.readThread = None

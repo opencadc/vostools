@@ -74,12 +74,7 @@ Next, create, and activate a local **venv** (this example uses **bash**):
 $ virtualenv venv
 $ source venv/bin/activate
 ```
-Make sure the setuptools is up to date
-```
-pip install --upgrade setuptools
-```
-
-Finally, use **pip** to install missing external dependencies into this subdirectory:
+Use **pip** to install external dependencies used for testing this project (Note: if the following install fails you probably have missing/older version of required modules. In that case just run '$ pip install --upgrade <module>' and re-invoke the install command):
 ```
 $ pip install -r requirements.txt
 ```

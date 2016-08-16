@@ -1,3 +1,4 @@
+from builtins import object
 # Test the vos Client class
 
 import unittest

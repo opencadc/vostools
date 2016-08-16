@@ -1,3 +1,7 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 # Test the cadcCache module.
 
 import copy
@@ -5,7 +9,7 @@ import errno
 import logging
 import sys
 import tempfile
-import thread
+import _thread
 import threading
 import time
 import unittest
@@ -896,7 +900,6 @@ class TestCadcCache(unittest.TestCase):
 
         with self.assertRaises(OSError) as cm:
             CadcCache.Cache(self.testdir, 100)
-        print cm
         self.assertTrue(str(cm.exception).find("permission denied") > 0)
 
         os.chmod(self.testdir, stat.S_IRWXU)
@@ -909,7 +912,6 @@ class TestCadcCache(unittest.TestCase):
         _, filename = tempfile.mkstemp()
         with self.assertRaises(OSError) as cm:
             CadcCache.Cache(filename, 100)
-        print cm
         self.assertTrue(str(cm.exception).find("is not a directory") > 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1097,7 +1099,7 @@ class TestCadcCache(unittest.TestCase):
         with CadcCache.Cache(self.testdir, 100) as testObject:
             # Release a slow to write file.
             ioObject = IOProxy_writeToBacking_slow()
-            thread.start_new_thread(self.release2_sub1,
+            _thread.start_new_thread(self.release2_sub1,
                                     (testObject, ioObject))
             time.sleep(1)
 
@@ -1401,9 +1403,9 @@ class TestCadcCache(unittest.TestCase):
             return False
 
         def threadExecuteMock(thread):
-            thread.fileHandle.readThread = None
-            thread.fileHandle.fileCondition.notify_all()
-            thread.fileHandle.metaData.setReadBlocks(0, 6)
+            _thread.fileHandle.readThread = None
+            _thread.fileHandle.fileCondition.notify_all()
+            _thread.fileHandle.metaData.setReadBlocks(0, 6)
 
         with CadcCache.Cache(self.testdir, 100, timeout=2) as testCache:
             ioObject = IOProxyFor100K()
