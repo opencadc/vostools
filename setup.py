@@ -34,6 +34,7 @@ setup(name="vos",
       maintainer="JJ Kavelaars",
       maintainer_email="jj.kavelaars@nrc-cnrc.gc.ca",
       long_description="""a module and scripts designed for accessing IVAO VOSpace 2.0 compatible services""",
+      license="AGPLv3",
       packages=find_packages(exclude=['test.*']),
       scripts=scripts,
       classifiers=[
