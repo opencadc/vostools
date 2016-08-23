@@ -130,39 +130,39 @@ if __name__ == '__main__':
                'size': size_format,
                'date': date_format}
 
-    for node in args:
-
-        try:
-            if not node[0:4] == "vos:" :
-                raise OSError(errno.EBADF, "Invalid node name", node)
-            logger.debug("getting listing of: %s" % str(node))
-            infoList = client.get_info_list(node)
-        except SSLError as error:
-            logger.error(str(error))
-            sys.exit(errno.EPERM)
-        except Exception as e:
-            logger.debug("{0}: {1}".format(type(e), str(e)))
-            logger.error("{0}".format(e))
-            err_no = getattr(e, 'errno', None)
-            err_no = err_no is not None and err_no or errno.ENOMSG
-            sys.exit(err_no)
-
-        if sortKey:
+    for uri in args:
+        for node in client.glob(uri):
             try:
-                sorted_list = sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
-            except:
-                sorted_list = infoList 
-            finally:
-                infoList = sorted_list
- 
-        for item in infoList:
-            name_string = item[0]
-            if opt.long or opt.group:
-                for col in columns:
-                    value = item[1].get(col, None)
-                    value = value is not None and value or ""
-                    if col in formats:
-                        sys.stdout.write(formats[col](value))
-                if item[1]["permissions"][0] == 'l':
-                    name_string = "%s -> %s" % (name_string, item[1]['target'])
-            sys.stdout.write("%s\n" % name_string)
+                if not node[0:4] == "vos:" :
+                    raise OSError(errno.EBADF, "Invalid node name", node)
+                logger.debug("getting listing of: %s" % str(node))
+                infoList = client.get_info_list(node)
+            except SSLError as error:
+                logger.error(str(error))
+                sys.exit(errno.EPERM)
+            except Exception as e:
+                logger.debug("{0}: {1}".format(type(e), str(e)))
+                logger.error("{0}".format(e))
+                err_no = getattr(e, 'errno', None)
+                err_no = err_no is not None and err_no or errno.ENOMSG
+                sys.exit(err_no)
+
+            if sortKey:
+                try:
+                    sorted_list = sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
+                except:
+                    sorted_list = infoList
+                finally:
+                    infoList = sorted_list
+
+            for item in infoList:
+                name_string = item[0]
+                if opt.long or opt.group:
+                    for col in columns:
+                        value = item[1].get(col, None)
+                        value = value is not None and value or ""
+                        if col in formats:
+                            sys.stdout.write(formats[col](value))
+                    if item[1]["permissions"][0] == 'l':
+                        name_string = "%s -> %s" % (name_string, item[1]['target'])
+                sys.stdout.write("%s\n" % name_string)
