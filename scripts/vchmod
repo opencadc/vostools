@@ -8,7 +8,6 @@ import signal
 from vos import vos, __version__
 import logging
 import sys
-import os
 
 
 def signal_handler(signum, frame):
@@ -93,19 +92,23 @@ if __name__ == '__main__':
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
-        node = client.get_node(cmdArgs['node'])
-        if opt.recursive:
-            node.props.clear()
-            node.clear_properties()
-            # del node.node.findall(vos.Node.PROPERTIES)[0:]
-        if 'readgroup' in props:
-            node.chrgrp(props['readgroup'])
-        if 'writegroup' in props:
-            node.chwgrp(props['writegroup'])
-        if 'ispublic' in props:
-            node.set_public(props['ispublic'])
-        logger.debug("Node: {0}".format(node))
-        returnCode = client.update(node, opt.recursive)
+        for uri in client.glob(cmdArgs['node']):
+            node = client.get_node(uri)
+            if opt.recursive:
+                node.props.clear()
+                node.clear_properties()
+                # del node.node.findall(vos.Node.PROPERTIES)[0:]
+            if 'readgroup' in props:
+                node.chrgrp(props['readgroup'])
+            if 'writegroup' in props:
+                node.chwgrp(props['writegroup'])
+            if 'ispublic' in props:
+                node.set_public(props['ispublic'])
+            logger.debug("Node: {0}".format(node))
+            logger.info("{0} -> {1}".format(uri, props))
+            returnCode = client.update(node, opt.recursive)
+            if returnCode != 0:
+                logger.error("vchmod failed for {0}".format(uri))
     except KeyboardInterrupt as ke:
         logger.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
