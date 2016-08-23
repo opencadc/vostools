@@ -965,9 +965,23 @@ class VOFile(object):
 
         if self.resp is None:
             try:
-                logger.debug("Intializing read by sending request: {0}".format(self.request))
-                self.resp = self.connector.session.send(self.request, stream=True)
-                self.checkstatus()
+                logger.debug("Initializing read by sending request: {0}".format(self.request))
+                # Sometimes there is a 'Connection reset by peer' during the read.
+                # These tend to happen on long-haul networks and appear associated with a close before end of read.
+                # so, we retry on those.
+                while self.totalRetryDelay < self.maxRetryTime:
+                    try:
+                        self.resp = self.connector.session.send(self.request, stream=True)
+                        self.checkstatus()
+                        break
+                    except requests.exceptions.ConnectionError as ce:
+                        if ce.errno != 104:
+                            # Only continue trying on a reset by peer error.
+                            raise ce
+                        self.totalRetryDelay += self.currentRetryDelay
+                        time.sleep(self.currentRetryDelay)
+                        self.currentRetryDelay = MAX_RETRY_DELAY > self.currentRetryDelay * 2 and \
+                                                 self.currentRetryDelay * 2 or MAX_RETRY_DELAY
             except Exception as ex:
                 logger.debug("Error on read: {0}".format(ex))
                 raise ex
