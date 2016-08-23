@@ -43,15 +43,16 @@ exit_code = 0
 
 try:
     client = vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
-    node = client.get_node(args[0])
-    if opt.lock or opt.unlock:
-        lock = not opt.unlock and opt.lock
-        node.is_locked = lock
-        client.update(node)
-    else:
-        print node.is_locked
-        if not node.is_locked:
-            exit_code = -1
+    for uri in client.glob(args[0]):
+        node = client.get_node(uri)
+        if opt.lock or opt.unlock:
+            lock = not opt.unlock and opt.lock
+            node.is_locked = lock
+            client.update(node)
+        else:
+            print "{0} locked: {1}".format(node.name, node.is_locked)
+            if not node.is_locked:
+                exit_code = -1
 except KeyboardInterrupt:
     exit_code = -1
 except Exception as e:
