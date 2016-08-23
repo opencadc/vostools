@@ -89,8 +89,10 @@ def access(filename, mode):
             node = get_node(filename)
             return node is not None
         except OSError as ex:
-            if ex.errno == errno.ENOENT:
+            if ex.errno in (errno.ENOENT, errno.EPERM, errno.EACCES):
                 return False
+        except:
+            return False
     else:
         return os.access(filename, mode)
 
