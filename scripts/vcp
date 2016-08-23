@@ -143,13 +143,6 @@ def get_md5(filename):
     return md5
 
 
-def lglob(pathname):
-    if pathname[0:4] == "vos:":
-        return client.glob(pathname)
-    else:
-        return glob.glob(pathname)
-
-
 def copy(source_name, destination_name, exclude=None, include=None, interrogate=False, overwrite=False, ignore=False):
     """
 
