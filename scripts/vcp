@@ -1,17 +1,12 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
-import traceback
-
-from vos import __version__
 from vos import vos
 from vos.commonparser import CommonParser
-from vos.vos import EndPoints
 try:
     from xml.etree.ElementTree import ParseError
 except:
     from exceptions import SyntaxError as ParseError
   
-import requests
 import logging
 import sys
 import errno
@@ -24,7 +19,8 @@ import traceback
 
 exit_code = 0
 
-cutout_pattern = re.compile(r'(.*?)(?P<cutout>(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+)$')
+cutout_pattern = re.compile(r'(.*?)'
+                            r'(?P<cutout>(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+)$')
 
 ra_dec_cutout_pattern = re.compile("([^\(\)]*?)"
                                    "(?P<cutout>\("
@@ -262,7 +258,7 @@ if __name__ == '__main__':
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
 
-
+    source = None
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token,
@@ -329,7 +325,7 @@ if __name__ == '__main__':
         logging.error("Failure at server while copying {0} -> {1}".format(source, dest))
     except Exception as e:
         message = str(e)
-        if re.search('NodeLocked', str(e)) is not None:
+        if re.search("NodeLocked", str(e)) is not None:
             logging.error("Use vlock to unlock the node before copying to %s." % this_destination)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
             logging.error("Failure at remote server while copying {0} -> {1}".format(source, dest))
