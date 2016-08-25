@@ -127,6 +127,34 @@ class URLParser(object):
                                                        self.netloc, self.path)
 
 
+class RetrySession(requests.Session):
+
+    def send(self, request, **kwargs):
+        """
+        Send a given PreparedRequest, wrapping the connection to service in try/except that retries on
+        Connection reset by peer.
+
+        :param request: The prepared request to send.
+        :param kwargs: Any keywords the adaptor for the request accepts.
+        :return: the response
+        :rtype: requests.Response
+        """
+
+        total_delay = 0
+        current_delay = DEFAULT_RETRY_DELAY
+        while total_delay < MAX_RETRY_DELAY:
+            try:
+                return super(RetrySession, self).send(request, **kwargs)
+            except requests.exceptions.ConnectionError as ce:
+                if ce.errno != 104:
+                    # Only continue trying on a reset by peer error.
+                    raise ce
+                time.sleep(current_delay)
+                total_delay += current_delay
+                current_delay = MAX_RETRY_DELAY > current_delay * 2 and current_delay * 2 or MAX_RETRY_DELAY
+        raise
+
+
 class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
@@ -155,7 +183,7 @@ class Connection(object):
             self.vospace_certfile = vospace_certfile
 
         # create a requests session object that all requests will be made via.
-        session = requests.Session()
+        session = RetrySession()
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
