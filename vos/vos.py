@@ -142,10 +142,12 @@ class RetrySession(requests.Session):
 
         total_delay = 0
         current_delay = DEFAULT_RETRY_DELAY
+        logger.debug("--------------->>>> Sending request {0}  to server.".format(request))
         while total_delay < MAX_RETRY_DELAY:
             try:
                 return super(RetrySession, self).send(request, **kwargs)
             except requests.exceptions.ConnectionError as ce:
+                logger.debug("Caught exception: {0}".format(ce))
                 if ce.errno != 104:
                     # Only continue trying on a reset by peer error.
                     raise ce
