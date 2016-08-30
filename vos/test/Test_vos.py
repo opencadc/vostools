@@ -7,6 +7,7 @@ from mock import Mock, patch, MagicMock
 
 from vos.vos import Client, Connection
 
+import os
 
 class Object(object):
     pass
@@ -136,6 +137,7 @@ class TestVos(unittest.TestCase):
             client.move(uri1, uri2)
 
     def test_delete(self):
+        os.environ["VOSPACE_CERTFILE"] = "some-cert-file.pem"
         client = Client()
         uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1?limit=0'
         url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1?limit=0'
