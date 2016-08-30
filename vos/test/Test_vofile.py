@@ -20,9 +20,9 @@ class TestVOFile(unittest.TestCase):
         super(TestVOFile, self).__init__(*args, **kwargs)
         self.responses = []
         self.headers = {
-            ('Content-MD5', None): 12345,
-            ('Content-Length', 10): 10,
-            ('X-CADC-Content-Length', 0): 10,
+            ('Content-MD5', None): "12345",
+            ('Content-Length', "10"): "10",
+            ('X-CADC-Content-Length', "0"): "10",
         }
 
     @patch.object(Connection, 'get_connection')
@@ -74,7 +74,7 @@ class TestVOFile(unittest.TestCase):
         mock_resp.status_code = 503
         mock_resp.content = "Testing"
 
-        headers = {'Content-Length': 10, 'X-CADC-Content-Length': 5, 'Retry-After': 4}
+        headers = {'Content-Length': "10", 'X-CADC-Content-Length': "5", 'Retry-After': "4"}
 
         def getheader(name, default):
             return headers[name]
@@ -92,7 +92,7 @@ class TestVOFile(unittest.TestCase):
         vofile.maxRetries = 1
         with self.assertRaises(OSError) as cm:
             vofile.read()
-        mock_resp.headers.get.assert_called_with('Retry-After', 5)
+        mock_resp.headers.get.assert_called_with('Retry-After', "5")
 
         # 1 retry -> getheader in HttpResponse was called 4 times in the order shown below.
         # TODO call is only available in mock 1.0. Uncomment when this version available
@@ -140,7 +140,7 @@ class TestVOFile(unittest.TestCase):
         # mock the 200 response
         mock_resp_200 = Mock(name="mock_resp_200")
         mock_resp_200.status_code = 200
-        mock_resp_200.headers = {'Content-Length': 10}
+        mock_resp_200.headers = {'Content-Length': "10"}
         mock_resp_200.raw.read = Mock(return_value="abcd")
         mock_resp_200.content = "Testing"
 
@@ -148,14 +148,14 @@ class TestVOFile(unittest.TestCase):
         mock_resp_404 = Mock(name="mock_resp_404")
         mock_resp_404.getheader.return_value = 1
         mock_resp_404.status_code = 404
-        mock_resp_404.headers = {'Content-Length': 10}
+        mock_resp_404.headers = {'Content-Length': "10"}
         mock_resp_404.content = "Fail"
 
         # mock the 503 response
         mock_resp_503 = Mock(name="mock_resp_503")
         mock_resp_503.getheader.return_value = 3
         mock_resp_503.status_code = 503
-        mock_resp_503.headers = {'Content-Length': 10, 'Content-MD5': 12345}
+        mock_resp_503.headers = {'Content-Length': "10", 'Content-MD5': "12345"}
         mock_resp_503.content = "Try again"
 
         conn = Connection()
@@ -212,7 +212,7 @@ class TestVOFile(unittest.TestCase):
         mock_resp = Object
         mock_resp.status_code = 200
         mock_resp.headers = {
-            'Content-MD5': 12345, 'Content-Length': 10, 'X-CADC-Content-Length': 10
+            'Content-MD5': "12345", 'Content-Length': "10", 'X-CADC-Content-Length': "10"
         }
         vofile.resp = mock_resp
 
