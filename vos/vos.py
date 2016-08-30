@@ -224,6 +224,7 @@ class Node(object):
         self.xattr = {}
         self._node_list = None
         self._endpoints = None
+        self._fully_listed = False
 
         if not subnodes:
             subnodes = []
@@ -921,7 +922,7 @@ class VOFile(object):
         if method in ["PUT"]:
             try:
                 self.size = int(self.size)
-                request.headers.update({"Content-Length": self.size,
+                request.headers.update({"Content-Length": str(self.size),
                                         HEADER_CONTENT_LENGTH: self.size})
             except TypeError:
                 self.size = None
@@ -1280,9 +1281,13 @@ class Client(object):
         :type pathname: str
         """
         dirname, basename = os.path.split(pathname)
+
+        if not len(dirname) > 0 and basename.startswith("vos:"):
+            dirname = "vos:"
+            basename = basename[4:]
         if not self.has_magic(pathname):
             if basename:
-                self.get_node(pathname)
+                self.get_node(pathname, limit=None)
                 yield pathname
             else:
                 # Patterns ending with a slash should match only directories
@@ -1306,7 +1311,10 @@ class Client(object):
             glob_in_dir = self.glob0
         for dirname in dirs:
             for name in glob_in_dir(dirname, basename):
-                yield os.path.join(dirname, name)
+                if dirname != "vos:":
+                    yield os.path.join(dirname, name)
+                else:
+                    yield dirname+name
 
     # These 2 helper functions non-recursively glob inside a literal directory.
     # They return a list of basenames. `glob1` accepts a pattern while `glob0`
@@ -1334,17 +1342,11 @@ class Client(object):
         return fnmatch.filter(names, pattern)
 
     def glob0(self, dirname, basename):
-        if basename == '':
+        if basename == '' and not self.isdir(dirname):
             # `os.path.split()` returns an empty basename for paths ending with a
             # directory separator.  'q*x/' should match only directories.
-            if self.isdir(dirname):
-                return [basename]
-        else:
-            if self.access(os.path.join(dirname, basename)):
-                return [basename]
-            else:
-                raise OSError(errno.EACCES, "Permission denied: {0}".format(os.path.join(dirname, basename)))
-        return []
+            return []
+        return [basename]
 
     magic_check = re.compile('[*?[]')
 
@@ -1572,6 +1574,7 @@ class Client(object):
                         if len(next_page.node_list) > 0 and next_uri == next_page.node_list[0].uri:
                             next_page.node_list.pop(0)
                         node.node_list.extend(next_page.node_list)
+                    node._fully_listed = True
         for childNode in node.node_list:
             with self.nodeCache.watch(childNode.uri) as childWatch:
                 childWatch.insert(childNode)
@@ -1745,7 +1748,7 @@ class Client(object):
 
         url = self.get_node_url(link_uri)
         logger.debug("Got linkNode URL: {0}".format(url))
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri
@@ -2041,7 +2044,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url, headers={'size': size}, data=data)
+        self.conn.session.post(url, headers={'size': str(size)}, data=data)
 
     def create(self, node):
         """
@@ -2053,7 +2056,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
         return True
 
     def update(self, node, recursive=False):
@@ -2136,6 +2139,8 @@ class Client(object):
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
         node = self.get_node(uri, limit=None)
+        if node.isdir() and not node._fully_listed:
+            node = self.get_node(uri, limit=None, force=True)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
