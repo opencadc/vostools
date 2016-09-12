@@ -951,7 +951,7 @@ class VOFile(object):
         if method in ["PUT"]:
             try:
                 self.size = int(self.size)
-                request.headers.update({"Content-Length": self.size,
+                request.headers.update({"Content-Length": str(self.size),
                                         HEADER_CONTENT_LENGTH: self.size})
             except TypeError:
                 self.size = None
@@ -1775,7 +1775,7 @@ class Client(object):
 
         url = self.get_node_url(link_uri)
         logger.debug("Got linkNode URL: {0}".format(url))
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri
@@ -2071,7 +2071,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url, headers={'size': size}, data=data)
+        self.conn.session.post(url, headers={'size': str(size)}, data=data)
 
     def create(self, node):
         """
@@ -2083,7 +2083,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
         return True
 
     def update(self, node, recursive=False):
