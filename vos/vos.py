@@ -952,7 +952,7 @@ class VOFile(object):
             try:
                 self.size = int(self.size)
                 request.headers.update({"Content-Length": str(self.size),
-                                        HEADER_CONTENT_LENGTH: self.size})
+                                        HEADER_CONTENT_LENGTH: str(self.size)})
             except TypeError:
                 self.size = None
                 self.trans_encode = "chunked"
