@@ -162,6 +162,9 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
     global exit_code
     ## determine if this is a directory we are copying so need to be recursive
     try:
+        if not opt.follow_links and islink(source_name):
+            logging.info("{}: Skipping (symbolic link)".format(source_name))
+            return
         if isdir(source_name):
             ## make sure the destination exists...
             if not isdir(destination_name):
@@ -254,6 +257,10 @@ if __name__ == '__main__':
     parser.add_option("--quick", action="store_true",
                       help="Use default CADC urls, for speed.  Will fail if CADC changes data storage mechanism",
                       default=False)
+    parser.add_option("-L", "--follow-links",
+                      help="Should recursive copy follow symbolic links? Default is to not follow links.",
+                      action="store_true",
+                      default=False)
     parser.add_option("--ignore", action="store_true", default=False,
                       help="ignore errors and continue with recursive copy")
 
@@ -298,16 +305,22 @@ if __name__ == '__main__':
             for source in sources:
                 if source[0:4] != "vos:":
                     source = os.path.abspath(source)
-                ### the source must exist, of course...
+                # the source must exist, of course...
                 if not access(source, os.R_OK):
                     raise Exception("Can't access source: %s " % source)
 
-                ## copying inside VOSpace not yet implemented
+                if not opt.follow_links and islink(source):
+                    logging.info("{}: Skipping (symbolic link)".format(source_name))
+                    continue
+
+                # copying inside VOSpace not yet implemented
                 if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
                     raise Exception("Can not (yet) copy from VOSpace to VOSpace.")
 
                 this_destination = dest
                 if isdir(source):
+                    if not opt.follow_links and islink(source) :
+                        continue
                     logging.debug("%s is a directory or link to one" % source)
                     # To mimic unix fs behaviours if copying a directory and
                     # the destination directory exists then the actual
@@ -324,7 +337,6 @@ if __name__ == '__main__':
                 elif dest[-1] == '/' or isdir(dest):
                     # we're copying into a directory
                     this_destination = os.path.join(dest, os.path.basename(source))
-
                 copy(source, this_destination, exclude=opt.exclude, include=opt.include,
                      interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
 
