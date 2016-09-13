@@ -24,6 +24,7 @@ NODE_XML = """
         </vos:node>
         """
 
+import os
 
 class Object(object):
     pass
@@ -48,6 +49,7 @@ class TestClient(unittest.TestCase):
 
     def test_init_client(self):
         # No parameters uses cert in ~/.ssl giving authenticated / https
+        Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
             client = Client()
         self.assertEqual(client.protocol, "https")
@@ -225,7 +227,8 @@ class TestClient(unittest.TestCase):
             client.move(uri1, uri2)
 
     def test_delete(self):
-        client = Client()
+        with patch('os.access'):
+            client = Client(vospace_certfile="SomeFile")
         uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1?limit=0'
         url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1?limit=0'
         client.conn.session.delete = Mock()
