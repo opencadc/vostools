@@ -8,7 +8,7 @@ Connection refused
 
 What does this mean?
 
-A: Likely you authentication certificat has expired.  Use the
+A: Likely your authentication certificate has expired.  Use the
 'getCert' command to pull a new cert and try again.  If the message
-doesn't go away, please contact CADC for help fixxing your
+doesn't go away, please contact CADC for help fixing your
 authentication issue.
