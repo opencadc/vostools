@@ -143,13 +143,14 @@ class TestClient(unittest.TestCase):
         node = Node(NODE_XML)
 
         resp = Mock()
-        resp.headers.get = Mock(return_value="http://www.canfar.phys.uvic.ca/vospace")
+        resp.headers.get = Mock(return_value="https://www.canfar.phys.uvic.ca/vospace")
 
         client = Client()
-        client.get_node_url = Mock(return_value='http://www.canfar.phys.uvic.ca/vospace')
+        client.get_node_url = Mock(return_value='https://www.canfar.phys.uvic.ca/vospace')
         client.conn = Mock()
         client.conn.session.post = Mock(return_value=resp)
         client.get_transfer_error = Mock()
+        client.protocol = 'https'
 
         data = str(node)
         property_url = 'https://{0}'.format(node.endpoints.properties)
@@ -157,12 +158,12 @@ class TestClient(unittest.TestCase):
         with patch('vos.Client', client) as mock:
             result = mock.update(node, False)
             self.assertEqual(result, 0)
-            mock.conn.session.post.assert_called_with('http://www.canfar.phys.uvic.ca/vospace',
+            mock.conn.session.post.assert_called_with('https://www.canfar.phys.uvic.ca/vospace',
                                                       data=data, allow_redirects=False)
 
         call1 = call(property_url, allow_redirects=False, data=data,
                      headers={'Content-type': 'text/xml'})
-        call2 = call('http://www.canfar.phys.uvic.ca/vospace/phase', allow_redirects=False, data="PHASE=RUN",
+        call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase', allow_redirects=False, data="PHASE=RUN",
                      headers={'Content-type': "text/text"})
         calls = [call1, call2]
 
