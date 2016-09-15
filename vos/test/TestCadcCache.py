@@ -14,6 +14,7 @@ import threading
 import time
 import unittest
 import uuid
+import ctypes
 
 import os
 import stat
@@ -1276,26 +1277,28 @@ class TestCadcCache(unittest.TestCase):
             fh = testCache.open("/dir1/dir2/file", False,
                                 False, ioObject, False)
             fh.fullyCached = False
-            data = fh.read(100, 0)
+            buf = ctypes.create_string_buffer(4)
+            retsize = fh.read(100, 0, buf)
             # Read beyond the end of the file.
             with self.assertRaises(ValueError):
-                data = fh.read(100, 1024 * 1024)
+                data = fh.read(100, 1024 * 1024, buf)
             fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_04_read2(self):
-        """Test reading to a file whch returns an error"""
+        """Test reading to a file which returns an error"""
 
         with CadcCache.Cache(self.testdir, 100) as testCache:
             ioObject = IOProxyFor100K()
             fh = testCache.open("/dir1/dir2/file", False, False, ioObject,
                                 False)
-            data = fh.read(100, 0)
+            buf = ctypes.create_string_buffer(100)
+            retsize = fh.read(100, 0, buf)
 
             with patch('vos.CadcCache.libc.read') as mockedRead:
                 mockedRead.return_value = -1
                 with self.assertRaises(CadcCache.CacheError):
-                    data = fh.read(0, 1024 * 1024)
+                    retsize = fh.read(0, 1024 * 1024, buf)
             fh.release()
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1307,8 +1310,9 @@ class TestCadcCache(unittest.TestCase):
             fh = testCache.open("/dir1/dir2/file", False, False, ioObject,
                                 False)
             ioObject.exception = OSError()
+            buf = ctypes.create_string_buffer(100)
             with self.assertRaises(OSError):
-                data = fh.read(100, 0)
+                retsize = fh.read(100, 0, buf)
             ioObject.exception = None
 
             fh.release()
@@ -1321,9 +1325,11 @@ class TestCadcCache(unittest.TestCase):
             testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject, False) as fh:
+                buf = ctypes.create_string_buffer(4)
                 fh.write("abcd", 4, 30000)
-                data = fh.read(4, 30000)
-                self.assertEqual(data[:], "abcd")
+                retsize = fh.read(4, 30000, buf)
+                self.assertEqual(retsize, 4)
+                self.assertEqual(buf[:], "abcd")
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_04_write2(self):

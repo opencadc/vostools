@@ -4,7 +4,7 @@ import time
 import vos
 import sys
 import urllib
-from fuse import Operations, FuseOSError
+from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
 from errno import EIO, ENOENT, EPERM, EAGAIN, EFAULT
 import os
@@ -521,7 +521,7 @@ class VOFS(Operations):
         return HandleWrapper(handle, read_only).get_id()
 
     @logExceptions()
-    def read(self, path, size=0, offset=0, file_id=None):
+    def read(self, path, buf, size=0, offset=0, file_id=None):
         """
         Read the required bytes from the file and return a buffer containing
         the bytes.
@@ -540,11 +540,11 @@ class VOFS(Operations):
                 logger.debug(str(e))
                 raise FuseOSError(EIO)
             with self.condition:
-                bytes = fh.cache_file_handle.read(size, offset)
+                retsize = fh.cache_file_handle.read(size, offset, buf)
             # Send back if we got bytes or we've read to end of file already.
-            if len(bytes) > 0 or not fh.cache_file_handle.metaData.size - offset > 0:
+            if retsize > 0 or not fh.cache_file_handle.metaData.size - offset > 0:
                 break
-        return bytes
+        return retsize
 
     @logExceptions()
     def readlink(self, path):
@@ -722,3 +722,27 @@ class VOFS(Operations):
         logger.debug("%s -> %s" % (path, fh))
         logger.debug("%d --> %d" % (offset, offset + size))
         return fh.cache_file_handle.write(data, size, offset)
+    
+    
+        
+class MyFuse(FUSE):
+    """ 
+    Customization of FUSE class in order to speed up reads by passing
+    the destination buffer from the file system directly to the read
+    operation to fill it in and return the actual size that was
+    filled in.
+    """
+    
+    def read(self, path, buf, size, offset, fip):
+        if self.raw_fi:
+          fh = fip.contents
+        else:
+          fh = fip.contents.fh
+
+        retsize = self.operations('read', self._decode_optional_path(path), buf, size,
+                                      offset, fh)
+
+        assert retsize <= size, \
+            'actual amount read %d greater than expected %d' % (retsize, size)
+
+        return retsize

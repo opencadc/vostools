@@ -87,7 +87,7 @@ class TestClient(unittest.TestCase):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
             client = Client()
-            client.open('vos://foo/bar', mode=666)
+            client.open('vos://foo/bar', mode=-1)
 
         with self.assertRaises(OSError):
             client = Client()

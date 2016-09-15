@@ -5,6 +5,8 @@ import copy
 import os
 import shutil
 import stat
+import ctypes
+from fuse import FUSE
 from contextlib import nested
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
@@ -16,7 +18,7 @@ from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, \
     IOProxy, FlushNodeQueue
 from vos.NodeCache import NodeCache
 from vos.fuse import FuseOSError
-from vos.vofs import HandleWrapper
+from vos.vofs import HandleWrapper, MyFuse, VOFS
 
 skipTests = False
 
@@ -160,9 +162,10 @@ class TestVOFS(unittest.TestCase):
     def testRead1(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
+        buf = ctypes.create_string_buffer(2048)
         # Read with a null file handle.
         with self.assertRaises(FuseOSError) as e:
-            testfs.read("/dir1/dir2/file", 4, 2048)
+            testfs.read("/dir1/dir2/file", buf, 4, 2048)
         self.assertEqual(e.exception.errno, EIO)
 
         # Read with a timeout.
@@ -177,12 +180,13 @@ class TestVOFS(unittest.TestCase):
         fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cache_file_handle.read = Mock()
         fileHandle.cache_file_handle.read.return_value = "abcd"
-        self.assertEqual(testfs.read("/dir1/dir2/file", 4, 2048,
+        self.assertEqual(testfs.read("/dir1/dir2/file", buf, 
+                                     4, 2048,
                                      fileHandle.get_id()), "abcd")
 
         # Read from an invalid file handle.
         with self.assertRaises(FuseOSError) as e:
-            testfs.read("/dir1/dir2/file", 4, 2048, -1)
+            testfs.read("/dir1/dir2/file", buf, 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
 
     #@unittest.skipIf(skipTests, "Individual tests")
@@ -1064,7 +1068,33 @@ class TestMyIOProxy(unittest.TestCase):
 
         testProxy.size = 27
         self.assertEqual(testProxy.getSize(), 27)
-
+        
+        
+    @unittest.skipIf(skipTests, "Individual tests")
+    @patch("vos.fuse.FUSE.__init__")
+    def test_readMyFuse(self, mock_fuse):
+        mock_fuse.return_value = None
+        conn = Mock()
+        buf = ctypes.create_string_buffer(4)
+        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", opt, conn=conn,
+                 cache_limit=100,
+                 cache_max_flush_threads=3),
+            "/tmp/vospace",
+            fsname="vos:",
+            nothreads=5,
+            foreground=False)
+        fuse.raw_fi = True
+        fuse.operations = Mock()
+        fuse.operations.return_value = 3
+        fuse._decode_optional_path = Mock()
+        fuse._decode_optional_path.return_value = '/path/'
+        fip = Mock()
+        fip.contents = 'somevalue'
+        retsize = fuse.read("/some/path", buf, 10, 1, fip)
+        fuse.operations.assert_called_once_with(
+                        'read', '/path/', buf, 10, 1, 'somevalue')
+        fuse._decode_optional_path.assert_called_with('/some/path')
+        self.assertEqual(3, retsize, "Wrong buffer size")
 
 class TestHandleWrapper(unittest.TestCase):
 
