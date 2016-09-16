@@ -1159,6 +1159,9 @@ class EndPoints(object):
         self.service = basic_auth and 'vospace/auth' or 'vospace'
         self.uri_parts = URLParser(uri)
 
+    def __str__(self):
+        return "{}{}".format(self.nodes, self.uri_parts.path)
+
     @property
     def netloc(self):
         return self.uri_parts.netloc
@@ -2073,18 +2076,18 @@ class Client(object):
         size = len(data)
         self.conn.session.post(url, headers={'size': str(size)}, data=data)
 
-    def create(self, node):
+    def create(self, uri):
         """
         Create a (Container/Link/Data) Node on the VOSpace server.
 
-        :param node: the Node that we are going to create on the server.
-        :type node: bool
+        :param uri: the Node that we are going to create on the server.
+        :type uri: basestring
         """
-        url = self.get_node_url(node.uri, method='PUT')
+        node = Node(self.fix_uri(uri))
+        url = "{}://{}".format(self.protocol, str(EndPoints(node.uri)))
         data = str(node)
         size = len(data)
-        self.conn.session.put(url, data=data, headers={'size': str(size)})
-        return True
+        return Node(self.conn.session.put(url, data=data, headers={'size': str(size)}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive

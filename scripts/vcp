@@ -11,7 +11,6 @@ try:
 except:
     from exceptions import SyntaxError as ParseError
   
-import requests
 import logging
 import sys
 import errno
@@ -21,6 +20,7 @@ import signal
 import re
 import glob
 import traceback
+import time
 
 exit_code = 0
 
@@ -47,6 +47,17 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 #    vcp currently only works on the CADC VOSpace server.
 # Version: %s """ % (__version__.version)
 
+def size(filename):
+    if filename[0:4] == "vos:":
+        return client.get_node(filename).get_info()['size']
+    return os.stat(filename).st_size
+
+def create(filename):
+    if filename[0:4] == "vos:":
+        return client.create(filename)
+    else:
+        open(filename,'w').close()
+pass
 
 def get_node(filename):
     """Get node, from cache if possible"""
@@ -163,6 +174,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
     ## determine if this is a directory we are copying so need to be recursive
     try:
         if not opt.follow_links and islink(source_name):
+            #return link(source_name, destination_name)
             logging.info("{}: Skipping (symbolic link)".format(source_name))
             return
         if isdir(source_name):
@@ -211,9 +223,13 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
 
             if not skip:
                 logging.info("%s -> %s " % (source_name, destination_name))
+            niters = 0
             while not skip:
                 try:
-                    client.copy(source_name, destination_name, send_md5=True)
+                    if size(source_name) == 0:
+                        create(destination_name)
+                    else:
+                        client.copy(source_name, destination_name, send_md5=True)
                     break
                 except Exception as client_exception:
                     if getattr(client_exception, 'errno', -1) == 104:
@@ -225,8 +241,13 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                         logging.warning("{0}: Retrying".format(client_exception))
                         pass
                     elif ignore:
-                        logging.error("Ignoring error: %s " % str(client_exception))
-                        skip = True
+                        if niters > 100:
+                            logging.error("%s (skipping after %d attempts)" % (str(client_exception), niters))
+                            skip = True
+                        else:
+                            logging.error("%s (retrying)" % str(client_exception))
+                            time.sleep(5)
+                            niters += 1
                     else:
                         raise client_exception
     except OSError as os_exception:
