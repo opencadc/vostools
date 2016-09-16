@@ -6,18 +6,17 @@ import os
 import shutil
 import stat
 import ctypes
-from fuse import FUSE
+from fuse import FUSE, FuseOSError, fuse_operations
 from contextlib import nested
 from errno import EIO, EAGAIN, EPERM, ENOENT
 
 import unittest2 as unittest
-from mock import Mock, MagicMock, patch
+from mock import Mock, MagicMock, patch, ANY
 
-from vos import vofs, vos
+from vos import vofs, vos, Connection
 from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, \
     IOProxy, FlushNodeQueue
 from vos.NodeCache import NodeCache
-from vos.fuse import FuseOSError
 from vos.vofs import HandleWrapper, MyFuse, VOFS
 
 skipTests = False
@@ -1071,12 +1070,50 @@ class TestMyIOProxy(unittest.TestCase):
         
         
     @unittest.skipIf(skipTests, "Individual tests")
-    @patch("vos.fuse.FUSE.__init__")
-    def test_readMyFuse(self, mock_fuse):
-        mock_fuse.return_value = None
-        conn = Mock()
+    @patch("fuse._libfuse")
+    def test_MyFuse(self, mock_libfuse):
+        #Tests the ctor to make sure the arguments are passed
+        #correctly to the os
+        conn = MagicMock()
+        mock_libfuse.fuse_main_real.return_value = False
+        fuseops = fuse_operations()
         buf = ctypes.create_string_buffer(4)
         fuse = MyFuse(VOFS(":vos", "/tmp/vos_", opt, conn=conn,
+                 cache_limit=100,
+                 cache_max_flush_threads=3),
+            "/tmp/vospace",
+            fsname="vos:",
+            nothreads=5,
+            foreground=False)
+        #if it was easy to pick inside the args memory structures we would
+        #have checked the the real arguments passed to the fuse library
+        #instead of ANY
+        mock_libfuse.fuse_main_real.assert_called_with(5, ANY, ANY, 
+                                                       ctypes.sizeof(fuseops), 
+                                                       None)
+        
+        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", opt, conn=conn,
+                 cache_limit=100,
+                 cache_max_flush_threads=3),
+            "/tmp/vospace",
+            fsname="vos:",
+            nothreads=5,
+            readonly=True,
+            user_allow_other=True,
+            foreground=False)
+
+        mock_libfuse.fuse_main_real.assert_called_with(6, ANY, ANY,
+                                                       ctypes.sizeof(fuseops),
+                                                       None)
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    @patch("vos.vofs.FUSE.__init__")
+    def test_readMyFuse(self, mock_fuse):
+        mock_fuse.return_value = None
+        conn = MagicMock()
+        buf = ctypes.create_string_buffer(4)
+        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", opt, conn=conn,
                  cache_limit=100,
                  cache_max_flush_threads=3),
             "/tmp/vospace",

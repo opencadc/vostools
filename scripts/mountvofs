@@ -109,7 +109,7 @@ if __name__ == "__main__":
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=readonly,
-                    allow_other=opt.allow_other,
+                    user_allow_other=opt.allow_other,
                     noapplexattr=True,
                     noappledouble=True,
                     debug=opt.foreground,
@@ -123,6 +123,6 @@ if __name__ == "__main__":
                     fsname=root,
                     nothreads=opt.nothreads,
                     readonly=readonly,
-                    allow_other=opt.allow_other,
+                    user_allow_other=opt.allow_other,
                     foreground=opt.foreground)
 

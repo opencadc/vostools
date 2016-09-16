@@ -732,6 +732,10 @@ class MyFuse(FUSE):
     operation to fill it in and return the actual size that was
     filled in.
     """
+    # add the readonly options to the list of options in FUSE
+    FUSE.OPTIONS = list(FUSE.OPTIONS)
+    FUSE.OPTIONS.append(('readonly', '-r'))
+    FUSE.OPTIONS = tuple(FUSE.OPTIONS)
     
     def read(self, path, buf, size, offset, fip):
         if self.raw_fi:
