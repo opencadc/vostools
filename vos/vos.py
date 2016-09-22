@@ -127,6 +127,36 @@ class URLParser(object):
                                                        self.netloc, self.path)
 
 
+class RetrySession(requests.Session):
+
+    def send(self, request, **kwargs):
+        """
+        Send a given PreparedRequest, wrapping the connection to service in try/except that retries on
+        Connection reset by peer.
+
+        :param request: The prepared request to send.
+        :param kwargs: Any keywords the adaptor for the request accepts.
+        :return: the response
+        :rtype: requests.Response
+        """
+
+        total_delay = 0
+        current_delay = DEFAULT_RETRY_DELAY
+        logger.debug("--------------->>>> Sending request {0}  to server.".format(request))
+        while total_delay < MAX_RETRY_DELAY:
+            try:
+                return super(RetrySession, self).send(request, **kwargs)
+            except requests.exceptions.ConnectionError as ce:
+                logger.debug("Caught exception: {0}".format(ce))
+                if ce.errno != 104:
+                    # Only continue trying on a reset by peer error.
+                    raise ce
+                time.sleep(current_delay)
+                total_delay += current_delay
+                current_delay = MAX_RETRY_DELAY > current_delay * 2 and current_delay * 2 or MAX_RETRY_DELAY
+        raise
+
+
 class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
@@ -155,7 +185,7 @@ class Connection(object):
             self.vospace_certfile = vospace_certfile
 
         # create a requests session object that all requests will be made via.
-        session = requests.Session()
+        session = RetrySession()
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
@@ -921,7 +951,7 @@ class VOFile(object):
         if method in ["PUT"]:
             try:
                 self.size = int(self.size)
-                request.headers.update({"Content-Length": self.size,
+                request.headers.update({"Content-Length": str(self.size),
                                         HEADER_CONTENT_LENGTH: self.size})
             except TypeError:
                 self.size = None
@@ -965,9 +995,23 @@ class VOFile(object):
 
         if self.resp is None:
             try:
-                logger.debug("Intializing read by sending request: {0}".format(self.request))
-                self.resp = self.connector.session.send(self.request, stream=True)
-                self.checkstatus()
+                logger.debug("Initializing read by sending request: {0}".format(self.request))
+                # Sometimes there is a 'Connection reset by peer' during the read.
+                # These tend to happen on long-haul networks and appear associated with a close before end of read.
+                # so, we retry on those.
+                while self.totalRetryDelay < self.maxRetryTime:
+                    try:
+                        self.resp = self.connector.session.send(self.request, stream=True)
+                        self.checkstatus()
+                        break
+                    except requests.exceptions.ConnectionError as ce:
+                        if ce.errno != 104:
+                            # Only continue trying on a reset by peer error.
+                            raise ce
+                        self.totalRetryDelay += self.currentRetryDelay
+                        time.sleep(self.currentRetryDelay)
+                        self.currentRetryDelay = MAX_RETRY_DELAY > self.currentRetryDelay * 2 and \
+                                                 self.currentRetryDelay * 2 or MAX_RETRY_DELAY
             except Exception as ex:
                 logger.debug("Error on read: {0}".format(ex))
                 raise ex
@@ -1731,7 +1775,7 @@ class Client(object):
 
         url = self.get_node_url(link_uri)
         logger.debug("Got linkNode URL: {0}".format(url))
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri
@@ -2027,7 +2071,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url, headers={'size': size}, data=data)
+        self.conn.session.post(url, headers={'size': str(size)}, data=data)
 
     def create(self, node):
         """
@@ -2039,7 +2083,7 @@ class Client(object):
         url = self.get_node_url(node.uri, method='PUT')
         data = str(node)
         size = len(data)
-        self.conn.session.put(url, data=data, headers={'size': size})
+        self.conn.session.put(url, data=data, headers={'size': str(size)})
         return True
 
     def update(self, node, recursive=False):
