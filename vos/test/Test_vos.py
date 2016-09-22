@@ -345,7 +345,7 @@ class TestClient(unittest.TestCase):
         new_node.create = Mock(return_value=new_node.node)
 
         data = str(new_node)
-        headers = {'size': len(data)}
+        headers = {'size': str(len(data))}
 
         client = Client()
         client.get_node = Mock(return_value=old_node)
@@ -364,7 +364,7 @@ class TestClient(unittest.TestCase):
         client.get_node = Mock(return_value=node)
 
         data = str(node)
-        headers = {'size': len(data)}
+        headers = {'size': str(len(data))}
 
         client = Client()
         client.get_node_url = Mock(return_value='http://foo.com/bar')
