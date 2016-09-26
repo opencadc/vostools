@@ -480,18 +480,7 @@ class FUSE(object):
         else:
           fh = fip.contents.fh
 
-        #ret = self.operations('read', path.decode(self.encoding), size, offset, fh)
-        data = self.operations('read', path.decode(self.encoding), size, offset, fh)
-
-        if not data: return 0
-
-        retsize = sizeof(data)
-        assert retsize <= size, \
-            'actual amount read %d greater than expected %d' % (retsize, size)
-
-        #data = create_string_buffer(ret, retsize)
-        memmove(buf, data, retsize)
-        return retsize
+        return self.operations('read', path.decode(self.encoding), size, offset, fh, buf)
 
     def write(self, path, buf, size, offset, fip):
         data = string_at(buf, size)
