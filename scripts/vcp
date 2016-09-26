@@ -59,9 +59,9 @@ def create(filename):
         open(filename,'w').close()
 pass
 
-def get_node(filename):
+def get_node(filename, limit=None):
     """Get node, from cache if possible"""
-    return client.get_node(filename, limit=None)
+    return client.get_node(filename, limit=limit)
 
 
 # here are a series of methods that choose between calling the system version or the vos version of various
@@ -97,7 +97,7 @@ def access(filename, mode):
     logging.debug("checking for access %s " % filename)
     if filename[0:4] == "vos:":
         try:
-            node = get_node(filename)
+            node = get_node(filename, limit=0)
             return node is not None
         except OSError as ex:
             if ex.errno in (errno.ENOENT, errno.EPERM, errno.EACCES):
