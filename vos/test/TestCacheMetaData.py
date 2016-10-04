@@ -1,8 +1,7 @@
 from builtins import str
-import sys
 import os
 import unittest
-from vos.CacheMetaData import CacheMetaData
+from ..CacheMetaData import CacheMetaData
 
 
 class TestCacheMetaData(unittest.TestCase):

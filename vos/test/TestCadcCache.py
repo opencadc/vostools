@@ -2,8 +2,6 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from builtins import object
-# Test the cadcCache module.
-
 import copy
 import errno
 import logging
@@ -15,13 +13,11 @@ import time
 import unittest
 import uuid
 import ctypes
-
 import os
 import stat
 from mock import Mock, MagicMock, patch
-
-from vos import CadcCache
-from vos.SharedLock import SharedLock, TimeoutError, RecursionError, StealError
+from .. import CadcCache
+from ..SharedLock import SharedLock, TimeoutError, RecursionError, StealError
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.

@@ -1,11 +1,7 @@
-# from builtins import object
-# Test the vos Client class
-
-import os
 import unittest
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call
-from vos.vos import Client, Connection, Node, VOFile
+from ..vos import Client, Connection, Node, VOFile
 
 NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'

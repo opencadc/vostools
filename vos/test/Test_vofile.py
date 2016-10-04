@@ -4,7 +4,7 @@ import requests
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch
 
-from vos import vos, Connection
+from .. import vos, Connection
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
