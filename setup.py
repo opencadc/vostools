@@ -7,7 +7,7 @@ if sys.version_info[0] > 2:
 
 # Build the list of scripts to be installed.
 
-dependencies = ['requests>=2.8,<3.0', 'BitVector>=3.4.4,<4.0', 'html2text>=2016.5.29', 'fusepy==2.0.4']
+dependencies = [ x.strip() for x in open('requirements.txt').readlines()]
 
 script_dir = 'scripts'
 scripts = []
