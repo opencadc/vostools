@@ -1,11 +1,10 @@
-# from builtins import object
 # Test the vos Client class
-
+ 
 import os
 import unittest
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call, mock_open
-from vos.vos import Client, Connection, Node, VOFile
+from ..vos import Client, Connection, Node, VOFile
 
 NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
@@ -101,8 +100,7 @@ class TestClient(unittest.TestCase):
         
         
     @patch('vos.vos.Node.get_info', Mock(return_value={'name':'aa'}))
-    @patch('Test_vos.Client.get_node')
-    def test_get_info_list(self, node_mock):
+    def test_get_info_list(self):
         # list tuples of a LinkNode
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.return_value = mock_node
@@ -110,17 +108,18 @@ class TestClient(unittest.TestCase):
         mock_node.get_info.return_value = {'name':'aa'}
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
-        node_mock.side_effect = [mock_link_node, mock_node]
         client = Client()
+        client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
         self.assertEquals({'testnode':mock_node.get_info.return_value}.items(), 
                           client.get_info_list('vos:/somenode'))
         
                 
-    @patch('Test_vos.Client.get_node')
-    def test_nodetype(self, node_mock):
-        mock_node = MagicMock(type='vos:ContainerNode')
-        node_mock.return_value = mock_node
+
+    def test_nodetype(self):
+        mock_node = MagicMock(id=333)
+        mock_node.type = 'vos:ContainerNode'
         client = Client()
+        client.get_node = Mock(return_value=mock_node)
         self.assertEquals('vos:ContainerNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
         
@@ -132,19 +131,19 @@ class TestClient(unittest.TestCase):
         mock_node.type = 'vos:ContainerNode'
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
-        node_mock.side_effect = [mock_link_node, mock_node, mock_link_node, mock_node]
+        client.get_node = Mock(side_effect=
+                [mock_link_node, mock_node, mock_link_node, mock_node])
         self.assertEquals('vos:ContainerNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
         
         # through an external link - not sure why the type is DataNode in this case???
         mock_link_node.target = '/somefile'
-        node_mock.side_effect = [mock_link_node, mock_link_node]
+        client.get_node = Mock(side_effect=[mock_link_node, mock_link_node])
         self.assertEquals('vos:DataNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isfile('vos:/somenode'))
         
 
-    @patch('Test_vos.Client.get_node')
-    def test_glob(self, node_mock):
+    def test_glob(self):
         # test the pattern matches in directories and file names
         
         # simple test for listing of directory, no wild cards
@@ -154,15 +153,15 @@ class TestClient(unittest.TestCase):
         # two other wasy to do it as seen below
         mock_node = MagicMock(type='vos:ContainerNode')
         mock_node.configure_mock(name='anode')
-        node_mock.return_value = mock_node
         client = Client()
+        client.get_node = Mock(return_value=mock_node)
         self.assertEquals(['vos:/anode/'], client.glob('vos:/anode/'))
         
         # simple test for file listing of file
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.configure_mock(name='afile')
-        node_mock.return_value = mock_node
         client = Client()
+        client.get_node = Mock(return_value=mock_node)
         self.assertEquals(['vos:/afile'], client.glob('vos:/afile'))
         
         # create a mock directory structure on the form
@@ -181,8 +180,8 @@ class TestClient(unittest.TestCase):
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node]
         mock_node.node_list = [mock_base_node, mock_child_node1, mock_child_node2]
-        node_mock.side_effect = [mock_node, mock_base_node, mock_node]
         client = Client()
+        client.get_node = Mock(side_effect=[mock_node, mock_base_node, mock_node])
         self.assertEquals(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
         self.assertEquals(['vos:/anode/abc'], client.glob('vos:/*node/abc'))
         
@@ -211,31 +210,27 @@ class TestClient(unittest.TestCase):
         mock_base_node = Mock(type='vos:DataNode')
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node1, mock_node2]
-        node_mock.side_effect = [mock_base_node, mock_node1, mock_node2]
         client = Client()
+        client.get_node = Mock(side_effect=[mock_base_node, mock_node1, mock_node2])
         self.assertEquals(['vos:/bnode/sometests'], 
                           client.glob('vos:/[a,b]node/*test*'))
         
         
-    @patch('Test_vos.Client.get_node_url')
     @patch('vos.vos.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
-    @patch('Test_vos.Client.get_node')
-    def test_copy(self, node_mock, computed_md5_mock, node_url_mock):
+    def test_copy(self, computed_md5_mock):
         # the md5sum of the file being copied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
         
-        node_url_mock.return_value = ['http://cadc.ca/test', 'http://cadc.ca/test']
         #mock the props of the corresponding node        
         props = MagicMock()
         props.get.return_value = md5sum
         #add props to the mocked node
         node = MagicMock(spec=Node)
         node.props = props
-        #patch Client.get_node to return our mocked node
-        node_mock.return_value = node 
+
         
         # mock one by one the chain of connection.session.response.headers
         conn = MagicMock(spec=Connection)
@@ -250,29 +245,32 @@ class TestClient(unittest.TestCase):
         test_client = Client()
         # use the mocked connection instead of the real one
         test_client.conn = conn
+        get_node_url_mock = Mock(return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+            
+        #patch Client.get_node to return our mocked node
+        get_node_mock = Mock(return_value=node)
+        test_client.get_node = get_node_mock
         
         # time to test...
         vospaceLocation = 'vos://test/foo'
         osLocation = '/tmp/foo'
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
-        node_url_mock.assert_called_once_with(vospaceLocation, method='GET', 
+        get_node_url_mock.assert_called_once_with(vospaceLocation, method='GET', 
                                               cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
-        node_mock.assert_called_once_with(vospaceLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation)
         
         # copy to vospace
-        node_url_mock.reset_mock()
+        get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         test_client.copy(osLocation, vospaceLocation)
-        node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
+        get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
         computed_md5_mock.assert_called_once_with(osLocation)
 
         # error tests - md5sum mismatch
-        node_url_mock.return_value = \
-            ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.return_value = '000bad000'
-        
         with self.assertRaises(OSError):
             test_client.copy(vospaceLocation, osLocation)
         
@@ -627,11 +625,3 @@ class TestVOFile(unittest.TestCase):
             self.assertEquals(15, vofile._fpos)
 
 
-def run():
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(TestClient)
-    all_tests = unittest.TestSuite([suite1])
-    return unittest.TextTestRunner(verbosity=2).run(all_tests)
-
-
-if __name__ == "__main__":
-    run()

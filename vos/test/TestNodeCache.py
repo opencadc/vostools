@@ -1,8 +1,5 @@
-# Test the NodeCache class
-
 import unittest
-
-from vos.NodeCache import NodeCache
+from ..NodeCache import NodeCache
 
 
 class TestNodeCache(unittest.TestCase):

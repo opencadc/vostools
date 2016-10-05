@@ -74,23 +74,18 @@ Next, create, and activate a local **venv** (this example uses **bash**):
 $ virtualenv venv
 $ source venv/bin/activate
 ```
-Use **pip** to install external dependencies used for testing this project (Note: if the following install fails you probably have missing/older version of required modules. In that case just run '$ pip install --upgrade <module>' and re-invoke the install command):
+The test environment is built into the *setup.py* so that conducting unit-tests can be achieved like so:
 ```
-$ pip install -r requirements.txt
+python setup.py test
+```
+If you would like versbose output formated as a web page, for example, you can add options to the test call:
+```
+python setup.py test --addopts '--cov-report html:cov_html --cov=vos'
 ```
 
-After successfully installing the external dependencies, the unit tests are invoked by running
+The same option attribute can be used to pass other arguments to py.test that is executing the test. To run specific only tests for example:
 ```
-$ py.test [-v]
-```
-
-To obtain a coverage report use the following commands:
-```
-$ py.test --cov-report term-missing --cov=vos [-v] #command line report which includes missing lines
-
-or
-
-py.test --cov-report html:cov_html --cov=vos [-v] # html reports in the cov_html directory
+python setup.py test --addopts 'vos/test/Test_vos.py::TestClient::test_transfer_error'
 ```
 
 Each time you resume work on the project and want to use the **venv** (e.g., from a new shell), simply re-activate it:

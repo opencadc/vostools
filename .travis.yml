@@ -11,4 +11,4 @@ install:
   - pip install .
   - pip install -r requirements.txt
 # command to run tests
-script: py.test --cov=vos
+script: python setup.py test --addops '--cov=vos'

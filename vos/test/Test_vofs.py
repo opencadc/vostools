@@ -9,15 +9,12 @@ import ctypes
 from fuse import FUSE, FuseOSError, fuse_operations
 from contextlib import nested
 from errno import EIO, EAGAIN, EPERM, ENOENT
-
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
-
-from vos import vofs, vos, Connection
-from vos.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, \
-    IOProxy, FlushNodeQueue
-from vos.NodeCache import NodeCache
-from vos.vofs import HandleWrapper, MyFuse, VOFS
+from .. import vofs, vos
+from ..CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
+from ..NodeCache import NodeCache
+from ..vofs import HandleWrapper, MyFuse, VOFS
 
 skipTests = False
 
