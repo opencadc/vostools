@@ -161,7 +161,7 @@ class TestVOFS(unittest.TestCase):
         buf = ctypes.create_string_buffer(2048)
         # Read with a null file handle.
         with self.assertRaises(FuseOSError) as e:
-            testfs.read("/dir1/dir2/file", buf, 4, 2048)
+            testfs.read("/dir1/dir2/file", 4, 2048, buf=buf)
         self.assertEqual(e.exception.errno, EIO)
 
         # Read with a timeout.
@@ -176,13 +176,13 @@ class TestVOFS(unittest.TestCase):
         fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cache_file_handle.read = Mock()
         fileHandle.cache_file_handle.read.return_value = "abcd"
-        self.assertEqual(testfs.read("/dir1/dir2/file", buf, 
-                                     4, 2048,
-                                     fileHandle.get_id()), "abcd")
+        self.assertEqual(testfs.read(path="/dir1/dir2/file", buf=buf,
+                                     size=4, offset=2048,
+                                     file_id=fileHandle.get_id()), "abcd")
 
         # Read from an invalid file handle.
         with self.assertRaises(FuseOSError) as e:
-            testfs.read("/dir1/dir2/file", buf, 4, 2048, -1)
+            testfs.read(path="/dir1/dir2/file", buf=buf, size=4, offset=2048, file_id=-1)
         self.assertEqual(e.exception.errno, EIO)
 
     #@unittest.skipIf(skipTests, "Individual tests")

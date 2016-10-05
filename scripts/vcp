@@ -11,7 +11,6 @@ try:
 except:
     from exceptions import SyntaxError as ParseError
   
-import requests
 import logging
 import sys
 import errno
@@ -21,6 +20,7 @@ import signal
 import re
 import glob
 import traceback
+import time
 
 exit_code = 0
 
@@ -47,10 +47,21 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 #    vcp currently only works on the CADC VOSpace server.
 # Version: %s """ % (__version__.version)
 
+def size(filename):
+    if filename[0:4] == "vos:":
+        return client.get_node(filename).get_info()['size']
+    return os.stat(filename).st_size
 
-def get_node(filename):
+def create(filename):
+    if filename[0:4] == "vos:":
+        return client.create(vos.Node(client.fix_uri(filename)))
+    else:
+        open(filename,'w').close()
+pass
+
+def get_node(filename, limit=None):
     """Get node, from cache if possible"""
-    return client.get_node(filename, limit=None)
+    return client.get_node(filename, limit=limit)
 
 
 # here are a series of methods that choose between calling the system version or the vos version of various
@@ -86,7 +97,7 @@ def access(filename, mode):
     logging.debug("checking for access %s " % filename)
     if filename[0:4] == "vos:":
         try:
-            node = get_node(filename)
+            node = get_node(filename, limit=0)
             return node is not None
         except OSError as ex:
             if ex.errno in (errno.ENOENT, errno.EPERM, errno.EACCES):
@@ -162,6 +173,10 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
     global exit_code
     ## determine if this is a directory we are copying so need to be recursive
     try:
+        if not opt.follow_links and islink(source_name):
+            #return link(source_name, destination_name)
+            logging.info("{}: Skipping (symbolic link)".format(source_name))
+            return
         if isdir(source_name):
             ## make sure the destination exists...
             if not isdir(destination_name):
@@ -208,9 +223,13 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
 
             if not skip:
                 logging.info("%s -> %s " % (source_name, destination_name))
+            niters = 0
             while not skip:
                 try:
-                    client.copy(source_name, destination_name, send_md5=True)
+                    if size(source_name) == 0:
+                        create(destination_name)
+                    else:
+                        client.copy(source_name, destination_name, send_md5=True)
                     break
                 except Exception as client_exception:
                     if getattr(client_exception, 'errno', -1) == 104:
@@ -222,8 +241,13 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                         logging.warning("{0}: Retrying".format(client_exception))
                         pass
                     elif ignore:
-                        logging.error("Ignoring error: %s " % str(client_exception))
-                        skip = True
+                        if niters > 100:
+                            logging.error("%s (skipping after %d attempts)" % (str(client_exception), niters))
+                            skip = True
+                        else:
+                            logging.error("%s (retrying)" % str(client_exception))
+                            time.sleep(5)
+                            niters += 1
                     else:
                         raise client_exception
     except OSError as os_exception:
@@ -253,6 +277,10 @@ if __name__ == '__main__':
                       help="don't check destination MD5, just overwrite even if source matches destination")
     parser.add_option("--quick", action="store_true",
                       help="Use default CADC urls, for speed.  Will fail if CADC changes data storage mechanism",
+                      default=False)
+    parser.add_option("-L", "--follow-links",
+                      help="Should recursive copy follow symbolic links? Default is to not follow links.",
+                      action="store_true",
                       default=False)
     parser.add_option("--ignore", action="store_true", default=False,
                       help="ignore errors and continue with recursive copy")
@@ -298,16 +326,22 @@ if __name__ == '__main__':
             for source in sources:
                 if source[0:4] != "vos:":
                     source = os.path.abspath(source)
-                ### the source must exist, of course...
+                # the source must exist, of course...
                 if not access(source, os.R_OK):
                     raise Exception("Can't access source: %s " % source)
 
-                ## copying inside VOSpace not yet implemented
+                if not opt.follow_links and islink(source):
+                    logging.info("{}: Skipping (symbolic link)".format(source_name))
+                    continue
+
+                # copying inside VOSpace not yet implemented
                 if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
                     raise Exception("Can not (yet) copy from VOSpace to VOSpace.")
 
                 this_destination = dest
                 if isdir(source):
+                    if not opt.follow_links and islink(source) :
+                        continue
                     logging.debug("%s is a directory or link to one" % source)
                     # To mimic unix fs behaviours if copying a directory and
                     # the destination directory exists then the actual
@@ -324,7 +358,6 @@ if __name__ == '__main__':
                 elif dest[-1] == '/' or isdir(dest):
                     # we're copying into a directory
                     this_destination = os.path.join(dest, os.path.basename(source))
-
                 copy(source, this_destination, exclude=opt.exclude, include=opt.include,
                      interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
 

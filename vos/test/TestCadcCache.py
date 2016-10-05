@@ -1274,7 +1274,7 @@ class TestCadcCache(unittest.TestCase):
                                 False, ioObject, False)
             fh.fullyCached = False
             buf = ctypes.create_string_buffer(4)
-            retsize = fh.read(100, 0, buf)
+            retsize = fh.read(size=100, offset=0, cbuffer=buf)
             # Read beyond the end of the file.
             with self.assertRaises(ValueError):
                 data = fh.read(100, 1024 * 1024, buf)
@@ -1289,7 +1289,7 @@ class TestCadcCache(unittest.TestCase):
             fh = testCache.open("/dir1/dir2/file", False, False, ioObject,
                                 False)
             buf = ctypes.create_string_buffer(100)
-            retsize = fh.read(100, 0, buf)
+            retsize = fh.read(size=100, offset=0, cbuffer=buf)
 
             with patch('vos.CadcCache.libc.read') as mockedRead:
                 mockedRead.return_value = -1

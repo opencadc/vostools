@@ -1085,7 +1085,8 @@ class FileHandle(object):
         return wroteBytes
 
     @logExceptions()
-    def read(self, size, offset, buf):
+
+    def read(self, size, offset, cbuffer=None):
         """Read data from the file.
         This method will raise a CacheRetry error if the response takes longer
         than the timeout.
@@ -1105,8 +1106,10 @@ class FileHandle(object):
         with self.ioObject.cacheFileDescriptorLock:
             # seek using python, avoid 32bit offset limit in libc32
             os.lseek(r, offset, os.SEEK_SET)
+            if cbuffer is None:
+                cbuffer = ctypes.create_string_buffer(size)
             # do the read in libc to avoid passing around a string
-            retsize = libc.read(r, buf, size)
+            retsize = libc.read(r, cbuffer, size)
             if retsize < 0:
                 raise CacheError("Failed to read from cache file")
 

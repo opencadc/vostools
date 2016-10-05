@@ -521,7 +521,8 @@ class VOFS(Operations):
         return HandleWrapper(handle, read_only).get_id()
 
     @logExceptions()
-    def read(self, path, buf, size=0, offset=0, file_id=None):
+
+    def read(self, path, size=0, offset=0, file_id=None, buf=None):
         """
         Read the required bytes from the file and return a buffer containing
         the bytes.
@@ -540,11 +541,11 @@ class VOFS(Operations):
                 logger.debug(str(e))
                 raise FuseOSError(EIO)
             with self.condition:
-                retsize = fh.cache_file_handle.read(size, offset, buf)
+                size = fh.cache_file_handle.read(size, offset, buf)
             # Send back if we got bytes or we've read to end of file already.
-            if retsize > 0 or not fh.cache_file_handle.metaData.size - offset > 0:
+            if size > 0 or not fh.cache_file_handle.metaData.size - offset > 0:
                 break
-        return retsize
+        return size
 
     @logExceptions()
     def readlink(self, path):

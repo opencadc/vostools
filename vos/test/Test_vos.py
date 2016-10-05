@@ -10,7 +10,7 @@ NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
                   xmlns:vos='http://www.ivoa.net/xml/VOSpace/v2.0'
                   xs:type='vos:ContainerNode'
-                  uri='{0}'>
+                  uri='vos://foo.com!vospace/bar'>
             <vos:properties>
                 <vos:property uri='ivo://ivoa.net/vospace/core#description'>
                     Stuff
@@ -356,23 +356,24 @@ class TestClient(unittest.TestCase):
                                                       headers=headers, data=data)
 
     def test_create(self):
-        node = Node(NODE_XML)
-
+        root = ElementTree.fromstring(NODE_XML)
+        node = Node(root)
         client = Client()
-        client.get_node = Mock(return_value=node)
 
         data = str(node)
         headers = {'size': str(len(data))}
 
         client = Client()
         client.get_node_url = Mock(return_value='http://foo.com/bar')
+        session_mock = MagicMock()
         client.conn = Mock()
+        client.conn.session = session_mock
+        session_mock.put.return_value = Mock(content=NODE_XML)
 
-        with patch('vos.Client', client) as mock:
-            result = mock.create(node)
-            self.assertTrue(result)
-            mock.conn.session.put.assert_called_with('http://foo.com/bar',
-                                                     headers=headers, data=data)
+        result = client.create(node)
+        self.assertEquals(node, result)
+        session_mock.put.assert_called_with('https://www.canfar.phys.uvic.ca/vospace/nodes/bar',
+                                                 headers=headers, data=data)
 
     def test_update(self):
         node = Node(NODE_XML)
@@ -412,7 +413,7 @@ class TestClient(unittest.TestCase):
 
         @return:
         """
-        uri = "vos://cadc.nrc.ca!vospace/stuff"
+        uri = "vos://foo.com!vospace/bar"
 
         nodes = """
             <vos:nodes>
