@@ -13,7 +13,7 @@ install_requires = ['requests>=2.8,<3.0',
                     'html2text>=2016.5.29',
                     'fusepy>=2.0.4']
 
-tests_require = ['pytest>=2.9.2',
+tests_require = ['pytest>=3.0.3',
                  'pytest-cov>=2.3.1',
                  'future>=0.15.2',
                  'unittest2>=1.1.0',
