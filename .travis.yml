@@ -10,4 +10,4 @@ before_install:
 install:
 
 # command to run tests
-script: python setup.py test --addops '--cov=vos'
+script: python setup.py test --addopts '--cov=vos'
