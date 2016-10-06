@@ -364,6 +364,7 @@ class TestClient(unittest.TestCase):
         headers = {'size': str(len(data))}
 
         client = Client()
+        client.protocol = 'https'
         client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
         client.conn = Mock()
