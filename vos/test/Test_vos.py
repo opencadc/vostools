@@ -356,10 +356,11 @@ class TestClient(unittest.TestCase):
                                                       headers=headers, data=data)
 
     def test_create(self):
-        root = ElementTree.fromstring(NODE_XML)
-        node = Node(root)
+        uri = 'vos://foo.com!vospace/bar'
         client = Client()
-
+        node = Node(client.fix_uri(uri))
+        node2 = Node(str(node))
+        self.assertEquals(node, node2)
         data = str(node)
         headers = {'size': str(len(data))}
 
@@ -369,9 +370,11 @@ class TestClient(unittest.TestCase):
         session_mock = MagicMock()
         client.conn = Mock()
         client.conn.session = session_mock
-        session_mock.put.return_value = Mock(content=NODE_XML)
+        session_mock.put.return_value = Mock(content=str(node))
 
-        result = client.create(node)
+        result = client.create(uri)
+        print(node)
+        print(result)
         self.assertEquals(node, result)
         session_mock.put.assert_called_with('https://www.canfar.phys.uvic.ca/vospace/nodes/bar',
                                                  headers=headers, data=data)

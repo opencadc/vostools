@@ -333,9 +333,8 @@ class VOFS(Operations):
 
         # Create is handle by the client.
         # This should fail if the base path doesn't exist
-        self.client.open(path, os.O_CREAT).close()
 
-        node = self.getNode(path)
+        node = self.client.create(path)
         parent = self.getNode(os.path.dirname(path))
         # Force inheritance of group settings.
         node.groupread = parent.groupread
@@ -728,8 +727,8 @@ class VOFS(Operations):
         
 class MyFuse(FUSE):
     """ 
-    Customization of FUSE class in order to speed up reads by passing
-    the destination buffer from the file system directly to the read
+    Customization of FUSE class in order to speed up reads and writes by passing
+    the destination buffer from the file system directly to the read and write
     operation to fill it in and return the actual size that was
     filled in.
     """
@@ -744,10 +743,15 @@ class MyFuse(FUSE):
         else:
           fh = fip.contents.fh
 
-        retsize = self.operations('read', self._decode_optional_path(path), buf, size,
-                                      offset, fh)
+        retsize = self.operations('read', path.decode(self.encoding), size, offset, fh, buf)
 
         assert retsize <= size, \
             'actual amount read %d greater than expected %d' % (retsize, size)
 
         return retsize
+
+
+    def write(self, path, buf, size, offset, fip):
+
+        return self.operations('write', path.decode(self.encoding), buf,
+                                       size, offset, fip.contents.fh)

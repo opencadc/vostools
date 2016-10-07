@@ -1075,7 +1075,7 @@ class TestMyIOProxy(unittest.TestCase):
         mock_libfuse.fuse_main_real.return_value = False
         fuseops = fuse_operations()
         buf = ctypes.create_string_buffer(4)
-        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", opt, conn=conn,
+        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
                  cache_limit=100,
                  cache_max_flush_threads=3),
             "/tmp/vospace",
@@ -1089,7 +1089,7 @@ class TestMyIOProxy(unittest.TestCase):
                                                        ctypes.sizeof(fuseops), 
                                                        None)
         
-        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", opt, conn=conn,
+        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
                  cache_limit=100,
                  cache_max_flush_threads=3),
             "/tmp/vospace",
@@ -1110,7 +1110,7 @@ class TestMyIOProxy(unittest.TestCase):
         mock_fuse.return_value = None
         conn = MagicMock()
         buf = ctypes.create_string_buffer(4)
-        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", opt, conn=conn,
+        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
                  cache_limit=100,
                  cache_max_flush_threads=3),
             "/tmp/vospace",
@@ -1118,16 +1118,42 @@ class TestMyIOProxy(unittest.TestCase):
             nothreads=5,
             foreground=False)
         fuse.raw_fi = True
+        fuse.encoding = 'ascii'
         fuse.operations = Mock()
         fuse.operations.return_value = 3
-        fuse._decode_optional_path = Mock()
-        fuse._decode_optional_path.return_value = '/path/'
         fip = Mock()
         fip.contents = 'somevalue'
         retsize = fuse.read("/some/path", buf, 10, 1, fip)
         fuse.operations.assert_called_once_with(
-                        'read', '/path/', buf, 10, 1, 'somevalue')
-        fuse._decode_optional_path.assert_called_with('/some/path')
+                        'read', '/some/path', 10, 1, 'somevalue', buf)
+        self.assertEqual(3, retsize, "Wrong buffer size")
+
+
+
+    @unittest.skipIf(skipTests, "Individual tests")
+    @patch("vos.vofs.FUSE.__init__")
+    def test_writeMyFuse(self, mock_fuse):
+        mock_fuse.return_value = None
+        conn = MagicMock()
+        buf = ctypes.create_string_buffer(4)
+        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
+                 cache_limit=100,
+                 cache_max_flush_threads=3),
+            "/tmp/vospace",
+            fsname="vos:",
+            nothreads=5,
+            foreground=False)
+        fuse.raw_fi = True
+        fuse.encoding = 'ascii'
+        fuse.operations = Mock()
+        fuse.operations.return_value = 3
+        fip = Mock()
+        fh_mock = Mock()
+        mock_contents = Mock(return_value='somevale', fh=fh_mock)
+        fip.contents = mock_contents
+        retsize = fuse.write("/some/path", buf, 10, 1, fip)
+        fuse.operations.assert_called_once_with(
+                        'write', '/some/path', buf, 10, 1, fh_mock)
         self.assertEqual(3, retsize, "Wrong buffer size")
 
 class TestHandleWrapper(unittest.TestCase):
