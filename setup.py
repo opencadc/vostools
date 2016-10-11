@@ -7,7 +7,18 @@ if sys.version_info[0] > 2:
 
 # Build the list of scripts to be installed.
 
-dependencies = ['requests >= 2.8']
+# dependencies = [ x.strip() for x in open('requirements.txt').readlines()]
+install_requires = ['requests>=2.8,<3.0',
+                    'BitVector>=3.4.4,<4.0',
+                    'html2text>=2016.5.29',
+                    'fusepy>=2.0.4']
+
+tests_require = ['pytest>=2.9.2',
+                 'pytest-cov>=2.3.1',
+                 'future>=0.15.2',
+                 'unittest2>=1.1.0',
+                 'magicmock>=0.3',
+                 'mock>=2.0.0']
 
 script_dir = 'scripts'
 scripts = []
@@ -24,13 +35,13 @@ except:
     has_setuptools = False
 
 
-from vos import __version__
+execfile('vos/__version__.py')
 
 setup(name="vos",
-      version=__version__.version,
+      version=version,
       url="https://github.com/ijiraq/cadcVOFS",
       description="Tools for interacting with CADC VOSpace.",
-      author="JJ Kavelaars, Norm Hill, Adrian Demain, Ed Chapin and others",
+      author="JJ Kavelaars, Norm Hill, Adrian Damian, Ed Chapin and others",
       maintainer="JJ Kavelaars",
       maintainer_email="jj.kavelaars@nrc-cnrc.gc.ca",
       long_description="""a module and scripts designed for accessing IVAO VOSpace 2.0 compatible services""",
@@ -47,7 +58,9 @@ setup(name="vos",
           'Operating System :: POSIX',
           'Programming Language :: Python',
       ],
-      install_requires=dependencies
+      setup_requires = ['pytest-runner'],
+      install_requires=install_requires,
+      tests_require=tests_require,
       )
 
 

@@ -1,8 +1,5 @@
-# Test the NodeCache class
-
 import unittest
-
-from vos.NodeCache import NodeCache
+from ..NodeCache import NodeCache
 
 
 class TestNodeCache(unittest.TestCase):
@@ -91,7 +88,7 @@ class TestNodeCache(unittest.TestCase):
 
         with nodeCache.watch('/a/b/c') as w:
             w.insert('d')
-        self.assertEqual( nodeCache['/a/b/c'], 'd')
+        self.assertEqual(nodeCache['/a/b/c'], 'd')
         self.assertEqual(len(nodeCache.watchedNodes), 0)
 
     def test_02_watchnvolatile(self):
@@ -101,12 +98,12 @@ class TestNodeCache(unittest.TestCase):
 
         with nodeCache.watch('/a/b/c/') as w:
             w.insert('d')
-            self.assertEqual( nodeCache['/a/b/c'], 'd')
+            self.assertEqual(nodeCache['/a/b/c'], 'd')
 
             # Make a sub-tree volatile. This should not effect the watched
             # directory.
             with nodeCache.volatile('/a/b/c/d'):
-                self.assertEqual( nodeCache['/a/b/c'], 'd')
+                self.assertEqual(nodeCache['/a/b/c'], 'd')
 
             self.assertTrue('/a/b/c' in nodeCache)
             with nodeCache.volatile('/a/b/c'):
@@ -160,6 +157,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
-
-

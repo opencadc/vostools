@@ -1085,13 +1085,11 @@ class FileHandle(object):
         return wroteBytes
 
     @logExceptions()
+
     def read(self, size, offset, cbuffer=None):
         """Read data from the file.
         This method will raise a CacheRetry error if the response takes longer
         than the timeout.
-
-        TODO: Figure out a way to add a buffer to the parameters so the buffer
-        isn't allocated for each read.
         """
 
         logger.debug("reading %d bytes at %d " % (size, offset))

@@ -6,13 +6,12 @@ import os
 import logging
 
 from vos import vos
-import vos.fuse
-from vos.fuse import FUSE
 from vos.__version__ import version
 from vos.vofs import VOFS
+from vos.vofs import MyFuse
 from vos.commonparser import CommonParser
 DAEMON_TIMEOUT = 60
- 
+
 
 if __name__ == "__main__":
 
@@ -99,7 +98,7 @@ if __name__ == "__main__":
     if not os.access(mount, os.F_OK):
         os.makedirs(mount)
     if platform == "darwin":
-        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
+        fuse = MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
                          cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
                          cache_max_flush_threads=opt.max_flush_threads,
                          secure_get=opt.secure_get),
@@ -110,13 +109,13 @@ if __name__ == "__main__":
                     defer_permissions=True,
                     daemon_timeout=DAEMON_TIMEOUT,
                     readonly=readonly,
-                    allow_other=opt.allow_other,
+                    user_allow_other=opt.allow_other,
                     noapplexattr=True,
                     noappledouble=True,
                     debug=opt.foreground,
                     foreground=opt.foreground)
     else:
-        fuse = FUSE(VOFS(root, opt.cache_dir, opt, conn=conn,
+        fuse = MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
                          cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
                          cache_max_flush_threads=opt.max_flush_threads,
                          secure_get=opt.secure_get),
@@ -124,5 +123,6 @@ if __name__ == "__main__":
                     fsname=root,
                     nothreads=opt.nothreads,
                     readonly=readonly,
-                    allow_other=opt.allow_other,
+                    user_allow_other=opt.allow_other,
                     foreground=opt.foreground)
+

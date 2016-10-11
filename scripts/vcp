@@ -54,7 +54,7 @@ def size(filename):
 
 def create(filename):
     if filename[0:4] == "vos:":
-        return client.create(filename)
+        return client.create(vos.Node(client.fix_uri(filename)))
     else:
         open(filename,'w').close()
 pass
@@ -331,7 +331,7 @@ if __name__ == '__main__':
                     raise Exception("Can't access source: %s " % source)
 
                 if not opt.follow_links and islink(source):
-                    logging.info("{}: Skipping (symbolic link)".format(source_name))
+                    logging.info("{}: Skipping (symbolic link)".format(source))
                     continue
 
                 # copying inside VOSpace not yet implemented

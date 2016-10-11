@@ -2080,14 +2080,16 @@ class Client(object):
         """
         Create a (Container/Link/Data) Node on the VOSpace server.
 
-        :param uri: the Node that we are going to create on the server.
-        :type uri: basestring
+        :param node: the Node that we are going to create on the server.
+        :type vos.Node
         """
         node = Node(self.fix_uri(uri))
         url = "{}://{}".format(self.protocol, str(EndPoints(node.uri)))
         data = str(node)
         size = len(data)
-        return Node(self.conn.session.put(url, data=data, headers={'size': str(size)}).content)
+        return Node(self.conn.session.put(url,
+                data=data, headers={'size': str(size)}).content)
+        #return Node(root)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive

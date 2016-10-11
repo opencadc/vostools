@@ -73,17 +73,19 @@ Next, create, and activate a local **venv** (this example uses **bash**):
 ```
 $ virtualenv venv
 $ source venv/bin/activate
-
+```
+The test environment is built into the *setup.py* so that conducting unit-tests can be achieved like so:
+```
+python setup.py test
+```
+If you would like versbose output formated as a web page, for example, you can add options to the test call:
+```
+python setup.py test --addopts '--cov-report html:cov_html --cov=vos'
 ```
 
-Finally, use **pip** to install missing external dependencies into this subdirectory:
+The same option attribute can be used to pass other arguments to py.test that is executing the test. To run specific only tests for example:
 ```
-$ pip install -r requirements.txt
-```
-
-After successfully installing the external dependencies, the unit tests are invoked by running
-```
-$ ant test
+python setup.py test --addopts 'vos/test/Test_vos.py::TestClient::test_transfer_error'
 ```
 
 Each time you resume work on the project and want to use the **venv** (e.g., from a new shell), simply re-activate it:

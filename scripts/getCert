@@ -7,7 +7,7 @@ import os
 import signal
 import sys
 import requests
-from vos import html2text
+import html2text
 
 CERT_ENDPOINT = "/cred/proxyCert"
 CERT_SERVER = "www.canfar.phys.uvic.ca"

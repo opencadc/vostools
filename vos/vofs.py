@@ -4,7 +4,7 @@ import time
 import vos
 import sys
 import urllib
-from fuse import Operations, FuseOSError
+from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
 from errno import EIO, ENOENT, EPERM, EAGAIN, EFAULT
 import os
@@ -333,9 +333,8 @@ class VOFS(Operations):
 
         # Create is handle by the client.
         # This should fail if the base path doesn't exist
-        self.client.open(path, os.O_CREAT).close()
 
-        node = self.getNode(path)
+        node = self.client.create(path)
         parent = self.getNode(os.path.dirname(path))
         # Force inheritance of group settings.
         node.groupread = parent.groupread
@@ -521,6 +520,7 @@ class VOFS(Operations):
         return HandleWrapper(handle, read_only).get_id()
 
     @logExceptions()
+
     def read(self, path, size=0, offset=0, file_id=None, buf=None):
         """
         Read the required bytes from the file and return a buffer containing
@@ -635,7 +635,7 @@ class VOFS(Operations):
                 self.cache.renameFile(src, dest)
                 return 0
             return -1
-        except Exception, e:
+        except Exception as e:
             logger.error("%s" % str(e))
             import re
             if re.search('NodeLocked', str(e)) is not None:
@@ -722,3 +722,36 @@ class VOFS(Operations):
         logger.debug("%s -> %s" % (path, fh))
         logger.debug("%d --> %d" % (offset, offset + size))
         return fh.cache_file_handle.write(data, size, offset)
+    
+    
+        
+class MyFuse(FUSE):
+    """ 
+    Customization of FUSE class in order to speed up reads and writes by passing
+    the destination buffer from the file system directly to the read and write
+    operation to fill it in and return the actual size that was
+    filled in.
+    """
+    # add the readonly options to the list of options in FUSE
+    FUSE.OPTIONS = list(FUSE.OPTIONS)
+    FUSE.OPTIONS.append(('readonly', '-r'))
+    FUSE.OPTIONS = tuple(FUSE.OPTIONS)
+    
+    def read(self, path, buf, size, offset, fip):
+        if self.raw_fi:
+          fh = fip.contents
+        else:
+          fh = fip.contents.fh
+
+        retsize = self.operations('read', path.decode(self.encoding), size, offset, fh, buf)
+
+        assert retsize <= size, \
+            'actual amount read %d greater than expected %d' % (retsize, size)
+
+        return retsize
+
+
+    def write(self, path, buf, size, offset, fip):
+
+        return self.operations('write', path.decode(self.encoding), buf,
+                                       size, offset, fip.contents.fh)
