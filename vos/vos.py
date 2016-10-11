@@ -2255,6 +2255,15 @@ class Client(object):
         :param uri:  a VOSpace location.
         :param mode: os.O_RDONLY
         """
+
+        if mode == os.O_RDONLY :
+            try:
+                self.get_node(uri, limit=0, force=True)
+            except OSError as ose:
+                if ose.errno in (errno.EEXIST, errno.EACCES, errno.ENOENT):
+                    return False
+                raise
+
         return isinstance(self.open(uri, mode=mode), VOFile)
 
     def status(self, uri, code=None):
