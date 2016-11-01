@@ -10,7 +10,10 @@ import copy
 import errno
 import fnmatch
 import hashlib
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 import requests
 from requests.exceptions import HTTPError
 import html2text
