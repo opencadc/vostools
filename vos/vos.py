@@ -2234,7 +2234,7 @@ class Client(object):
                 node = self.get_node(uri, limit=0)
             else:
                 return int(requests.head(uri).headers.get('Content-Length', 0))
-        return node.attr['length']
+        return node.get_info()['size']
 
     def isdir(self, uri):
         """
