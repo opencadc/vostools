@@ -2226,6 +2226,16 @@ class Client(object):
                 return "vos:DataNode"
         return node.type
 
+    def size(self, uri):
+        node = self.get_node(uri, limit=0)
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            if uri[0:4] == "vos:":
+                node = self.get_node(uri, limit=0)
+            else:
+                return int(requests.head(uri).headers.get('Content-Length', 0))
+        return node.attr['length']
+
     def isdir(self, uri):
         """
         Check to see if the given uri is or is a link to a containerNode.

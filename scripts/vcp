@@ -49,7 +49,7 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 
 def size(filename):
     if filename[0:4] == "vos:":
-        return client.get_node(filename).get_info()['size']
+        return client.size(filename)
     return os.stat(filename).st_size
 
 def create(filename):
@@ -226,7 +226,7 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
             niters = 0
             while not skip:
                 try:
-                    if size(source_name) == 0:
+                    if not islink(source_name) and size(source_name) == 0:
                         create(destination_name)
                     else:
                         client.copy(source_name, destination_name, send_md5=True)
