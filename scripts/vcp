@@ -54,7 +54,9 @@ def size(filename):
 
 def create(filename):
     if filename[0:4] == "vos:":
-        return client.create(vos.Node(client.fix_uri(filename)))
+        uri = client.fix_uri(filename)
+        client.delete(uri)
+        return client.create(uri)
     else:
         open(filename,'w').close()
 pass
