@@ -31,7 +31,7 @@ class TestClient(unittest.TestCase):
     """Test the vos Client class.
     """
 
-    def off_test_quota(self):
+    def off_quota(self):
         """
         Test that a 413 raised by the server gets a reasonable error to the user.
         @return:

@@ -10,7 +10,7 @@ try:
     from xml.etree.ElementTree import ParseError
 except:
     from exceptions import SyntaxError as ParseError
-  
+
 import logging
 import sys
 import errno
@@ -47,10 +47,12 @@ description = "Copy a file or directory (always recursive) to a VOSpace location
 #    vcp currently only works on the CADC VOSpace server.
 # Version: %s """ % (__version__.version)
 
+
 def size(filename):
     if filename[0:4] == "vos:":
         return client.size(filename)
     return os.stat(filename).st_size
+
 
 def create(filename):
     if filename[0:4] == "vos:":
@@ -58,6 +60,7 @@ def create(filename):
     else:
         open(filename,'w').close()
 pass
+
 
 def get_node(filename, limit=None):
     """Get node, from cache if possible"""
@@ -226,12 +229,12 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
             niters = 0
             while not skip:
                 try:
-                    if not islink(source_name) and size(source_name) == 0:
-                        create(destination_name)
-                    else:
-                        client.copy(source_name, destination_name, send_md5=True)
+                    logging.debug("Starting call to copy")
+                    client.copy(source_name, destination_name, send_md5=True)
+                    logging.debug("Call to copy returned")
                     break
                 except Exception as client_exception:
+                    logging.debug("{}".format(client_exception))
                     if getattr(client_exception, 'errno', -1) == 104:
                         # 104 is connection reset by peer.  Try again on this error
                         logging.warning(str(client_exception))
@@ -250,6 +253,10 @@ def copy(source_name, destination_name, exclude=None, include=None, interrogate=
                             niters += 1
                     else:
                         raise client_exception
+                except Exception as ex:
+                    logging.debug("{}".format(ex))
+                    raise
+
     except OSError as os_exception:
         logging.debug(str(os_exception))
         if getattr(os_exception, 'errno', -1) == errno.EINVAL:
