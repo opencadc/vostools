@@ -132,6 +132,12 @@ class URLParser(object):
 
 class RetrySession(requests.Session):
 
+    proxyDict = { 
+        "http"  : os.getenv('HTTP_PROXY', None),
+        "https" : os.getenv('HTTPS_PROXY', None)
+        }
+    
+
     def send(self, request, **kwargs):
         """
         Send a given PreparedRequest, wrapping the connection to service in try/except that retries on
@@ -189,6 +195,7 @@ class Connection(object):
 
         # create a requests session object that all requests will be made via.
         session = RetrySession()
+        session.proxies = RetrySession.proxyDict
         if self.vospace_certfile is not None:
             session.cert = (self.vospace_certfile, self.vospace_certfile)
         if self.vospace_certfile is None:
