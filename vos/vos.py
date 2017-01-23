@@ -197,7 +197,7 @@ class Connection(object):
         session = RetrySession()
         session.proxies = RetrySession.proxyDict
         if self.vospace_certfile is not None:
-            session.cert = (self.vospace_certfile, self.vospace_certfile)
+            session.cert = self.vospace_certfile
         if self.vospace_certfile is None:
             try:
                 auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
@@ -1443,6 +1443,9 @@ class Client(object):
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
+            if destination[0:4] == 'vos:':
+                put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
+            put_node_url_retried = False
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
                 if len(get_urls) == 0:
@@ -1456,23 +1459,37 @@ class Client(object):
                         break
                 get_url = get_urls.pop(0)
                 try:
-                    response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
-                    source_md5 = response.headers.get('Content-MD5', source_md5)
-                    response.raise_for_status()
-                    with open(destination, 'w') as fout:
-                        for chunk in response.iter_content(chunk_size=512 * 1024):
-                            if chunk:
-                                fout.write(chunk)
-                                fout.flush()
-                    destination_size = os.stat(destination).st_size
-                    if check_md5:
-                        destination_md5 = compute_md5(destination)
-                        logger.debug("{0} {1}".format(source_md5, destination_md5))
-                        assert destination_md5 == source_md5
-                    success = True
+                    if destination[0:4] == 'vos:':
+                        while not success:
+                            if len(put_urls) == 0:
+                                if not put_node_url_retried:
+                                    put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
+                                    put_node_url_retried = True
+                                else:
+                                    break
+                            put_url = put_urls.pop()
+                            self.conn.session.put(put_url,
+                                                  data=StringIO(self.conn.session.get(get_url, timeout=(10, 10)).content))
+                            if self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e') == self.get_node(destination).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e'):
+                                success = True
+                    else:
+                        response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
+                        source_md5 = response.headers.get('Content-MD5', source_md5)
+                        response.raise_for_status()
+                        with open(destination, 'w') as fout:
+                            for chunk in response.iter_content(chunk_size=512 * 1024):
+                                if chunk:
+                                    fout.write(chunk)
+                                    fout.flush()
+                        destination_size = os.stat(destination).st_size
+                        if check_md5:
+                            destination_md5 = compute_md5(destination)
+                            logger.debug("{0} {1}".format(source_md5, destination_md5))
+                            assert destination_md5 == source_md5
+                        success = True
                 except Exception as ex:
-                    logging.debug("Failed to GET {0}".format(get_url))
-                    logging.debug("Got error {0}".format(ex))
+                    logging.info("Failed to GET {0}".format(get_url))
+                    logging.info("Got error {0}".format(ex))
                     continue
         else:
             source_md5 = compute_md5(source)
