@@ -344,7 +344,7 @@ if __name__ == '__main__':
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if source[0:4] == 'vos:' and dest[0:4] == 'vos:' and not args.server_copy:
+                if source[0:4] == 'vos:' and dest[0:4] == 'vos:' and not opt.server_copy:
                     raise Exception("Can not (yet) copy from VOSpace to VOSpace.")
 
                 this_destination = dest

@@ -10,6 +10,8 @@ import copy
 import errno
 import fnmatch
 import hashlib
+from tempfile import TemporaryFile, NamedTemporaryFile
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -40,6 +42,8 @@ except NameError:
     # will not exist. Fake one.
     class Unicode(object):
         pass
+
+
     _unicode = unicode
 
 logger = logging.getLogger('vos')
@@ -131,12 +135,10 @@ class URLParser(object):
 
 
 class RetrySession(requests.Session):
-
-    proxyDict = { 
-        "http"  : os.getenv('HTTP_PROXY', None),
-        "https" : os.getenv('HTTPS_PROXY', None)
-        }
-    
+    proxyDict = {
+        "http": os.getenv('HTTP_PROXY', None),
+        "https": os.getenv('HTTPS_PROXY', None)
+    }
 
     def send(self, request, **kwargs):
         """
@@ -915,8 +917,8 @@ class VOFile(object):
                 if msg is None or len(msg) == 0 and self.resp.status_code in msgs:
                     msg = msgs[self.resp.status_code]
                 if (self.resp.status_code == 401 and
-                        self.connector.vospace_certfile is None and
-                        self.connector.session.auth is None and self.connector.vospace_token is None):
+                            self.connector.vospace_certfile is None and
+                            self.connector.session.auth is None and self.connector.vospace_token is None):
                     msg += " using anonymous access "
             exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
@@ -1435,17 +1437,14 @@ class Client(object):
                 view = 'cutout'
                 source = ra_dec_match.group(1)
                 cutout = "CIRCLE ICRS {} {} {}".format(ra_dec_match.group('ra'),
-                                                  ra_dec_match.group('dec'),
-                                                  ra_dec_match.group('rad'))
+                                                       ra_dec_match.group('dec'),
+                                                       ra_dec_match.group('rad'))
             else:
                 view = 'data'
                 cutout = None
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
-            if destination[0:4] == 'vos:':
-                put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
-            put_node_url_retried = False
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
                 if len(get_urls) == 0:
@@ -1459,39 +1458,36 @@ class Client(object):
                         break
                 get_url = get_urls.pop(0)
                 try:
+                    response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
+                    source_md5 = response.headers.get('Content-MD5', source_md5)
+                    response.raise_for_status()
+                    # Write to a temporary file instead of destination.
                     if destination[0:4] == 'vos:':
-                        while not success:
-                            if len(put_urls) == 0:
-                                if not put_node_url_retried:
-                                    put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
-                                    put_node_url_retried = True
-                                else:
-                                    break
-                            put_url = put_urls.pop()
-                            self.conn.session.put(put_url,
-                                                  data=StringIO(self.conn.session.get(get_url, timeout=(10, 10)).content))
-                            if self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e') == self.get_node(destination).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e'):
-                                success = True
+                        tobj = NamedTemporaryFile(prefix='vospace.')
+                        this_destination = tobj.name
                     else:
-                        response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
-                        source_md5 = response.headers.get('Content-MD5', source_md5)
-                        response.raise_for_status()
-                        with open(destination, 'w') as fout:
-                            for chunk in response.iter_content(chunk_size=512 * 1024):
-                                if chunk:
-                                    fout.write(chunk)
-                                    fout.flush()
-                        destination_size = os.stat(destination).st_size
-                        if check_md5:
-                            destination_md5 = compute_md5(destination)
-                            logger.debug("{0} {1}".format(source_md5, destination_md5))
-                            assert destination_md5 == source_md5
-                        success = True
+                        this_destination = destination
+                    with open(this_destination, 'wb') as fout:
+                        for chunk in response.iter_content(chunk_size=512 * 1024):
+                            if chunk:
+                                fout.write(chunk)
+                                fout.flush()
+                    destination_size = os.stat(this_destination).st_size
+                    if check_md5:
+                        destination_md5 = compute_md5(this_destination)
+                        logger.debug("{0} {1}".format(source_md5, destination_md5))
+                        assert destination_md5 == source_md5
+                    success = True
+                    if destination[0:4] == 'vos:':
+                        # we have been writing to a temp file, so make that the source now.
+                        source = this_destination
+                        tobj.seek(0)
                 except Exception as ex:
-                    logging.info("Failed to GET {0}".format(get_url))
-                    logging.info("Got error {0}".format(ex))
+                    logging.debug("Failed to GET {0}".format(get_url))
+                    logging.debug("Got error {0}".format(ex))
                     continue
-        else:
+        if destination[0:4] == 'vos:':
+            success = False
             source_md5 = compute_md5(source)
             put_urls = self.get_node_url(destination, 'PUT')
             while not success:
@@ -1505,7 +1501,7 @@ class Client(object):
                         break
                 put_url = put_urls.pop(0)
                 try:
-                    with open(source, 'r') as fin:
+                    with open(source, 'rb') as fin:
                         self.conn.session.put(put_url, data=fin)
                     node = self.get_node(destination, limit=0, force=True)
                     destination_md5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
@@ -1553,7 +1549,9 @@ class Client(object):
         path = re.match("(?P<filename>[^\[]*)(?P<ext>(\[\d*:?\d*\])?"
                         "(\[\d*:?\d*,?\d*:?\d*\])?)", parts.path)
         # check for 'ra_dec' syntax too.
-        path = re.match("(?P<filename>[^\(]*)(?P<cutout>\((?P<ra>[\-\+]?\d*(\.\d*)?),(?P<dec>[\-\+]?\d*(\.\d*)?),(?P<rad>\d*(\.\d*)?)\))?", path.group('filename'))
+        path = re.match(
+            "(?P<filename>[^\(]*)(?P<cutout>\((?P<ra>[\-\+]?\d*(\.\d*)?),(?P<dec>[\-\+]?\d*(\.\d*)?),(?P<rad>\d*(\.\d*)?)\))?",
+            path.group('filename'))
         logger.debug("Match : {}".format(path.groupdict()))
         filename = os.path.basename(path.group('filename'))
         if not re.match("^[_\-\(\)=\+!,;:@&\*\$\.\w~]*$", filename):
@@ -1686,7 +1684,6 @@ class Client(object):
             return [uri]
 
         endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
-
 
         # see if we have a VOSpace server that goes with this URI in our look up list
         if endpoints.server is None:
@@ -2115,8 +2112,8 @@ class Client(object):
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,
-                data=data, headers={'size': str(size)}).content)
-        #return Node(root)
+                                          data=data, headers={'size': str(size)}).content)
+        # return Node(root)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2295,7 +2292,7 @@ class Client(object):
         :param mode: os.O_RDONLY
         """
 
-        if mode == os.O_RDONLY :
+        if mode == os.O_RDONLY:
             try:
                 self.get_node(uri, limit=0, force=True)
             except OSError as ose:
