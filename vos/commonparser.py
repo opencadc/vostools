@@ -55,9 +55,9 @@ class CommonParser(optparse.OptionParser):
         else:
             self.log_level = logging.ERROR
 
-        log_format = "%(levelname)s %(module)s %(message)s"
-        if self.log_level != logging.INFO or opt.vos_debug:
-            log_format = ("%(levelname)s %(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
+        log_format = "%(levelname)s %(module)s: %(message)s"
+        if self.log_level == logging.DEBUG or opt.vos_debug:
+            log_format = ("%(levelname)s %(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d: %(message)s")
         logging.basicConfig(format=log_format, level=self.log_level)
 
         if opt.vos_debug:
