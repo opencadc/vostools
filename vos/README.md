@@ -6,11 +6,10 @@ The default installation of vos is tuned for accessing the VOSpace provided by t
 
 VOSpace is a Distributed Cloud storage service for use in Astronomy.
 
-There are three ways to use vos:
+There are two ways to use vos:
       
 1. access VOSpace using the command-line script: eg. *vcp*
-1. make VOSpace appear as mounted filesystem: *mountvofs*
-1. use the vos module inside a Python script: `import vos`
+2. use the vos module inside a Python script: `import vos`
 
 Authentication to the CANFAR VOSpace service is performed using X509 security certificates, header tokens or username/password pairs.
 The authentication system is managed by the CADC Group Management Service (GMS).
@@ -39,22 +38,15 @@ Or, you can retrieve the [github](github.com/canfar/vos) distribution and use
 ## Tutorial
 
 1. Get a [CANFAR account](http://www.canfar.phys.uvic.ca/canfar/auth/request.html)
-1. Install the vos package.
-1. Retrieve a X509/SSL certificate using the built in `getCert` script.
-1. Example Usage.
-    1. For filesystem usage: `mountvofs`
-  mounts the CADC VOSpace root Container Node at /tmp/vospace and
-  initiates a 5GB cache in the users home directory (${HOME}/vos_).
-  `fusermount -u /tmp/vospace` (LINUX) or `umount /tmp/vospace` (OS-X) unmounts the file system.
-   *VOSpace does not have a mapping of your unix users
-   IDs and thus files appear to be owned by the user who issued the
-   'mountvofs' command.*
+2. Install the vos package.
+3. Retrieve a X509/SSL certificate using the built in `getCert` script.
+4. Example Usage.
     1. Commandline usage:
         * `vls -l vos:`   [List a vospace]
         * `vcp vos:jkavelaars/test.txt ./`  [copies test.txt to the local directory from vospace]
         * `vmkdir --help` [get a list of command line options and arguments]
         * `vmkdir`, `vrm`, `vrmdir`, `vsync` `vcat`, `vchmod` and `vln`
-    1. In a Python script (the example below provides a listing of a vospace container)
+    2. In a Python script (the example below provides a listing of a vospace container)
 ```
 #!python
 import vos
@@ -114,7 +106,7 @@ Set the python binary for testing. Before using **virtualenv** this was used to 
 $ setenv CADC_PYTHON_TEST_TARGETS python
 ```
 
-Set the path to the vos script locatio
+Set the path to the vos script location
 
 ```
 $ setenv CACD_ROOT <vos directory>
