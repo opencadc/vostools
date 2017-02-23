@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node xmlns="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uri="vos://cadc.nrc.ca!vospace/CADCAuthtest1/atest" xsi:type="vos:ContainerNode">
+  <properties/>
+  <accepts />
+  <provides />
+  <nodes />
+</node>
+

@@ -1,0 +1,13 @@
+*~
+#*#
+*.swp
+build/
+*pyc
+dist/
+MANIFEST
+*.egg-info
+.coverage
+.svn
+*.pyc
+.idea/
+.DS_Store

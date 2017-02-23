@@ -1,0 +1,47 @@
+#!python2.7
+
+import curses
+import logging
+from vos.vos import cantop
+from vos.vos import commonparser
+import os
+
+if __name__ == '__main__':
+
+    usage = """Like 'top'. keystrokes:
+
+            s - filter on job status
+            u - filter on job owner
+            q - quit"""
+
+    parser = commonparser.CommonParser(usage)
+
+    (opt, args) = parser.parse_args()
+    parser.process_informational_options()
+    logger = logging.basicConfig(filename=os.getenv('TMPDIR', '/tmp/')+"/cantop.log",
+                                 level=parser.log_level)
+
+    top = cantop.Cantop(vospace_certfile=opt.certfile,
+                        vospace_cookie=opt.cookie)
+    top.window_init()
+
+    try:
+        while True:
+            top.redraw()
+            curses.halfdelay(cantop.RATE * 10)
+            elapsed = 0
+            cmd = None
+            while elapsed < cantop.DELAY:
+                top.main_window.addch(0, 25, str(cantop.DELAY - elapsed))
+                top.main_window.refresh()
+                cmd = top.main_window.getch()
+                if cmd > 0:
+                    top.set_filter(cmd)
+                    break
+                elapsed += cantop.RATE
+            if cmd == ord('q'):
+                break
+    finally:
+        curses.nocbreak()
+        curses.echo()
+        curses.endwin()

@@ -1,0 +1,47 @@
+#!python
+"""
+Retrieve the UWS status of a given job.
+
+The UWS system is used by VOSpace for asynchronous actions. Normally users do not use or need to use this script.
+checkJobPhase is provide for admin usage.
+
+This script is used to retrieve the state of a job using X509 authentication.
+
+"""
+
+
+import sys
+from vos import vos
+from vos.commonparser import CommonParser
+import os
+import logging
+
+if __name__ == '__main__':
+
+    usage = """ Get the status of a UWS job. Syntax: 
+               
+                 checkJobPhase --cert=<certfile> <JOBURL>/phase """
+
+    parser=CommonParser(usage)
+
+    (opt,args)=parser.parse_args()
+    parser.process_informational_options()
+
+    logging.getLogger('vos').setLevel(parser.log_level)
+    logging.getLogger('vos').addHandler(logging.StreamHandler())
+
+    if len(args) !=  1:
+        parser.error("You must specifiy a job url")
+        sys.exit(-1)
+
+    try:
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_token=opt.token)
+        sys.stdout.write("%s\n" % client.get_job_status(args[0]))
+    except KeyboardInterrupt:
+        sys.stderr.write("Received keyboard interrupt. Execution aborted...\n")
+        sys.exit(-1)
+    except Exception as e:
+        sys.stderr.write(str(e))
+        sys.exit(-1)
+    sys.exit(0)
