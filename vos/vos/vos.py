@@ -30,7 +30,7 @@ import urlparse
 from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
-from __version__ import version
+from .version import version
 import netrc
 
 try:

@@ -2,6 +2,7 @@ from __future__ import print_function
 from builtins import str
 from builtins import object
 import copy
+import requests
 import os
 import shutil
 import stat
@@ -295,12 +296,14 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(side_effect=SideEffect({
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        with self.assertRaises(FuseOSError) as e:
-            testfs.create(file, os.O_RDWR)
+        with patch('vos.vos.Client.create', Mock(return_value=node)):
+            with self.assertRaises(FuseOSError) as e:
+                testfs.create(file, os.O_RDWR)
 
         testfs.getNode = Mock(side_effect=FuseOSError(errno=5))
-        with self.assertRaises(FuseOSError) as e:
-            testfs.create(file, os.O_RDWR)
+        with patch('vos.vos.Client.create', Mock(return_value=node)):
+            with self.assertRaises(FuseOSError) as e:
+                testfs.create(file, os.O_RDWR)
 
         node.props.get = Mock(return_value=False)
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -309,7 +312,8 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(side_effect=SideEffect({
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        testfs.create(file, os.O_RDWR)
+        with patch('vos.vos.Client.create', Mock(return_value=node)):
+            testfs.create(file, os.O_RDWR)
         testfs.open.assert_called_once_with(file, os.O_WRONLY)
 
     @unittest.skipIf(skipTests, "Individual tests")

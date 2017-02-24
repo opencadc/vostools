@@ -5,7 +5,7 @@ import sys
 import logging
 
 from vos.commonparser import CommonParser
-from vos.__version__ import version
+from vos.version import version
 from mock import patch, Mock
 
 class TestCommonParser(unittest.TestCase):

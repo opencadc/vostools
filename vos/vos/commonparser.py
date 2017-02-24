@@ -3,7 +3,7 @@ import logging
 import optparse
 import os
 import sys
-from __version__ import version
+from .version import version
 
 
 

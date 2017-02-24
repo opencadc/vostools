@@ -2,9 +2,10 @@
  
 import os
 import unittest
+import requests
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call, mock_open
-from ..vos import Client, Connection, Node, VOFile
+from vos import Client, Connection, Node, VOFile
 
 NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
@@ -80,6 +81,7 @@ class TestClient(unittest.TestCase):
         self.assertIsNone(client.conn.vospace_certfile)
         self.assertTrue(client.conn.vospace_token)
 
+    @patch('vos.vos.RetrySession.get', Mock(return_value=Mock(spec=requests.Response, status_code=404)))
     def test_open(self):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
@@ -482,7 +484,8 @@ class TestNode(unittest.TestCase):
     """
 
     def test_compute_md5(self):
-        from vos import vos
+        pass
+        #from vos import vos
         # mock_file = MagicMock(spec=file, wraps=StringIO('a'))
         # foo = mock_file.open()
         # self.assertEqual(foo.read, 'a')
