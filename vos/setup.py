@@ -1,68 +1,139 @@
-import sys
+#!/usr/bin/env python
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+
+import glob
 import os
+import sys
 
-if sys.version_info[0] > 2:
-    print "The vos package is only compatible with Python version 2.n"
-    sys.exit(-1)
+import ah_bootstrap
+from setuptools import setup
 
-# Build the list of scripts to be installed.
+# A dirty hack to get around some early import/configurations ambiguities
+if sys.version_info[0] >= 3:
+    import builtins
+else:
+    import __builtin__ as builtins
+builtins._ASTROPY_SETUP_ = True
 
-# dependencies = [ x.strip() for x in open('requirements.txt').readlines()]
-install_requires = ['requests>=2.8,<3.0',
-                    'BitVector>=3.4.4,<4.0',
-                    'html2text>=2016.5.29',
-                    'fusepy>=2.0.4']
+from astropy_helpers.setup_helpers import (register_commands, get_debug_option,
+                                           get_package_info)
+from astropy_helpers.git_helpers import get_git_devstr
+from astropy_helpers.version_helpers import generate_version_py
 
-tests_require = ['pytest>=2.9.2',
-                 'pytest-cov>=2.3.1',
-                 'future>=0.15.2',
-                 'unittest2>=1.1.0',
-                 'magicmock>=0.3',
-                 'mock>=2.0.0']
-
-script_dir = 'scripts'
-scripts = []
-for script in os.listdir(script_dir):
-    if script[-1] in ["~", "#"]:
-        continue
-    scripts.append(os.path.join(script_dir,script))
-
+# Get some values from the setup.cfg
 try:
-    from setuptools import setup, find_packages
-    has_setuptools = True
-except:
-    from distutils.core import setup
-    has_setuptools = False
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
+
+conf = ConfigParser()
+conf.read(['setup.cfg'])
+metadata = dict(conf.items('metadata'))
+
+PACKAGENAME = metadata.get('package_name', 'packagename')
+DESCRIPTION = metadata.get('description', 'Astropy affiliated package')
+AUTHOR = metadata.get('author', '')
+AUTHOR_EMAIL = metadata.get('author_email', '')
+LICENSE = metadata.get('license', 'unknown')
+URL = metadata.get('url', 'http://astropy.org')
+
+# order of priority for long_description:
+#   (1) set in setup.cfg,
+#   (2) load LONG_DESCRIPTION.rst,
+#   (3) load README.rst,
+#   (4) package docstring
+readme_glob = 'README*'
+_cfg_long_description = metadata.get('long_description', '')
+if _cfg_long_description:
+    LONG_DESCRIPTION = _cfg_long_description
+
+elif os.path.exists('LONG_DESCRIPTION.rst'):
+    with open('LONG_DESCRIPTION.rst') as f:
+        LONG_DESCRIPTION = f.read()
+
+elif len(glob.glob(readme_glob)) > 0:
+    with open(glob.glob(readme_glob)[0]) as f:
+        LONG_DESCRIPTION = f.read()
+
+else:
+    # Get the long description from the package's docstring
+    __import__(PACKAGENAME)
+    package = sys.modules[PACKAGENAME]
+    LONG_DESCRIPTION = package.__doc__
+
+# Store the package name in a built-in variable so it's easy
+# to get from other parts of the setup infrastructure
+builtins._ASTROPY_PACKAGE_NAME_ = PACKAGENAME
+
+# VERSION should be PEP440 compatible (http://www.python.org/dev/peps/pep-0440)
+VERSION = metadata.get('version', '0.0.dev')
+
+# Indicates if this version is a release version
+RELEASE = 'dev' not in VERSION
+
+if not RELEASE:
+    VERSION += get_git_devstr(False)
+
+# Populate the dict of setup command overrides; this should be done before
+# invoking any other functionality from distutils since it can potentially
+# modify distutils' behavior.
+cmdclassd = register_commands(PACKAGENAME, VERSION, RELEASE)
+
+# Freeze build information in version.py
+generate_version_py(PACKAGENAME, VERSION, RELEASE,
+                    get_debug_option(PACKAGENAME))
+
+# Treat everything in scripts except README* as a script to be installed
+scripts = [fname for fname in glob.glob(os.path.join('scripts', '*'))
+           if not os.path.basename(fname).startswith('README')]
 
 
-execfile('vos/__version__.py')
+# Get configuration information from all of the various subpackages.
+# See the docstring for setup_helpers.update_package_files for more
+# details.
+package_info = get_package_info()
 
-setup(name="vos",
-      version=version,
-      url="https://github.com/ijiraq/cadcVOFS",
-      description="Tools for interacting with CADC VOSpace.",
-      author="JJ Kavelaars, Norm Hill, Adrian Damian, Ed Chapin and others",
-      maintainer="JJ Kavelaars",
-      maintainer_email="jj.kavelaars@nrc-cnrc.gc.ca",
-      long_description="""a module and scripts designed for accessing IVAO VOSpace 2.0 compatible services""",
-      license="AGPLv3",
-      packages=find_packages(exclude=['test.*']),
+# Add the project-global data
+package_info['package_data'].setdefault(PACKAGENAME, [])
+package_info['package_data'][PACKAGENAME].append('data/*')
+
+# Define entry points for command-line scripts
+entry_points = {'console_scripts': []}
+
+entry_point_list = conf.items('entry_points')
+for entry_point in entry_point_list:
+    entry_points['console_scripts'].append('{0} = {1}'.format(entry_point[0],
+                                                              entry_point[1]))
+
+# Include all .c files, recursively, including those generated by
+# Cython, since we can not do this in MANIFEST.in with a "dynamic"
+# directory name.
+c_files = []
+for root, dirs, files in os.walk(PACKAGENAME):
+    for filename in files:
+        if filename.endswith('.c'):
+            c_files.append(
+                os.path.join(
+                    os.path.relpath(root, PACKAGENAME), filename))
+package_info['package_data'][PACKAGENAME].extend(c_files)
+
+# Note that requires and provides should not be included in the call to
+# ``setup``, since these are now deprecated. See this link for more details:
+# https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
+
+setup(name=PACKAGENAME,
+      version=VERSION,
+      description=DESCRIPTION,
       scripts=scripts,
-      classifiers=[
-          'Development Status :: 5 - Production/Stable',
-          'Environment :: Console',
-          'Intended Audience :: Developers',
-          'Intended Audience :: End Users/Desktop',
-          'Intended Audience :: Science/Research',
-          'License :: OSI Approved :: GNU Affero General Public License v3',
-          'Operating System :: POSIX',
-          'Programming Language :: Python',
-      ],
-      setup_requires = ['pytest-runner'],
-      install_requires=install_requires,
-      tests_require=tests_require,
-      )
-
-
-
-
+      install_requires=metadata.get('install_requires', '').strip().split(),
+      author=AUTHOR,
+      author_email=AUTHOR_EMAIL,
+      license=LICENSE,
+      url=URL,
+      long_description=LONG_DESCRIPTION,
+      cmdclass=cmdclassd,
+      zip_safe=False,
+      use_2to3=False,
+      entry_points=entry_points,
+      **package_info
+)
