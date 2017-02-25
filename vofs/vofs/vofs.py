@@ -11,7 +11,7 @@ import os
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
-from logExceptions import logExceptions
+from vos.logExceptions import logExceptions
 import logging
 
 logger = logging.getLogger('vofs')

@@ -12,9 +12,10 @@ from contextlib import nested
 from errno import EIO, EAGAIN, EPERM, ENOENT
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
-from .. import vofs, vos
+from .. import vofs
+import vos
 from ..CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
-from ..NodeCache import NodeCache
+from vos.NodeCache import NodeCache
 from ..vofs import HandleWrapper, MyFuse, VOFS
 
 skipTests = False
@@ -198,7 +199,7 @@ class TestVOFS(unittest.TestCase):
         # getNode return not found
         myVofs.get_node = Mock()
         myVofs.get_node.side_effect = OSError(404, "NoFile")
-        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+        with patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle2(file, myVofs.cache,
                                                         None)
             mockFileHandle.return_value.readData = Mock(
@@ -229,7 +230,7 @@ class TestVOFS(unittest.TestCase):
         #fhMock = Mock()
         #myVofs.cache.open = Mock()
         #myVofs.cache.open.return_value = fhMock
-        with patch('vos.vofs.MyIOProxy') as myIOProxy, patch('vos.CadcCache.FileHandle') as mockFileHandle:
+        with patch('vofs.vofs.MyIOProxy') as myIOProxy, patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, myVofs.cache, None)
             mockFileHandle.return_value.readData = Mock(
@@ -568,7 +569,7 @@ class TestVOFS(unittest.TestCase):
         node.type = "vos:DataNode"
         node.name = "testNode"
         testfs.client.get_node = Mock(return_value=node)
-        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+        with patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, testfs.cache, None)
             fh = testfs.open(file, os.O_RDWR | os.O_CREAT, None)
@@ -598,7 +599,7 @@ class TestVOFS(unittest.TestCase):
         node.type = "vos:DataNode"
         testfs.client.get_node = Mock(return_value=node)
         # Try flushing on a read-only file.
-        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+        with patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, testfs.cache, None)
             fh = testfs.open(file, os.O_RDONLY, None)
@@ -623,7 +624,7 @@ class TestVOFS(unittest.TestCase):
         self.assertEqual(e.exception.errno, EIO)
 
         # Try flushing on a read-only file system.
-        with patch('vos.CadcCache.FileHandle') as mockFileHandle:
+        with patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             myopt = copy.copy(opt)
             testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, myopt)
             mockFileHandle.return_value = MyFileHandle(
@@ -720,8 +721,8 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.open = Mock(wraps=testfs.cache.open)
         origRelease = FileHandle.release
         origTruncate = FileHandle.truncate
-        with nested(patch('vos.CadcCache.FileHandle.release'),
-                    patch('vos.CadcCache.FileHandle')) as (mockRelease,
+        with nested(patch('vofs.CadcCache.FileHandle.release'),
+                    patch('vofs.CadcCache.FileHandle')) as (mockRelease,
                                                            mockFileHandle):
             mockFileHandle.return_value = MyFileHandle(
                 file, testfs.cache, None)
@@ -741,14 +742,14 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
-        with nested(patch('vos.CadcCache.FileHandle.release'),
-                    patch('vos.CadcCache.FileHandle.readData')) as mocks:
+        with nested(patch('vofs.CadcCache.FileHandle.release'),
+                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
             mockRelease = mocks[0]
             mockReadData = mocks[1]
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
-            with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+            with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                 mockTruncate.wraps = origTruncate  # TODO Same issue as the
                 # mockRelease TODO above.
                 testfs.truncate(file, 5)
@@ -759,14 +760,14 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate with an exception returned by the CadcCache truncate
         testfs.cache.open.reset_mock()
-        with nested(patch('vos.CadcCache.FileHandle.release'),
-                    patch('vos.CadcCache.FileHandle.readData')) as mocks:
+        with nested(patch('vofs.CadcCache.FileHandle.release'),
+                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
             mockRelease = mocks[0]
             mockReadData = mocks[1]
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
-            with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+            with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                 mockTruncate.side_effect = NotImplementedError("an error")
                 with self.assertRaises(NotImplementedError):
                     testfs.truncate(file, 5)
@@ -775,8 +776,8 @@ class TestVOFS(unittest.TestCase):
             mockRelease.assert_called_once_with()
 
         # Truncate an already opened file given the file handle.
-        with nested(patch('vos.CadcCache.FileHandle.release'),
-                    patch('vos.CadcCache.FileHandle.readData')) as mocks:
+        with nested(patch('vofs.CadcCache.FileHandle.release'),
+                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
             mockRelease = mocks[0]
             mockReadData = mocks[1]
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
@@ -785,7 +786,7 @@ class TestVOFS(unittest.TestCase):
             try:
                 fh = testfs.open(file, os.O_RDWR | os.O_CREAT, None)
                 testfs.cache.open.reset_mock()
-                with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                     mockTruncate.wraps = origTruncate  # TODO Same issue as the
                     # mockRelease TODO above.
                     testfs.truncate(file, 20, fh)
@@ -806,8 +807,8 @@ class TestVOFS(unittest.TestCase):
         testfs2.cache.open = Mock(wraps=testfs2.cache.open)
 
         # Truncate a read only file handle.
-        with nested(patch('vos.CadcCache.FileHandle.release'),
-                    patch('vos.CadcCache.FileHandle')) as \
+        with nested(patch('vofs.CadcCache.FileHandle.release'),
+                    patch('vofs.CadcCache.FileHandle')) as \
                 (mockRelease, mockFileHandle):
             mockRelease.wraps = origRelease
             mockFileHandle.return_value = MyFileHandle(file, testfs2.cache,
@@ -817,7 +818,7 @@ class TestVOFS(unittest.TestCase):
             try:
                 fh = testfs2.open(file, os.O_RDONLY, None)
                 testfs2.cache.open.reset_mock()
-                with patch('vos.CadcCache.FileHandle.truncate') as mockTruncate:
+                with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                     mockTruncate.wraps = origTruncate
                     with self.assertRaises(FuseOSError):
                         testfs2.truncate(file, 20, fh)
@@ -1109,7 +1110,7 @@ class TestMyIOProxy(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    @patch("vos.vofs.FUSE.__init__")
+    @patch("vofs.vofs.FUSE.__init__")
     def test_readMyFuse(self, mock_fuse):
         mock_fuse.return_value = None
         conn = MagicMock()
@@ -1135,7 +1136,7 @@ class TestMyIOProxy(unittest.TestCase):
 
 
     @unittest.skipIf(skipTests, "Individual tests")
-    @patch("vos.vofs.FUSE.__init__")
+    @patch("vofs.vofs.FUSE.__init__")
     def test_writeMyFuse(self, mock_fuse):
         mock_fuse.return_value = None
         conn = MagicMock()

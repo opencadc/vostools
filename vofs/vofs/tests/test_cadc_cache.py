@@ -1291,7 +1291,7 @@ class TestCadcCache(unittest.TestCase):
             buf = ctypes.create_string_buffer(100)
             retsize = fh.read(size=100, offset=0, cbuffer=buf)
 
-            with patch('vos.CadcCache.libc.read') as mockedRead:
+            with patch('vofs.CadcCache.libc.read') as mockedRead:
                 mockedRead.return_value = -1
                 with self.assertRaises(CadcCache.CacheError):
                     retsize = fh.read(0, 1024 * 1024, buf)
@@ -1336,7 +1336,7 @@ class TestCadcCache(unittest.TestCase):
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject,
                                 False) as fh:
-                with patch('vos.CadcCache.libc.write') as mockedWrite:
+                with patch('vofs.CadcCache.libc.write') as mockedWrite:
                     mockedWrite.return_value = -1
 
                     with self.assertRaises(CadcCache.CacheError):
@@ -1502,7 +1502,7 @@ class TestCadcCache(unittest.TestCase):
                 t1 = threading.Thread(target=self.notifyAfter1S,
                                       args=[fh.fileCondition, fh])
                 t1.start()
-                with patch('vos.CadcCache.CacheReadThread') as mockedClass:
+                with patch('vofs.CadcCache.CacheReadThread') as mockedClass:
                     mockedClass.return_value = CacheReadThreadMock(fh)
                     fh.makeCached(0, 1)
 
@@ -1515,7 +1515,7 @@ class TestCadcCache(unittest.TestCase):
                 t1 = threading.Thread(target=self.notifyAfter1S,
                                       args=[fh.fileCondition, fh])
                 t1.start()
-                with patch('vos.CadcCache.CacheReadThread') as mockedClass:
+                with patch('vofs.CadcCache.CacheReadThread') as mockedClass:
                     realClass = mockedClass.return_value
                     mockedClass.return_value = CacheReadThreadMock(fh)
                     fh.metaData.setReadBlocks(6, 6)
