@@ -30,7 +30,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='requests lxml clint mock coverage'
+        - PIP_DEPENDENCIES='requests html2text>=2016.5.29 BitVector>=3.4.4,<4.0 fusepy>=2.0.4 future unittest2 mock coverage'
 
         # For this package-template, we include examples of Cython modules,
         # so Cython is required for testing. If your package does not include
