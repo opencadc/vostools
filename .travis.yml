@@ -83,10 +83,10 @@ matrix:
 
         #- python: 3.3
         #  env: SETUP_CMD='egg_info'
-        - python: 3.3
-          env: SETUP_CMD='test' NUMPY_VERSION=1.9
-        - python: 3.4
-          env: SETUO_CMD='test' NUMPY_VERSION=1.11
+        #- python: 3.3
+        #  env: SETUP_CMD='test' NUMPY_VERSION=1.9
+        #- python: 3.4
+        #  env: SETUO_CMD='test' NUMPY_VERSION=1.11
 
         # Try older numpy versions
         #- python: 2.7
@@ -103,10 +103,10 @@ matrix:
         #  env: NUMPY_VERSION=prerelease
     exclude:
 
-        - python: 3.3
-          env: SETUP_CMD='test'
-        - python: 3.4
-          env: SETUP_CMD='test'
+        #- python: 3.3
+        #  env: SETUP_CMD='test'
+        #- python: 3.4
+        #  env: SETUP_CMD='test'
           
 install:
 
