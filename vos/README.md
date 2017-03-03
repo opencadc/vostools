@@ -92,12 +92,12 @@ command to deactivate the virtual environment.
 
 ### Integration Tests
 The integration tests are, at present, designed to run only with the CADC VOSpace. Tests assume that vos and/or vofs packages have been installed.
-Note: the integration tests run only on tcsh.
 
-Start the tcsh and activate the **venv**
+Activate the **venv** and install vos
 
 ```
 $ source venv/bin/activate.csh
+$ pip install vos
 ```
 
 Run the tests:

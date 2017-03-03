@@ -21,6 +21,21 @@ else
      set MD5CMD = 'md5sum'
 endif
 
+if ($#argv == 1) then
+    setenv CADC_TESTCERT_PATH $1
+else
+    if ($#argv == 0) then
+        echo "Enter path to the CADC test certificates"
+        echo -n "Cert path: "
+        set certpath = "$<"
+        setenv CADC_TESTCERT_PATH ${certpath}
+    else
+        echo "usage: vospace-all [cadc_test_cert_path]"
+        exit -1
+    endif
+endif
+
+echo "cert files path:  $CADC_TESTCERT_PATH"
 
 date
 
@@ -30,13 +45,7 @@ else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 
-if (! ${?CADC_TESTCERT_PATH} ) then
-	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
-    exit -1
-else
-    set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
-	echo "cert file:  ($CADC_TESTCERT_PATH env variable): $CERTFILE"
-endif
+set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
 
 ## define the local cache size, number, and size of files to test exceeding the cache
 set VOS_CACHE = "/tmp/vos_cache"

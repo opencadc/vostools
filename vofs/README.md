@@ -38,9 +38,9 @@ Or, you can retrieve the [github](github.com/canfar/vosfs) distribution and use
 ## Tutorial
 
 1. Get a [CANFAR account](http://www.canfar.phys.uvic.ca/canfar/auth/request.html)
-1. Install the vosfs package.
-1. Retrieve a X509/SSL certificate using the installed in `cadc-get-cert` script.
-1. Example Usage.
+2. Install the vosfs package.
+3. Retrieve a X509/SSL certificate using the installed in `cadc-get-cert` script.
+4. Example Usage.
     1. For filesystem usage: `mountvofs`
   mounts the CADC VOSpace root Container Node at /tmp/vospace and
   initiates a 5GB cache in the users home directory (${HOME}/vos_).
@@ -86,36 +86,17 @@ command to deactivate the virtual environment.
 
 
 ### Integration Tests
-The integration tests are, at present, designed to run only at CADC. Tests assume that scripts have been installed (e.g., into the **venv**). 
-Note: the integration tests run only on tcsh.
+The integration tests are, at present, designed to run only with the CADC VOSpace. Tests assume that the vofs package has been installed.
 
-Start the tcsh and activate the **venv**
+Activate the **venv** and install vofs
 
 ```
 $ source venv/bin/activate.csh
+$ pip install vofs
 ```
 
-Set the python binary for testing. Before using **virtualenv** this was used to test on multiple version of python. With **venv**, just set it to the default version of python on that **venv**:
+Run the tests:
 
 ```
-$ setenv CADC_PYTHON_TEST_TARGETS python
-```
+$ ./test/scripts/vospace-mountvospace-atest.tcsh <location_of_cadc_test_certs>
 
-Set the path to the mountvofs script location
-
-```
-$ setenv CACD_ROOT <vosfs directory>
-```
-
-Finally, add the development vosfs to the **PYTHONPATH**:
-
-```
-$ setenv PYTHONPATH $CADC_ROOT:$PYTHONPATH
-```
-CADC_ROOT
-
-Now, it's time to run the test:
-
-```
-$ cd test/scripts
-$ ./vospace-mountvospace-atest.tcsh
