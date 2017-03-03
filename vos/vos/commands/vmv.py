@@ -7,17 +7,17 @@ import sys
 import logging
 from vos.commonparser import CommonParser
 import signal
-from vos import __version__
+from vos import version
 
 def signal_handler(signum, frame):
     raise KeyboardInterrupt, "SIGINT signal handler"
 
-def main():
+def vmv():
     signal.signal(signal.SIGINT, signal_handler)
     usage = """
     vmv vos:/root/node vos:/root/newNode   -- move node to newNode, if newNode is a container then moving node into newNode.
 
-Version: %s """ % (__version__.version)
+Version: %s """ % (version.version)
 
     parser = CommonParser(usage)
 
@@ -57,10 +57,3 @@ Version: %s """ % (__version__.version)
         logger.error(str(e))
         sys.exit(-1)
 
-
-if __name__ == '__main__':
-
-    try:
-        main()
-    except:
-        sys.exit(-1)

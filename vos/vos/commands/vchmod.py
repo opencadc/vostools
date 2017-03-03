@@ -5,7 +5,7 @@
 
 from vos.commonparser import CommonParser
 import signal
-from vos import vos, __version__
+from vos import vos, version
 import logging
 import sys
 import os
@@ -15,7 +15,7 @@ def signal_handler(signum, frame):
     raise KeyboardInterrupt("SIGNAL {0} from {1} signal handler".format(signum, frame))
 
 
-if __name__ == '__main__':
+def vchmod():
 
     signal.signal(signal.SIGINT, signal_handler)
     usage = """vchmod mode node [read/write group names in quotes - maximum of 4 each]
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     Sets read/write properties of a node.
     
-    Version: %s """ % __version__.version
+    Version: %s """ % version.version
 
     parser = CommonParser(usage)
 

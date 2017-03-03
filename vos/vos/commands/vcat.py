@@ -1,4 +1,3 @@
-#!python
 """cat files from vospace to stdout"""
 
 from optparse import OptionParser
@@ -6,7 +5,7 @@ import sys
 import os
 import logging
 from vos.commonparser import CommonParser
-from vos import vos, __version__
+from vos import vos, version
 
 
 def _cat(vospace_uri, cert_filename=None):
@@ -24,8 +23,7 @@ def _cat(vospace_uri, cert_filename=None):
             fh.close()
 
 
-if __name__ == '__main__':
-
+def vcat():
     usage = "%prog [options] vos:VOSpace/node_name"
     description = "Writes the content of vos:VOSpace/node_name to stdout."
 

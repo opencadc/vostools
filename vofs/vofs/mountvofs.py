@@ -6,14 +6,14 @@ import os
 import logging
 
 from vos import vos
-from vos.__version__ import version
-from vos.vofs import VOFS
-from vos.vofs import MyFuse
+from .version import version
+from .vofs import VOFS
+from .vofs import MyFuse
 from vos.commonparser import CommonParser
 DAEMON_TIMEOUT = 60
 
 
-if __name__ == "__main__":
+def mountvofs():
 
     parser = CommonParser(description='mount vospace as a filesystem.')
 
