@@ -1,0 +1,6 @@
+[submodule "vos/astropy_helpers"]
+	path = vos/astropy_helpers
+	url = https://github.com/astropy/astropy-helpers.git
+[submodule "vofs/astropy_helpers"]
+	path = vofs/astropy_helpers
+	url = https://github.com/astropy/astropy-helpers.git
