@@ -224,7 +224,7 @@ class TestVOFile(unittest.TestCase):
         self.assertTrue(vofile.checkstatus())
         self.assertEqual(vofile.get_file_info(), (10, 12345))
 
-    def side_effect(self, foo, stream=True):
+    def side_effect(self, foo, stream=True, verify=False):
         # removes first in the list
         # mock the 200 response
         return self.responses.pop(0)

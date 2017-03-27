@@ -129,6 +129,7 @@ cat $ANONLOGFILE >> $LOGFILE  # since the original gets removed
 echo " [OK]"
 
 echo -n "mount vospace using certificate"
+echo "$MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d"
 $MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
 sleep 3
 ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
