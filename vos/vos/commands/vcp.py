@@ -21,6 +21,7 @@ import re
 import glob
 import traceback
 import time
+from cadcutils import exceptions
 
 
 def signal_handler(signum, frame):
@@ -139,11 +140,9 @@ def vcp():
             try:
                 node = get_node(filename, limit=0)
                 return node is not None
-            except OSError as ex:
-                if ex.errno in (errno.ENOENT, errno.EPERM, errno.EACCES):
-                    return False
-                else:
-                    raise ex
+            except (exceptions.NotFoundException, exceptions.ForbiddenException,
+                    exceptions.UnauthorizedException) as ex:
+                return False
         else:
             return os.access(filename, mode)
 
