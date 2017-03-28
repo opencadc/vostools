@@ -12,3 +12,6 @@ def post_install_hook(foo):
 
 def post_develop_hook(foo):
     config.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
+
+
+vos_config = config.Config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
