@@ -1,0 +1,2 @@
+[vos]
+x509-path: ~/.ssl/cadcproxy.pem
