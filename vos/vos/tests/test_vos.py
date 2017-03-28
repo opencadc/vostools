@@ -611,6 +611,9 @@ class TestNode(unittest.TestCase):
         return None
 
 
+@patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+       Mock(return_value='http://foo.com/vospace'))
+@patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
 class TestVOFile(unittest.TestCase):
     """Test the vos VOFile class.
     """

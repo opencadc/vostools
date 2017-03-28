@@ -1011,7 +1011,19 @@ class VOFile(object):
         """
 
         if self.resp is None:
-            self.resp = self.connector.session.send(self.request, stream=True, verify=False) #TODO ignore certs
+            self.resp = self.connector.session.send(self.request, stream=True, verify=False) #TODO ignore certs when http to storage nodes
+
+        # Get the file size. We use this HEADER-CONTENT-LENGTH as a
+        # fallback to work around a server-side Java bug that limits
+        # 'Content-Length' to a signed 32-bit integer (~2 gig files)
+        try:
+            self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
+        except ValueError:
+            self.size = 0
+
+        if self.resp.status_code == 200:
+            self.md5sum = self.resp.headers.get("Content-MD5", None)
+            self.totalFileSize = self.size
 
         if self.resp is None:
             raise OSError(errno.EFAULT, "No response from VOServer")
@@ -1151,13 +1163,14 @@ class EndPoints(object):
         :param uri:
         """
         self.uri_parts = URLParser(uri)
-        if self.uri_parts.scheme.startswith('vos'):
-            if self.uri_parts.netloc is None:
-                self.resource_id = self.VOSPACE_RESOURCE_ID
+        if self.uri_parts.scheme is not None:
+            if self.uri_parts.scheme.startswith('vos'):
+                if self.uri_parts.netloc is None:
+                    self.resource_id = self.VOSPACE_RESOURCE_ID
+                else:
+                    self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
             else:
-                self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
-        else:
-            raise OSError('Unsupported scheme in {}'.format(uri))
+                raise OSError('Unsupported scheme in {}'.format(uri))
 
         if self.resource_id not in self.VOConnections:
             self.VOConnections[self.resource_id] = \
@@ -2055,8 +2068,9 @@ class Client(object):
         :param node: the Node that we are going to create on the server.
         :type vos.Node
         """
-        node = Node(self.fix_uri(uri))
-        url = str(EndPoints(uri))
+        fixed_uri = self.fix_uri(uri)
+        node = Node(fixed_uri)
+        url = str(EndPoints(fixed_uri))
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,
