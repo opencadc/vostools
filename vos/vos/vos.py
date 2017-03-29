@@ -144,7 +144,7 @@ class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
-                 resource_id=vos_config.resourceID):
+                 resource_id=vos_config.get('vos', 'resourceID')):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -1163,7 +1163,7 @@ class EndPoints(object):
         if self.uri_parts.scheme is not None:
             if self.uri_parts.scheme.startswith('vos'):
                 if self.uri_parts.netloc is None:
-                    self.resource_id = vos_config.resourceID
+                    self.resource_id = vos_config.get('vos', 'resourceID')
                 else:
                     self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
             else:
