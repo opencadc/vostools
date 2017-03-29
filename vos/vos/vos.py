@@ -31,7 +31,8 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
-from cadcutils import net, exceptions
+from cadcutils import net, exceptions, util
+from .setup_package import config, vos_config
 
 try:
     _unicode = unicode
@@ -62,8 +63,6 @@ HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
 HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
 
-CADC_VOS_RESOURCE_ID = 'ivo://cadc.nrc.ca/vospace'
-
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
 
@@ -80,7 +79,6 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
 
 #requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.ERROR)
-
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -146,7 +144,7 @@ class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
-                 resource_id=CADC_VOS_RESOURCE_ID):
+                 resource_id=vos_config.resourceID):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -1011,7 +1009,19 @@ class VOFile(object):
         """
 
         if self.resp is None:
-            self.resp = self.connector.session.send(self.request, stream=True, verify=False) #TODO ignore certs
+            self.resp = self.connector.session.send(self.request, stream=True, verify=False) #TODO ignore certs when http to storage nodes
+
+        # Get the file size. We use this HEADER-CONTENT-LENGTH as a
+        # fallback to work around a server-side Java bug that limits
+        # 'Content-Length' to a signed 32-bit integer (~2 gig files)
+        try:
+            self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
+        except ValueError:
+            self.size = 0
+
+        if self.resp.status_code == 200:
+            self.md5sum = self.resp.headers.get("Content-MD5", None)
+            self.totalFileSize = self.size
 
         if self.resp is None:
             raise OSError(errno.EFAULT, "No response from VOServer")
@@ -1126,7 +1136,6 @@ class VOFile(object):
 class EndPoints(object):
     DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
-    VOSPACE_RESOURCE_ID = 'ivo://cadc.nrc.ca/vospace'
 
     #VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
     #             'cadc.nrc.ca~vospace': CADC_SERVER}
@@ -1151,13 +1160,14 @@ class EndPoints(object):
         :param uri:
         """
         self.uri_parts = URLParser(uri)
-        if self.uri_parts.scheme.startswith('vos'):
-            if self.uri_parts.netloc is None:
-                self.resource_id = self.VOSPACE_RESOURCE_ID
+        if self.uri_parts.scheme is not None:
+            if self.uri_parts.scheme.startswith('vos'):
+                if self.uri_parts.netloc is None:
+                    self.resource_id = vos_config.resourceID
+                else:
+                    self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
             else:
-                self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
-        else:
-            raise OSError('Unsupported scheme in {}'.format(uri))
+                raise OSError('Unsupported scheme in {}'.format(uri))
 
         if self.resource_id not in self.VOConnections:
             self.VOConnections[self.resource_id] = \
@@ -2055,8 +2065,9 @@ class Client(object):
         :param node: the Node that we are going to create on the server.
         :type vos.Node
         """
-        node = Node(self.fix_uri(uri))
-        url = str(EndPoints(uri))
+        fixed_uri = self.fix_uri(uri)
+        node = Node(fixed_uri)
+        url = str(EndPoints(fixed_uri))
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,

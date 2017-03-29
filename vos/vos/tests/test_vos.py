@@ -141,6 +141,9 @@ class TestClient(unittest.TestCase):
         
 
     patch('vos.EndPoints.nodes', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace'))
     def test_glob(self):
         # test the pattern matches in directories and file names
         
@@ -353,6 +356,10 @@ class TestClient(unittest.TestCase):
             mock.conn.session.post.assert_called_with('http://foo.com/bar',
                                                       headers=headers, data=data)
 
+
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace'))
     def test_create(self):
         uri = 'vos://cadc.nrc.ca!vospace/bar'
         client = Client()
@@ -451,6 +458,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 2)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_move(self):
         mock_resp_403 = Mock(name="mock_resp_303")
         mock_resp_403.status_code = 403
@@ -465,6 +473,9 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             client.move(uri1, uri2)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='https://www.canfar.phys.uvic.ca'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_delete(self):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
@@ -611,6 +622,9 @@ class TestNode(unittest.TestCase):
         return None
 
 
+@patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+       Mock(return_value='http://foo.com/vospace'))
+@patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
 class TestVOFile(unittest.TestCase):
     """Test the vos VOFile class.
     """
