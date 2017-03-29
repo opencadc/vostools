@@ -31,8 +31,8 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
-from cadcutils import net, exceptions, util
-from .setup_package import config, vos_config
+from cadcutils import net, exceptions
+from .setup_package import vos_config
 
 try:
     _unicode = unicode
