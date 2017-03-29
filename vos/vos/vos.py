@@ -300,12 +300,6 @@ class Node(object):
 
         return self.props == node.props
 
-    @property
-    def endpoints(self):
-        if not self._endpoints:
-            self._endpoints = EndPoints(self.uri)
-        return self._endpoints
-
     def update(self):
         """Update the convience links of this node as we update the xml file"""
 
@@ -1137,9 +1131,6 @@ class EndPoints(object):
     DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
-    #VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
-    #             'cadc.nrc.ca~vospace': CADC_SERVER}
-
     VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
                   'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace'}
 
@@ -1148,38 +1139,21 @@ class EndPoints(object):
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
 
-    VOConnections = {}
-
     subject = net.Subject() #default subject is for anonymous access
 
-    def __init__(self, uri):
+    def __init__(self, resource_id_uri):
         """
-        Based on the URI return the various server endpoints that will be
-        associated with this uri.
-
-        :param uri:
+        Determines the end points of a vospace service
+        :param uri: the resource id uri
         """
-        self.uri_parts = URLParser(uri)
-        if self.uri_parts.scheme is not None:
-            if self.uri_parts.scheme.startswith('vos'):
-                if self.uri_parts.netloc is None:
-                    self.resource_id = vos_config.get('vos', 'resourceID')
-                else:
-                    self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
-            else:
-                raise OSError('Unsupported scheme in {}'.format(uri))
-
-        if self.resource_id not in self.VOConnections:
-            self.VOConnections[self.resource_id] = \
+        self.resource_id = resource_id_uri
+        self.service = \
                 net.BaseWsClient(self.resource_id, EndPoints.subject, 'vos/' + version,
                                  host=self.VOSPACE_WEBSERVICE)
 
-    def __str__(self):
-        return "{}{}".format(self.nodes, self.uri_parts.path)
-
     @property
     def properties(self):
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_PROPERTIES, None))
+        return self.service._get_url((EndPoints.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1192,7 +1166,7 @@ class EndPoints(object):
         :return: The network location of the VOSpace server.
         """
         #TODO fix to run with test server
-        return self.uri_parts.server
+        return self.service.host
 
     @property
     def transfer(self):
@@ -1202,14 +1176,14 @@ class EndPoints(object):
         :rtype: str
         """
 
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_TRANSFER, None))
+        return self.service._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
         :return: The Node service endpoint.
         """
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_NODES, None))
+        return self.service._get_url((EndPoints.VO_NODES, None))
 
 
 class Client(object):
@@ -1274,6 +1248,7 @@ class Client(object):
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
+        self._endpoints = {}
 
         return
 
@@ -1367,6 +1342,35 @@ class Client(object):
         return []
 
     magic_check = re.compile('[*?[]')
+
+
+    def get_endpoints(self, uri):
+        """
+        Returns the end points or a vospace service corresponding to an uri
+
+        The main purpose of this method is to cache the EndPoints for used services for performance reasons.
+
+        :param uri: uri for which the end points are seek
+        :return: corresponding EndPoint object
+        """
+
+        uri_parts = URLParser(uri)
+        if uri_parts.scheme is not None:
+            if uri_parts.scheme.startswith('vos'):
+                if uri_parts.netloc is None:
+                    resource_id = vos_config.get('vos', 'resourceID')
+                else:
+                    resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace("!", "/").replace("~", "/")
+            else:
+                raise OSError('Unsupported scheme in {}'.format(uri))
+        else:
+            raise OSError('No scheme in {}'.format(uri))
+
+        if resource_id not in self._endpoints:
+            self._endpoints[resource_id] = EndPoints(resource_id)
+
+        return self._endpoints[resource_id]
+
 
     @classmethod
     def has_magic(cls, s):
@@ -1645,7 +1649,7 @@ class Client(object):
         if parts.scheme.startswith('http'):
             return [uri]
 
-        endpoints = EndPoints(uri)
+        endpoints = self.get_endpoints(uri)
 
 
         # see if we have a VOSpace server that goes with this URI in our look up list
@@ -1794,7 +1798,7 @@ class Client(object):
         :param view: which view of the node (data/default/cutout/etc.) is being transferred
         :param cutout: a special parameter added to the 'cutout' view request. e.g. '[0][1:10,1:10]'
         """
-        endpoints = EndPoints(uri)
+        endpoints = self.get_endpoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
                     "pushToVoSpace": "{0}put".format(self.protocol)}
 
@@ -2067,7 +2071,8 @@ class Client(object):
         """
         fixed_uri = self.fix_uri(uri)
         node = Node(fixed_uri)
-        url = str(EndPoints(fixed_uri))
+        path = URLParser(fixed_uri).path
+        url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,
@@ -2085,7 +2090,7 @@ class Client(object):
            """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
-        endpoints = node.endpoints
+        endpoints = self.get_endpoints(node.uri)
         if recursive:
             property_url = endpoints.properties
             logger.debug("prop URL: {0}".format(property_url))

@@ -357,11 +357,11 @@ class TestClient(unittest.TestCase):
                                                       headers=headers, data=data)
 
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='http://foo.com/vospace'))
+           Mock(return_value='http://foo.com/vospace/nodes'))
     def test_create(self):
-        uri = 'vos://cadc.nrc.ca!vospace/bar'
+        uri = 'vos://create.vospace.auth!vospace/bar'
         client = Client()
         node = Node(client.fix_uri(uri))
         node2 = Node(str(node))
@@ -370,8 +370,7 @@ class TestClient(unittest.TestCase):
         headers = {'size': str(len(data))}
 
         client = Client()
-        client.protocol = 'https'
-        client.get_node_url = Mock(return_value='http://foo.com/bar')
+        #client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
         client.conn = Mock()
         client.conn.session = session_mock
@@ -379,7 +378,7 @@ class TestClient(unittest.TestCase):
 
         result = client.create(uri)
         self.assertEquals(node, result)
-        session_mock.put.assert_called_with('https://www.canfar.phys.uvic.ca/vospace/nodes/bar',
+        session_mock.put.assert_called_with('http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
                                                  headers=headers, data=data)
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock())
@@ -473,9 +472,8 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             client.move(uri1, uri2)
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='https://www.canfar.phys.uvic.ca'))
-    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_delete(self):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
