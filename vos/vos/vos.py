@@ -1498,7 +1498,7 @@ class Client(object):
         host = parts.netloc
         if not host or host == '':
             # default host corresponds to the resource ID of the client
-            host = self.conn.resource_id.replace('ivo://', '').replace('/', '~')
+            host = self.conn.resource_id.replace('ivo://', '').replace('/', '!')
 
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
