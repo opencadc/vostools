@@ -31,8 +31,8 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
-from cadcutils import net, exceptions, util
-from .setup_package import config, vos_config
+from cadcutils import net, exceptions
+from .setup_package import vos_config, _CONFIG_PATH
 
 try:
     _unicode = unicode
@@ -144,7 +144,7 @@ class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
-                 resource_id=vos_config.get('vos', 'resourceID')):
+                 resource_id=vos_config.get('vos', 'resourceid')):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -153,41 +153,10 @@ class Connection(object):
         http_debug -- set True to generate debug statements (Deprecated)
         resource_id -- The resource ID of the vospace service. Defaults to CADC vos.
 
-        The user must supply a valid certificate or connection will be 'anonymous'.
+        If the user supplies an empty vospace_certificate, the connection will be 'anonymous'.
+        If no certificate or token are provided, and attempt to find user/password combination
+        in the .netrc file is made before the connection is downgraded to 'anonymous'
         """
-        # self.http_debug = http_debug
-        #
-        # # tokens trump certs. We should only ever have token or certfile
-        # # set in order to avoid confusion.
-        # self.vospace_certfile = None
-        # self.vospace_token = vospace_token
-        # if self.vospace_token is None:
-        #     # allow anonymous access if no certfile specified
-        #     if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-        #         logger.warning(
-        #             "Could not access certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
-        #         vospace_certfile = None
-        #     self.vospace_certfile = vospace_certfile
-        #
-        # # create a requests session object that all requests will be made via.
-        # session = RetrySession()
-        # if self.vospace_certfile is not None:
-        #     session.cert = (self.vospace_certfile, self.vospace_certfile)
-        # if self.vospace_certfile is None:
-        #     try:
-        #         auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
-        #         if auth is not None:
-        #             session.auth = (auth[0], auth[2])
-        #     except:
-        #         pass
-        # if self.vospace_token is not None:
-        #     session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
-        # user_agent = 'vos ' + version
-        # if "vofs" in sys.argv[0]:
-        #     user_agent = 'vofs ' + version
-        # session.headers.update({"User-Agent": user_agent})
-        # assert isinstance(session, requests.Session)
-        # self.session = session
         self.vo_token = None
         session_headers = None
         if vospace_token is not None:
@@ -299,12 +268,6 @@ class Node(object):
             return False
 
         return self.props == node.props
-
-    @property
-    def endpoints(self):
-        if not self._endpoints:
-            self._endpoints = EndPoints(self.uri)
-        return self._endpoints
 
     def update(self):
         """Update the convience links of this node as we update the xml file"""
@@ -1134,11 +1097,7 @@ class VOFile(object):
 
 
 class EndPoints(object):
-    DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
-
-    #VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
-    #             'cadc.nrc.ca~vospace': CADC_SERVER}
 
     VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
                   'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace'}
@@ -1148,38 +1107,21 @@ class EndPoints(object):
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
 
-    VOConnections = {}
-
     subject = net.Subject() #default subject is for anonymous access
 
-    def __init__(self, uri):
+    def __init__(self, resource_id_uri):
         """
-        Based on the URI return the various server endpoints that will be
-        associated with this uri.
-
-        :param uri:
+        Determines the end points of a vospace service
+        :param uri: the resource id uri
         """
-        self.uri_parts = URLParser(uri)
-        if self.uri_parts.scheme is not None:
-            if self.uri_parts.scheme.startswith('vos'):
-                if self.uri_parts.netloc is None:
-                    self.resource_id = vos_config.get('vos', 'resourceID')
-                else:
-                    self.resource_id = 'ivo://{0}'.format(self.uri_parts.netloc).replace("!", "/").replace("~", "/")
-            else:
-                raise OSError('Unsupported scheme in {}'.format(uri))
-
-        if self.resource_id not in self.VOConnections:
-            self.VOConnections[self.resource_id] = \
+        self.resource_id = resource_id_uri
+        self.service = \
                 net.BaseWsClient(self.resource_id, EndPoints.subject, 'vos/' + version,
                                  host=self.VOSPACE_WEBSERVICE)
 
-    def __str__(self):
-        return "{}{}".format(self.nodes, self.uri_parts.path)
-
     @property
     def properties(self):
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_PROPERTIES, None))
+        return self.service._get_url((EndPoints.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1192,7 +1134,7 @@ class EndPoints(object):
         :return: The network location of the VOSpace server.
         """
         #TODO fix to run with test server
-        return self.uri_parts.server
+        return self.service.host
 
     @property
     def transfer(self):
@@ -1202,14 +1144,14 @@ class EndPoints(object):
         :rtype: str
         """
 
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_TRANSFER, None))
+        return self.service._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
         :return: The Node service endpoint.
         """
-        return EndPoints.VOConnections[self.resource_id]._get_url((EndPoints.VO_NODES, None))
+        return self.service._get_url((EndPoints.VO_NODES, None))
 
 
 class Client(object):
@@ -1220,6 +1162,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
+    VO_TRANSFER_PROTOCOLS = ['http', 'https']
 
     #  reserved vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length",
@@ -1262,18 +1205,17 @@ class Client(object):
                               http_debug=http_debug)
 
 
-        #vospace_certfile = conn.vospace_certfile
-        # Set the protocol - TODO this is independent of certs. Config?
-        if vospace_certfile is None:
-            self.protocol = "http"
-        else:
-            self.protocol = "https"
+        self.protocol = vos_config.get('transfer', 'protocol')
+        if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
+            raise SystemError('Unsupported protocol {}. Valid protocols: {}. Update {}'.format(
+                self.protocol, self.VO_TRANSFER_PROTOCOLS, _CONFIG_PATH))
 
         self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
+        self._endpoints = {}
 
         return
 
@@ -1367,6 +1309,37 @@ class Client(object):
         return []
 
     magic_check = re.compile('[*?[]')
+
+
+    def get_endpoints(self, uri):
+        """
+        Returns the end points or a vospace service corresponding to an uri
+
+        The main purpose of this method is to cache the EndPoints for used services for performance reasons.
+
+        :param uri: uri of and entry or of a resource id for which the end points are seek
+        :return: corresponding EndPoint object
+        """
+
+        uri_parts = URLParser(uri)
+        if uri_parts.scheme is not None:
+            if uri_parts.scheme.startswith('vos'):
+                if uri_parts.netloc is None:
+                    resource_id = vos_config.get('vos', 'resourceid')
+                else:
+                    resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace("!", "/").replace("~", "/")
+            elif uri_parts.scheme.startswith('ivo'):
+                resource_id = uri
+            else:
+                raise OSError('Unsupported scheme in {}'.format(uri))
+        else:
+            raise OSError('No scheme in {}'.format(uri))
+
+        if resource_id not in self._endpoints:
+            self._endpoints[resource_id] = EndPoints(resource_id)
+
+        return self._endpoints[resource_id]
+
 
     @classmethod
     def has_magic(cls, s):
@@ -1523,7 +1496,12 @@ class Client(object):
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
-            host = EndPoints.DEFAULT_VOSPACE_URI
+            # the host of the default vospace identifier corresponds to that of the default
+            # resource id in the config file.
+            # just remove the scheme part and replace /vospace with ~vospace (or !vospace)
+            # to form a vospace identifier
+            host = vos_config.get('vos', 'resourceid').replace('ivo://', '').replace('/', '~')
+
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
@@ -1645,7 +1623,7 @@ class Client(object):
         if parts.scheme.startswith('http'):
             return [uri]
 
-        endpoints = EndPoints(uri)
+        endpoints = self.get_endpoints(uri)
 
 
         # see if we have a VOSpace server that goes with this URI in our look up list
@@ -1794,7 +1772,7 @@ class Client(object):
         :param view: which view of the node (data/default/cutout/etc.) is being transferred
         :param cutout: a special parameter added to the 'cutout' view request. e.g. '[0][1:10,1:10]'
         """
-        endpoints = EndPoints(uri)
+        endpoints = self.get_endpoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
                     "pushToVoSpace": "{0}put".format(self.protocol)}
 
@@ -2067,7 +2045,8 @@ class Client(object):
         """
         fixed_uri = self.fix_uri(uri)
         node = Node(fixed_uri)
-        url = str(EndPoints(fixed_uri))
+        path = URLParser(fixed_uri).path
+        url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,
@@ -2085,7 +2064,7 @@ class Client(object):
            """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
-        endpoints = node.endpoints
+        endpoints = self.get_endpoints(node.uri)
         if recursive:
             property_url = endpoints.properties
             logger.debug("prop URL: {0}".format(property_url))
