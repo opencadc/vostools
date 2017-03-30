@@ -162,7 +162,3 @@ def vls():
                 if item[1]["permissions"][0] == 'l':
                     name_string = "%s -> %s" % (name_string, item[1]['target'])
             sys.stdout.write("%s\n" % name_string)
-
-
-if __name__ == "__main__":
-    vls()

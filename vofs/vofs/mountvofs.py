@@ -88,7 +88,7 @@ def mountvofs():
         logger.debug("No certificate/token, anonymous connections should work")
     else:
         readonly = opt.readonly
-        logger.debug("Got a certificate, connections should work")
+        logger.debug("Got authentication, connections should work")
 
     root = opt.vospace
     mount = os.path.abspath(opt.mountpoint)
@@ -125,7 +125,3 @@ def mountvofs():
                     readonly=readonly,
                     user_allow_other=opt.allow_other,
                     foreground=opt.foreground)
-
-
-if __name__ == '__main__':
-    mountvofs()

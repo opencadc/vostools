@@ -32,7 +32,7 @@ from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
 from cadcutils import net, exceptions
-from .setup_package import vos_config
+from .setup_package import vos_config, _CONFIG_PATH
 
 try:
     _unicode = unicode
@@ -144,7 +144,7 @@ class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
-                 resource_id=vos_config.get('vos', 'resourceID')):
+                 resource_id=vos_config.get('vos', 'resourceid')):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -153,41 +153,10 @@ class Connection(object):
         http_debug -- set True to generate debug statements (Deprecated)
         resource_id -- The resource ID of the vospace service. Defaults to CADC vos.
 
-        The user must supply a valid certificate or connection will be 'anonymous'.
+        If the user supplies an empty vospace_certificate, the connection will be 'anonymous'.
+        If no certificate or token are provided, and attempt to find user/password combination
+        in the .netrc file is made before the connection is downgraded to 'anonymous'
         """
-        # self.http_debug = http_debug
-        #
-        # # tokens trump certs. We should only ever have token or certfile
-        # # set in order to avoid confusion.
-        # self.vospace_certfile = None
-        # self.vospace_token = vospace_token
-        # if self.vospace_token is None:
-        #     # allow anonymous access if no certfile specified
-        #     if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-        #         logger.warning(
-        #             "Could not access certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
-        #         vospace_certfile = None
-        #     self.vospace_certfile = vospace_certfile
-        #
-        # # create a requests session object that all requests will be made via.
-        # session = RetrySession()
-        # if self.vospace_certfile is not None:
-        #     session.cert = (self.vospace_certfile, self.vospace_certfile)
-        # if self.vospace_certfile is None:
-        #     try:
-        #         auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
-        #         if auth is not None:
-        #             session.auth = (auth[0], auth[2])
-        #     except:
-        #         pass
-        # if self.vospace_token is not None:
-        #     session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
-        # user_agent = 'vos ' + version
-        # if "vofs" in sys.argv[0]:
-        #     user_agent = 'vofs ' + version
-        # session.headers.update({"User-Agent": user_agent})
-        # assert isinstance(session, requests.Session)
-        # self.session = session
         self.vo_token = None
         session_headers = None
         if vospace_token is not None:
@@ -1128,7 +1097,6 @@ class VOFile(object):
 
 
 class EndPoints(object):
-    DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
     VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
@@ -1194,6 +1162,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
+    VO_TRANSFER_PROTOCOLS = ['http', 'https']
 
     #  reserved vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length",
@@ -1236,12 +1205,10 @@ class Client(object):
                               http_debug=http_debug)
 
 
-        #vospace_certfile = conn.vospace_certfile
-        # Set the protocol - TODO this is independent of certs. Config?
-        if vospace_certfile is None:
-            self.protocol = "http"
-        else:
-            self.protocol = "https"
+        self.protocol = vos_config.get('transfer', 'protocol')
+        if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
+            raise SystemError('Unsupported protocol {}. Valid protocols: {}. Update {}'.format(
+                self.protocol, self.VO_TRANSFER_PROTOCOLS, _CONFIG_PATH))
 
         self.conn = conn
         self.rootNode = root_node
@@ -1350,7 +1317,7 @@ class Client(object):
 
         The main purpose of this method is to cache the EndPoints for used services for performance reasons.
 
-        :param uri: uri for which the end points are seek
+        :param uri: uri of and entry or of a resource id for which the end points are seek
         :return: corresponding EndPoint object
         """
 
@@ -1358,9 +1325,11 @@ class Client(object):
         if uri_parts.scheme is not None:
             if uri_parts.scheme.startswith('vos'):
                 if uri_parts.netloc is None:
-                    resource_id = vos_config.get('vos', 'resourceID')
+                    resource_id = vos_config.get('vos', 'resourceid')
                 else:
                     resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace("!", "/").replace("~", "/")
+            elif uri_parts.scheme.startswith('ivo'):
+                resource_id = uri
             else:
                 raise OSError('Unsupported scheme in {}'.format(uri))
         else:
@@ -1527,7 +1496,12 @@ class Client(object):
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
-            host = EndPoints.DEFAULT_VOSPACE_URI
+            # the host of the default vospace identifier corresponds to that of the default
+            # resource id in the config file.
+            # just remove the scheme part and replace /vospace with ~vospace (or !vospace)
+            # to form a vospace identifier
+            host = vos_config.get('vos', 'resourceid').replace('ivo://', '').replace('/', '~')
+
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
