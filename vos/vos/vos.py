@@ -144,7 +144,7 @@ class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
-                 resource_id=vos_config.get('vos', 'resourceid')):
+                 resource_id=vos_config.get('vos', 'resourceID')):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -159,6 +159,7 @@ class Connection(object):
         """
         self.vo_token = None
         session_headers = None
+        self.resource_id = resource_id
         if vospace_token is not None:
             session_headers = {HEADER_DELEG_TOKEN: vospace_token}
             self.subject = net.Subject()
@@ -1325,7 +1326,7 @@ class Client(object):
         if uri_parts.scheme is not None:
             if uri_parts.scheme.startswith('vos'):
                 if uri_parts.netloc is None:
-                    resource_id = vos_config.get('vos', 'resourceid')
+                    resource_id = vos_config.get('vos', 'resourceID')
                 else:
                     resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace("!", "/").replace("~", "/")
             elif uri_parts.scheme.startswith('ivo'):
@@ -1496,11 +1497,8 @@ class Client(object):
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
-            # the host of the default vospace identifier corresponds to that of the default
-            # resource id in the config file.
-            # just remove the scheme part and replace /vospace with ~vospace (or !vospace)
-            # to form a vospace identifier
-            host = vos_config.get('vos', 'resourceid').replace('ivo://', '').replace('/', '~')
+            # default host corresponds to the resource ID of the client
+            host = self.conn.resource_id.replace('ivo://', '').replace('/', '~')
 
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)

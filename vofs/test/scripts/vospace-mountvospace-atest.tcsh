@@ -160,7 +160,9 @@ $LSCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "copy data node to local filesystem "
+echo "cp $MCONTAINER/something.png something.png.2"
 cp $MCONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
+echo "cmp $thisDir/something.png something.png.2"
 cmp $thisDir/something.png something.png.2 || echo " [FAIL]" && exit -1
 rm -f something.png.2
 echo " [OK]"
