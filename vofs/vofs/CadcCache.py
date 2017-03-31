@@ -20,7 +20,7 @@ import logging
 from SharedLock import SharedLock as SharedLock
 from CacheMetaData import CacheMetaData as CacheMetaData
 from vos.logExceptions import logExceptions
-from vos import utils
+from . import utils
 
 libcPath = ctypes.util.find_library('c')
 libc = ctypes.cdll.LoadLibrary(libcPath)

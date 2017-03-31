@@ -80,15 +80,15 @@ def mountvofs():
         certfile = os.path.abspath(opt.certfile)
 
     conn = vos.Connection(vospace_certfile=certfile, vospace_token=opt.token)
-    if conn.vospace_certfile:
-        readonly = opt.readonly
-        logger.debug("Got a certificate, connections should work")
-    elif conn.vospace_token:
+    if opt.token:
         readonly = opt.readonly
         logger.debug("Got a token, connections should work")
-    else:
+    elif conn.ws_client.subject.anon:
         readonly = True
         logger.debug("No certificate/token, anonymous connections should work")
+    else:
+        readonly = opt.readonly
+        logger.debug("Got authentication, connections should work")
 
     root = opt.vospace
     mount = os.path.abspath(opt.mountpoint)
@@ -125,4 +125,3 @@ def mountvofs():
                     readonly=readonly,
                     user_allow_other=opt.allow_other,
                     foreground=opt.foreground)
-

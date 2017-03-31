@@ -31,7 +31,8 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
-import netrc
+from cadcutils import net, exceptions, util
+from .setup_package import _CONFIG_PATH
 
 try:
     _unicode = unicode
@@ -56,19 +57,29 @@ BUFSIZE = 8388608  # Size of read/write buffer
 MAX_RETRY_DELAY = 128  # maximum delay between retries
 DEFAULT_RETRY_DELAY = 30  # start delay between retries when Try_After not sent by server.
 MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
-CONNECTION_TIMEOUT = 30  # seconds before HTTP connection should drop, should be less than DAEMON timeout in vofs
 
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
 HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
-CONNECTION_COUNTER = 0
 
 CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
 
-requests.packages.urllib3.disable_warnings()
-logging.getLogger("requests").setLevel(logging.WARNING)
 
+VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
+VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
+# CADC specific views
+VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
+
+CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
+                 'manifest': '{}#manifest'.format(VO_CADC_VIEW_URI),
+                 'rss': '{}#rss'.format(VO_CADC_VIEW_URI),
+                 'cutout': '{}#cutout'.format(VO_CADC_VIEW_URI)}
+
+vos_config = util.Config(_CONFIG_PATH)
+
+#requests.packages.urllib3.disable_warnings()
+logging.getLogger("requests").setLevel(logging.ERROR)
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -110,7 +121,7 @@ class URLParser(object):
     There is a difference between the 2.5 and 2.7 version of the
     urlparse.urlparse command, so here I roll my own...
     """
-
+    #TODO - ad: since 2.5 is no longer supported maybe it's time to get rid of this
     def __init__(self, url):
         self.scheme = None
         self.netloc = None
@@ -130,82 +141,60 @@ class URLParser(object):
                                                        self.netloc, self.path)
 
 
-class RetrySession(requests.Session):
-
-    def send(self, request, **kwargs):
-        """
-        Send a given PreparedRequest, wrapping the connection to service in try/except that retries on
-        Connection reset by peer.
-
-        :param request: The prepared request to send.
-        :param kwargs: Any keywords the adaptor for the request accepts.
-        :return: the response
-        :rtype: requests.Response
-        """
-
-        total_delay = 0
-        current_delay = DEFAULT_RETRY_DELAY
-        logger.debug("--------------->>>> Sending request {0}  to server.".format(request))
-        while total_delay < MAX_RETRY_DELAY:
-            try:
-                return super(RetrySession, self).send(request, **kwargs)
-            except requests.exceptions.ConnectionError as ce:
-                logger.debug("Caught exception: {0}".format(ce))
-                if ce.errno != 104:
-                    # Only continue trying on a reset by peer error.
-                    raise ce
-                time.sleep(current_delay)
-                total_delay += current_delay
-                current_delay = MAX_RETRY_DELAY > current_delay * 2 and current_delay * 2 or MAX_RETRY_DELAY
-        raise
-
-
 class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False):
+    def __init__(self, vospace_certfile=None, vospace_token=None, http_debug=False,
+                 resource_id=vos_config.get('vos', 'resourceID')):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
         vospace_token -- token string (alternative to vospace_certfile)
-        http_debug -- set True to generate debug statements
+        http_debug -- set True to generate debug statements (Deprecated)
+        resource_id -- The resource ID of the vospace service. Defaults to CADC vos.
 
-        The user must supply a valid certificate or connection will be 'anonymous'.
+        If the user supplies an empty vospace_certificate, the connection will be 'anonymous'.
+        If no certificate or token are provided, and attempt to find user/password combination
+        in the .netrc file is made before the connection is downgraded to 'anonymous'
         """
-        self.http_debug = http_debug
+        self.vo_token = None
+        session_headers = None
+        self.resource_id = resource_id
+        if vospace_token is not None:
+            session_headers = {HEADER_DELEG_TOKEN: vospace_token}
+            self.subject = net.Subject()
+            self.vo_token = vospace_token
+        else:
+            cert = vospace_certfile
+            if cert is not None:
+                if len(cert) == 0:
+                    logger.debug('Anonymous access (certifile=Anonymous)')
+                    self.subject = net.Subject()
+                elif (not os.access(vospace_certfile, os.F_OK)):
+                    logger.warning(
+                        "Could not access certificate at {0}.".format(cert))
+                    cert = None
+                else:
+                    logger.debug('Authenticate with cert {}'.format(vospace_certfile))
+                    self.subject = net.Subject(certificate = vospace_certfile)
 
-        # tokens trump certs. We should only ever have token or certfile
-        # set in order to avoid confusion.
-        self.vospace_certfile = None
-        self.vospace_token = vospace_token
-        if self.vospace_token is None:
-            # allow anonymous access if no certfile specified
-            if vospace_certfile is not None and not os.access(vospace_certfile, os.F_OK):
-                logger.warning(
-                    "Could not access certificate at {0}.  Reverting to anonymous.".format(vospace_certfile))
-                vospace_certfile = None
-            self.vospace_certfile = vospace_certfile
+            if cert is None:
+                if os.access(os.path.join(os.environ['HOME'], ".netrc"), os.F_OK):
+                    logger.debug('Authenticate with user/password from $HOME/.netrc file')
+                    self.subject = net.Subject(netrc=True)
+                else:
+                    logger.warning('No valid authentication found. Reverting to anonymous.')
+                    self.subject = net.Subject()
+        self.ws_client = net.BaseWsClient(resource_id, self.subject, 'vos/' + version,
+                                          host=os.getenv('VOSPACE_WEBSERVICE', None),
+                                          session_headers=session_headers)
+        EndPoints.subject = self.subject
 
-        # create a requests session object that all requests will be made via.
-        session = RetrySession()
-        if self.vospace_certfile is not None:
-            session.cert = (self.vospace_certfile, self.vospace_certfile)
-        if self.vospace_certfile is None:
-            try:
-                auth = netrc.netrc().authenticators(EndPoints.VOSPACE_WEBSERVICE)
-                if auth is not None:
-                    session.auth = (auth[0], auth[2])
-            except:
-                pass
-        if self.vospace_token is not None:
-            session.headers.update({HEADER_DELEG_TOKEN: self.vospace_token})
-        user_agent = 'vos ' + version
-        if "vofs" in sys.argv[0]:
-            user_agent = 'vofs ' + version
-        session.headers.update({"User-Agent": user_agent})
-        assert isinstance(session, requests.Session)
-        self.session = session
+    @property
+    def session(self):
+        return self.ws_client._get_session()
+
 
     def get_connection(self, url=None):
         """Create an HTTPSConnection object and return.  Uses the client
@@ -215,7 +204,7 @@ class Connection(object):
         """
         if url is not None:
             raise OSError(errno.ENOSYS, "Connections are no longer set per URL.")
-        return self.session
+        return self.ws_client
 
 
 class Node(object):
@@ -282,12 +271,6 @@ class Node(object):
 
         return self.props == node.props
 
-    @property
-    def endpoints(self):
-        if not self._endpoints:
-            self._endpoints = EndPoints(self.uri)
-        return self._endpoints
-
     def update(self):
         """Update the convience links of this node as we update the xml file"""
 
@@ -306,7 +289,7 @@ class Node(object):
         self.is_public = False
         if self.props.get('ispublic', 'false') == 'true':
             self.is_public = True
-        logger.debug("{0} {1} -> {2}".format(self.uri, self.endpoints.islocked, self.props))
+        logger.debug("{0} {1} -> {2}".format(self.uri, VO_PROPERTY_URI_ISLOCKED, self.props))
         self.groupwrite = self.props.get('groupwrite', '')
         self.groupread = self.props.get('groupread', '')
         logger.debug("Setting file attributes via setattr")
@@ -592,8 +575,6 @@ class Node(object):
         if not properties:
             properties = {}
 
-        endpoints = EndPoints(uri)
-
         # Build the root node called 'node'
         node = ElementTree.Element("node")
         node.attrib["xmlns"] = Node.VOSNS
@@ -624,19 +605,15 @@ class Node(object):
         # create accepts
         accepts = ElementTree.SubElement(node, Node.ACCEPTS)
 
-        ElementTree.SubElement(accepts, "view").attrib['uri'] = \
-            "%s#%s" % (Node.IVOAURL, "defaultview")
+        ElementTree.SubElement(accepts, "view").attrib['uri'] = VO_VIEW_DEFAULT
 
         provides = ElementTree.SubElement(node, Node.PROVIDES)
-        ElementTree.SubElement(provides, "view").attrib['uri'] = \
-            "%s#%s" % (Node.IVOAURL, 'defaultview')
-        ElementTree.SubElement(provides, "view").attrib['uri'] = \
-            "%s#%s" % (endpoints.core, 'rssview')
+        ElementTree.SubElement(provides, "view").attrib['uri'] = VO_VIEW_DEFAULT
+        ElementTree.SubElement(provides, "view").attrib['uri'] = CADC_VO_VIEWS['rss']
 
         # Only DataNode can have a dataview...
         if node_type == "vos:DataNode":
-            ElementTree.SubElement(provides, "view").attrib['uri'] = \
-                "%s#%s" % (endpoints.core, 'dataview')
+            ElementTree.SubElement(provides, "view").attrib['uri'] = CADC_VO_VIEWS['data']
 
         # if this is a container node then add directory contents
         if node_type == "vos:ContainerNode":
@@ -668,11 +645,11 @@ class Node(object):
     def is_locked(self, lock):
         if lock == self.is_locked:
             return
-        self.change_prop(self.endpoints.islocked, lock and "true" or "false")
+        self.change_prop(VO_PROPERTY_URI_ISLOCKED, lock and "true" or "false")
 
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props.get(self.endpoints.islocked, "false") == "true"
+        return self.props.get(VO_PROPERTY_URI_ISLOCKED, "false") == "true"
 
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
@@ -698,7 +675,7 @@ class Node(object):
         read_group = self.props.get('groupread', 'NONE')
         if read_group != 'NONE':
             perm[4] = 'r'
-        is_locked = self.props.get(self.endpoints.islocked, "false")
+        is_locked = self.props.get(VO_PROPERTY_URI_ISLOCKED, "false")
         return {"permissions": string.join(perm, ''),
                 "creator": creator,
                 "readGroup": read_group,
@@ -883,7 +860,7 @@ class VOFile(object):
                 self.closed = True
         return self.closed
 
-    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
+    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 404, 416,
                                  416, 402, 408, 412, 504)):
         """check the response status.  If the status code doesn't match a value from the codes list then
         raise an Exception.
@@ -908,8 +885,8 @@ class VOFile(object):
                 if msg is None or len(msg) == 0 and self.resp.status_code in msgs:
                     msg = msgs[self.resp.status_code]
                 if (self.resp.status_code == 401 and
-                        self.connector.vospace_certfile is None and
-                        self.connector.session.auth is None and self.connector.vospace_token is None):
+                        self.connector.subject.anon and
+                        self.connector.vospace_token is None):
                     msg += " using anonymous access "
             exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
@@ -997,34 +974,68 @@ class VOFile(object):
         """
 
         if self.resp is None:
+            # this is original retry flag of the session
+            orig_retry_flag = self.connector.session.retry
             try:
-                logger.debug("Initializing read by sending request: {0}".format(self.request))
-                # Sometimes there is a 'Connection reset by peer' during the read.
-                # These tend to happen on long-haul networks and appear associated with a close before end of read.
-                # so, we retry on those.
-                while self.totalRetryDelay < self.maxRetryTime:
-                    try:
-                        self.resp = self.connector.session.send(self.request, stream=True)
-                        self.checkstatus()
-                        break
-                    except requests.exceptions.ConnectionError as ce:
-                        if ce.errno != 104:
-                            # Only continue trying on a reset by peer error.
-                            raise ce
-                        self.totalRetryDelay += self.currentRetryDelay
-                        time.sleep(self.currentRetryDelay)
-                        self.currentRetryDelay = MAX_RETRY_DELAY > self.currentRetryDelay * 2 and \
-                                                 self.currentRetryDelay * 2 or MAX_RETRY_DELAY
-            except Exception as ex:
-                logger.debug("Error on read: {0}".format(ex))
-                raise ex
+                if (len(self.URLs) > 1) and (self.urlIndex < len(self.URLs) - 1):
+                    # there is more urls to try so don't bother retrying on transient errors
+                    # return instead and try the next url
+                    self.connector.session.retry = False
+                self.resp = self.connector.session.send(self.request, stream=True, verify=False)
+            except exceptions.HttpException as e:
+                # this is the path for all status_codes between 400 and 600
+                self.resp = e.orig_exception.response
+
+                # restore the original retry flag of the session
+                self.connector.session.retry = orig_retry_flag
+
+                self.checkstatus()
+                if self.resp.status_code == 416:
+                    return ""
+
+                if isinstance(e, exceptions.UnauthorizedException) or\
+                   isinstance(e, exceptions.BadRequestException) or\
+                   isinstance(e, exceptions.ForbiddenException):
+                    raise
+
+                # Note: 404 (File Not Found) might be returned when:
+                # 1. file deleted or replaced
+                # 2. file migrated from cache
+                # 3. hardware failure on storage node
+                # For 3. it is necessary to try the other URLs in the list
+                #   otherwise this the failed URL might show up even after the
+                #   caller tries to re-negotiate the transfer.
+                # For 1. and 2., calls to the other URLs in the list might or
+                #   might not succeed.
+                if self.urlIndex < len(self.URLs) - 1:
+                    # go to the next URL
+                    self.urlIndex += 1
+                    self.open(self.URLs[self.urlIndex], "GET")
+                    self.resp = None
+                    return self.read(size)
+                else:
+                    raise
+            finally:
+                # restore the original retry flag of the session
+                self.connector.session.retry = orig_retry_flag
+
+
+
+        # Get the file size. We use this HEADER-CONTENT-LENGTH as a
+        # fallback to work around a server-side Java bug that limits
+        # 'Content-Length' to a signed 32-bit integer (~2 gig files)
+        try:
+            self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
+        except Exception:
+            self.size = 0
+
+        if self.resp.status_code == 200:
+            self.md5sum = self.resp.headers.get("Content-MD5", None)
+            self.totalFileSize = self.size
 
         if self.resp is None:
             raise OSError(errno.EFAULT, "No response from VOServer")
 
-        read_error = None
-        if self.resp.status_code == 416:
-            return ""
         # check the most likely response first
         if self.resp.status_code == 200 or self.resp.status_code == 206:
             if return_response:
@@ -1054,37 +1065,7 @@ class VOFile(object):
                 # logger.debug("Got url:%s from redirect but not following" %
                 # (self.url))
                 return self.url
-        elif self.resp.status_code in VOFile.retryCodes:
-            # Note: 404 (File Not Found) might be returned when:
-            # 1. file deleted or replaced
-            # 2. file migrated from cache
-            # 3. hardware failure on storage node
-            # For 3. it is necessary to try the other URLs in the list
-            #   otherwise this the failed URL might show up even after the
-            #   caller tries to re-negotiate the transfer.
-            # For 1. and 2., calls to the other URLs in the list might or
-            #   might not succeed.
-            if self.urlIndex < len(self.URLs) - 1:
-                # go to the next URL
-                self.urlIndex += 1
-                self.open(self.URLs[self.urlIndex], "GET")
-                self.resp = None
-                return self.read(size)
-        else:
-            self.URLs.pop(self.urlIndex)  # remove url from list
-            if len(self.URLs) == 0:
-                # no more URLs to try...
-                if read_error is not None:
-                    raise read_error
-                if self.resp.status_code == 404:
-                    raise OSError(errno.ENOENT, self.url)
-                else:
-                    raise OSError(errno.EIO,
-                                  "unexpected server response %s (%d)" %
-                                  (self.resp.reason, self.resp.status_code), self.url)
-            if self.urlIndex < len(self.URLs):
-                self.open(self.URLs[self.urlIndex], "GET")
-                return self.read(size)
+
 
         # start from top of URLs with a delay
         self.urlIndex = 0
@@ -1130,68 +1111,35 @@ class VOFile(object):
 
 
 class EndPoints(object):
-    CADC_SERVER = 'www.canfar.phys.uvic.ca'
-    NOAO_TEST_SERVER = "dldev1.tuc.noao.edu:8080/vospace-2.0"
-    DEFAULT_VOSPACE_URI = 'cadc.nrc.ca!vospace'
-    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', CADC_SERVER)
-
-    VOServers = {'cadc.nrc.ca!vospace': CADC_SERVER,
-                 'cadc.nrc.ca~vospace': CADC_SERVER,
-                 'datalab.noao.edu!vospace': NOAO_TEST_SERVER,
-                 'datalab.noao.edu~vospace': NOAO_TEST_SERVER}
+    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
     VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
-                  'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace',
-                  'datalab.noao.edu!vosapce': 'ivo://datalab.noao.edu/vosapce'}
+                  'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace'}
 
-    VONodes = "nodes"
+    # standard ids
+    VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
+    VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
+    VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
 
-    VOProperties = {NOAO_TEST_SERVER: "nodeprops",
-                    CADC_SERVER: "nodeprops"}
+    subject = net.Subject() #default subject is for anonymous access
 
-    VOTransfer = {NOAO_TEST_SERVER: 'sync',
-                  CADC_SERVER: 'synctrans'}
-
-    def __init__(self, uri, basic_auth=False):
+    def __init__(self, resource_id_uri):
         """
-        Based on the URI return the various sever endpoints that will be
-        associated with this uri.
-
-        :param uri:
+        Determines the end points of a vospace service
+        :param uri: the resource id uri
         """
-        self.service = basic_auth and 'vospace/auth' or 'vospace'
-        self.uri_parts = URLParser(uri)
-
-    def __str__(self):
-        return "{}{}".format(self.nodes, self.uri_parts.path)
-
-    @property
-    def netloc(self):
-        return self.uri_parts.netloc
+        self.resource_id = resource_id_uri
+        self.service = \
+                net.BaseWsClient(self.resource_id, EndPoints.subject, 'vos/' + version,
+                                 host=self.VOSPACE_WEBSERVICE)
 
     @property
     def properties(self):
-        return "{0}/{1}/{2}".format(self.server, self.service, EndPoints.VOProperties.get(self.server))
+        return self.service._get_url((EndPoints.VO_PROPERTIES, None))
 
     @property
     def uri(self):
-        return "ivo://{0}".format(self.netloc).replace("!", "/").replace("~", "/")
-
-    @property
-    def view(self):
-        return "{0}/view".format(self.uri)
-
-    @property
-    def cutout(self):
-        return "ivo://{0}/{1}#{2}".format(self.uri_parts.server, 'view', 'cutout')
-
-    @property
-    def core(self):
-        return "{0}/core".format(self.uri)
-
-    @property
-    def islocked(self):
-        return "{0}#islocked".format(self.core)
+        return self.resource_id
 
     @property
     def server(self):
@@ -1199,8 +1147,8 @@ class EndPoints(object):
 
         :return: The network location of the VOSpace server.
         """
-        return (EndPoints.VOSPACE_WEBSERVICE is not None and EndPoints.VOSPACE_WEBSERVICE or
-                EndPoints.VOServers.get(self.netloc, None))
+        #TODO fix to run with test server
+        return self.service.host
 
     @property
     def transfer(self):
@@ -1209,19 +1157,15 @@ class EndPoints(object):
         :return: service location of the transfer service.
         :rtype: str
         """
-        if self.server in EndPoints.VOTransfer:
-            end_point = EndPoints.VOTransfer[self.server]
-        else:
-            end_point = "synctrans"
-        return "{0}/{1}/{2}".format(self.server, self.service, end_point)
+
+        return self.service._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
-
         :return: The Node service endpoint.
         """
-        return "{0}/{1}/{2}".format(self.server, self.service, EndPoints.VONodes)
+        return self.service._get_url((EndPoints.VO_NODES, None))
 
 
 class Client(object):
@@ -1232,6 +1176,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
+    VO_TRANSFER_PROTOCOLS = ['http', 'https']
 
     #  reserved vospace properties, not to be used for extended property setting
     vosProperties = ["description", "type", "encoding", "MD5", "length",
@@ -1273,23 +1218,18 @@ class Client(object):
                               vospace_token=vospace_token,
                               http_debug=http_debug)
 
-        if conn.vospace_certfile:
-            logger.debug("Using certificate file: {0}".format(vospace_certfile))
-        if conn.vospace_token:
-            logger.debug("Using vospace token: " + conn.vospace_token)
 
-        vospace_certfile = conn.vospace_certfile
-        # Set the protocol
-        if vospace_certfile is None:
-            self.protocol = "http"
-        else:
-            self.protocol = "https"
+        self.protocol = vos_config.get('transfer', 'protocol')
+        if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
+            raise SystemError('Unsupported protocol {}. Valid protocols: {}. Update {}'.format(
+                self.protocol, self.VO_TRANSFER_PROTOCOLS, _CONFIG_PATH))
 
         self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
+        self._endpoints = {}
 
         return
 
@@ -1383,6 +1323,37 @@ class Client(object):
         return []
 
     magic_check = re.compile('[*?[]')
+
+
+    def get_endpoints(self, uri):
+        """
+        Returns the end points or a vospace service corresponding to an uri
+
+        The main purpose of this method is to cache the EndPoints for used services for performance reasons.
+
+        :param uri: uri of and entry or of a resource id for which the end points are seek
+        :return: corresponding EndPoint object
+        """
+
+        uri_parts = URLParser(uri)
+        if uri_parts.scheme is not None:
+            if uri_parts.scheme.startswith('vos'):
+                if uri_parts.netloc is None:
+                    resource_id = vos_config.get('vos', 'resourceID')
+                else:
+                    resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace("!", "/").replace("~", "/")
+            elif uri_parts.scheme.startswith('ivo'):
+                resource_id = uri
+            else:
+                raise OSError('Unsupported scheme in {}'.format(uri))
+        else:
+            raise OSError('No scheme in {}'.format(uri))
+
+        if resource_id not in self._endpoints:
+            self._endpoints[resource_id] = EndPoints(resource_id)
+
+        return self._endpoints[resource_id]
+
 
     @classmethod
     def has_magic(cls, s):
@@ -1539,7 +1510,9 @@ class Client(object):
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
-            host = EndPoints.DEFAULT_VOSPACE_URI
+            # default host corresponds to the resource ID of the client
+            host = self.conn.resource_id.replace('ivo://', '').replace('/', '!')
+
         path = os.path.normpath(path).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
@@ -1661,7 +1634,7 @@ class Client(object):
         if parts.scheme.startswith('http'):
             return [uri]
 
-        endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
+        endpoints = self.get_endpoints(uri)
 
 
         # see if we have a VOSpace server that goes with this URI in our look up list
@@ -1696,8 +1669,7 @@ class Client(object):
             data = ""
             if len(fields) > 0:
                 data = "?" + urllib.urlencode(fields)
-            url = "%s://%s/%s%s" % (self.protocol,
-                                    endpoints.nodes,
+            url = "%s/%s%s" % (endpoints.nodes,
                                     parts.path.strip('/'),
                                     data)
             logger.debug("URL: %s (%s)" % (url, method))
@@ -1716,9 +1688,7 @@ class Client(object):
 
         # build the url for that will request the url that provides access to the node.
 
-        url = "%s://%s" % (self.protocol, endpoints.transfer)
-        logger.debug("URL: %s" % url)
-
+        url = endpoints.transfer
         args = {
             'TARGET': uri,
             'DIRECTION': direction[method],
@@ -1731,7 +1701,7 @@ class Client(object):
         headers = {"Content-type": "application/x-www-form-urlencoded",
                    "Accept": "text/plain"}
 
-        response = self.conn.session.get(url, params=params, headers=headers, allow_redirects=False)
+        response = self.conn.session.get(endpoints.transfer, params=params, headers=headers, allow_redirects=False)
         assert isinstance(response, requests.Response)
         logging.debug("Transfer Server said: {0}".format(response.content))
 
@@ -1813,7 +1783,7 @@ class Client(object):
         :param view: which view of the node (data/default/cutout/etc.) is being transferred
         :param cutout: a special parameter added to the 'cutout' view request. e.g. '[0][1:10,1:10]'
         """
-        endpoints = EndPoints(uri, basic_auth=self.conn.session.auth is not None)
+        endpoints = self.get_endpoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
                     "pushToVoSpace": "{0}put".format(self.protocol)}
 
@@ -1827,24 +1797,22 @@ class Client(object):
         else:
             if view == 'defaultview':
                 ElementTree.SubElement(transfer_xml, "vos:view").attrib[
-                    'uri'] = "ivo://ivoa.net/vospace/core#defaultview"
+                    'uri'] = VO_VIEW_DEFAULT
             elif view is not None:
                 vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = endpoints.view + "#{0}".format(view)
+                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
                 if cutout is not None and view == 'cutout':
                     param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = endpoints.cutout
+                    param.attrib['uri'] = VO_CADC_VIEW_URI
                     param.text = cutout
             protocol_element = ElementTree.SubElement(transfer_xml, "vos:protocol")
             protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL, protocol[direction])
 
         logging.debug(ElementTree.tostring(transfer_xml))
-        url = "{0}://{1}".format(self.protocol,
-                                 endpoints.transfer)
-        logging.debug("Sending to : {}".format(url))
+        logging.debug("Sending to : {}".format(endpoints.transfer))
 
         data = ElementTree.tostring(transfer_xml)
-        resp = self.conn.session.post(url,
+        resp = self.conn.session.post(endpoints.transfer,
                                       data=data,
                                       allow_redirects=False,
                                       headers={'Content-Type': 'text/xml'})
@@ -2086,8 +2054,10 @@ class Client(object):
         :param node: the Node that we are going to create on the server.
         :type vos.Node
         """
-        node = Node(self.fix_uri(uri))
-        url = "{}://{}".format(self.protocol, str(EndPoints(node.uri)))
+        fixed_uri = self.fix_uri(uri)
+        node = Node(fixed_uri)
+        path = URLParser(fixed_uri).path
+        url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
         return Node(self.conn.session.put(url,
@@ -2105,9 +2075,9 @@ class Client(object):
            """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
-        endpoints = node.endpoints
+        endpoints = self.get_endpoints(node.uri)
         if recursive:
-            property_url = "{0}://{1}".format(self.protocol, endpoints.properties)
+            property_url = endpoints.properties
             logger.debug("prop URL: {0}".format(property_url))
             try:
                 resp = self.conn.session.post(property_url,
@@ -2245,10 +2215,9 @@ class Client(object):
         """
         try:
             return self._node_type(uri) == "vos:ContainerNode"
-        except OSError as ex:
-            if ex.errno == errno.ENOENT:
-                return False
-            raise ex
+        except exceptions.NotFoundException as ex:
+            return False
+
 
     def isfile(self, uri):
         """
@@ -2274,10 +2243,9 @@ class Client(object):
         if mode == os.O_RDONLY :
             try:
                 self.get_node(uri, limit=0, force=True)
-            except OSError as ose:
-                if ose.errno in (errno.EEXIST, errno.EACCES, errno.ENOENT):
+            except (exceptions.NotFoundException, exceptions.AlreadyExistsException,
+                    exceptions.UnauthorizedException, exceptions.ForbiddenException) as ose:
                     return False
-                raise
 
         return isinstance(self.open(uri, mode=mode), VOFile)
 

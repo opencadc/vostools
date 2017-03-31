@@ -47,41 +47,36 @@ class TestClient(unittest.TestCase):
 
     def test_init_client(self):
         # No parameters uses cert in ~/.ssl giving authenticated / https
+        # create a fake pem file
+        certfile = '/tmp/some-cert-file.pem'
+        open(certfile, 'w+')
         Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
-            client = Client()
-        self.assertEqual(client.protocol, "https")
-        self.assertTrue(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_token)
+            client = Client(vospace_certfile=certfile)
+        self.assertTrue(client.conn.subject.certificate)
+        self.assertFalse(client.conn.vo_token)
 
         # Supplying an empty string for certfile implies anonymous / http
         client = Client(vospace_certfile='')
-        self.assertEqual(client.protocol, "http")
-        self.assertIsNone(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_token)
-
-        # Specifying a certfile implies authenticated / https
-        with patch('os.access'):
-            client = Client(vospace_certfile='/path/to/cert')
-        self.assertEqual(client.protocol, "https")
-        self.assertTrue(client.conn.vospace_certfile)
-        self.assertIsNone(client.conn.vospace_token)
+        self.assertTrue(client.conn.subject.anon)
+        self.assertFalse(client.conn.vo_token)
 
         # Specifying a token implies authenticated / http
         client = Client(vospace_token='a_token_string')
-        self.assertEqual(client.protocol, "http")
-        self.assertIsNone(client.conn.vospace_certfile)
-        self.assertTrue(client.conn.vospace_token)
+        self.assertTrue(client.conn.subject.anon)
+        self.assertTrue(client.conn.vo_token)
 
         # Specifying both a certfile and token implies token (auth) / http
         with patch('os.access'):
-            client = Client(vospace_certfile='/path/to/cert',
+            client = Client(vospace_certfile=certfile,
                             vospace_token='a_token_string')
-        self.assertEqual(client.protocol, "http")
-        self.assertIsNone(client.conn.vospace_certfile)
-        self.assertTrue(client.conn.vospace_token)
+        self.assertTrue(client.conn.subject.anon)
+        self.assertTrue(client.conn.vo_token)
 
-    @patch('vos.vos.RetrySession.get', Mock(return_value=Mock(spec=requests.Response, status_code=404)))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+    @patch('vos.vos.net.ws.RetrySession.send', Mock(return_value=Mock(spec=requests.Response, status_code=404)))
     def test_open(self):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
@@ -145,6 +140,10 @@ class TestClient(unittest.TestCase):
         self.assertTrue(client.isfile('vos:/somenode'))
         
 
+    patch('vos.EndPoints.nodes', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace'))
     def test_glob(self):
         # test the pattern matches in directories and file names
         
@@ -339,8 +338,8 @@ class TestClient(unittest.TestCase):
           
 
     def test_add_props(self):
-        old_node = Node(NODE_XML)
-        new_node = Node(NODE_XML)
+        old_node = Node(ElementTree.fromstring(NODE_XML))
+        new_node = Node(ElementTree.fromstring(NODE_XML))
         new_node.props['quota'] = '1000'
         new_node.create = Mock(return_value=new_node.node)
 
@@ -357,8 +356,12 @@ class TestClient(unittest.TestCase):
             mock.conn.session.post.assert_called_with('http://foo.com/bar',
                                                       headers=headers, data=data)
 
+
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace/nodes'))
     def test_create(self):
-        uri = 'vos://foo.com!vospace/bar'
+        uri = 'vos://create.vospace.auth!vospace/bar'
         client = Client()
         node = Node(client.fix_uri(uri))
         node2 = Node(str(node))
@@ -367,22 +370,21 @@ class TestClient(unittest.TestCase):
         headers = {'size': str(len(data))}
 
         client = Client()
-        client.protocol = 'https'
-        client.get_node_url = Mock(return_value='http://foo.com/bar')
+        #client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
         client.conn = Mock()
         client.conn.session = session_mock
         session_mock.put.return_value = Mock(content=str(node))
 
         result = client.create(uri)
-        print(node)
-        print(result)
         self.assertEquals(node, result)
-        session_mock.put.assert_called_with('https://www.canfar.phys.uvic.ca/vospace/nodes/bar',
+        session_mock.put.assert_called_with('http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
                                                  headers=headers, data=data)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock())
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_update(self):
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
 
         resp = Mock()
         resp.headers.get = Mock(return_value="https://www.canfar.phys.uvic.ca/vospace")
@@ -395,12 +397,10 @@ class TestClient(unittest.TestCase):
         client.protocol = 'https'
 
         data = str(node)
-        property_url = 'https://{0}'.format(node.endpoints.properties)
-
-        with patch('vos.Client', client) as mock:
-            result = mock.update(node, False)
-            self.assertEqual(result, 0)
-            mock.conn.session.post.assert_called_with('https://www.canfar.phys.uvic.ca/vospace',
+        property_url = 'https://www.canfar.phys.uvic.ca/vospace/nodeprops'
+        result = client.update(node, False)
+        self.assertEqual(result, 0)
+        client.conn.session.post.assert_called_with('https://www.canfar.phys.uvic.ca/vospace',
                                                       data=data, allow_redirects=False)
 
         call1 = call(property_url, allow_redirects=False, data=data,
@@ -409,10 +409,12 @@ class TestClient(unittest.TestCase):
                      headers={'Content-type': "text/text"})
         calls = [call1, call2]
 
-        with patch('vos.Client', client) as mock:
-            result = mock.update(node, True)
-            self.assertEqual(result, 0)
-            mock.conn.session.post.assert_has_calls(calls)
+        client.conn = Mock()
+        client.conn.session.post = Mock(return_value=resp)
+        with patch('vos.vos.EndPoints.properties', property_url):
+            result = client.update(node, True)
+        self.assertEqual(result, 0)
+        client.conn.session.post.assert_has_calls(calls)
 
     def test_getNode(self):
         """
@@ -455,6 +457,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 2)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_move(self):
         mock_resp_403 = Mock(name="mock_resp_303")
         mock_resp_403.status_code = 403
@@ -469,10 +472,14 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             client.move(uri1, uri2)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_delete(self):
+        certfile = '/tmp/SomeCert.pem'
+        open(certfile, 'w+')
         with patch('os.access'):
-            client = Client(vospace_certfile="SomeFile")
-        uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1?limit=0'
+            client = Client(vospace_certfile=certfile)
+        uri1 = 'vos://cadc.nrc.ca!vospace/nosuchfile1'
         url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1?limit=0'
         client.conn.session.delete = Mock()
         client.delete(uri1)
@@ -530,7 +537,7 @@ class TestNode(unittest.TestCase):
         self.assertEquals(node1, node2)
 
     def test_node_set_property(self):
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
         properties = node.node.find(Node.PROPERTIES)
         property_list = properties.findall(Node.PROPERTY)
         self.assertEqual(len(property_list), 1)
@@ -548,14 +555,14 @@ class TestNode(unittest.TestCase):
         self.assertTrue(found)
 
     def test_chwgrp(self):
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
         self.assertEquals('', node.groupwrite)
 
         node.chwgrp('foo')
         self.assertEquals('foo', node.groupwrite)
 
     def test_chrgrp(self):
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
         self.assertEquals('', node.groupread)
 
         node.chrgrp('foo')
@@ -563,7 +570,7 @@ class TestNode(unittest.TestCase):
 
     def test_change_prop(self):
         # Add a new property
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
         quota = TestNode.get_node_property(node, 'quota')
         self.assertIsNone(quota)
 
@@ -585,7 +592,7 @@ class TestNode(unittest.TestCase):
 
     def test_clear_properties(self):
         # Add a new property
-        node = Node(NODE_XML)
+        node = Node(ElementTree.fromstring(NODE_XML))
         node.set_property('quota', '1000')
         properties = node.node.find(Node.PROPERTIES)
         property_list = properties.findall(Node.PROPERTY)
@@ -613,6 +620,9 @@ class TestNode(unittest.TestCase):
         return None
 
 
+@patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+       Mock(return_value='http://foo.com/vospace'))
+@patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
 class TestVOFile(unittest.TestCase):
     """Test the vos VOFile class.
     """
