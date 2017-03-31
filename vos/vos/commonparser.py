@@ -37,9 +37,10 @@ class CommonParser(optparse.OptionParser):
         self.add_option("-w", "--warning", action="store_true", default=False,
                         help="Print warning level log messages")
 
-        self.epilog = """The vos commands use a configuration file for user specific settings. \
-A user can edit this file to change the behaviour of the vos commands. The configuration is \
-typically found in the user's home directory in .config/vos/vos-config.
+        self.epilog =\
+"""The vos commands use a configuration file for user specific settings.
+A user can edit this file to change the behaviour of the vos commands.
+The configuration is typically found in the user's home directory in .config/vos/vos-config.
 
 The file contains sections with settings pertaining to that section. The current setting are:
 
@@ -50,7 +51,10 @@ resourceID = ivo://cadc.nrc.ca/vospace
 [transfer]
 # The default transfer protocol
 protocol = http
-        """
+"""
+
+    def format_epilog(self, formatter):
+        return self.epilog
 
     def process_informational_options(self):
         """Display version, set logging verbosity"""
