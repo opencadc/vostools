@@ -4,6 +4,7 @@ import requests
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch
 
+from cadcutils import exceptions
 from .. import vos, Connection
 
 # To run individual tests, set the value of skipTests to True, and comment
@@ -144,70 +145,61 @@ class TestVOFile(unittest.TestCase):
         transfer_urls = ['http://url1.ca', 'http://url2.ca', 'http://url3.ca']
 
         # mock the 200 response
-        mock_resp_200 = Mock(name="mock_resp_200")
+        mock_resp_200 = requests.Response()
         mock_resp_200.status_code = 200
         mock_resp_200.headers = {'Content-Length': 10}
-        mock_resp_200.raw.read = Mock(return_value="abcd")
-        mock_resp_200.content = "Testing"
+        mock_resp_200.raw = Mock(read=Mock(return_value="abcd"))
 
         # mock the 404 response
-        mock_resp_404 = Mock(name="mock_resp_404")
-        mock_resp_404.getheader.return_value = 1
+        mock_resp_404 = requests.Response()
         mock_resp_404.status_code = 404
         mock_resp_404.headers = {'Content-Length': 10}
-        mock_resp_404.content = "Fail"
 
         # mock the 503 response
-        mock_resp_503 = Mock(name="mock_resp_503")
-        mock_resp_503.getheader.return_value = 3
+        mock_resp_503 = requests.Response()
         mock_resp_503.status_code = 503
-        mock_resp_503.headers = {'Content-Length': 10, 'Content-MD5': 12345}
-        mock_resp_503.content = "Try again"
+        mock_resp_503.headers = {'Content-Length': 10, 'Content-MD5': 12345, 'Retry-After':1}
 
         conn = Connection()
-        mock_request = Mock()
 
         # test successful - use first url
         self.responses = [mock_resp_200]
-        conn.session.send = Mock(side_effect=self.side_effect)
         vofile = vos.VOFile(transfer_urls, conn, "GET")
-        vofile.read()
+        with patch('vos.vos.net.ws.Session.send', Mock(side_effect=self.responses)):
+            vofile.read()
         assert(vofile.url == transfer_urls[0])
         assert(vofile.urlIndex == 0)
         assert(len(vofile.URLs) == 3)
 
         # test first url busy
         self.responses = [mock_resp_503, mock_resp_200]
-        conn.session.send = Mock(side_effect=self.side_effect)
         vofile = vos.VOFile(transfer_urls, conn, "GET")
-        vofile.read()
+        with patch('vos.vos.net.ws.Session.send', Mock(side_effect=self.responses)):
+            vofile.read()
         assert(vofile.url == transfer_urls[1])
         assert(vofile.urlIndex == 1)
         assert(len(vofile.URLs) == 3)
 
         # #test first url error - ignored internally, second url busy, third url works
         # test 404 which raises OSError
-        # self.responses = [mock_resp_404, mock_resp_503, mock_resp_200]
-        self.responses = [mock_resp_404]
-        conn.session.send = Mock(side_effect=self.side_effect)
+        self.responses = [mock_resp_404, mock_resp_503, mock_resp_200]
         vofile = vos.VOFile(transfer_urls, conn, "GET")
-        with self.assertRaises(OSError) as ex:
+        #with self.assertRaises(exceptions.NotFoundException) as ex:
+        with patch('vos.vos.net.ws.requests.Session.send', Mock(side_effect=self.responses)):
             vofile.read()
-        # assert(vofile.url == transfer_urls[2])
-        # assert(vofile.urlIndex == 1)
-        # assert(len(vofile.URLs) == 2)
+        assert(vofile.url == transfer_urls[2])
+        assert(vofile.urlIndex == 2)
+        assert(len(vofile.URLs) == 3)
 
         # all urls busy first time, first one successful second time
         self.responses = [mock_resp_503, mock_resp_503,
                           mock_resp_503, mock_resp_200]
-        conn.session.send = Mock(side_effect=self.side_effect)
         vofile = vos.VOFile(transfer_urls, conn, "GET")
-        vofile.read()
-        assert(vofile.url == transfer_urls[0])
-        assert(vofile.urlIndex == 0)
+        with patch('vos.vos.net.ws.requests.Session.send', Mock(side_effect=self.responses)):
+            vofile.read()
+        assert(vofile.url == transfer_urls[2])
+        assert(vofile.urlIndex == 2)
         assert(len(vofile.URLs) == 3)
-        assert(5 == vofile.totalRetryDelay)
-        assert(1 == vofile.retries)
 
     @unittest.skipIf(skipTests, "Individual tests")
     @patch.object(Connection, 'get_connection')
@@ -226,10 +218,13 @@ class TestVOFile(unittest.TestCase):
         self.assertTrue(vofile.checkstatus())
         self.assertEqual(vofile.get_file_info(), (10, 12345))
 
+
     def side_effect(self, foo, stream=True, verify=False):
         # removes first in the list
         # mock the 200 response
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        return response
+
 
     def get_headers(self, arg):
         return self.headers[arg]

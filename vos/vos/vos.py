@@ -31,8 +31,8 @@ from xml.etree import ElementTree
 from copy import deepcopy
 from NodeCache import NodeCache
 from .version import version
-from cadcutils import net, exceptions
-from .setup_package import vos_config, _CONFIG_PATH
+from cadcutils import net, exceptions, util
+from .setup_package import _CONFIG_PATH
 
 try:
     _unicode = unicode
@@ -76,6 +76,7 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
                  'rss': '{}#rss'.format(VO_CADC_VIEW_URI),
                  'cutout': '{}#cutout'.format(VO_CADC_VIEW_URI)}
 
+vos_config = util.Config(_CONFIG_PATH)
 
 #requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.ERROR)
@@ -859,7 +860,7 @@ class VOFile(object):
                 self.closed = True
         return self.closed
 
-    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416,
+    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 404, 416,
                                  416, 402, 408, 412, 504)):
         """check the response status.  If the status code doesn't match a value from the codes list then
         raise an Exception.
@@ -973,14 +974,59 @@ class VOFile(object):
         """
 
         if self.resp is None:
-            self.resp = self.connector.session.send(self.request, stream=True, verify=False) #TODO ignore certs when http to storage nodes
+            # this is original retry flag of the session
+            orig_retry_flag = self.connector.session.retry
+            try:
+                if (len(self.URLs) > 1) and (self.urlIndex < len(self.URLs) - 1):
+                    # there is more urls to try so don't bother retrying on transient errors
+                    # return instead and try the next url
+                    self.connector.session.retry = False
+                self.resp = self.connector.session.send(self.request, stream=True, verify=False)
+            except exceptions.HttpException as e:
+                # this is the path for all status_codes between 400 and 600
+                self.resp = e.orig_exception.response
+
+                # restore the original retry flag of the session
+                self.connector.session.retry = orig_retry_flag
+
+                self.checkstatus()
+                if self.resp.status_code == 416:
+                    return ""
+
+                if isinstance(e, exceptions.UnauthorizedException) or\
+                   isinstance(e, exceptions.BadRequestException) or\
+                   isinstance(e, exceptions.ForbiddenException):
+                    raise
+
+                # Note: 404 (File Not Found) might be returned when:
+                # 1. file deleted or replaced
+                # 2. file migrated from cache
+                # 3. hardware failure on storage node
+                # For 3. it is necessary to try the other URLs in the list
+                #   otherwise this the failed URL might show up even after the
+                #   caller tries to re-negotiate the transfer.
+                # For 1. and 2., calls to the other URLs in the list might or
+                #   might not succeed.
+                if self.urlIndex < len(self.URLs) - 1:
+                    # go to the next URL
+                    self.urlIndex += 1
+                    self.open(self.URLs[self.urlIndex], "GET")
+                    self.resp = None
+                    return self.read(size)
+                else:
+                    raise
+            finally:
+                # restore the original retry flag of the session
+                self.connector.session.retry = orig_retry_flag
+
+
 
         # Get the file size. We use this HEADER-CONTENT-LENGTH as a
         # fallback to work around a server-side Java bug that limits
         # 'Content-Length' to a signed 32-bit integer (~2 gig files)
         try:
             self.size = int(self.resp.headers.get("Content-Length", self.resp.headers.get(HEADER_CONTENT_LENGTH, 0)))
-        except ValueError:
+        except Exception:
             self.size = 0
 
         if self.resp.status_code == 200:
@@ -990,9 +1036,6 @@ class VOFile(object):
         if self.resp is None:
             raise OSError(errno.EFAULT, "No response from VOServer")
 
-        read_error = None
-        if self.resp.status_code == 416:
-            return ""
         # check the most likely response first
         if self.resp.status_code == 200 or self.resp.status_code == 206:
             if return_response:
@@ -1022,37 +1065,7 @@ class VOFile(object):
                 # logger.debug("Got url:%s from redirect but not following" %
                 # (self.url))
                 return self.url
-        elif self.resp.status_code in VOFile.retryCodes:
-            # Note: 404 (File Not Found) might be returned when:
-            # 1. file deleted or replaced
-            # 2. file migrated from cache
-            # 3. hardware failure on storage node
-            # For 3. it is necessary to try the other URLs in the list
-            #   otherwise this the failed URL might show up even after the
-            #   caller tries to re-negotiate the transfer.
-            # For 1. and 2., calls to the other URLs in the list might or
-            #   might not succeed.
-            if self.urlIndex < len(self.URLs) - 1:
-                # go to the next URL
-                self.urlIndex += 1
-                self.open(self.URLs[self.urlIndex], "GET")
-                self.resp = None
-                return self.read(size)
-        else:
-            self.URLs.pop(self.urlIndex)  # remove url from list
-            if len(self.URLs) == 0:
-                # no more URLs to try...
-                if read_error is not None:
-                    raise read_error
-                if self.resp.status_code == 404:
-                    raise OSError(errno.ENOENT, self.url)
-                else:
-                    raise OSError(errno.EIO,
-                                  "unexpected server response %s (%d)" %
-                                  (self.resp.reason, self.resp.status_code), self.url)
-            if self.urlIndex < len(self.URLs):
-                self.open(self.URLs[self.urlIndex], "GET")
-                return self.read(size)
+
 
         # start from top of URLs with a delay
         self.urlIndex = 0
