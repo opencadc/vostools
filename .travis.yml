@@ -135,8 +135,8 @@ install:
     # other dependencies.
 
 script:
-   - cd vos; python setup.py install; python setup.py $SETUP_CMD || exit -1; cd ..
-   - cd vofs; pip install ../vos; python setup.py $SETUP_CMD || exit -1
+   - cd vos; pip install .; python setup.py $SETUP_CMD || exit -1; cd ..
+   - cd vofs; python setup.py $SETUP_CMD || exit -1
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line
