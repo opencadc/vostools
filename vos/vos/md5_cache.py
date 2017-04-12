@@ -1,5 +1,6 @@
 
 import sqlite3, logging
+import hashlib
 READBUF = 8192
 
 class MD5_Cache:
@@ -14,16 +15,15 @@ class MD5_Cache:
             sqlConn.execute("create table if not exists md5_cache (fname text PRIMARY KEY NOT NULL , md5 text, st_size int, st_mtime int)")
         ## build cache lookup if doesn't already exists
 
-    def computeMD5(self, filename, block_size=READBUF):
-        import hashlib
+    @staticmethod
+    def computeMD5(filename, block_size=READBUF):
         md5 = hashlib.md5()
-        r = open(filename, 'r')
-        while True:
-            buf = r.read(block_size)
-            if len(buf) == 0:
-                break
-            md5.update(buf)
-        r.close()
+        with open(filename, 'rb') as f:
+            while True:
+                buf = f.read(block_size)
+                if len(buf) == 0:
+                    break
+                md5.update(buf)
         return md5.hexdigest()
 
 

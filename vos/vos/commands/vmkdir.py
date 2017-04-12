@@ -1,6 +1,7 @@
 #!python
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os, sys, logging
 from vos.commonparser import CommonParser

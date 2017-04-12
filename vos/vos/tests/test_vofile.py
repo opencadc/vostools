@@ -86,6 +86,7 @@ class TestVOFile(unittest.TestCase):
 
         mock_resp.headers = MagicMock()
         mock_resp.headers.get.side_effect = getheader
+        mock_resp.text = 'Try again later'
 
         conn = Connection()
         conn.session.send = Mock(return_value=mock_resp)

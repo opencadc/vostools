@@ -4,7 +4,8 @@ import unittest
 import hashlib
 
 from vos.md5_cache import MD5_Cache
-from mock import patch, MagicMock, Mock, call
+from mock import patch, MagicMock, Mock, call, mock_open
+from six import moves
 
 class TestMD5Cache(unittest.TestCase):
     """Test the TestMD5Cache class.
@@ -49,20 +50,18 @@ class TestMD5Cache(unittest.TestCase):
            'SELECT md5, st_size, st_mtime FROM md5_cache WHERE fname = ? ', ('somefile',))
 
 
-    @patch('__builtin__.open')
-    def test_computeMD5(self, mock_file):
-        md5_cache = MD5_Cache()
+    def test_computeMD5(self):
         file_mock = MagicMock()
-        buffer = ['abcd', 'efgh', '']
+        buffer = [b'abcd', b'efgh', b'']
         file_mock.read.side_effect = buffer
-        mock_file.return_value = file_mock
-        
+
         expect_md5 = hashlib.md5()
         for b in buffer:
             expect_md5.update(b)
         
         md5_cache = MD5_Cache()
-        self.assertEquals(expect_md5.hexdigest(), md5_cache.computeMD5('fakefile', 4))
+        with patch('six.moves.builtins.open', mock_open(read_data=b''.join(buffer))):
+                self.assertEquals(expect_md5.hexdigest(), md5_cache.computeMD5('fakefile', 4))
 
 def run():
     suite1 = unittest.TestLoader().loadTestsFromTestCase(TestMD5Cache)
