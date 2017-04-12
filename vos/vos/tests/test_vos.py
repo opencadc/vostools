@@ -7,6 +7,9 @@ from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call, mock_open
 from vos import Client, Connection, Node, VOFile
 
+# The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
+call.__wrapped__ = None
+
 NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
                   xmlns:vos='http://www.ivoa.net/xml/VOSpace/v2.0'

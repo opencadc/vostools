@@ -4,8 +4,7 @@ import requests
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch
 
-from cadcutils import exceptions
-from .. import vos, Connection
+from vos import vos, Connection
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.

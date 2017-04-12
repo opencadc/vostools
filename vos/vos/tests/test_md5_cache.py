@@ -5,7 +5,9 @@ import hashlib
 
 from vos.md5_cache import MD5_Cache
 from mock import patch, MagicMock, Mock, call, mock_open
-from six import moves
+
+# The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
+call.__wrapped__ = None
 
 class TestMD5Cache(unittest.TestCase):
     """Test the TestMD5Cache class.
