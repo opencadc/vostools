@@ -31,7 +31,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='requests==2.11 html2text>=2016.5.29 BitVector>=3.4.4,<4.0 fusepy>=2.0.4 cadcutils>=1.1.2a3 future unittest2 mock coverage coveralls'
+        - PIP_DEPENDENCIES='requests==2.11 html2text>=2016.5.29 BitVector>=3.4.4,<4.0 fusepy>=2.0.4 cadcutils>=1.1.2a3 future unittest2 mock coverage'
 
         # For this package-template, we include examples of Cython modules,
         # so Cython is required for testing. If your package does not include
@@ -134,12 +134,13 @@ install:
     # section if they are needed before setting up conda) to install any
     # other dependencies.
     - pip install vos
+    - pip install coveralls
 
 script:
    #- cd vos; pip install .; python setup.py $SETUP_CMD || exit -1; cd ..
    #- cd vofs; python setup.py $SETUP_CMD || exit -1
-   - coverage run --source=vos setup.py test
-   - coverage run --source=vofs setup.py test
+   - cd vos; coverage run --source=vos setup.py test || exit -1; cd ..
+   - cd vofs; coverage run --source=vofs setup.py test || exit -1
 after_success:
     # If coveralls.io is set up for this package, uncomment the line
     # below and replace "packagename" with the name of your package.
