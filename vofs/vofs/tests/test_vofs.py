@@ -1,22 +1,21 @@
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from builtins import str
 from builtins import object
 import copy
-import requests
 import os
 import shutil
 import stat
 import ctypes
 from fuse import FUSE, FuseOSError, fuse_operations
-from contextlib import nested
 from errno import EIO, EAGAIN, EPERM, ENOENT
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
-from .. import vofs
+from vofs import vofs
 import vos
-from ..CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
+from vofs.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
 from vos.NodeCache import NodeCache
-from ..vofs import HandleWrapper, MyFuse, VOFS
+from vofs.vofs import HandleWrapper, MyFuse, VOFS
 
 skipTests = False
 
@@ -156,7 +155,7 @@ class TestVOFS(unittest.TestCase):
             testfs.write("/dir1/dir2/file", "abcd", 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
 
-    @unittest.skipIf(skipTests, "Individual tests")
+    #@unittest.skipIf(skipTests, "Individual tests")
     def testRead1(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
@@ -177,17 +176,17 @@ class TestVOFS(unittest.TestCase):
         # Read with success.
         fileHandle = vofs.HandleWrapper(Object())
         fileHandle.cache_file_handle.read = Mock()
-        fileHandle.cache_file_handle.read.return_value = "abcd"
+        fileHandle.cache_file_handle.read.return_value = len("abcd")
         self.assertEqual(testfs.read(path="/dir1/dir2/file", buf=buf,
                                      size=4, offset=2048,
-                                     file_id=fileHandle.get_id()), "abcd")
+                                     file_id=fileHandle.get_id()), 4)
 
         # Read from an invalid file handle.
         with self.assertRaises(FuseOSError) as e:
             testfs.read(path="/dir1/dir2/file", buf=buf, size=4, offset=2048, file_id=-1)
         self.assertEqual(e.exception.errno, EIO)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    @unittest.skipIf(skipTests, "Individual tests")
     def test_open(self):
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
         file = "/dir1/dir2/file"
@@ -721,9 +720,8 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.open = Mock(wraps=testfs.cache.open)
         origRelease = FileHandle.release
         origTruncate = FileHandle.truncate
-        with nested(patch('vofs.CadcCache.FileHandle.release'),
-                    patch('vofs.CadcCache.FileHandle')) as (mockRelease,
-                                                           mockFileHandle):
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
+                    patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, testfs.cache, None)
             mockFileHandle.return_value.readData = \
@@ -742,10 +740,8 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
-        with nested(patch('vofs.CadcCache.FileHandle.release'),
-                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
-            mockRelease = mocks[0]
-            mockReadData = mocks[1]
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
+                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
@@ -760,10 +756,8 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate with an exception returned by the CadcCache truncate
         testfs.cache.open.reset_mock()
-        with nested(patch('vofs.CadcCache.FileHandle.release'),
-                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
-            mockRelease = mocks[0]
-            mockReadData = mocks[1]
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
+                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
@@ -776,10 +770,8 @@ class TestVOFS(unittest.TestCase):
             mockRelease.assert_called_once_with()
 
         # Truncate an already opened file given the file handle.
-        with nested(patch('vofs.CadcCache.FileHandle.release'),
-                    patch('vofs.CadcCache.FileHandle.readData')) as mocks:
-            mockRelease = mocks[0]
-            mockReadData = mocks[1]
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
+                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
@@ -807,9 +799,8 @@ class TestVOFS(unittest.TestCase):
         testfs2.cache.open = Mock(wraps=testfs2.cache.open)
 
         # Truncate a read only file handle.
-        with nested(patch('vofs.CadcCache.FileHandle.release'),
-                    patch('vofs.CadcCache.FileHandle')) as \
-                (mockRelease, mockFileHandle):
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
+                    patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockRelease.wraps = origRelease
             mockFileHandle.return_value = MyFileHandle(file, testfs2.cache,
                                                        None)
@@ -1128,7 +1119,7 @@ class TestMyIOProxy(unittest.TestCase):
         fuse.operations.return_value = 3
         fip = Mock()
         fip.contents = 'somevalue'
-        retsize = fuse.read("/some/path", buf, 10, 1, fip)
+        retsize = fuse.read("/some/path".encode('utf-8'), buf, 10, 1, fip)
         fuse.operations.assert_called_once_with(
                         'read', '/some/path', 10, 1, 'somevalue', buf)
         self.assertEqual(3, retsize, "Wrong buffer size")
@@ -1156,7 +1147,7 @@ class TestMyIOProxy(unittest.TestCase):
         fh_mock = Mock()
         mock_contents = Mock(return_value='somevale', fh=fh_mock)
         fip.contents = mock_contents
-        retsize = fuse.write("/some/path", buf, 10, 1, fip)
+        retsize = fuse.write("/some/path".encode('utf-8'), buf, 10, 1, fip)
         fuse.operations.assert_called_once_with(
                         'write', '/some/path', buf, 10, 1, fh_mock)
         self.assertEqual(3, retsize, "Wrong buffer size")

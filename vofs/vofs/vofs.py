@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 """A FUSE based filesystem view of VOSpace."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import time
 import vos
 import sys
@@ -9,7 +11,7 @@ from threading import Lock
 from errno import EIO, ENOENT, EPERM, EAGAIN, EFAULT
 import os
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
-from CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
+from .CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from vos.logExceptions import logExceptions
 import logging
@@ -19,6 +21,7 @@ logger.setLevel(logging.ERROR)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
+__all__ = ['VOFS', 'HandleWrapper', 'MyIOProxy']
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -565,11 +568,11 @@ class VOFS(Operations):
         """Send a list of entries in this directory"""
         logger.debug("Getting directory list for {0}".format(path))
         # reading from VOSpace can be slow, we'll do this in a thread
-        import thread
+        from six.moves import _thread
         with self.condition:
             if not self.loading_dir.get(path, False):
                 self.loading_dir[path] = True
-                thread.start_new_thread(self.load_dir, (path, ))
+                _thread.start_new_thread(self.load_dir, (path, ))
 
             while self.loading_dir.get(path, False):
                 logger.debug("Waiting ... ")

@@ -1,24 +1,25 @@
 """
 A sparse file caching library
 """
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import os
 import sys
 import stat
 import time
 import threading
-from Queue import Queue
+from six.moves.queue import Queue
+from six.moves.reprlib import repr
 import traceback
 import errno
-from contextlib import nested
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
     EEXIST, ENODATA, ECONNREFUSED, EAGAIN, ENOTCONN
 import ctypes
 import ctypes.util
 import logging
 
-from SharedLock import SharedLock as SharedLock
-from CacheMetaData import CacheMetaData as CacheMetaData
+from .SharedLock import SharedLock as SharedLock
+from .CacheMetaData import CacheMetaData as CacheMetaData
 from vos.logExceptions import logExceptions
 from . import utils
 
@@ -249,9 +250,8 @@ class Cache(object):
                 # are propegated.
                 if not (isinstance(fileHandle.readException[1], EnvironmentError) and
                                 fileHandle.readException[1].errno == errno.ENOENT and not mustExist):
-                    raise fileHandle.readException[0], \
-                        fileHandle.readException[1], \
-                        fileHandle.readException[2]
+                    raise fileHandle.readException[0]('{} - {}'.format(
+                        fileHandle.readException[1], fileHandle.readException[2]))
                 # The file didn't exist on the backing store but its ok
                 fileHandle.fullyCached = True
                 fileHandle.gotHeader = True
@@ -592,7 +592,7 @@ class CacheAborted(Exception):
         self.value = value
 
     def __str__(self):
-        return repr(self.value)
+        return str(repr(self.value))
 
 
 class IOProxy(object):
@@ -724,11 +724,11 @@ class IOProxy(object):
         if size is None:
             return None, None
 
-        firstBlock = offset / self.cache.IO_BLOCK_SIZE
+        firstBlock = offset // self.cache.IO_BLOCK_SIZE
         if size == 0:
             numBlocks = 0
         else:
-            numBlocks = (((offset + size - 1) / self.cache.IO_BLOCK_SIZE) -
+            numBlocks = (((offset + size - 1) // self.cache.IO_BLOCK_SIZE) -
                          firstBlock + 1)
         return firstBlock, numBlocks
 
@@ -930,8 +930,8 @@ class FileHandle(object):
 
             # Look for write failures.
             if self.flushException is not None:
-                raise self.flushException[0], self.flushException[1], \
-                    self.flushException[2]
+                raise self.flushException[0]('{} - {}'.format(self.flushException[1],
+                    self.flushException[2]))
 
             return 0
 
@@ -947,8 +947,7 @@ class FileHandle(object):
 
     def deref(self):
         # logger.debug("Getting locks so we can do a deref and close.")
-        with nested(self.cache.cacheLock, self.fileLock,
-                    self.ioObject.cacheFileDescriptorLock):
+        with self.cache.cacheLock, self.fileLock, self.ioObject.cacheFileDescriptorLock:
             # logger.debug("Lock acquired now doing the ref-reduction and close.")
             self.refCount -= 1
             if self.refCount == 0:
@@ -1241,7 +1240,7 @@ class FileHandle(object):
             # Ensure the required part of the file is in cache.
             if length != 0:
                 self.makeCached(0, min(length, self.fileSize))
-            with nested(self.fileLock, self.ioObject.cacheFileDescriptorLock):
+            with self.fileLock, self.ioObject.cacheFileDescriptorLock:
                 os.ftruncate(self.ioObject.cacheFileDescriptor, length)
                 os.fsync(self.ioObject.cacheFileDescriptor)
                 self.fileModified = True
