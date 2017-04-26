@@ -266,6 +266,7 @@ class VOFS(Operations):
             exception = FuseOSError(errno)
             raise exception
         finally:
+            logger.debug(ret)
             logger.debug('<- {0} {1}'.format(op, repr(ret)))
 
     @logExceptions()
@@ -416,7 +417,7 @@ class VOFS(Operations):
         """
         self.cache.flushNodeQueue = FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
 
-    # @logExceptions()
+    @logExceptions()
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
 
@@ -577,9 +578,9 @@ class VOFS(Operations):
             while self.loading_dir.get(path, False):
                 logger.debug("Waiting ... ")
                 self.condition.wait()
-        return ['.', '..'] + [e.name.encode('utf-8') for e in self.getNode(path,
-                                                                           force=False,
-                                                                           limit=None).node_list]
+        return ['.', '..'] + [e.name for e in self.getNode(path,
+                                                           force=False,
+                                                           limit=None).node_list]
 
     @logExceptions()
     def load_dir(self, path):

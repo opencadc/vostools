@@ -237,6 +237,8 @@ class Node(object):
 
         if isinstance(node, six.text_type) or isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
+        elif isinstance(node, bytes):
+            node = self.create(node.decode('utf-8'), node_type, properties, subnodes=subnodes)
 
         if node is None:
             raise LookupError("no node found or created?")
@@ -367,7 +369,7 @@ class Node(object):
         st_size = int(self.props.get('length', 0))
         self.attr['st_size'] = st_size > 0 and st_size or 0
 
-        self.attr['st_blocks'] = self.attr['st_size'] / 512
+        self.attr['st_blocks'] = self.attr['st_size'] // 512
 
     def setxattr(self, attrs=None):
         """Initialize the extended attributes using the Node properties that are not part of the core set.
