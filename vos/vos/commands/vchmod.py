@@ -112,6 +112,6 @@ def vchmod():
         logger.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
-        logger.error(e.msg)
+        logger.error('Error {}: '.format(str(e)))
         sys.exit(getattr(e, 'errno', -1))
     sys.exit(returnCode)

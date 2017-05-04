@@ -44,7 +44,6 @@ except ImportError:
 
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
-logging.getLogger('vos').setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
@@ -76,6 +75,8 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
                  'rss': '{}#rss'.format(VO_CADC_VIEW_URI),
                  'cutout': '{}#cutout'.format(VO_CADC_VIEW_URI)}
 
+# md5sum of a size zero file
+ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 vos_config = util.Config(_CONFIG_PATH)
 
 #requests.packages.urllib3.disable_warnings()
@@ -1388,7 +1389,7 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+                source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
@@ -1438,7 +1439,7 @@ class Client(object):
                     with open(source, 'rb') as fin:
                         self.conn.session.put(put_url, data=fin)
                     node = self.get_node(destination, limit=0, force=True)
-                    destination_md5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+                    destination_md5 = node.props.get('MD5', ZERO_MD5)
                     assert destination_md5 == source_md5
                 except Exception as ex:
                     logging.debug("FAILED to PUT to {0}".format(put_url))

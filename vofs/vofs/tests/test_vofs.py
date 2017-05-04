@@ -740,8 +740,7 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate a non-open file past the start of the file.
         testfs.cache.open.reset_mock()
-        with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
-                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
+        with patch('vofs.CadcCache.FileHandle.release') as mockRelease:
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked

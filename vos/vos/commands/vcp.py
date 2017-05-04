@@ -183,7 +183,7 @@ def vcp():
     def get_md5(filename):
         logging.debug("getting the MD5 for %s" % filename)
         if filename[0:4] == 'vos:':
-            return get_node(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            return get_node(filename).props.get('MD5', vos.ZERO_MD5)
         else:
             return md5_cache.MD5_Cache.computeMD5(filename)
 
