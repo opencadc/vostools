@@ -1786,7 +1786,7 @@ class Client(object):
                 vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
                 if cutout is not None and view == 'cutout':
                     param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = VO_CADC_VIEW_URI
+                    param.attrib['uri'] = CADC_VO_VIEWS[view]
                     param.text = cutout
             protocol_element = ElementTree.SubElement(transfer_xml, "vos:protocol")
             protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL, protocol[direction])
