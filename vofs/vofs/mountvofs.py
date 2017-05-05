@@ -1,6 +1,7 @@
 #!python
 """A FUSE based filesystem view of VOSpace."""
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from sys import platform
 import os
 import logging

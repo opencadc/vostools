@@ -1,5 +1,7 @@
 """cat files from vospace to stdout"""
 
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from optparse import OptionParser
 import sys
 import os

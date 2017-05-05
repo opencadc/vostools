@@ -73,7 +73,7 @@ class NodeCache(dict):
                 self.nodeCache.volatileNodes.append(self)
 
                 # Remove any cached nodes in the volatile sub-tree.
-                for uri in self.nodeCache.keys():
+                for uri in list(self.nodeCache.keys()):
                     if uri.startswith(self.uri):
                         del self.nodeCache[uri]
 

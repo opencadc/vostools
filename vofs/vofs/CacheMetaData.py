@@ -1,6 +1,7 @@
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import os
-import cPickle as pickle
+from six.moves import cPickle as pickle
 
 import BitVector
 import logging
@@ -27,7 +28,7 @@ class CacheMetaData(object):
         self.size = size
         self.bitmap = None
         if os.path.exists(self.metaDataFile):
-            f = open(self.metaDataFile, 'rU')
+            f = open(self.metaDataFile, 'rb')
             persisted = pickle.load(f)
             if self.md5sum is None or persisted.md5sum == self.md5sum:
                 #persisted bitmap still valid. Used that instead
@@ -41,13 +42,13 @@ class CacheMetaData(object):
 
     def __str__(self):
         """To create a print representation that is informative."""
-        return "CacheMetaData: metaDataFile=%r bitmap=%r md5sum=%r size=%r" % (self.metaDataFile,
+        return "CacheMetaData: metaDataFile=%r bitmap=%r md5sum=%r size=%r" % (str(self.metaDataFile),
                                                                                self.bitmap,
                                                                                self.md5sum,
                                                                                self.size)
 
     def __repr__(self):
-        return "CacheMetaData(metaDataFile=%r, blocks=%r, md5sum=%r, size=%r)" % (self.metaDataFile,
+        return "CacheMetaData(metaDataFile=%r, blocks=%r, md5sum=%r, size=%r)" % (str(self.metaDataFile),
                                                                                   self.blocks,
                                                                                   self.md5sum,
                                                                                   self.size)
@@ -130,7 +131,7 @@ class CacheMetaData(object):
         """To persist cache file metadata for the current file """
         if not os.path.exists(os.path.dirname(self.metaDataFile)):
             os.makedirs(os.path.dirname(self.metaDataFile))
-        f = open(self.metaDataFile, 'w+')
+        f = open(self.metaDataFile, 'wb+')
         pickle.dump(self, f, -1)
         f.close()
 

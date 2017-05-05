@@ -1,8 +1,11 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import traceback
 
-from vos import version
+from vos import md5_cache
 from vos import vos
 from vos.commonparser import CommonParser
 from vos.vos import EndPoints
@@ -180,17 +183,9 @@ def vcp():
     def get_md5(filename):
         logging.debug("getting the MD5 for %s" % filename)
         if filename[0:4] == 'vos:':
-            md5 = get_node(filename).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+            return get_node(filename).props.get('MD5', vos.ZERO_MD5)
         else:
-            md5 = hashlib.md5()
-            fin = file(filename, 'r')
-            while True:
-                buff = fin.read()
-                if len(buff) == 0:
-                    break
-                md5.update(buff)
-            md5 = md5.hexdigest()
-        return md5
+            return md5_cache.MD5_Cache.computeMD5(filename)
 
 
     def lglob(pathname):

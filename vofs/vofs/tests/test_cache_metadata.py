@@ -1,7 +1,10 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from builtins import str
+from six.moves.reprlib import repr, aRepr
 import os
 import unittest
-from ..CacheMetaData import CacheMetaData
+from vofs.CacheMetaData import CacheMetaData
 
 
 class TestCacheMetaData(unittest.TestCase):
@@ -122,10 +125,11 @@ class TestCacheMetaData(unittest.TestCase):
         except ValueError:
             expected = 1
 
-        file1_repr = "CacheMetaData(metaDataFile='{}file1', " \
+        file1_repr = str("CacheMetaData(metaDataFile='{}file1', " \
             "blocks=10, md5sum=9029, size=1025)".format(
-                TestCacheMetaData.TEST_CACHE_PATH)
-        self.assertEquals(file1_repr, repr(file1))
+                TestCacheMetaData.TEST_CACHE_PATH))
+        aRepr.maxother = len(file1_repr) # avoid repr limitting the size of the return representation
+        self.assertEquals(str(file1_repr), repr(file1))
 
         self.assertEquals(1, expected)
         file1.persist()

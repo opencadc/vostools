@@ -7,6 +7,9 @@ from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call, mock_open
 from vos import Client, Connection, Node, VOFile
 
+# The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
+call.__wrapped__ = None
+
 NODE_XML = """
         <vos:node xmlns:xs='http://www.w3.org/2001/XMLSchema-instance'
                   xmlns:vos='http://www.ivoa.net/xml/VOSpace/v2.0'
@@ -217,7 +220,7 @@ class TestClient(unittest.TestCase):
                           client.glob('vos:/[a,b]node/*test*'))
         
         
-    @patch('vos.vos.compute_md5')
+    @patch('vos.vos.md5_cache.MD5_Cache.computeMD5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being copied
@@ -297,15 +300,15 @@ class TestClient(unittest.TestCase):
         test_client.conn = conn
         
         # job successfully completed
-        vofile.read.side_effect = ['QUEUED', 'COMPLETED']
+        vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
         self.assertFalse(test_client.get_transfer_error(
                 vospace_url +'/results/transferDetails', 'vos://vospace'))
         session.get.assert_called_once_with(vospace_url + '/phase', allow_redirects=False)
         
         # job suspended
         session.reset_mock()
-        session.get.side_effect = [Mock(content='COMPLETED')]
-        vofile.read.side_effect = ['QUEUED', 'SUSPENDED']
+        session.get.side_effect = [Mock(content=b'COMPLETED')]
+        vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
                 vospace_url +'/results/transferDetails', 'vos://vospace')
@@ -315,8 +318,8 @@ class TestClient(unittest.TestCase):
 
         # job encountered an internal error
         session.reset_mock()
-        vofile.read.side_effect = Mock(side_effect=['QUEUED', 'ERROR'])
-        session.get.side_effect = [Mock(content='COMPLETED'), Mock(content='InternalFault')]
+        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
+        session.get.side_effect = [Mock(content=b'COMPLETED'), Mock(text='InternalFault')]
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
                 vospace_url +'/results/transferDetails', 'vos://vospace')
@@ -327,9 +330,9 @@ class TestClient(unittest.TestCase):
         # job encountered an unsupported link error
         session.reset_mock()
         link_file = 'testlink.fits'
-        vofile.read.side_effect = Mock(side_effect=['QUEUED', 'ERROR'])
-        session.get.side_effect = [Mock(content='COMPLETED'), 
-                                   Mock(content="Unsupported link target: " + link_file)]
+        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
+        session.get.side_effect = [Mock(content=b'COMPLETED'),
+                                   Mock(text="Unsupported link target: " + link_file)]
         self.assertEquals(link_file, test_client.get_transfer_error(
             vospace_url +'/results/transferDetails', 'vos://vospace'))
         self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
@@ -442,12 +445,12 @@ class TestClient(unittest.TestCase):
         client = Client()
         client.open = Mock(return_value=mock_vofile)
 
-        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, ''))
+        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, '').encode('UTF-8'))
         my_node = client.get_node(uri, limit=0, force=False)
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 0)
 
-        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, nodes))
+        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, nodes).encode('UTF-8'))
 
         my_node = client.get_node(uri, limit=2, force=True)
         self.assertEqual(uri, my_node.uri)
@@ -480,7 +483,7 @@ class TestClient(unittest.TestCase):
         with patch('os.access'):
             client = Client(vospace_certfile=certfile)
         uri1 = 'vos://cadc.nrc.ca!vospace/nosuchfile1'
-        url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1?limit=0'
+        url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1'
         client.conn.session.delete = Mock()
         client.delete(uri1)
         client.conn.session.delete.assert_called_once_with(url)

@@ -1,6 +1,7 @@
 #!python
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from vos import vos
 import sys
@@ -10,7 +11,7 @@ import signal
 from vos import version
 
 def signal_handler(signum, frame):
-    raise KeyboardInterrupt, "SIGINT signal handler"
+    raise KeyboardInterrupt("SIGINT signal handler")
 
 def vmv():
     signal.signal(signal.SIGINT, signal_handler)

@@ -1,4 +1,6 @@
 """Lists information about a VOSpace DataNode or the contents of a ContainerNode."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import errno
 import logging
@@ -45,7 +47,7 @@ def vls():
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
-    except Exception, e:
+    except Exception as e:
         logger.error("Connection failed:  %s" % (str(e)))
         sys.exit(-1)
 
@@ -118,11 +120,11 @@ def vls():
             return time.strftime('%b %d  %Y ', time_tuple)
         return time.strftime('%b %d %H:%S ', time_tuple)
 
-    formats = {'permissions': lambda value: "%-11s" % value,
-               'creator': lambda value: " %-20s" % value,
-               'readGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
-               'writeGroup': lambda value: " %-15s" % ("'" + value.replace(CADC_GMS_PREFIX, "") + "'"),
-               'isLocked': lambda value: " %-8s" % ("", "LOCKED")[value == "true"],
+    formats = {'permissions': lambda value: "{:<11}".format(value),
+               'creator': lambda value: " {:<20}".format(value),
+               'readGroup': lambda value: " {:<15}".format(value.replace(CADC_GMS_PREFIX, "")),
+               'writeGroup': lambda value: " {:<15}".format(value.replace(CADC_GMS_PREFIX, "")),
+               'isLocked': lambda value: " {:<8}".format("", "LOCKED")[value == "true"],
                'size': size_format,
                'date': date_format}
 

@@ -4,7 +4,8 @@
 
 A node is locked by setting the islocked property. When a node is
 locked, it cannot be copied to, moved or deleted. """
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import logging
 import sys
@@ -17,7 +18,7 @@ import signal
 
 
 def signal_handler(signal, frame):
-    raise KeyboardInterrupt, "SIGINT signal handler"
+    raise KeyboardInterrupt("SIGINT signal handler")
 
 def vlock():
     signal.signal(signal.SIGINT, signal_handler)
@@ -50,7 +51,7 @@ def vlock():
             node.is_locked = lock
             client.update(node)
         else:
-            print node.is_locked
+            print(node.is_locked)
             if not node.is_locked:
                 exit_code = -1
     except KeyboardInterrupt:

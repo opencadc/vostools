@@ -4,8 +4,9 @@
    Connections to VOSpace are made using a SSL X509 certificat which is
    stored in a .pem file.
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-from contextlib import nested
 import copy
 import errno
 import fnmatch
@@ -26,22 +27,20 @@ import string
 import sys
 import time
 import urllib
-import urlparse
+from six.moves.urllib.parse import urlparse
+import six
 from xml.etree import ElementTree
 from copy import deepcopy
-from NodeCache import NodeCache
+from .NodeCache import NodeCache
 from .version import version
 from cadcutils import net, exceptions, util
 from .setup_package import _CONFIG_PATH
+from . import md5_cache
 
 try:
-    _unicode = unicode
-except NameError:
-    # If Python is built without Unicode support, the unicode type
-    # will not exist. Fake one.
-    class Unicode(object):
-        pass
-    _unicode = unicode
+    from urllib import splittag
+except ImportError:
+    from urllib.parse import splittag
 
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
@@ -76,10 +75,13 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
                  'rss': '{}#rss'.format(VO_CADC_VIEW_URI),
                  'cutout': '{}#cutout'.format(VO_CADC_VIEW_URI)}
 
+# md5sum of a size zero file
+ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 vos_config = util.Config(_CONFIG_PATH)
 
 #requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.ERROR)
+
 
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
@@ -92,27 +94,6 @@ def convert_vospace_time_to_seconds(str_date):
     right = str_date.rfind(":") + 3
     mtime = time.mktime(time.strptime(str_date[0:right], '%Y-%m-%dT%H:%M:%S'))
     return mtime - time.mktime(time.gmtime()) + time.mktime(time.localtime())
-
-
-def compute_md5(filename, block_size=BUFSIZE):
-    """
-    Given a file compute the MD5 of that file.
-
-    :param filename: name of file to open and compute MD5 for.
-    :type filename: str
-    :param block_size: size of read blocks to stream through MD5 calculator.
-    :type block_size: int
-    :return: md5 as hex
-    :rtype: hex
-    """
-    md5 = hashlib.md5()
-    with open(filename, 'r') as r:
-        while True:
-            buf = r.read(block_size)
-            if len(buf) == 0:
-                break
-            md5.update(buf)
-    return md5.hexdigest()
 
 
 class URLParser(object):
@@ -255,8 +236,10 @@ class Node(object):
         if node_type is None:
             node_type = Node.DATA_NODE
 
-        if type(node) == unicode or type(node) == str:
+        if isinstance(node, six.text_type) or isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
+        elif isinstance(node, bytes):
+            node = self.create(node.decode('utf-8'), node_type, properties, subnodes=subnodes)
 
         if node is None:
             raise LookupError("no node found or created?")
@@ -317,8 +300,9 @@ class Node(object):
         data = []
         file_handle = Dummy()
         file_handle.write = data.append
-        ElementTree.ElementTree(self.node).write(file_handle, encoding="UTF-8")
-        return "".join(data)
+        ElementTree.ElementTree(self.node).write(file_handle, encoding='UTF-8')
+        # concatenate and decode the string
+        return b''.join(data).decode('UTF-8')
 
     def setattr(self, attr=None):
         """return / augment a dictionary of attributes associated with the Node
@@ -386,7 +370,7 @@ class Node(object):
         st_size = int(self.props.get('length', 0))
         self.attr['st_size'] = st_size > 0 and st_size or 0
 
-        self.attr['st_blocks'] = self.attr['st_size'] / 512
+        self.attr['st_blocks'] = self.attr['st_size'] // 512
 
     def setxattr(self, attrs=None):
         """Initialize the extended attributes using the Node properties that are not part of the core set.
@@ -442,7 +426,7 @@ class Node(object):
         :param prop: the  property to expand into a  IVOA uri value for a property.
         :rtype str
         """
-        (url, tag) = urllib.splittag(prop)
+        (url, tag) = splittag(prop)
         if tag is None and url in ['title',
                                    'creator',
                                    'subject',
@@ -654,9 +638,9 @@ class Node(object):
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
         date = convert_vospace_time_to_seconds(self.props['date'])
-        creator = string.lower(re.search('CN=([^,]*)',
+        creator = (re.search('CN=([^,]*)',
                                          self.props.get('creator', 'CN=unknown_000,'))
-                               .groups()[0].replace(' ', '_'))
+                               .groups()[0].replace(' ', '_')).lower()
         perm = []
         for i in range(10):
             perm.append('-')
@@ -676,7 +660,7 @@ class Node(object):
         if read_group != 'NONE':
             perm[4] = 'r'
         is_locked = self.props.get(VO_PROPERTY_URI_ISLOCKED, "false")
-        return {"permissions": string.join(perm, ''),
+        return {"permissions": ''.join(perm),
                 "creator": creator,
                 "readGroup": read_group,
                 "writeGroup": write_group,
@@ -748,7 +732,7 @@ class Node(object):
         :param prop: the uri of the property to get the name of.
 
         """
-        (url, prop_name) = urllib.splittag(prop)
+        (url, prop_name) = splittag(prop)
         if url == Node.IVOAURL:
             return prop_name
         return prop
@@ -876,7 +860,7 @@ class VOFile(object):
         if self.resp.status_code not in codes:
             logger.debug("Got status code: %s for %s" %
                          (self.resp.status_code, self.url))
-            msg = self.resp.content
+            msg = self.resp.text
             if msg is not None:
                 msg = html2text.html2text(msg, self.url).strip().replace('\n', ' ')
             logger.debug("Error message: {0}".format(msg))
@@ -886,7 +870,7 @@ class VOFile(object):
                     msg = msgs[self.resp.status_code]
                 if (self.resp.status_code == 401 and
                         self.connector.subject.anon and
-                        self.connector.vospace_token is None):
+                        self.connector.vo_token is None):
                     msg += " using anonymous access "
             exception = OSError(VOFile.errnos.get(self.resp.status_code, self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
@@ -1070,7 +1054,7 @@ class VOFile(object):
         # start from top of URLs with a delay
         self.urlIndex = 0
         logger.error("Servers busy {0} for {1}".format(self.resp.status_code, self.URLs))
-        msg = self.resp.content
+        msg = self.resp.text
         if msg is not None:
             msg = html2text.html2text(msg, self.url).strip()
         else:
@@ -1299,8 +1283,8 @@ class Client(object):
         """
         if not dirname:
             dirname = self.rootNode
-        if isinstance(pattern, _unicode) and not isinstance(dirname, unicode):
-            dirname = unicode(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
+        if isinstance(pattern, str) and not isinstance(dirname, str):
+            dirname = str(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             names = self.listdir(dirname, force=True)
         except os.error:
@@ -1405,7 +1389,7 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_md5 = self.get_node(source).props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+                source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
@@ -1423,14 +1407,14 @@ class Client(object):
                     response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
                     source_md5 = response.headers.get('Content-MD5', source_md5)
                     response.raise_for_status()
-                    with open(destination, 'w') as fout:
+                    with open(destination, 'wb') as fout:
                         for chunk in response.iter_content(chunk_size=512 * 1024):
                             if chunk:
                                 fout.write(chunk)
                                 fout.flush()
                     destination_size = os.stat(destination).st_size
                     if check_md5:
-                        destination_md5 = compute_md5(destination)
+                        destination_md5 = md5_cache.MD5_Cache.computeMD5(destination)
                         logger.debug("{0} {1}".format(source_md5, destination_md5))
                         assert destination_md5 == source_md5
                     success = True
@@ -1439,7 +1423,7 @@ class Client(object):
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
-            source_md5 = compute_md5(source)
+            source_md5 = md5_cache.MD5_Cache.computeMD5(source)
             put_urls = self.get_node_url(destination, 'PUT')
             while not success:
                 if len(put_urls) == 0:
@@ -1452,10 +1436,10 @@ class Client(object):
                         break
                 put_url = put_urls.pop(0)
                 try:
-                    with open(source, 'r') as fin:
+                    with open(source, 'rb') as fin:
                         self.conn.session.put(put_url, data=fin)
                     node = self.get_node(destination, limit=0, force=True)
-                    destination_md5 = node.props.get('MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+                    destination_md5 = node.props.get('MD5', ZERO_MD5)
                     assert destination_md5 == source_md5
                 except Exception as ex:
                     logging.debug("FAILED to PUT to {0}".format(put_url))
@@ -1544,7 +1528,7 @@ class Client(object):
                 # comes from the HTTP header.
                 if uri.startswith('vos:') or uri.startswith('ad:'):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
-                    vo_xml_string = vo_fobj.read()
+                    vo_xml_string = vo_fobj.read().decode('UTF-8')
                     xml_file = StringIO(vo_xml_string)
                     xml_file.seek(0)
                     dom = ElementTree.parse(xml_file)
@@ -1575,7 +1559,8 @@ class Client(object):
                     next_uri = None
                     while next_uri != node.node_list[-1].uri:
                         next_uri = node.node_list[-1].uri
-                        xml_file = StringIO(self.open(uri, os.O_RDONLY, next_uri=next_uri, limit=limit).read())
+                        xml_file = StringIO(self.open(uri, os.O_RDONLY, next_uri=next_uri,
+                                                      limit=limit).read().decode('UTF-8'))
                         xml_file.seek(0)
                         next_page = Node(ElementTree.parse(xml_file).getroot())
                         if len(next_page.node_list) > 0 and next_uri == next_page.node_list[0].uri:
@@ -1586,7 +1571,7 @@ class Client(object):
                 childWatch.insert(childNode)
         return node
 
-    def get_node_url(self, uri, method='GET', view=None, limit=0, next_uri=None, cutout=None, full_negotiation=None):
+    def get_node_url(self, uri, method='GET', view=None, limit=None, next_uri=None, cutout=None, full_negotiation=None):
         """Split apart the node string into parts and return the correct URL for this node.
 
         :param uri: The VOSpace uri to get an associated url for.
@@ -1666,13 +1651,12 @@ class Client(object):
                 fields['view'] = view
             if next_uri is not None:
                 fields['uri'] = next_uri
-            data = ""
-            if len(fields) > 0:
-                data = "?" + urllib.urlencode(fields)
-            url = "%s/%s%s" % (endpoints.nodes,
-                                    parts.path.strip('/'),
-                                    data)
-            logger.debug("URL: %s (%s)" % (url, method))
+            tmp_url = '{}/{}'.format(endpoints.nodes, parts.path.strip('/'))
+            # include the parameters into the url. Use Request to get it rigth
+            req = requests.Request(method, tmp_url, params=fields)
+            prepped = req.prepare()
+            url = prepped.url
+            logger.debug('URL: {} ({})'.format(url, method))
             return url
 
         # This is the shortcut. We do a GET request on the service with the parameters sent as arguments.
@@ -1697,11 +1681,10 @@ class Client(object):
 
         if cutout is not None:
             args['cutout'] = cutout
-        params = urllib.urlencode(args)
         headers = {"Content-type": "application/x-www-form-urlencoded",
                    "Accept": "text/plain"}
 
-        response = self.conn.session.get(endpoints.transfer, params=params, headers=headers, allow_redirects=False)
+        response = self.conn.session.get(endpoints.transfer, params=args, headers=headers, allow_redirects=False)
         assert isinstance(response, requests.Response)
         logging.debug("Transfer Server said: {0}".format(response.content))
 
@@ -1743,7 +1726,7 @@ class Client(object):
         if self.isdir(link_uri):
             link_uri = os.path.join(link_uri, os.path.basename(src_uri))
 
-        with nested(self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri)):
+        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(link_uri):
             link_node = Node(link_uri, node_type="vos:LinkNode")
             ElementTree.SubElement(link_node.node, "target").text = src_uri
         data = str(link_node)
@@ -1765,7 +1748,7 @@ class Client(object):
         """
         src_uri = self.fix_uri(src_uri)
         destination_uri = self.fix_uri(destination_uri)
-        with nested(self.nodeCache.volatile(src_uri), self.nodeCache.volatile(destination_uri)):
+        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(destination_uri):
             return self.transfer(src_uri, destination_uri, view='move')
 
     def _get(self, uri, view="defaultview", cutout=None):
@@ -1803,7 +1786,7 @@ class Client(object):
                 vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
                 if cutout is not None and view == 'cutout':
                     param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = VO_CADC_VIEW_URI
+                    param.attrib['uri'] = CADC_VO_VIEWS[view]
                     param.text = cutout
             protocol_element = ElementTree.SubElement(transfer_xml, "vos:protocol")
             protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL, protocol[direction])
@@ -1818,7 +1801,7 @@ class Client(object):
                                       headers={'Content-Type': 'text/xml'})
 
         logging.debug("{0}".format(resp))
-        logging.debug("{0}".format(resp.content))
+        logging.debug("{0}".format(resp.text))
         if resp.status_code != 303:
             raise OSError(resp.status_code, "Failed to get transfer service response.")
         transfer_url = resp.headers.get('Location', None)
@@ -1837,7 +1820,7 @@ class Client(object):
         xfer_url = xfer_resp.headers.get('Location', None)
         if self.conn.session.auth is not None and "auth" not in xfer_url:
             xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = self.conn.session.get(xfer_url).content
+        xml_string = self.conn.session.get(xfer_url).text
         logging.debug("Transfer Document: %s" % xml_string)
         transfer_document = ElementTree.fromstring(xml_string)
         logging.debug("XML version: {0}".format(ElementTree.tostring(transfer_document)))
@@ -1879,7 +1862,7 @@ class Client(object):
             sleep_time = 1
             roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
             phase = VOFile(phase_url, self.conn, method="GET",
-                           follow_redirect=False).read()
+                           follow_redirect=False).read().decode('utf-8')
             # do not remove the line below. It is used for testing
             logging.debug("Job URL: " + job_url + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
@@ -1900,7 +1883,7 @@ class Client(object):
                     sys.stdout.write("\r                    \n")
                 else:
                     time.sleep(sleep_time)
-                phase = self.conn.session.get(phase_url, allow_redirects=False).content
+                phase = self.conn.session.get(phase_url, allow_redirects=False).text
                 logging.debug("Async transfer Phase for url %s: %s " % (url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
@@ -1911,7 +1894,7 @@ class Client(object):
                                    headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
         status = VOFile(phase_url, self.conn, method="GET",
-                        follow_redirect=False).read()
+                        follow_redirect=False).read().decode('UTF-8')
 
         logger.debug("Phase:  {0}".format(status))
         if status in ['COMPLETED']:
@@ -1920,7 +1903,7 @@ class Client(object):
             # re-queue the job and continue to monitor for completion.
             raise OSError("UWS status: {0}".format(status), errno.EFAULT)
         error_url = job_url + "/error"
-        error_message = self.conn.session.get(error_url).content
+        error_message = self.conn.session.get(error_url).text
         logger.debug("Got transfer error {0} on URI {1}".format(error_message, uri))
         # Check if the error was that the link type is unsupported and try and follow that link.
         target = re.search("Unsupported link target:(?P<target> .*)$", error_message)

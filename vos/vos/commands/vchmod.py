@@ -2,6 +2,8 @@
 """set read/write properties of a node.
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from vos.commonparser import CommonParser
 import signal
@@ -110,6 +112,6 @@ def vchmod():
         logger.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
-        logger.error("Error: " + str(e))
+        logger.error('Error {}: '.format(str(e)))
         sys.exit(getattr(e, 'errno', -1))
     sys.exit(returnCode)

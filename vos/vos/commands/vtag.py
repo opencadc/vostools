@@ -3,7 +3,8 @@
 
 The tag system is meant to allow tags, in addition to the standard
 nodode properties. """
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import pprint
 from vos import version
@@ -14,7 +15,7 @@ from vos import vos
 import signal
 
 def signal_handler(signal, frame):
-    raise KeyboardInterrupt, "SIGINT signal handler"
+    raise KeyboardInterrupt("SIGINT signal handler")
 
 
 def vtag():
@@ -68,7 +69,7 @@ def vtag():
         if len(props) == 0:
             # print all properties
             for key in node.props:
-                print key, node.props[key]
+                print(key, node.props[key])
             return pprint.pprint(node.props)
 
         changed = False

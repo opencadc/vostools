@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from future import standard_library
 standard_library.install_aliases()
 from builtins import str
@@ -15,9 +17,11 @@ import uuid
 import ctypes
 import os
 import stat
+import six
+#from six.moves import queue
 from mock import Mock, MagicMock, patch
-from .. import CadcCache
-from ..SharedLock import SharedLock, TimeoutError, RecursionError, StealError
+from vofs import CadcCache
+from vofs.SharedLock import SharedLock, TimeoutError, RecursionError, StealError
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
@@ -266,24 +270,24 @@ class TestCacheError(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = CadcCache.CacheError("a string")
-        self.assertEqual("'a string'", str(e))
+        e = CadcCache.CacheError(str("a string"))
+        self.assertEqual("'a string'", six.text_type(e))
 
 
 class TestCacheRetry(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = CadcCache.CacheRetry("a string")
-        self.assertEqual("'a string'", str(e))
+        e = CadcCache.CacheRetry(str("a string"))
+        self.assertEqual("'a string'", six.text_type(e))
 
 
 class TestCacheAborted(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_str(self):
-        e = CadcCache.CacheAborted("a string")
-        self.assertEqual("'a string'", str(e))
+        e = CadcCache.CacheAborted(str("a string"))
+        self.assertEqual("'a string'", six.text_type(e))
 
 
 class TestSharedLock(unittest.TestCase):
@@ -292,11 +296,11 @@ class TestSharedLock(unittest.TestCase):
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_Exceptions(self):
-        e = TimeoutError("timeout")
-        self.assertEqual(str(e), "'timeout'")
+        e = TimeoutError(str("timeout"))
+        self.assertEqual(six.text_type(e), "'timeout'")
 
-        e = RecursionError("recursion")
-        self.assertEqual(str(e), "'recursion'")
+        e = RecursionError(str("recursion"))
+        self.assertEqual(six.text_type(e), "'recursion'")
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_simpleLock(self):
@@ -1247,7 +1251,9 @@ class TestCadcCache(unittest.TestCase):
             ioObject.writeToBacking = MagicMock(side_effect=OSError(
                 errno.ENOENT, "No such file *EXPECTED*"))
             fh.flushNode()
-            self.assertTrue(fh.flushException[0] is OSError)
+            # turns out that OSError, based on teh errno argument, returns the specific subclass, in this
+            # case the FileNotFoundError. However, FileNotFoundError is not defined in Python2.7
+            self.assertTrue(isinstance(fh.flushException[1], OSError))
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_03_flushNode3(self):
@@ -1321,11 +1327,12 @@ class TestCadcCache(unittest.TestCase):
             testCache.flushNodeQueue = CadcCache.FlushNodeQueue()
             ioObject = IOProxyFor100K()
             with testCache.open("/dir1/dir2/file", True, False, ioObject, False) as fh:
-                buf = ctypes.create_string_buffer(4)
-                fh.write("abcd", 4, 30000)
-                retsize = fh.read(4, 30000, buf)
-                self.assertEqual(retsize, 4)
-                self.assertEqual(buf[:], "abcd")
+                data = b"abcd"
+                buf = ctypes.create_string_buffer(len(data))
+                fh.write(data, len(data), 30000)
+                retsize = fh.read(len(data), 30000, buf)
+                self.assertEqual(retsize, len(data))
+                self.assertEqual(buf[:], b"abcd")
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_04_write2(self):
