@@ -34,7 +34,6 @@ from copy import deepcopy
 from .NodeCache import NodeCache
 from .version import version
 from cadcutils import net, exceptions, util
-from .setup_package import _CONFIG_PATH
 from . import md5_cache
 
 try:
@@ -77,7 +76,19 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
 
 # md5sum of a size zero file
 ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
-vos_config = util.Config(_CONFIG_PATH)
+
+_ROOT = os.path.abspath(os.path.dirname(__file__))
+_DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
+_CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
+
+try:
+    vos_config = util.Config(_CONFIG_PATH)
+except IOError as e:
+    # Assume this is the first invocation and the config file has not been
+    # created yet => create it
+    util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
+    # now read parse it again
+    vos_config = util.Config(_CONFIG_PATH)
 
 #requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.ERROR)
