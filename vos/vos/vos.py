@@ -851,6 +851,9 @@ class VOFile(object):
 
         :param codes: a list of http status_codes that are NOT failures but require some additional action.
         """
+        if self.resp is None:
+            return
+
         msgs = {404: "Node Not Found",
                 401: "Not Authorized",
                 409: "Conflict",
@@ -968,14 +971,13 @@ class VOFile(object):
                 self.resp = self.connector.session.send(self.request, stream=True, verify=False)
             except exceptions.HttpException as e:
                 # this is the path for all status_codes between 400 and 600
-                self.resp = e.orig_exception.response
+                if e.orig_exception is not None:
+                    self.resp = e.orig_exception.response
 
                 # restore the original retry flag of the session
                 self.connector.session.retry = orig_retry_flag
 
                 self.checkstatus()
-                if self.resp.status_code == 416:
-                    return ""
 
                 if isinstance(e, exceptions.UnauthorizedException) or\
                    isinstance(e, exceptions.BadRequestException) or\

@@ -139,8 +139,7 @@ def vls():
             logger.error(str(error))
             sys.exit(errno.EPERM)
         except Exception as e:
-            logger.debug("{0}: {1}".format(type(e), str(e)))
-            logger.error("{0}".format(e))
+            logger.error(str(e))
             err_no = getattr(e, 'errno', None)
             err_no = err_no is not None and err_no or errno.ENOMSG
             sys.exit(err_no)
