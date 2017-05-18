@@ -5,6 +5,7 @@ import glob
 import os
 import sys
 from setuptools.command.test import test as TestCommand
+from setuptools import find_packages
 
 from setuptools import setup
 
@@ -92,7 +93,7 @@ setup(name=PACKAGENAME,
       use_2to3=False,
       setup_requires=['pytest-runner'],
       entry_points=entry_points,
-      packages=[PACKAGENAME],
+      packages=find_packages(),
       package_data={PACKAGENAME: ['data/*', 'tests/data/*', '*/data/*', '*/tests/data/*']},
       cmdclass = {'coverage': PyTest}
 )
