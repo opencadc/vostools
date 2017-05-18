@@ -15,10 +15,10 @@ sudo: false
 #
 # https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
 
-#addons:
-#    apt:
-#        packages:
-             - libfuse-dev
+addons:
+    apt:
+        packages:
+            - libfuse-dev
 #            - graphviz
 #            - texlive-latex-extra
 #            - dvipng
