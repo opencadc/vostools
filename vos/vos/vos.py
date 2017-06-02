@@ -1368,7 +1368,9 @@ class Client(object):
         :type destination: str
         :param send_md5: Should copy send back the md5 of the destination file or just the size?
         :type send_md5: bool
-
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
+        
         """
         # TODO: handle vospace to vospace copies.
 
@@ -1602,6 +1604,9 @@ class Client(object):
         :type cutout: str
         :param full_negotiation: Should we use the transfer UWS or do a GET and follow the redirect.
         :type full_negotiation: bool
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         uri = self.fix_uri(uri)
 
@@ -1731,6 +1736,9 @@ class Client(object):
         :type src_uri: str
         :param link_uri: the vospace node to create that will be a link to src_uri
         :type link_uri: str
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         link_uri = self.fix_uri(link_uri)
         src_uri = self.fix_uri(src_uri)
@@ -1778,6 +1786,9 @@ class Client(object):
         :param uri: the uri to transfer from or to VOSpace.
         :param view: which view of the node (data/default/cutout/etc.) is being transferred
         :param cutout: a special parameter added to the 'cutout' view request. e.g. '[0][1:10,1:10]'
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         endpoints = self.get_endpoints(uri)
         protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
@@ -1855,6 +1866,9 @@ class Client(object):
         """Follow a transfer URL to the Error message
         :param url: The URL of the transfer request that had the error.
         :param uri: The uri that we were trying to transfer (get or put).
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         error_codes = {'NodeNotFound': errno.ENOENT,
                        'RequestEntityTooLarge': errno.E2BIG,
@@ -2029,6 +2043,9 @@ class Client(object):
             then updates server with differences.
 
            :param node: the Node object to add some properties to.
+           
+           :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
            """
         new_props = copy.deepcopy(node.props)
         old_props = self.get_node(node.uri, force=True).props
@@ -2049,6 +2066,9 @@ class Client(object):
 
         :param node: the Node that we are going to create on the server.
         :type vos.Node
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         fixed_uri = self.fix_uri(uri)
         node = Node(fixed_uri)
@@ -2068,6 +2088,9 @@ class Client(object):
 
            :param node: the node to update.
            :param recursive: should this update be applied to all children? (True/False)
+           
+            :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+            cadcutils.exceptions module
            """
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
@@ -2108,6 +2131,9 @@ class Client(object):
 
         :param uri: The URI of the ContainerNode to create on the service.
         :type uri: str
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         uri = self.fix_uri(uri)
         node = Node(uri, node_type="vos:ContainerNode")
@@ -2124,6 +2150,9 @@ class Client(object):
     def delete(self, uri):
         """Delete the node
         :param uri: The (Container/Link/Data)Node to delete from the service.
+        
+        :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
+        cadcutils.exceptions module
         """
         uri = self.fix_uri(uri)
         logger.debug("delete {0}".format(uri))
