@@ -1,13 +1,68 @@
 language: python
+
+
 python:
-  - "2.7"
+    - 2.7
+    - 3.3
+    - 3.4
+    - 3.5
 
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libfuse-dev
+# Setting sudo to false opts in to Travis-CI container-based builds.
+sudo: false
 
-# command to install dependencies
+# The apt packages below are needed for sphinx builds. A full list of packages
+# that can be included can be found here:
+#
+# https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
+
+addons:
+    apt:
+        packages:
+            - libfuse-dev
+#            - graphviz
+#            - texlive-latex-extra
+#            - dvipng
+
+env:
+    global:
+
+        - SETUP_CMD='test'
+
+    matrix:
+        # Make sure that egg_info works without dependencies
+        - SETUP_CMD='test'
+
+matrix:
+    include:
+
+        # Do a coverage test in Python 2.
+        - python: 2.7
+          env: SETUP_CMD='coverage'
+
+        # Do a egg-info test in Python 2.
+        - python: 2.7
+          env: SETUP_CMD='egg_info'
+
+        # Check for sphinx doc build warnings - we do this first because it
+        # may run for a long time
+        #- python: 2.7
+        #  env: SETUP_CMD='build_sphinx -w'
+
+    exclude:
+
+        #- python: 3.3
+        #  env: SETUP_CMD='test'
+          
 install:
+   - cd vos; pip install -r dev_requirements.txt; cd ..;
+   - cd vofs; pip install -r dev_requirements.txt; cd ..;
 
-# command to run tests
-script: python setup.py test --addopts '--cov=vos'
+script:
+   - cd vos; python setup.py $SETUP_CMD || exit -1; cd ..
+   - cd vofs; python setup.py $SETUP_CMD || exit -1
+
+after_success:
+    # If coveralls.io is set up for this package, uncomment the line
+    # below and replace "packagename" with the name of your package.
+    # The coveragerc file may be customized as needed for your package.
+    # - if [[ $SETUP_CMD == 'coverage' ]]; then coveralls; fi

@@ -1,8 +1,0 @@
-This is a set of integration tests against the VOSpace service hosted
-at the CADC. These tests can only be executed at the CADC against that
-service.
-
-Environment variables (optional):
-CADC_ROOT = points to the location of the cadcVOFS scripts (Default: released location)
-VOSPACE_WEBSERVICE = URL of the VOSpace service host (Default: "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca")
-CADC_PYTHON_TEST_TARGETS = List of versions of python to test against (Default: "python2.6 python2.7")
