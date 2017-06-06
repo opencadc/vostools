@@ -3,6 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import time
+import warnings
 import vos
 import sys
 import urllib
@@ -15,6 +16,8 @@ from .CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from vos.logExceptions import logExceptions
 import logging
+import six.moves
+
 
 logger = logging.getLogger('vofs')
 logger.setLevel(logging.ERROR)
@@ -22,6 +25,7 @@ if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
 __all__ = ['VOFS', 'HandleWrapper', 'MyIOProxy']
+
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -97,7 +101,7 @@ class MyIOProxy(IOProxy):
             logger.debug("reading from {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
             try:
                 resp = self.lastVOFile.read(return_response=True)
-            except OSError as os_error:
+            except OSError:
                 # existing URLs do not work anymore. Try another
                 # transfer, forcing a full negotiation. This
                 # handles the case that we tried a short cut URL
@@ -209,7 +213,11 @@ class VOFS(Operations):
     removexattr = None
 
     def setxattr(self, path, name, value, options, position=0):
-        logger.warning("Extended attributes not supported: {0} {1} {2} {3} {4}".format(path, name, value, options, position))
+        logger.warning("Extended attributes not supported: {0} {1} {2} {3} {4}".format(path,
+                                                                                       name,
+                                                                                       value,
+                                                                                       options,
+                                                                                       position))
 
     def __init__(self, root, cache_dir, options, conn=None,
                  cache_limit=1024, cache_nodes=False,
@@ -329,11 +337,15 @@ class VOFS(Operations):
     @logExceptions()
     def create(self, path, flags, fi=None):
         """Create a node. Currently ignores the ownership mode
-        @param path: the container/dataNode in VOSpace to be created
-        @param flags: Read/Write settings (eg. 600)
+        :param path: the container/dataNode in VOSpace to be created
+        :param flags: Read/Write settings (eg. 600)
+        :param fi: integer handle to assign to created file.
         """
 
         logger.debug("Creating a node: {0} with flags {1}".format(path, str(flags)))
+
+        if fi is not None:
+            warnings.warn("setting fi on call to create is not supported", NotImplemented)
 
         # Create is handle by the client.
         # This should fail if the base path doesn't exist
@@ -524,7 +536,6 @@ class VOFS(Operations):
         return HandleWrapper(handle, read_only).get_id()
 
     @logExceptions()
-
     def read(self, path, size=0, offset=0, file_id=None, buf=None):
         """
         Read the required bytes from the file and return a buffer containing
@@ -569,12 +580,11 @@ class VOFS(Operations):
         """Send a list of entries in this directory"""
         logger.debug("Getting directory list for {0}".format(path))
         # reading from VOSpace can be slow, we'll do this in a thread
-        from six.moves import _thread
         with self.condition:
             if not self.loading_dir.get(path, False):
+                # TODO implement this as a multiprocess call instead of threading.
                 self.loading_dir[path] = True
-                _thread.start_new_thread(self.load_dir, (path, ))
-
+                six.moves._thread.start_new_thread(self.load_dir, (path, ))
             while self.loading_dir.get(path, False):
                 logger.debug("Waiting ... ")
                 self.condition.wait()
@@ -727,8 +737,7 @@ class VOFS(Operations):
         logger.debug("%d --> %d" % (offset, offset + size))
         return fh.cache_file_handle.write(data, size, offset)
     
-    
-        
+
 class MyFuse(FUSE):
     """ 
     Customization of FUSE class in order to speed up reads and writes by passing
@@ -743,9 +752,9 @@ class MyFuse(FUSE):
     
     def read(self, path, buf, size, offset, fip):
         if self.raw_fi:
-          fh = fip.contents
+            fh = fip.contents
         else:
-          fh = fip.contents.fh
+            fh = fip.contents.fh
 
         retsize = self.operations('read', path.decode(self.encoding), size, offset, fh, buf)
 
@@ -754,8 +763,6 @@ class MyFuse(FUSE):
 
         return retsize
 
-
     def write(self, path, buf, size, offset, fip):
-
         return self.operations('write', path.decode(self.encoding), buf,
-                                       size, offset, fip.contents.fh)
+                               size, offset, fip.contents.fh)
