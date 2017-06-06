@@ -6,11 +6,11 @@
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-
+from future.utils import bytes_to_native_str
+import warnings
 import copy
 import errno
 import fnmatch
-import hashlib
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -23,24 +23,26 @@ import mimetypes
 import os
 import re
 import stat
-import string
 import sys
 import time
 import urllib
-from six.moves.urllib.parse import urlparse
 import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .NodeCache import NodeCache
-from .version import version
+try:
+    from .version import version
+except ImportError:
+    version = "unknown"
 from cadcutils import net, exceptions, util
 from . import md5_cache
-
 try:
     from urllib import splittag
 except ImportError:
-    from urllib.parse import splittag
+    import six.moves.urllib.parse
+    splittag = six.moves.urllib.parse.splittag
 
+urlparse = six.moves.urllib.parse.urlparse
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -81,6 +83,19 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
 _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
+# Pattern matching in filenames to extract out the RA/DEC/RADIUS part
+FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]+)'  # legal filename string
+                                    r'(?P<cutout>'   # Look for a cutout part
+                                    r'(?P<pix>(\[\d*:?\d*\])?(\[[-+]?\d*:?[-+]?\d*,?[-+]?\d*:?[-+]?\d*\]))'  # pixel
+                                    r'|'  # OR
+                                    r'(?P<wcs>'  # possible wcs cutout
+                                    r'\((?P<ra>[+]?\d*(\.\d*)?),'  # ra part
+                                    r'(?P<dec>[\-+]?\d*(\.\d*)?),'  # dec part
+                                    r'(?P<rad>\d*(\.\d*)?)\))'  # radius of cutout
+                                    r')?$'
+                                    )
+MAGIC_GLOB_CHECK = re.compile('[*?[]')
+
 try:
     vos_config = util.Config(_CONFIG_PATH)
 except IOError as e:
@@ -90,7 +105,6 @@ except IOError as e:
     # now read parse it again
     vos_config = util.Config(_CONFIG_PATH)
 
-#requests.packages.urllib3.disable_warnings()
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
@@ -98,7 +112,7 @@ def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
 
     :param str_date: string to parse into a VOSpace time
-    :type str_date: str
+    :type str_date: unicode
     :return: A datetime object for the provided string date
     :rtype: datetime
     """
@@ -113,7 +127,7 @@ class URLParser(object):
     There is a difference between the 2.5 and 2.7 version of the
     urlparse.urlparse command, so here I roll my own...
     """
-    #TODO - ad: since 2.5 is no longer supported maybe it's time to get rid of this
+    # TODO - ad: since 2.5 is no longer supported maybe it's time to get rid of this
     def __init__(self, url):
         self.scheme = None
         self.netloc = None
@@ -150,6 +164,8 @@ class Connection(object):
         If no certificate or token are provided, and attempt to find user/password combination
         in the .netrc file is made before the connection is downgraded to 'anonymous'
         """
+        if http_debug is not False:
+            warnings.warn("Connection object no longer uses http_debug setting.", DeprecationWarning)
         self.vo_token = None
         session_headers = None
         self.resource_id = resource_id
@@ -161,15 +177,15 @@ class Connection(object):
             cert = vospace_certfile
             if cert is not None:
                 if len(cert) == 0:
-                    logger.debug('Anonymous access (certifile=Anonymous)')
+                    logger.debug('Anonymous access (certfile=Anonymous)')
                     self.subject = net.Subject()
-                elif (not os.access(vospace_certfile, os.F_OK)):
+                elif not os.access(vospace_certfile, os.F_OK):
                     logger.warning(
                         "Could not access certificate at {0}.".format(cert))
                     cert = None
                 else:
                     logger.debug('Authenticate with cert {}'.format(vospace_certfile))
-                    self.subject = net.Subject(certificate = vospace_certfile)
+                    self.subject = net.Subject(certificate=vospace_certfile)
 
             if cert is None:
                 if os.access(os.path.join(os.environ['HOME'], ".netrc"), os.F_OK):
@@ -187,7 +203,6 @@ class Connection(object):
     def session(self):
         return self.ws_client._get_session()
 
-
     def get_connection(self, url=None):
         """Create an HTTPSConnection object and return.  Uses the client
         certificate if None given.
@@ -203,7 +218,6 @@ class Node(object):
     """A VOSpace node"""
 
     IVOAURL = "ivo://ivoa.net/vospace/core"
-
     VOSNS = "http://www.ivoa.net/xml/VOSpace/v2.0"
     XSINS = "http://www.w3.org/2001/XMLSchema-instance"
     TYPE = '{%s}type' % XSINS
@@ -225,6 +239,8 @@ class Node(object):
 
         if node is a string then create a node named node of nodeType with
         properties
+
+        :param node: the name of the node to create or a string representing that node
         """
         self.uri = None
         self.name = None
@@ -247,10 +263,10 @@ class Node(object):
         if node_type is None:
             node_type = Node.DATA_NODE
 
+        if isinstance(node, bytes):
+            node = bytes_to_native_str(node)
         if isinstance(node, six.text_type) or isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
-        elif isinstance(node, bytes):
-            node = self.create(node.decode('utf-8'), node_type, properties, subnodes=subnodes)
 
         if node is None:
             raise LookupError("no node found or created?")
@@ -402,7 +418,7 @@ class Node(object):
         """Set the groupwrite value to group for this node
 
         :param group: the uri of he group to give write access to.
-        :type group: str
+        :type group: unicode
         """
         logger.debug("Setting groups to: {0}".format(group))
         if group is not None and len(group.split()) > 3:
@@ -414,7 +430,7 @@ class Node(object):
         """Set the groupread value to group for this node
 
         :param group: the uri of the group to give read access to.
-        :type group: str
+        :type group: unicode
         """
         if group is not None and len(group.split()) > 3:
             raise AttributeError("Exceeded max of 4 read groups: {0}<-".format(group))
@@ -426,7 +442,7 @@ class Node(object):
         """
         :param value: should the is_public flag be set? (true/false)
 
-        :type value: str
+        :type value: unicode
         """
         return self.change_prop('ispublic', value)
 
@@ -435,7 +451,7 @@ class Node(object):
         """Check if prop is a well formed uri and if not then make into one
 
         :param prop: the  property to expand into a  IVOA uri value for a property.
-        :rtype str
+        :rtype unicode
         """
         (url, tag) = splittag(prop)
         if tag is None and url in ['title',
@@ -482,9 +498,9 @@ class Node(object):
         """Change the node property 'key' to 'value'.
 
         :param key: The property key to update
-        :type key: str
+        :type key: unicode
         :param value: The value to give that property.
-        :type value: str,None
+        :type value: unicode,None
         :return True/False depending on if the property value was updated.
         """
         # TODO split into 'set' and 'delete'
@@ -556,7 +572,7 @@ class Node(object):
         :param uri: The URI for this node.
         :type uri: str
         :param node_type: the type of VOSpace node, likely one of vos:DataNode, vos:ContainerNode, vos:LinkNode
-        :type node_type: str
+        :type node_type: unicode
         :param properties:  a dictionary of the node properties, keys should be single words from the IVOA list
         :type properties: dict
         :param subnodes: Any children to attach to this node, only valid for vos:ContainerNode
@@ -650,8 +666,8 @@ class Node(object):
         """Organize some information about a node and return as dictionary"""
         date = convert_vospace_time_to_seconds(self.props['date'])
         creator = (re.search('CN=([^,]*)',
-                                         self.props.get('creator', 'CN=unknown_000,'))
-                               .groups()[0].replace(' ', '_')).lower()
+                             self.props.get('creator', 'CN=unknown_000,'))
+                   .groups()[0].replace(' ', '_')).lower()
         perm = []
         for i in range(10):
             perm.append('-')
@@ -683,7 +699,10 @@ class Node(object):
     @property
     def node_list(self):
         """Get a list of all the nodes held to by a ContainerNode return a
-           list of Node objects"""
+           list of Node objects
+
+        :rtype: list
+        """
         if self._node_list is None:
             self._node_list = []
             for nodesNode in self.node.findall(Node.NODES):
@@ -907,12 +926,12 @@ class VOFile(object):
 
     def open(self, url, method="GET", byte_range=None, possible_partial_read=False):
         """Open a connection to the given URL
-        :param url: The URL to be openned
-        :type url: str
+        :param url: The URL to be opened
+        :type url: unicode
         :param method: HTTP Method to use on open (PUT/GET/POST)
-        :type method: str
+        :type method: unicode
         :param byte_range: The range of byte_range to read, This is in open so we can set the header parameter.
-        :type byte_range: str
+        :type byte_range: unicode
         :param possible_partial_read:  Sometimes we kill during read, this tells the server that isn't an error.
         :type possible_partial_read: bool
         """
@@ -962,12 +981,16 @@ class VOFile(object):
             logger.error(str(ex))
 
     def get_file_info(self):
-        """Return information harvested from the HTTP header"""
+        """Return information harvested from the HTTP header.
+
+        :rtype (int, unicode)
+        """
         return self.totalFileSize, self.md5sum
 
     def read(self, size=None, return_response=False):
         """return size bytes from the connection response
 
+        :param return_response: should we return the response object or the bytes read?
         :param size: number of bytes to read from the file.
         """
 
@@ -980,19 +1003,19 @@ class VOFile(object):
                     # return instead and try the next url
                     self.connector.session.retry = False
                 self.resp = self.connector.session.send(self.request, stream=True, verify=False)
-            except exceptions.HttpException as e:
+            except exceptions.HttpException as http_exception:
                 # this is the path for all status_codes between 400 and 600
-                if e.orig_exception is not None:
-                    self.resp = e.orig_exception.response
+                if http_exception.orig_exception is not None:
+                    self.resp = http_exception.orig_exception.response
 
                 # restore the original retry flag of the session
                 self.connector.session.retry = orig_retry_flag
 
                 self.checkstatus()
 
-                if isinstance(e, exceptions.UnauthorizedException) or\
-                   isinstance(e, exceptions.BadRequestException) or\
-                   isinstance(e, exceptions.ForbiddenException):
+                if isinstance(http_exception, exceptions.UnauthorizedException) or\
+                   isinstance(http_exception, exceptions.BadRequestException) or\
+                   isinstance(http_exception, exceptions.ForbiddenException):
                     raise
 
                 # Note: 404 (File Not Found) might be returned when:
@@ -1015,8 +1038,6 @@ class VOFile(object):
             finally:
                 # restore the original retry flag of the session
                 self.connector.session.retry = orig_retry_flag
-
-
 
         # Get the file size. We use this HEADER-CONTENT-LENGTH as a
         # fallback to work around a server-side Java bug that limits
@@ -1062,7 +1083,6 @@ class VOFile(object):
                 # logger.debug("Got url:%s from redirect but not following" %
                 # (self.url))
                 return self.url
-
 
         # start from top of URLs with a delay
         self.urlIndex = 0
@@ -1118,17 +1138,17 @@ class EndPoints(object):
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
 
-    subject = net.Subject() #default subject is for anonymous access
+    subject = net.Subject()  # default subject is for anonymous access
 
     def __init__(self, resource_id_uri):
         """
         Determines the end points of a vospace service
-        :param uri: the resource id uri
+        :param resource_id_uri: the resource id uri
+        :type resource_id_uri: unicode
         """
         self.resource_id = resource_id_uri
-        self.service = \
-                net.BaseWsClient(self.resource_id, EndPoints.subject, 'vos/' + version,
-                                 host=self.VOSPACE_WEBSERVICE)
+        self.service = net.BaseWsClient(self.resource_id, EndPoints.subject, 'vos/' + version,
+                                        host=self.VOSPACE_WEBSERVICE)
 
     @property
     def properties(self):
@@ -1144,7 +1164,7 @@ class EndPoints(object):
 
         :return: The network location of the VOSpace server.
         """
-        #TODO fix to run with test server
+        # TODO fix to run with test server
         return self.service.host
 
     @property
@@ -1152,9 +1172,8 @@ class EndPoints(object):
         """
         The transfer service endpoint.
         :return: service location of the transfer service.
-        :rtype: str
+        :rtype: unicode
         """
-
         return self.service._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
@@ -1194,11 +1213,11 @@ class Client(object):
         """This could/should be expanded to set various defaults
 
         :param vospace_certfile: x509 proxy certificate file location. Overrides certfile in conn.
-        :type vospace_certfile: str
+        :type vospace_certfile: unicode
         :param vospace_token: token string (alternative to vospace_certfile)
-        :type vospace_token: str
+        :type vospace_token: unicode
         :param root_node: the base of the VOSpace for uri references.
-        :type root_node: str
+        :type root_node: unicode
         :param conn: a connection pool object for this Client
         :type conn: Session
         :param transfer_shortcut: if True then just assumed data web service urls
@@ -1214,7 +1233,6 @@ class Client(object):
             conn = Connection(vospace_certfile=vospace_certfile,
                               vospace_token=vospace_token,
                               http_debug=http_debug)
-
 
         self.protocol = vos_config.get('transfer', 'protocol')
         if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
@@ -1250,7 +1268,7 @@ class Client(object):
         starting with a dot are special cases that are not matched by '*' and '?' patterns.
 
         :param pathname: path to run glob against.
-        :type pathname: str
+        :type pathname: unicode
         """
         dirname, basename = os.path.split(pathname)
         if not self.has_magic(pathname):
@@ -1289,15 +1307,15 @@ class Client(object):
         """
 
         :param dirname: name of the directory to look for matches in.
-        :type dirname: str
+        :type dirname: unicode
         :param pattern: pattern to match directory contents names against
-        :type pattern: str
+        :type pattern: unicode
         :return:
         """
         if not dirname:
             dirname = self.rootNode
-        if isinstance(pattern, str) and not isinstance(dirname, str):
-            dirname = str(dirname, sys.getfilesystemencoding() or sys.getdefaultencoding())
+        if isinstance(pattern, six.string_types) and not isinstance(dirname, six.string_types):
+            dirname = str(dirname).encode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             names = self.listdir(dirname, force=True)
         except os.error:
@@ -1318,9 +1336,6 @@ class Client(object):
             else:
                 raise OSError(errno.EACCES, "Permission denied: {0}".format(os.path.join(dirname, basename)))
         return []
-
-    magic_check = re.compile('[*?[]')
-
 
     def get_endpoints(self, uri):
         """
@@ -1351,23 +1366,24 @@ class Client(object):
 
         return self._endpoints[resource_id]
 
-
-    @classmethod
-    def has_magic(cls, s):
-        return cls.magic_check.search(s) is not None
+    @staticmethod
+    def has_magic(s):
+        return MAGIC_GLOB_CHECK.search(s) is not None
 
     # @logExceptions()
-    def copy(self, source, destination, send_md5=False):
+    def copy(self, source, destination, send_md5=False, disposition=False):
         """copy from source to destination.
 
         One of source or destination must be a vospace location and the other must be a local location.
 
         :param source: The source file to send to VOSpace or the VOSpace node to retrieve
-        :type source: str
+        :type source: unicode
         :param destination: The VOSpace location to put the file to or the local destination.
-        :type destination: str
+        :type destination: unicode
         :param send_md5: Should copy send back the md5 of the destination file or just the size?
         :type send_md5: bool
+        :param disposition: Should the filename from content disposition be returned instead of size or MD5?
+        :type disposition: bool
         :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
         cadcutils.exceptions module
         
@@ -1379,32 +1395,32 @@ class Client(object):
         destination_md5 = None
         source_md5 = None
         get_node_url_retried = False
+        content_disposition = None
 
         if source[0:4] == "vos:":
+            if os.path.isdir(destination):
+                # We can't write to a directory so take file name from content-disposition or
+                # from filename part of source.
+                disposition = True
             check_md5 = False
-            match = re.search("([^\[\]]*)(\[.*\])$", source)
-            ra_dec_match = re.search("([^\(\)]*)"
-                                     "(?P<cutout>\("
-                                     "(?P<ra>[\-\+]?\d*(\.\d*)?),"
-                                     "(?P<dec>[\-\+]?\d*(\.\d*)?),"
-                                     "(?P<rad>\d*(\.\d*)?)\))$",
-                                     source)
-
-            if match is not None:
+            cutout_match = FILENAME_PATTERN_MAGIC.search(source)
+            if cutout_match.group('cutout'):
                 view = 'cutout'
-                source = match.group(1)
-                cutout = match.group(2)
-            elif ra_dec_match is not None:
-                view = 'cutout'
-                source = ra_dec_match.group(1)
-                cutout = "CIRCLE ICRS {} {} {}".format(ra_dec_match.group('ra'),
-                                                  ra_dec_match.group('dec'),
-                                                  ra_dec_match.group('rad'))
+                if cutout_match.group('pix'):
+                    cutout = cutout_match.group('pix')
+                elif cutout_match.group('wcs') is not None:
+                    cutout = "CIRCLE ICRS {} {} {}".format(cutout_match.group('ra'),
+                                                           cutout_match.group('dec'),
+                                                           cutout_match.group('rad'))
+                else:
+                    raise ValueError("Bad source name: ".format(source))
+                source = cutout_match.group('filename')
             else:
                 view = 'data'
                 cutout = None
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
+
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
                 # If there are no urls available, drop through to full negotiation if that wasn't already tried
@@ -1420,6 +1436,15 @@ class Client(object):
                 get_url = get_urls.pop(0)
                 try:
                     response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
+                    if disposition:
+                        # Build the destination location from the content-disposition value, or source name.
+                        content_disposition = response.headers.get('content-disposition', destination)
+                        content_disposition = re.search('.*filename=(\S*).*', content_disposition)
+                        if content_disposition is not None:
+                            content_disposition = content_disposition.group(1).strip()
+                        else:
+                            content_disposition = os.path.split(source)[-1]
+                        destination = os.path.join(destination, content_disposition)
                     source_md5 = response.headers.get('Content-MD5', source_md5)
                     response.raise_for_status()
                     with open(destination, 'wb') as fout:
@@ -1465,8 +1490,11 @@ class Client(object):
 
         if not success:
             raise OSError(errno.EFAULT, "Failed copying {0} -> {1}".format(source, destination))
-
-        return send_md5 and destination_md5 or destination_size
+        if disposition:
+            return content_disposition
+        if send_md5:
+            return destination_md5
+        return destination_size
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't then add the VOSpace authority
@@ -1495,24 +1523,22 @@ class Client(object):
             logger.debug("Got uri: {0}".format(uri))
             if uri is not None:
                 return self.fix_uri(uri)
-        # Check for 'cutout' syntax values.
-        path = re.match("(?P<filename>[^\[]*)(?P<ext>(\[\d*:?\d*\])?"
-                        "(\[\d*:?\d*,?\d*:?\d*\])?)", parts.path)
-        # check for 'ra_dec' syntax too.
-        path = re.match("(?P<filename>[^\(]*)(?P<cutout>\((?P<ra>[\-\+]?\d*(\.\d*)?),(?P<dec>[\-\+]?\d*(\.\d*)?),(?P<rad>\d*(\.\d*)?)\))?", path.group('filename'))
+
+        # Check for filename values.
+        path = FILENAME_PATTERN_MAGIC.match(parts.path)
+        if path is None or path.group('filename') is None:
+            raise OSError(errno.EINVAL, "Illegal vospace container name", parts.path)
         logger.debug("Match : {}".format(path.groupdict()))
-        filename = os.path.basename(path.group('filename'))
-        if not re.match("^[_\-\(\)=\+!,;:@&\*\$\.\w~]*$", filename):
-            raise OSError(errno.EINVAL, "Illegal vospace container name",
-                          filename)
-        path = path.group('filename')
+
+        filename = path.group('filename')
+
         # insert the default VOSpace server if none given
         host = parts.netloc
         if not host or host == '':
             # default host corresponds to the resource ID of the client
             host = self.conn.resource_id.replace('ivo://', '').replace('/', '!')
 
-        path = os.path.normpath(path).strip('/')
+        path = os.path.normpath(filename).strip('/')
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
         return uri
@@ -1521,7 +1547,7 @@ class Client(object):
         """connect to VOSpace and download the definition of VOSpace node
 
         :param uri:   -- a voSpace node in the format vos:/VOSpaceName/nodeName
-        :type uri: str
+        :type uri: unicode
         :param limit: -- load children nodes in batches of limit
         :type limit: int, None
         :param force: force getting the node from the service, rather than returning a cached version.
@@ -1590,18 +1616,18 @@ class Client(object):
         """Split apart the node string into parts and return the correct URL for this node.
 
         :param uri: The VOSpace uri to get an associated url for.
-        :type uri: str
+        :type uri: unicode
         :param method: What will this URL be used to do: 'GET' the node, 'PUT' or 'POST' to the node or 'DELETE' it
-        :type method: str
+        :type method: unicode
         :param view: If this is a 'GET' which view of the node should the URL provide.
-        :type view: str
+        :type view: unicode
         :param limit: If this is a container how many of the children should be returned? (None - Unlimited)
         :type limit: int, None
         :param next_uri: When getting a container we make repeated calls until all 'limit' children returned. next_uri
         tells the service what was the last child uri retrieved in the previous call.
-        :type next_uri: str
+        :type next_uri: unicode
         :param cutout: The cutout pattern to apply to the file at the service end: applies to view='cutout' only.
-        :type cutout: str
+        :type cutout: str, None
         :param full_negotiation: Should we use the transfer UWS or do a GET and follow the redirect.
         :type full_negotiation: bool
         
@@ -1638,7 +1664,6 @@ class Client(object):
             return [uri]
 
         endpoints = self.get_endpoints(uri)
-
 
         # see if we have a VOSpace server that goes with this URI in our look up list
         if endpoints.server is None:
@@ -1733,9 +1758,9 @@ class Client(object):
         """Make link_uri point to src_uri.
 
         :param src_uri: the existing resource, either a vospace uri or a http url
-        :type src_uri: str
+        :type src_uri: unicode
         :param link_uri: the vospace node to create that will be a link to src_uri
-        :type link_uri: str
+        :type link_uri: unicode
         
         :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1761,9 +1786,9 @@ class Client(object):
         """Move src_uri to destination_uri.  If destination_uri is a containerNode then move src_uri into destination_uri
 
         :param src_uri: the VOSpace node to be moved.
-        :type src_uri: str
+        :type src_uri: unicode
         :param destination_uri: the VOSpace location to move to.
-        :type destination_uri: str
+        :type destination_uri: unicode
         :return did the move succeed?
         :rtype bool
         """
@@ -1946,25 +1971,25 @@ class Client(object):
 
         :rtype : VOFile
         :param uri: The uri of the VOSpace resource to create a connection to, override by specifying url
-        :type uri: str, None
+        :type uri: unicode, None
         :param mode: The mode os.O_RDONLY or os.O_WRONLY to open the connection with.
         :type mode: bit
         :param view: The view of the VOSpace resource, one of: default, data, cutout
-        :type view: str, None
+        :type view: unicode, None
         :param head: Just return the http header of this request.
         :type head: bool
         :param url: Ignore the uri (ie don't look up the url using get_node_url) and just connect to this url
-        :type url: str, None
+        :type url: unicode, None
         :param limit: limit response from vospace to this many child nodes. relevant for containerNode type
         :type limit: int, None
         :param next_uri: The  uri of the last child node returned by a previous request on a containerNode
-        :type next_uri: str, None
+        :type next_uri: unicode, None
         :param size: The size of file to expect or be put to VOSpace
         :type size: int, None
         :param cutout: The cutout pattern to use during a get
-        :type cutout: str, None
+        :type cutout: unicode, None
         :param byte_range: The range of bytes to request, rather than getting the entire file.
-        :type byte_range: str, None
+        :type byte_range: unicode, None
         :param full_negotiation: force this interaction to use the full UWS interaction to get the url for the resource
         :type full_negotiation: bool
         :param possible_partial_read:
@@ -2019,11 +2044,11 @@ class Client(object):
                                           size=size,
                                           byte_range=byte_range,
                                           possible_partial_read=possible_partial_read)
-            except OSError as e:
-                if e.errno in [2, 404]:
+            except OSError as ose:
+                if ose.errno in [2, 404]:
                     pass
                 else:
-                    raise e
+                    raise ose
 
         if url is None:
             url = self.get_node_url(uri, method=method, view=view,
@@ -2064,8 +2089,8 @@ class Client(object):
         """
         Create a (Container/Link/Data) Node on the VOSpace server.
 
-        :param node: the Node that we are going to create on the server.
-        :type vos.Node
+        :param uri: the Node that we are going to create on the server.
+        :type  uri: vos.Node
         
         :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -2076,9 +2101,7 @@ class Client(object):
         url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
-        return Node(self.conn.session.put(url,
-                data=data, headers={'size': str(size)}).content)
-        #return Node(root)
+        return Node(self.conn.session.put(url, data=data, headers={'size': str(size)}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2130,7 +2153,7 @@ class Client(object):
         Create a ContainerNode on the service.  Raise OSError(EEXIST) if the container exists.
 
         :param uri: The URI of the ContainerNode to create on the service.
-        :type uri: str
+        :type uri: unicode
         
         :raises When a network problem occurs, it raises one of the HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -2174,8 +2197,8 @@ class Client(object):
             uri = node.target
             try:
                 node = self.get_node(uri, limit=None)
-            except Exception as e:
-                logger.error(str(e))
+            except Exception as exception:
+                logger.error(str(exception))
                 break
         for thisNode in node.node_list:
             info_list[thisNode.name] = thisNode.get_info()
@@ -2191,7 +2214,7 @@ class Client(object):
 
         :param force: don't use cached values, retrieve from service.
         :param uri: The ContainerNode to get a listing of.
-        :rtype [str]
+        :rtype [unicode]
         """
         # logger.debug("getting a listing of %s " % (uri))
         names = []
@@ -2210,7 +2233,7 @@ class Client(object):
         Recursively follow links until the base Node is found.
         :param uri: the VOSpace uri to recursively get the type of.
         :return: the type of Node
-        :rtype: str
+        :rtype: unicode
         """
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
@@ -2240,9 +2263,8 @@ class Client(object):
         """
         try:
             return self._node_type(uri) == "vos:ContainerNode"
-        except exceptions.NotFoundException as ex:
+        except exceptions.NotFoundException:
             return False
-
 
     def isfile(self, uri):
         """
@@ -2265,11 +2287,11 @@ class Client(object):
         :param mode: os.O_RDONLY
         """
 
-        if mode == os.O_RDONLY :
+        if mode == os.O_RDONLY:
             try:
                 self.get_node(uri, limit=0, force=True)
             except (exceptions.NotFoundException, exceptions.AlreadyExistsException,
-                    exceptions.UnauthorizedException, exceptions.ForbiddenException) as ose:
+                    exceptions.UnauthorizedException, exceptions.ForbiddenException):
                     return False
 
         return isinstance(self.open(uri, mode=mode), VOFile)
@@ -2290,6 +2312,6 @@ class Client(object):
     def get_job_status(self, url):
         """ Returns the status of a job
         :param url: the URL of the UWS job to get status of.
-        :rtype: str
+        :rtype: unicode
         """
         return VOFile(url, self.conn, method="GET", follow_redirect=False).read()
