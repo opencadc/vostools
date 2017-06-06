@@ -65,6 +65,10 @@ Next, create, and activate a local **venv** (this example uses **bash**):
 $ virtualenv venv
 $ source venv/bin/activate
 ```
+Setup the new development environment for testing by installing the appropriate packages:
+```
+$ pip install -r dev_requirements.txt
+```
 The test environment is built into the *setup.py* so that conducting unit-tests can be achieved like so:
 ```
 python setup.py test
