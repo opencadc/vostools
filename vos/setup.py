@@ -6,16 +6,7 @@ import os
 import sys
 from setuptools.command.test import test as TestCommand
 from setuptools import find_packages
-
 from setuptools import setup
-
-# A dirty hack to get around some early import/configurations ambiguities
-if sys.version_info[0] >= 3:
-    import builtins
-else:
-    import __builtin__ as builtins
-if sys.argv[1] not in ['test', 'coverage']:
-    builtins._PACKAGE_SETUP_ = True
 
 # Get some values from the setup.cfg
 try:
@@ -38,7 +29,6 @@ URL = metadata.get('url', 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca')
 __import__(PACKAGENAME)
 package = sys.modules[PACKAGENAME]
 LONG_DESCRIPTION = package.__doc__
-
 # VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
 VERSION = metadata.get('version', 'none')
 
