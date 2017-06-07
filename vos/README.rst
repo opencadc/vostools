@@ -97,26 +97,33 @@ Next, create, and activate a local **venv** (this example uses
     $ virtualenv venv
     $ source venv/bin/activate
 
+::
+
+Setup the new development environment for testing by installing the appropriate packages:
+
+    $ pip install -r dev_requirements.txt
+
+
 The test environment is built into the *setup.py* so that conducting
 unit-tests can be achieved like so:
 
 ::
 
-    python setup.py test
+    $ python setup.py test
 
 If you would like versbose output formated as a web page, for example,
 you can add options to the test call:
 
 ::
 
-    python setup.py test --addopts '--cov-report html:cov_html --cov=vos'
+    $ python setup.py test --addopts '--cov-report html:cov_html --cov=vos'
 
 The same option attribute can be used to pass other arguments to py.test
 that is executing the test. To run specific only tests for example:
 
 ::
 
-    python setup.py test --addopts 'vos/test/Test_vos.py::TestClient::test_transfer_error'
+    $ python setup.py test --addopts 'vos/test/Test_vos.py::TestClient::test_transfer_error'
 
 Each time you resume work on the project and want to use the **venv**
 (e.g., from a new shell), simply re-activate it:
@@ -149,4 +156,4 @@ Activate the **venv** and install vos
 
 Run the tests:
 
-\`\`\` $ ./test/scripts/vospace-all.tcsh
+    $ ./test/scripts/vospace-all.tcsh
