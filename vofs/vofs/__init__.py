@@ -4,8 +4,4 @@
 This application mounts a VOSpace service to the local file system
  using fuse.
 """
-try:
-    _PACKAGE_SETUP_
-except NameError:
-    # not in setup mode
-    from vofs import *
+from vofs import *
