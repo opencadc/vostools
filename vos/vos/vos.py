@@ -1665,11 +1665,6 @@ class Client(object):
 
         endpoints = self.get_endpoints(uri)
 
-        # see if we have a VOSpace server that goes with this URI in our look up list
-        if endpoints.server is None:
-            # Since we don't know how to get URLs for this server we should just return the uri.
-            return uri
-
         # full_negotiation is an override, so it can be used to force either shortcut (false) or full negotiation (true)
         if full_negotiation is not None:
             do_shortcut = not full_negotiation

@@ -66,7 +66,6 @@ class TestVOFile(unittest.TestCase):
         # self.assertEquals( expected, mockHttpResponse503.getheader.call_args_list)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_fail_max_retry(self):
         # this tests the read function when HTTP requests keep returning 503s
         # read call fails when it reaches the maximum number of retries, in
@@ -139,7 +138,6 @@ class TestVOFile(unittest.TestCase):
         # self.assertEquals( expected, mockHttpResponse412.getheader.call_args_list)
 
     @unittest.skipIf(skipTests, "Individual tests")
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_multiple_urls(self):
 
         transfer_urls = ['http://url1.ca', 'http://url2.ca', 'http://url3.ca']
