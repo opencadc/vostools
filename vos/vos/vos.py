@@ -1161,11 +1161,11 @@ class EndPoints(object):
     @property
     def server(self):
         """
-
+        Returns the server where the __nodes__ capability is deployed. Most of the time all the capabilities
+        are deployed on the same server but sometimes they might not be.
         :return: The network location of the VOSpace server.
         """
-        # TODO fix to run with test server
-        return self.service.host
+        return urlparse(self.nodes).netloc
 
     @property
     def transfer(self):
@@ -1878,7 +1878,7 @@ class Client(object):
                 result.append(node.text)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
-        if endpoints.server.startswith('rc'):
+        if urlparse(endpoints.nodes).netloc.startswith('rc'):
             result.reverse()
         return result
 

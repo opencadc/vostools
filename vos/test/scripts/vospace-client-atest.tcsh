@@ -39,7 +39,7 @@ echo "vls command: " $LSCMD $CERT
 echo
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOROOT = "vos:"
+set VOROOT = "vos:/"
 set VOHOME = "$VOROOT""CADCRegtest1"
 set BASE = "$VOHOME/atest"
 
@@ -115,6 +115,7 @@ echo -n "check recursive create (non-existant parents) "
 echo "[TODO]"
 
 echo -n "copy file to existing container and non-existent data node "
+echo "$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png"
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
