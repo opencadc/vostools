@@ -1,5 +1,5 @@
-from future.builtins import object
 # Test the vos module
+from six.moves import builtins
 import requests
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch
@@ -11,7 +11,7 @@ from vos import vos, Connection
 skipTests = False
 
 
-class Object(object):
+class Object(builtins.object):
     pass
 
 

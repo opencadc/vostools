@@ -1,5 +1,4 @@
 # Test the NodeCache class
-
 import unittest
 import hashlib
 
@@ -8,6 +7,7 @@ from mock import patch, MagicMock, Mock, call, mock_open
 
 # The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
 call.__wrapped__ = None
+
 
 class TestMD5Cache(unittest.TestCase):
     """Test the TestMD5Cache class.

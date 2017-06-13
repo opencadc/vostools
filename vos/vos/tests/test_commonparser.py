@@ -1,12 +1,11 @@
 # Test the NodeCache class
-
 import unittest
 import sys
 import logging
-
 from vos.commonparser import CommonParser
 from vos.version import version
 from mock import patch, Mock
+
 
 class TestCommonParser(unittest.TestCase):
     """Test the CommonParser class.
