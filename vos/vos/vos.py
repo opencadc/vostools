@@ -1398,6 +1398,9 @@ class Client(object):
         content_disposition = None
 
         if source[0:4] == "vos:":
+            if destination is None:
+               # Set the destination, initially, to the same directory as the source (strip the vos:)
+               destination = os.path.dirname(source)[4:]
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from content-disposition or
                 # from filename part of source.
@@ -1444,7 +1447,8 @@ class Client(object):
                             content_disposition = content_disposition.group(1).strip()
                         else:
                             content_disposition = os.path.split(source)[-1]
-                        destination = os.path.join(destination, content_disposition)
+                        if os.path.isdir(destination):
+                            destination = os.path.join(destination, content_disposition)
                     source_md5 = response.headers.get('Content-MD5', source_md5)
                     response.raise_for_status()
                     with open(destination, 'wb') as fout:
