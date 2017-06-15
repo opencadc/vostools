@@ -1161,11 +1161,11 @@ class EndPoints(object):
     @property
     def server(self):
         """
-
+        Returns the server where the __nodes__ capability is deployed. Most of the time all the capabilities
+        are deployed on the same server but sometimes they might not be.
         :return: The network location of the VOSpace server.
         """
-        # TODO fix to run with test server
-        return self.service.host
+        return urlparse(self.nodes).netloc
 
     @property
     def transfer(self):
@@ -1398,6 +1398,9 @@ class Client(object):
         content_disposition = None
 
         if source[0:4] == "vos:":
+            if destination is None:
+               # Set the destination, initially, to the same directory as the source (strip the vos:)
+               destination = os.path.dirname(source)[4:]
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from content-disposition or
                 # from filename part of source.
@@ -1444,7 +1447,8 @@ class Client(object):
                             content_disposition = content_disposition.group(1).strip()
                         else:
                             content_disposition = os.path.split(source)[-1]
-                        destination = os.path.join(destination, content_disposition)
+                        if os.path.isdir(destination):
+                            destination = os.path.join(destination, content_disposition)
                     source_md5 = response.headers.get('Content-MD5', source_md5)
                     response.raise_for_status()
                     with open(destination, 'wb') as fout:
@@ -1665,11 +1669,6 @@ class Client(object):
 
         endpoints = self.get_endpoints(uri)
 
-        # see if we have a VOSpace server that goes with this URI in our look up list
-        if endpoints.server is None:
-            # Since we don't know how to get URLs for this server we should just return the uri.
-            return uri
-
         # full_negotiation is an override, so it can be used to force either shortcut (false) or full negotiation (true)
         if full_negotiation is not None:
             do_shortcut = not full_negotiation
@@ -1883,7 +1882,7 @@ class Client(object):
                 result.append(node.text)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
-        if endpoints.server.startswith('rc'):
+        if urlparse(endpoints.nodes).netloc.startswith('rc'):
             result.reverse()
         return result
 

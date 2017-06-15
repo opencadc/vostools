@@ -1,6 +1,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from builtins import str
+from six.moves.builtins import str
 from six.moves.reprlib import repr, aRepr
 import os
 import unittest

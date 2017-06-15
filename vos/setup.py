@@ -86,7 +86,7 @@ setup(name=PACKAGE_NAME,
       use_2to3=False,
       setup_requires=['pytest-runner'],
       entry_points=entry_points,
-      packages=find_packages('src'),
+      packages=find_packages(),
       package_data={PACKAGE_NAME: ['data/*', 'tests/data/*', '*/data/*', '*/tests/data/*']},
       cmdclass={'coverage': PyTest}
       )
