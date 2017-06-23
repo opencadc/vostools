@@ -1407,7 +1407,7 @@ class Client(object):
                 disposition = True
             check_md5 = False
             cutout_match = FILENAME_PATTERN_MAGIC.search(source)
-            if cutout_match.group('cutout'):
+            if cutout_match is not None and cutout_match.group('cutout'):
                 view = 'cutout'
                 if cutout_match.group('pix'):
                     cutout = cutout_match.group('pix')
@@ -1423,6 +1423,7 @@ class Client(object):
                 cutout = None
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
+
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
@@ -1529,7 +1530,7 @@ class Client(object):
                 return self.fix_uri(uri)
 
         # Check for filename values.
-        path = FILENAME_PATTERN_MAGIC.match(parts.path)
+        path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
         if path is None or path.group('filename') is None:
             raise OSError(errno.EINVAL, "Illegal vospace container name", parts.path)
         logger.debug("Match : {}".format(path.groupdict()))
