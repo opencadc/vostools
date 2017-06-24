@@ -1,10 +1,11 @@
-
+"""
+A common commandline parser for the VOS command line tool set.
+"""
 import logging
 import optparse
 import os
 import sys
 from .version import version
-
 
 
 class CommonParser(optparse.OptionParser):
@@ -37,8 +38,7 @@ class CommonParser(optparse.OptionParser):
         self.add_option("-w", "--warning", action="store_true", default=False,
                         help="Print warning level log messages")
 
-        self.epilog =\
-"""The vos commands use a configuration file for user specific settings.
+        self.epilog = """\nThe vos commands use a configuration file for user specific settings.
 A user can edit this file to change the behaviour of the vos commands.
 The configuration is typically found in the user's home directory in .config/vos/vos-config.
 
@@ -76,7 +76,8 @@ protocol = http
 
         log_format = "%(levelname)s %(module)s %(message)s"
         if self.log_level < logging.INFO:
-            log_format = ("%(levelname)s %(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
+            log_format = ("%(levelname)s %(asctime)s %(thread)d vos-" + str(version) +
+                          " %(module)s.%(funcName)s.%(lineno)d %(message)s")
         logging.basicConfig(format=log_format, level=self.log_level)
 
         if opt.vos_debug:
@@ -86,7 +87,3 @@ protocol = http
         if sys.version_info[1] > 6:
             logger = logging.getLogger()
             logger.addHandler(logging.NullHandler())
-
-
-
-

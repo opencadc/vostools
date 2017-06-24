@@ -29,7 +29,7 @@ import urllib
 import six
 from xml.etree import ElementTree
 from copy import deepcopy
-from .NodeCache import NodeCache
+from .node_cache import NodeCache
 try:
     from .version import version
 except ImportError:
@@ -1459,7 +1459,7 @@ class Client(object):
                                 fout.flush()
                     destination_size = os.stat(destination).st_size
                     if check_md5:
-                        destination_md5 = md5_cache.MD5_Cache.computeMD5(destination)
+                        destination_md5 = md5_cache.MD5Cache.compute_md5(destination)
                         logger.debug("{0} {1}".format(source_md5, destination_md5))
                         assert destination_md5 == source_md5
                     success = True
@@ -1468,7 +1468,7 @@ class Client(object):
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
-            source_md5 = md5_cache.MD5_Cache.computeMD5(source)
+            source_md5 = md5_cache.MD5Cache.compute_md5(source)
             put_urls = self.get_node_url(destination, 'PUT')
             while not success:
                 if len(put_urls) == 0:

@@ -1,13 +1,11 @@
-#!python
-
-"""vls:  list the contents of a voSpace"""
+"""link one VOSpace Node to another."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-
 from vos.commonparser import CommonParser
 import logging
 import sys
 from vos import vos
+
 
 def vln():
     usage = """

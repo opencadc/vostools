@@ -1,24 +1,27 @@
-"""cat files from vospace to stdout"""
-
+"""cat VOSpace DataNode to stdout"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from optparse import OptionParser
 import sys
-import os
 import logging
 from vos.commonparser import CommonParser
-from vos import vos, version
+from vos import vos
 
 
-def _cat(vospace_uri, cert_filename=None):
-    """Cat out the given uri."""
+def _cat(uri, cert_filename=None):
+    """Cat out the given uri stored in VOSpace.
+    
+    :param uri: the VOSpace URI that will be piped to stdout.
+    :type uri: str
+    :param cert_filename: filename of the PEM certificate used to gain access.
+    :type cert_filename: str
+    """
 
     fh = None
     try:
-        if vospace_uri[0:4] == "vos:":
-            fh = vos.Client(vospace_certfile=cert_filename).open(vospace_uri, view='data')
+        if uri[0:4] == "vos:":
+            fh = vos.Client(vospace_certfile=cert_filename).open(uri, view='data')
         else:
-            fh = open(vospace_uri, 'r')
+            fh = open(uri, str("r"))
         sys.stdout.write(fh.read())
     finally:
         if fh:
@@ -26,6 +29,10 @@ def _cat(vospace_uri, cert_filename=None):
 
 
 def vcat():
+    """cat a given file to stdout.
+    
+    this method is a command line tool.
+    """
     usage = "%prog [options] vos:VOSpace/node_name"
     description = "Writes the content of vos:VOSpace/node_name to stdout."
 

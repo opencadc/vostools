@@ -1,24 +1,18 @@
 #!python
-"""copy files from / to vospace directly without using the FUSE layer"""
+"""copy files vospace to local or local to VOSpace"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-
-import traceback
-
 from vos import md5_cache
 from vos import vos
 from vos.commonparser import CommonParser
-from vos.vos import EndPoints
 try:
     from xml.etree.ElementTree import ParseError
-except:
-    from exceptions import SyntaxError as ParseError
-
+except ImportError:
+    ParseError = SyntaxError
 import logging
 import sys
 import errno
 import os
-import hashlib
 import signal
 import re
 import glob
@@ -32,7 +26,12 @@ def signal_handler(signum, frame):
 
 
 def vcp():
-    ## handle interrupts nicely
+    """
+    Parse the sys.argv values to determine which file to copy to where.  Can copy vospace <==> local
+    :return: 
+    """
+    # TODO split this into main and methods
+    # handle interrupts nicely
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = CommonParser("%prog filename vos:rootNode/destination",
@@ -71,12 +70,13 @@ def vcp():
 
     exit_code = 0
 
-    cutout_pattern = re.compile(r'(.*?)(?P<cutout>(\[[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?(,[\-\+]?[\d\*]+(:[\-\+]?[\d\*]+)?)?\])+)$')
+    cutout_pattern = re.compile(r'(.*?)(?P<cutout>(\[[\-+]?[\d*]+(:[\-+]?[\d*]+)?'
+                                r'(,[\-+]?[\d*]+(:[\-+]?[\d*]+)?)?\])+)$')
 
-    ra_dec_cutout_pattern = re.compile("([^\(\)]*?)"
+    ra_dec_cutout_pattern = re.compile("([^()]*?)"
                                        "(?P<cutout>\("
-                                       "(?P<ra>[\-\+]?\d*(\.\d*)?),"
-                                       "(?P<dec>[\-\+]?\d*(\.\d*)?),"
+                                       "(?P<ra>[\-+]?\d*(\.\d*)?),"
+                                       "(?P<dec>[\-+]?\d*(\.\d*)?),"
                                        "(?P<rad>\d*(\.\d*)?)\))?")
 
     # Warnings:
@@ -88,25 +88,11 @@ def vcp():
     #    vcp currently only works on the CADC VOSpace server.
     # Version: %s """ % (version.version)
 
-
-    def size(filename):
-        if filename[0:4] == "vos:":
-            return client.size(filename)
-        return os.stat(filename).st_size
-
-
-    def create(filename):
-        if filename[0:4] == "vos:":
-            return client.create(vos.Node(client.fix_uri(filename)))
-        else:
-            open(filename,'w').close()
     pass
-
 
     def get_node(filename, limit=None):
         """Get node, from cache if possible"""
         return client.get_node(filename, limit=limit)
-
 
     # here are a series of methods that choose between calling the system version or the vos version of various
     # function, based on pattern matching.
@@ -119,17 +105,15 @@ def vcp():
         else:
             return os.path.isdir(filename)
 
-
     def islink(filename):
         logging.debug("Doing an islink on %s" % filename)
         if filename[0:4] == "vos:":
             try:
                 return get_node(filename).islink()
-            except:
+            except exceptions.NotFoundException:
                 return False
         else:
             return os.path.islink(filename)
-
 
     def access(filename, mode):
         """
@@ -144,11 +128,10 @@ def vcp():
                 node = get_node(filename, limit=0)
                 return node is not None
             except (exceptions.NotFoundException, exceptions.ForbiddenException,
-                    exceptions.UnauthorizedException) as ex:
+                    exceptions.UnauthorizedException):
                 return False
         else:
             return os.access(filename, mode)
-
 
     def listdir(dirname):
         """Walk through the directory structure a al os.walk"""
@@ -159,26 +142,12 @@ def vcp():
         else:
             return os.listdir(dirname)
 
-
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
         if filename[0:4] == 'vos:':
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
-
-
-    def lglob(pathname):
-        """
-        Call system glob if not vos path.
-        @param pathname: the pathname (aka pattern) to glob with.
-        @return: list of matched filenames.
-        """
-        if pathname[0:4] == "vos:":
-            return client.glob(pathname)
-        else:
-            return glob.glob(pathname)
-
 
     def get_md5(filename):
         logging.debug("getting the MD5 for %s" % filename)
@@ -187,35 +156,41 @@ def vcp():
         else:
             return md5_cache.MD5_Cache.computeMD5(filename)
 
-
     def lglob(pathname):
         if pathname[0:4] == "vos:":
             return client.glob(pathname)
         else:
             return glob.glob(pathname)
 
-
-    def copy(source_name, destination_name, exclude=None, include=None, interrogate=False, overwrite=False, ignore=False):
+    def copy(source_name, destination_name, exclude=None, include=None,
+             interrogate=False, overwrite=False, ignore=False):
         """
-
-        :param source_name:
-        :param destination_name:
-        :param exclude:
-        :param include:
-        :return: :raise e:
+        Send source_name to destination, possibly looping over contents if source_name points to a directory.
+        
+        source_name can specify cutout parameters if source is in VOSpace.  Cutout parameters are passed to vos.Client
+        vos.Client supports (RA,DEC,RAD) [in degrees] and [x1:x2,y1:y2] (in pixels) 
+        
+        :param source_name: filename of the source to copy, can be a container or data node or directory or filename
+        :param destination_name: where to copy the source to.
+        :param exclude: pattern match against source names that will be excluded from recursive copy.
+        :param include: only pattern match against source names that will be copied.
+        :param interrogate: prompt before overwrite.
+        :param overwrite: Should we overwrite existing destination?
+        :param ignore: ignore errors during recursive copy, just continue.        
+        :return:  
+        :raise e:
         """
         global exit_code
-        ## determine if this is a directory we are copying so need to be recursive
+        # determine if this is a directory we are copying so need to be recursive
         try:
             if not opt.follow_links and islink(source_name):
-                #return link(source_name, destination_name)
                 logging.info("{}: Skipping (symbolic link)".format(source_name))
                 return
             if isdir(source_name):
-                ## make sure the destination exists...
+                # make sure the destination exists...
                 if not isdir(destination_name):
                     mkdir(destination_name)
-                ## for all files in the current source directory copy them to the destination directory
+                # for all files in the current source directory copy them to the destination directory
                 for filename in listdir(source_name):
                     logging.debug("%s -> %s" % (filename, source_name))
                     copy(os.path.join(source_name, filename), os.path.join(destination_name, filename),
@@ -229,13 +204,14 @@ def vcp():
                             raise Exception("File exists")
 
                 if not overwrite and access(destination_name, os.F_OK):
-                    ### check if the MD5 of dest and source mathc, if they do then skip
+                    # check if the MD5 of dest and source mathc, if they do then skip
                     if get_md5(destination_name) == get_md5(source_name):
                         logging.info("%s matches %s, skipping" % (source_name, destination_name))
                         return
 
                 if not access(os.path.dirname(destination_name), os.F_OK):
-                    raise OSError(errno.EEXIST, "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
+                    raise OSError(errno.EEXIST,
+                                  "vcp: ContainerNode %s does not exist" % os.path.dirname(destination_name))
 
                 if not isdir(os.path.dirname(destination_name)) and not islink(os.path.dirname(destination_name)):
                     raise OSError(errno.ENOTDIR,
@@ -284,9 +260,6 @@ def vcp():
                                 niters += 1
                         else:
                             raise client_exception
-                    except Exception as ex:
-                        logging.debug("{}".format(ex))
-                        raise
 
         except OSError as os_exception:
             logging.debug(str(os_exception))
@@ -296,8 +269,10 @@ def vcp():
             else:
                 raise os_exception
 
-
     # main loop
+    # Set source to the initial value of args so that if we have any issues in the try before source gets defined
+    # at least we know where we were starting.
+    source = args[0]
     try:
         for source_pattern in args:
             # define this empty cutout string.  Then we strip possible cutout strings off the end of the
@@ -337,14 +312,15 @@ def vcp():
 
                 this_destination = dest
                 if isdir(source):
-                    if not opt.follow_links and islink(source) :
+                    if not opt.follow_links and islink(source):
                         continue
                     logging.debug("%s is a directory or link to one" % source)
                     # To mimic unix fs behaviours if copying a directory and
                     # the destination directory exists then the actual
                     # destination in a recursive copy is the destination +
                     # source basename.
-                    # This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
+                    # This has an odd behaviour if more than one directory is
+                    # given as a source and the copy is recursive.
                     if access(dest, os.F_OK):
                         if not isdir(dest):
                             raise Exception("Can't write a directory (%s) to a file (%s)" % (source, dest))
@@ -361,7 +337,7 @@ def vcp():
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
         exit_code = getattr(ke, 'errno', -1)
-    except ParseError as pe:
+    except ParseError:
         exit_code = errno.EREMOTE
         logging.error("Failure at server while copying {0} -> {1}".format(source, dest))
     except Exception as e:

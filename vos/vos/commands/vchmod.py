@@ -10,14 +10,22 @@ import signal
 from vos import vos, version
 import logging
 import sys
-import os
 
 
 def signal_handler(signum, frame):
+    """
+    signal handler for keyboard interupt of cl interface.
+    
+    :param signum: signal sent to CL tool. 
+    :param frame: frame where CL tool was running
+    :raises KeyboardInterrupt
+    """
     raise KeyboardInterrupt("SIGNAL {0} from {1} signal handler".format(signum, frame))
 
 
 def vchmod():
+    """Parses the sys.argv values to set the permissions on a vospace Node."""
+    # TODO:  seperate the sys.argv parsing from the actual command.
 
     signal.signal(signal.SIGINT, signal_handler)
     usage = """vchmod mode node [read/write group names in quotes - maximum of 4 each]
@@ -48,7 +56,7 @@ def vchmod():
     groupNames = args[2:]
     import re
 
-    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[\+\-=])(?P<what>rw$|wr$|r$|w$)", cmdArgs['mode'])
+    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[+\-=])(?P<what>rw$|wr$|r$|w$)", cmdArgs['mode'])
     if not mode:
         parser.print_help()
         logger.error("\n\nAccepted modes: (og|go|o|g)[+-=](rw|wr|r\w)\n\n")
@@ -91,7 +99,7 @@ def vchmod():
                                        wgroups.replace(" ", " " + vos.CADC_GMS_PREFIX))
     logger.debug("Properties: %s" % (str(props)))
     logger.debug("Node: %s" % cmdArgs['node'])
-    returnCode = 0
+
     try:
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
@@ -107,11 +115,10 @@ def vchmod():
         if 'ispublic' in props:
             node.set_public(props['ispublic'])
         logger.debug("Node: {0}".format(node))
-        returnCode = client.update(node, opt.recursive)
+        sys.exit(client.update(node, opt.recursive))
     except KeyboardInterrupt as ke:
         logger.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
         logger.error('Error {}: '.format(str(e)))
         sys.exit(getattr(e, 'errno', -1))
-    sys.exit(returnCode)
