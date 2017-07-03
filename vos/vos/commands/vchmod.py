@@ -4,12 +4,14 @@
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-
-from vos.commonparser import CommonParser
+from ..vos import Client
+from ..vos import CADC_GMS_PREFIX
+from ..commonparser import CommonParser, set_logging_level_from_args
 import signal
-from vos import vos, version
 import logging
 import sys
+import re
+from argparse import ArgumentError
 
 
 def signal_handler(signum, frame):
@@ -23,87 +25,94 @@ def signal_handler(signum, frame):
     raise KeyboardInterrupt("SIGNAL {0} from {1} signal handler".format(signum, frame))
 
 
+def __mode__(mode):
+    """
+
+    :param mode:
+    :return: mode dictionary
+     :rtype: re.groupdict
+    """
+    _mode = re.match(r"(?P<who>og|go|o|g)(?P<op>[+\-=])(?P<what>rw|wr|r|w)", mode)
+    if _mode is None:
+        raise ArgumentError(_mode, 'Invalid mode: {}'.format(mode))
+    return _mode.groupdict()
+
+
 def vchmod():
     """Parses the sys.argv values to set the permissions on a vospace Node."""
     # TODO:  seperate the sys.argv parsing from the actual command.
 
     signal.signal(signal.SIGINT, signal_handler)
-    usage = """vchmod mode node [read/write group names in quotes - maximum of 4 each]
+    description = """Set the read and write permission on VOSpace nodes.
+Permission string specifies the mode change to make.
 
-    Accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)
+Changes to 'o' set the public permission, so only o+r and o-r are allowed.
 
-    Sets read/write properties of a node.
-    
-    Version: %s """ % version.version
+Changes to 'g' set the group permissions, g-r, g-w, g-rw to remove a group
+permission setting (removes all groups) and g+r, g+w, g+rw to add a group
+permission setting.  If Adding group permission then the applicable group
+must be included.
 
-    parser = CommonParser(usage)
+e.g. vchmod g+r vos:RootNode/MyFile.txt  "Group1"
 
+provides read access to Group one.
+"""
+    parser = CommonParser(description=description)
+    parser.add_argument('mode', type=__mode__, help='permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
+    parser.add_argument("node", help="node to set mode on, eg: vos:Root/Container/file.txt")
+    parser.add_argument('groups', nargs="*", help="name of group(s) to assign read/write permission to")
     parser.add_option("-R", "--recursive", action='store_const', const=True,
                       help="Recursive set read/write properties")
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
+    opt = parser.parse_args()
 
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
+    set_logging_level_from_args(opt)
 
-    logger = logging.getLogger()
+    group_names = opt.groups
 
-    if len(args) < 2:
-        parser.error("Requires mode and node arguments")
-    cmdArgs = dict(zip(['mode', 'node'], args[0:2]))
-    groupNames = args[2:]
-    import re
-
-    mode = re.match(r"(?P<who>^og|^go|^o|^g)(?P<op>[+\-=])(?P<what>rw$|wr$|r$|w$)", cmdArgs['mode'])
-    if not mode:
-        parser.print_help()
-        logger.error("\n\nAccepted modes: (og|go|o|g)[+-=](rw|wr|r\w)\n\n")
-        sys.exit(-1)
+    mode = opt.mode
 
     props = {}
-    if 'o' in mode.group('who'):
-        if not mode.group('what') == 'r':  # read only
-            parser.print_help()
-            logger.error("\n\nPublic access is readonly, no public write available \n\n")
-            sys.exit(-1)
-        if mode.group('op') == '-':
-            props['ispublic'] = 'false'
-        else:
-            props['ispublic'] = 'true'
-    if 'g' in mode.group('who'):
-        if '-' == mode.group('op'):
-            if not len(groupNames) == 0:
-                parser.print_help()
-                logger.error("\n\nNames of groups not required with remove permission\n\n")
-                sys.exit(-1)
-            if 'r' in mode.group('what'):
-                props['readgroup'] = None
-            if "w" in mode.group('what'):
-                props['writegroup'] = None
-        else:
-            if not len(groupNames) == len(mode.group('what')):
-                parser.print_help()
-                logger.error("\n\n%s group names required for %s\n\n" %
-                             (len(mode.group('what')), mode.group('what')))
-                sys.exit(-1)
-            if mode.group('what').find('r') > -1:
-                # remove duplicate whitespaces
-                rgroups = " ".join(groupNames[mode.group('what').find('r')].split())
-                props['readgroup'] = (vos.CADC_GMS_PREFIX +
-                                      rgroups.replace(" ", " " + vos.CADC_GMS_PREFIX))
-            if mode.group('what').find('w') > -1:
-                wgroups = " ".join(groupNames[mode.group('what').find('w')].split())
-                props['writegroup'] = (vos.CADC_GMS_PREFIX +
-                                       wgroups.replace(" ", " " + vos.CADC_GMS_PREFIX))
-    logger.debug("Properties: %s" % (str(props)))
-    logger.debug("Node: %s" % cmdArgs['node'])
+    try:
+        if 'o' in mode['who']:
+            if mode['op'] == '-':
+                props['ispublic'] = 'false'
+            else:
+                props['ispublic'] = 'true'
+        if 'g' in mode['who']:
+            if '-' == mode['op']:
+                if not len(group_names) == 0:
+                    raise ArgumentError(opt.groups, "Names of groups not valid with remove permission")
+                if 'r' in mode['what']:
+                    props['readgroup'] = None
+                if "w" in mode['what']:
+                    props['writegroup'] = None
+            else:
+                if not len(group_names) == len(mode['what']):
+                    name = len(mode['what']) > 1 and "names" or "name"
+                    raise ArgumentError(None,
+                                        "{} group {} required for {}".format(len(mode['what']), name,
+                                                                             mode['what']))
+                if mode['what'].find('r') > -1:
+                    # remove duplicate whitespaces
+                    read_groups = " ".join(group_names[mode['what'].find('r')].split())
+                    props['readgroup'] = (CADC_GMS_PREFIX +
+                                          read_groups.replace(" ", " " + CADC_GMS_PREFIX))
+                if mode['what'].find('w') > -1:
+                    wgroups = " ".join(group_names[mode['what'].find('w')].split())
+                    props['writegroup'] = (CADC_GMS_PREFIX +
+                                           wgroups.replace(" ", " " + CADC_GMS_PREFIX))
+    except ArgumentError as er:
+        parser.print_usage()
+        logging.error(str(er))
+        sys.exit(er)
+
+    logging.debug("Setting {} on {}".format(props, opt.node))
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
-        node = client.get_node(cmdArgs['node'])
+        client = Client(vospace_certfile=opt.certfile,
+                        vospace_token=opt.token)
+        node = client.get_node(opt.node)
         if opt.recursive:
             node.props.clear()
             node.clear_properties()
@@ -114,11 +123,11 @@ def vchmod():
             node.chwgrp(props['writegroup'])
         if 'ispublic' in props:
             node.set_public(props['ispublic'])
-        logger.debug("Node: {0}".format(node))
+        logging.debug("Node: {0}".format(node))
         sys.exit(client.update(node, opt.recursive))
     except KeyboardInterrupt as ke:
-        logger.error("Received keyboard interrupt. Execution aborted...\n")
+        logging.error("Received keyboard interrupt. Execution aborted...\n")
         sys.exit(getattr(ke, 'errno', -1))
     except Exception as e:
-        logger.error('Error {}: '.format(str(e)))
+        logging.error('Error {}: '.format(str(e)))
         sys.exit(getattr(e, 'errno', -1))

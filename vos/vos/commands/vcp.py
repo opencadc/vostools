@@ -2,9 +2,9 @@
 """copy files vospace to local or local to VOSpace"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from vos import md5_cache
-from vos import vos
-from vos.commonparser import CommonParser
+from .. import md5_cache
+from .. import vos
+from ..commonparser import CommonParser, set_logging_level_from_args
 try:
     from xml.etree.ElementTree import ParseError
 except ImportError:
@@ -20,53 +20,76 @@ import traceback
 import time
 from cadcutils import exceptions
 
+__all__ = ['vcp']
+
 
 def signal_handler(signum, frame):
     raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
 
 
 def vcp():
-    """
-    Parse the sys.argv values to determine which file to copy to where.  Can copy vospace <==> local
-    :return: 
+    """Copy a file or directory (always recursive) from or to a VOSpace location.
+Behaviour is modelled off the UNIX cp command. Currently one of destination or 
+source must be local. VOSpace locations can be specified using a shorthand notation 
+eg:  vos:RootNode/Node or with the server specified vos:cadc.nrc.ca!RootNode/Node.   
+
+VOSpace service associated to the requested container is discovered via registry search.
+
+vcp can be used to cutout particular parts of a FITS file if the VOSpace server supports the action.  
+
+extensions and pixel locations accessed with [] brackets: 
+vcp vos:Node/filename.fits[3][1:100,1:100] ./   
+
+or
+
+RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD) 
+
+where RA, DEC and RAD are all given in degrees
+
     """
     # TODO split this into main and methods
     # handle interrupts nicely
     signal.signal(signal.SIGINT, signal_handler)
+    description = """Copy files to and from VOSpace. Always recursive.  
 
-    parser = CommonParser("%prog filename vos:rootNode/destination",
-                          description=("Copy a file or directory (always recursive) to a "
-                                       "VOSpace location.  Try to be UNIX like. "))
-    parser.add_option("--exclude", default=None, help="exclude files that match pattern")
-    parser.add_option("--include", default=None, help="only include files that match pattern (overrides exclude)")
-    parser.add_option("-i", "--interrogate", action="store_true", help="Ask before overwriting files")
-    parser.add_option("--overwrite", action="store_true",
-                      help="don't check destination MD5, just overwrite even if source matches destination")
-    parser.add_option("--quick", action="store_true",
-                      help="Use default CADC urls, for speed.  Will fail if CADC changes data storage mechanism",
-                      default=False)
-    parser.add_option("-L", "--follow-links",
-                      help="Should recursive copy follow symbolic links? Default is to not follow links.",
-                      action="store_true",
-                      default=False)
-    parser.add_option("--ignore", action="store_true", default=False,
-                      help="ignore errors and continue with recursive copy")
+Pixel based FITS file access: vcp vos:Node/files.fits[EXT][X1:X2,Y1:Y2] destination
+Coordinate based FITS file access:  vcp vos:Node/file.fits(RA,DEC,RA) destination  
+(NOTE: RA,DEC,RAD in degrees)
 
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
+If no X509 certificate given on commnad line then default location will be used.
+"""
 
-    if len(args) < 2:
-        parser.error("Must give a source and a destination")
+    parser = CommonParser(description=description)
+    parser.add_argument("source", nargs="+", help="file/directory/dataNode/containerNode to copy from.")
+    parser.add_argument("destination", help="file/directory/dataNode/containerNode to copy to")
+    parser.add_argument("--exclude", default=None, help="skip files that match pattern (overrides include)")
+    parser.add_argument("--include", default=None, help="only copy files that match pattern")
+    parser.add_argument("-i", "--interrogate", action="store_true", help="Ask before overwriting files")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="overwrite destination (skip check if source and destination content identical)")
+    parser.add_argument("--quick", action="store_true",
+                        help="assuming CANFAR VOSpace, only comptible with CANFAR VOSpace.",
+                        default=False)
+    parser.add_argument("-L", "--follow-links",
+                        help="follow symbolic links. Default is to not follow links.",
+                        action="store_true",
+                        default=False)
+    parser.add_argument("--ignore", action="store_true", default=False,
+                        help="ignore errors and continue with recursive copy")
 
-    dest = args.pop()
+    args = parser.parse_args()
+
+    set_logging_level_from_args(args)
+
+    dest = args.destination
     this_destination = dest
 
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
 
-    client = vos.Client(vospace_certfile=opt.certfile,
-                        vospace_token=opt.token,
-                        transfer_shortcut=opt.quick)
+    client = vos.Client(vospace_certfile=args.certfile,
+                        vospace_token=args.token,
+                        transfer_shortcut=args.quick)
 
     exit_code = 0
 
@@ -154,7 +177,7 @@ def vcp():
         if filename[0:4] == 'vos:':
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
         else:
-            return md5_cache.MD5_Cache.computeMD5(filename)
+            return md5_cache.MD5Cache.compute_md5(filename)
 
     def lglob(pathname):
         if pathname[0:4] == "vos:":
@@ -183,7 +206,7 @@ def vcp():
         global exit_code
         # determine if this is a directory we are copying so need to be recursive
         try:
-            if not opt.follow_links and islink(source_name):
+            if not args.follow_links and islink(source_name):
                 logging.info("{}: Skipping (symbolic link)".format(source_name))
                 return
             if isdir(source_name):
@@ -272,9 +295,9 @@ def vcp():
     # main loop
     # Set source to the initial value of args so that if we have any issues in the try before source gets defined
     # at least we know where we were starting.
-    source = args[0]
+    source = args.source[1]
     try:
-        for source_pattern in args:
+        for source_pattern in args.source:
             # define this empty cutout string.  Then we strip possible cutout strings off the end of the
             # pattern before matching.  This allows cutouts on the vos service.
             # The shell does pattern matching for local files, so don't run glob on local files.
@@ -302,7 +325,7 @@ def vcp():
                 if not access(source, os.R_OK):
                     raise Exception("Can't access source: %s " % source)
 
-                if not opt.follow_links and islink(source):
+                if not args.follow_links and islink(source):
                     logging.info("{}: Skipping (symbolic link)".format(source))
                     continue
 
@@ -312,7 +335,7 @@ def vcp():
 
                 this_destination = dest
                 if isdir(source):
-                    if not opt.follow_links and islink(source):
+                    if not args.follow_links and islink(source):
                         continue
                     logging.debug("%s is a directory or link to one" % source)
                     # To mimic unix fs behaviours if copying a directory and
@@ -326,13 +349,13 @@ def vcp():
                             raise Exception("Can't write a directory (%s) to a file (%s)" % (source, dest))
                         # directory exists so we append the end of source to that (UNIX behaviour)
                         this_destination = os.path.normpath(os.path.join(dest, os.path.basename(source)))
-                    elif len(args) > 1:
+                    elif len(args.source) > 1:
                         raise Exception("vcp can not copy multiple things into a non-existent location (%s)" % dest)
                 elif dest[-1] == '/' or isdir(dest):
                     # we're copying into a directory
                     this_destination = os.path.join(dest, os.path.basename(source))
-                copy(source, this_destination, exclude=opt.exclude, include=opt.include,
-                     interrogate=opt.interrogate, overwrite=opt.overwrite, ignore=opt.ignore)
+                copy(source, this_destination, exclude=args.exclude, include=args.include,
+                     interrogate=args.interrogate, overwrite=args.overwrite, ignore=args.ignore)
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
