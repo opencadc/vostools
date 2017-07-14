@@ -84,7 +84,7 @@ _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
 _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
-FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]+)'  # legal filename string
+FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]*)'  # legal filename string
                                     r'(?P<cutout>'   # Look for a cutout part
                                     r'(?P<pix>(\[\d*:?\d*\])?(\[[-+]?\d*:?[-+]?\d*,?[-+]?\d*:?[-+]?\d*\]))'  # pixel
                                     r'|'  # OR
@@ -1391,6 +1391,7 @@ class Client(object):
         # TODO: handle vospace to vospace copies.
 
         success = False
+        copy_failed_message = ""
         destination_size = None
         destination_md5 = None
         source_md5 = None
@@ -1464,6 +1465,7 @@ class Client(object):
                         assert destination_md5 == source_md5
                     success = True
                 except Exception as ex:
+                    copy_failed_message = str(ex)
                     logging.debug("Failed to GET {0}".format(get_url))
                     logging.debug("Got error {0}".format(ex))
                     continue
@@ -1481,12 +1483,13 @@ class Client(object):
                         break
                 put_url = put_urls.pop(0)
                 try:
-                    with open(source, 'rb') as fin:
+                    with open(source, str('rb')) as fin:
                         self.conn.session.put(put_url, data=fin)
                     node = self.get_node(destination, limit=0, force=True)
                     destination_md5 = node.props.get('MD5', ZERO_MD5)
                     assert destination_md5 == source_md5
                 except Exception as ex:
+                    copy_failed_message = str(ex)
                     logging.debug("FAILED to PUT to {0}".format(put_url))
                     logging.debug("Got error: {0}".format(ex))
                     continue
@@ -1494,7 +1497,8 @@ class Client(object):
                 break
 
         if not success:
-            raise OSError(errno.EFAULT, "Failed copying {0} -> {1}".format(source, destination))
+            raise OSError(errno.EFAULT, "Failed copying {0} -> {1}\n{2}".format(source, destination,
+                                                                               copy_failed_message))
         if disposition:
             return content_disposition
         if send_md5:
