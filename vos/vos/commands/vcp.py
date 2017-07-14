@@ -13,7 +13,6 @@ import logging
 import sys
 import errno
 import os
-import signal
 import re
 import glob
 import traceback
@@ -22,44 +21,26 @@ from cadcutils import exceptions
 
 __all__ = ['vcp']
 
-
-def signal_handler(signum, frame):
-    raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
-
-
-def vcp():
-    """Copy a file or directory (always recursive) from or to a VOSpace location.
-Behaviour is modelled off the UNIX cp command. Currently one of destination or 
-source must be local. VOSpace locations can be specified using a shorthand notation 
-eg:  vos:RootNode/Node or with the server specified vos:cadc.nrc.ca!RootNode/Node.   
-
+DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
 VOSpace service associated to the requested container is discovered via registry search.
 
-vcp can be used to cutout particular parts of a FITS file if the VOSpace server supports the action.  
+vcp can be used to cutout particular parts of a FITS file if the VOSpace server supports the action.
 
-extensions and pixel locations accessed with [] brackets: 
-vcp vos:Node/filename.fits[3][1:100,1:100] ./   
-
+extensions and pixel locations accessed with [] brackets:
+vcp vos:Node/filename.fits[3][1:100,1:100] ./
 or
-
-RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD) 
-
+RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
-
-    """
-    # TODO split this into main and methods
-    # handle interrupts nicely
-    signal.signal(signal.SIGINT, signal_handler)
-    description = """Copy files to and from VOSpace. Always recursive.  
-
-Pixel based FITS file access: vcp vos:Node/files.fits[EXT][X1:X2,Y1:Y2] destination
-Coordinate based FITS file access:  vcp vos:Node/file.fits(RA,DEC,RA) destination  
-(NOTE: RA,DEC,RAD in degrees)
 
 If no X509 certificate given on commnad line then default location will be used.
 """
 
-    parser = CommonParser(description=description)
+
+def vcp():
+
+    # TODO split this into main and methods
+
+    parser = CommonParser(description=DESCRIPTION)
     parser.add_argument("source", nargs="+", help="file/directory/dataNode/containerNode to copy from.")
     parser.add_argument("destination", help="file/directory/dataNode/containerNode to copy to")
     parser.add_argument("--exclude", default=None, help="skip files that match pattern (overrides include)")
@@ -376,3 +357,5 @@ If no X509 certificate given on commnad line then default location will be used.
         exit_code = getattr(e, 'errno', -1)
 
     sys.exit(exit_code)
+
+vcp.__doc__ = DESCRIPTION

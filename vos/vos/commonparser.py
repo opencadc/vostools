@@ -4,8 +4,26 @@ A common commandline parser for the VOS command line tool set.
 import logging
 import argparse
 import os
+import signal
 import sys
 from .version import version
+
+
+# handle interrupts nicely
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
+def exit_on_exception(ex):
+    """
+    Exit program due to an exception, print the exception and exit with error code.
+    :param ex:
+    :return:
+    """
+    logging.error(str(ex))
+    sys.exit(getattr(ex, 'errno', -1))
 
 
 def set_logging_level_from_args(args):

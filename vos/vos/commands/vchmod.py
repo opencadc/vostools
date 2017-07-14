@@ -6,23 +6,11 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args
-import signal
+from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
 import logging
 import sys
 import re
 from argparse import ArgumentError
-
-
-def signal_handler(signum, frame):
-    """
-    signal handler for keyboard interupt of cl interface.
-    
-    :param signum: signal sent to CL tool. 
-    :param frame: frame where CL tool was running
-    :raises KeyboardInterrupt
-    """
-    raise KeyboardInterrupt("SIGNAL {0} from {1} signal handler".format(signum, frame))
 
 
 def __mode__(mode):
@@ -37,13 +25,7 @@ def __mode__(mode):
         raise ArgumentError(_mode, 'Invalid mode: {}'.format(mode))
     return _mode.groupdict()
 
-
-def vchmod():
-    """Parses the sys.argv values to set the permissions on a vospace Node."""
-    # TODO:  seperate the sys.argv parsing from the actual command.
-
-    signal.signal(signal.SIGINT, signal_handler)
-    description = """Set the read and write permission on VOSpace nodes.
+DESCRIPTION = """Set the read and write permission on VOSpace nodes.
 Permission string specifies the mode change to make.
 
 Changes to 'o' set the public permission, so only o+r and o-r are allowed.
@@ -53,11 +35,20 @@ permission setting (removes all groups) and g+r, g+w, g+rw to add a group
 permission setting.  If Adding group permission then the applicable group
 must be included.
 
-e.g. vchmod g+r vos:RootNode/MyFile.txt  "Group1"
+e.g. vchmod g+r vos:RootNode/MyFile.txt  "Group1 Group2"
 
-provides read access to Group one.
+Set read access to groups Group1 and Group2 (upto 4 groups can be specified).
+
+Permission setting is recursive, if a GroupB is part of GroupA then permissions given
+to members of GroupA are also provided to members of GroupB.
 """
-    parser = CommonParser(description=description)
+
+
+def vchmod():
+
+    # TODO:  seperate the sys.argv parsing from the actual command.
+
+    parser = CommonParser(description=DESCRIPTION)
     parser.add_argument('mode', type=__mode__, help='permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
     parser.add_argument("node", help="node to set mode on, eg: vos:Root/Container/file.txt")
     parser.add_argument('groups', nargs="*", help="name of group(s) to assign read/write permission to")
@@ -125,9 +116,7 @@ provides read access to Group one.
             node.set_public(props['ispublic'])
         logging.debug("Node: {0}".format(node))
         sys.exit(client.update(node, opt.recursive))
-    except KeyboardInterrupt as ke:
-        logging.error("Received keyboard interrupt. Execution aborted...\n")
-        sys.exit(getattr(ke, 'errno', -1))
-    except Exception as e:
-        logging.error('Error {}: '.format(str(e)))
-        sys.exit(getattr(e, 'errno', -1))
+    except Exception as ex:
+        exit_on_exception(ex)
+
+vchmod.__doc__ = DESCRIPTION

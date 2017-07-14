@@ -3,23 +3,23 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
 import logging
-from vos.commonparser import CommonParser
-from vos import vos
+from ..vos import Client
+from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
 
 
 def _cat(uri, cert_filename=None):
     """Cat out the given uri stored in VOSpace.
     
     :param uri: the VOSpace URI that will be piped to stdout.
-    :type uri: str
+    :type uri: basestring
     :param cert_filename: filename of the PEM certificate used to gain access.
-    :type cert_filename: str
+    :type cert_filename: basestring
     """
 
     fh = None
     try:
         if uri[0:4] == "vos:":
-            fh = vos.Client(vospace_certfile=cert_filename).open(uri, view='data')
+            fh = Client(vospace_certfile=cert_filename).open(uri, view='data')
         else:
             fh = open(uri, str("r"))
         sys.stdout.write(fh.read())
@@ -27,34 +27,35 @@ def _cat(uri, cert_filename=None):
         if fh:
             fh.close()
 
+DESCRIPTION = """Write the content of source (eg. vos:Node/filename) to stdout.
+
+Accepts cutout syntax for FITS files; see vcp --help for syntax details"""
+
 
 def vcat():
-    """cat a given file to stdout.
-    
-    this method is a command line tool.
-    """
-    usage = "%prog [options] vos:VOSpace/node_name"
-    description = "Writes the content of vos:VOSpace/node_name to stdout."
 
-    parser = CommonParser(usage, description=description)
-    parser.add_option("-q", help="run quietly, exit on error without message", action="store_true")
+    parser = CommonParser(description=description)
+    parser.add_argument("source", help="source to cat to stdout out.", nargs="+")
+    parser.add_argument("-q", help="run quietly, exit on error without message", action="store_true")
 
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
-
-    if not len(args) > 0:
-        parser.error("no argument given")
+    args = parser.parse_args()
+    set_logging_level_from_args(args)
 
     logger = logging.getLogger()
 
     exit_code = 0
 
-    for uri in args:
-        try:
-            _cat(uri, cert_filename=opt.certfile)
-        except Exception as e:
-            exit_code = getattr(e, 'errno', -1)
-            if not opt.q:
-                logger.error(str(e))
+    try:
+        for uri in args.source:
+            try:
+                _cat(uri, cert_filename=args.certfile)
+            except Exception as e:
+                exit_code = getattr(e, 'errno', -1)
+                if not args.q:
+                    logger.error(str(e))
+    except KeyboardInterrupt as ke:
+        exit_on_exception(ke)
 
     sys.exit(exit_code)
+
+vcat.__doc__ = DESCRIPTION
