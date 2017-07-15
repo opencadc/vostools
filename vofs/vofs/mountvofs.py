@@ -10,7 +10,7 @@ from vos import vos
 from .version import version
 from .vofs import VOFS
 from .vofs import MyFuse
-from vos.commonparser import CommonParser
+from vos.commonparser import CommonParser, set_logging_level_from_args
 DAEMON_TIMEOUT = 60
 
 
@@ -47,7 +47,7 @@ def mountvofs():
     parser.add_option("--nothreads", help="Only run in a single thread, causes some blocking.", action="store_true")
 
     (opt, args) = parser.parse_args()
-    parser.process_informational_options()
+    set_logging_level_from_args(opt)
 
     log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
 

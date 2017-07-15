@@ -1,7 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import unittest
-from vos.NodeCache import NodeCache
+from vos.node_cache import NodeCache
 
 
 class TestNodeCache(unittest.TestCase):
