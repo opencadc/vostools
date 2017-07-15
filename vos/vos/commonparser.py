@@ -44,6 +44,8 @@ def set_logging_level_from_args(args):
         log_format = ("%(levelname)s %(asctime)s %(thread)d vos-" + str(version) +
                       " %(module)s.%(funcName)s.%(lineno)d %(message)s")
     logging.basicConfig(format=log_format, level=args.log_level)
+    logger = logging.getLogger('root')
+    logger.setLevel(args.log_level)
 
     if args.vos_debug:
         logger = logging.getLogger('vos')
