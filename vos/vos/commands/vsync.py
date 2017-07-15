@@ -13,6 +13,7 @@ import logging
 import time
 import signal
 from vos import vos, version
+from .. import md5_cache
 
 
 def vsync():
@@ -74,7 +75,7 @@ def vsync():
     nodeDict = {}
 
 
-    def computeMD5(filename, block_size=None):
+    def compute_md5(filename, block_size=None):
         """
         Read through a file and compute that files MD5 checksum.
         :param filename: name of the file on disk
@@ -82,16 +83,7 @@ def vsync():
         :return: md5 as a hexadecimal string
         """
         block_size = block_size is None and 2**19 or block_size
-        md5 = hashlib.md5()
-        r = open(filename, 'r')
-        while True:
-            buf = r.read(block_size)
-            if len(buf) == 0:
-                break
-            md5.update(buf)
-        r.close()
-        return md5.hexdigest()
-
+        return md5_cache.MD5Cache.compute_md5(filename, block_size=block_size)
 
     def fileMD5(filename):
         import os
@@ -99,7 +91,7 @@ def vsync():
         if opt.cache_nodes:
             md5 = md5Cache.get(filename)
         if md5 is None or md5[2] < os.stat(filename).st_mtime:
-            md5 = computeMD5(filename)
+            md5 = compute_md5(filename)
             if opt.cache_nodes:
                 stat = os.stat(filename)
                 md5Cache.update(filename, md5, stat.st_size, stat.st_mtime)
