@@ -218,7 +218,7 @@ class TestClient(unittest.TestCase):
                           client.glob('vos:/[a,b]node/*test*'))
         
         
-    @patch('vos.vos.md5_cache.MD5_Cache.computeMD5')
+    @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being copied
