@@ -9,19 +9,25 @@
 import sqlite3
 import logging
 import hashlib
+import tempfile
+
 READ_BUFFER_SIZE = 8192
 
 
 class MD5Cache:
 
-    def __init__(self, cache_db):
+    def __init__(self, cache_db=None):
         """Setup the sqlDB that will contain the cache table.
         
         The slqDB can then be used to lookup MD5 values rather than recompute them at each restart of a transfer.
         
         :param cache_db: The path and filename where the SQL db will be stored. 
         """
-        self.cache_db = cache_db
+        if cache_db is None:
+            self.cache_obj = tempfile.NamedTemporaryFile()
+            self.cache_db = self.cache_obj.name
+        else:
+            self.cache_db = cache_db
 
         # initialize the md5Cache db
         sql_conn = sqlite3.connect(self.cache_db)
@@ -55,9 +61,9 @@ class MD5Cache:
         
         :param filename: name of the file you want the MD5 sum for.
         """
-        sqlConn = sqlite3.connect(self.cache_db)
-        with sqlConn:
-            cursor = sqlConn.execute("SELECT md5, st_size, st_mtime FROM md5_cache WHERE filename = ? ", (filename,))
+        slq_conn = sqlite3.connect(self.cache_db)
+        with slq_conn:
+            cursor = slq_conn.execute("SELECT md5, st_size, st_mtime FROM md5_cache WHERE filename = ? ", (filename,))
             md5_row = cursor.fetchone()
         if md5_row is not None:
             return md5_row
@@ -83,11 +89,11 @@ class MD5Cache:
         """
 
         # UPDATE the MD5 database
-        sqlConn = sqlite3.connect(self.cache_db)
+        sql_connection = sqlite3.connect(self.cache_db)
         try:
-            with sqlConn:
-                sqlConn.execute("DELETE from md5_cache WHERE filename = ?", (filename,))
-                sqlConn.execute(("INSERT INTO md5_cache (filename, md5, st_size, st_mtime)"
+            with sql_connection:
+                sql_connection.execute("DELETE from md5_cache WHERE filename = ?", (filename,))
+                sql_connection.execute(("INSERT INTO md5_cache (filename, md5, st_size, st_mtime)"
                                  " VALUES ( ?, ?, ?, ?)"), (filename, md5, st_size, st_mtime))
         except Exception as e:
             logging.error(e)
