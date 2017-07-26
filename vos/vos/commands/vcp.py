@@ -276,7 +276,7 @@ def vcp():
     # main loop
     # Set source to the initial value of args so that if we have any issues in the try before source gets defined
     # at least we know where we were starting.
-    source = args.source[1]
+    source = args.source[0]
     try:
         for source_pattern in args.source:
             # define this empty cutout string.  Then we strip possible cutout strings off the end of the
