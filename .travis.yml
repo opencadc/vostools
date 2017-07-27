@@ -19,6 +19,7 @@ sudo: false
 #addons:
     #apt:
         #packages:
+             - libfuse-dev
 #            - graphviz
 #            - texlive-latex-extra
 #            - dvipng
