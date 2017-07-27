@@ -1,6 +1,9 @@
 DOCUMENTATION
 =============
 
+.. image:: https://img.shields.io/pypi/v/vofs.svg   
+    :target: https://pypi.python.org/pypi/vofs
+
 vosfs is a python module that allows a VOSpace service to be used as a
 file system.
 
