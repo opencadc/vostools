@@ -32,7 +32,7 @@ or
 RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
 
-If no X509 certificate given on commnad line then default location will be used.
+If no X509 certificate given on commnad line then location specified by default service settings will be used.
 """
 
 
