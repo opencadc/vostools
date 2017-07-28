@@ -34,7 +34,7 @@ Accepts cutout syntax for FITS files; see vcp --help for syntax details"""
 
 def vcat():
 
-    parser = CommonParser(description=description)
+    parser = CommonParser(description=DESCRIPTION)
     parser.add_argument("source", help="source to cat to stdout out.", nargs="+")
     parser.add_argument("-q", help="run quietly, exit on error without message", action="store_true")
 
