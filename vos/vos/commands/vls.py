@@ -4,7 +4,6 @@ from __future__ import (absolute_import, division, print_function,
 import logging
 import math
 from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
-import os
 import sys
 import time
 from .. import vos
@@ -28,6 +27,7 @@ def size_format(size):
         size = 0.0
     if this.human:
         size_unit = ['B', 'K', 'M', 'G', 'T']
+        # noinspection PyBroadException
         try:
             length = float(size)
             scale = int(math.log(length) / math.log(1024))
@@ -103,6 +103,7 @@ def vls():
             info_list = client.get_info_list(node)
 
             if sort_key:
+                # noinspection PyBroadException
                 try:
                     sorted_list = sorted(info_list, key=lambda name: name[1][sort_key], reverse=not opt.reverse)
                 except:
@@ -123,42 +124,5 @@ def vls():
     except Exception as ex:
         exit_on_exception(ex)
 
-
-def get_terminal_size():
-    """Get the size of the terminal
-
-    @return: tuple(int, int) giving the row/column of the terminal screen.
-    """
-
-    def ioctl_gwinsz(fd):
-        """
-
-        @param fd: A file descriptor that points at the Screen Parameters
-        @return: the termios screeen structure unpacked into an array.
-        """
-        try:
-            import fcntl
-            import termios
-            import struct
-            this_cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-        except:
-            return None
-        return this_cr
-
-    cr = ioctl_gwinsz(0) or ioctl_gwinsz(1) or ioctl_gwinsz(2)
-
-    if not cr:
-        try:
-            td = os.open(os.ctermid(), os.O_RDONLY)
-            cr = ioctl_gwinsz(td)
-            os.close(td)
-        except:
-            pass
-    if not cr:
-        try:
-            cr = (os.environ['LINES'], os.environ['COLUMNS'])
-        except:
-            cr = (25, 80)
-    return int(cr[1]), int(cr[0])
 
 vls.__doc__ = DESCRIPTION
