@@ -37,19 +37,6 @@ vcp vos:VOSPACE/foo/*.txt .
 
 If no X509 certificate given on commnad line then location specified by default service settings will be used.
 """
-DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
-VOSpace service associated to the requested container is discovered via registry search.
-
-vcp can be used to cutout particular parts of a FITS file if the VOSpace server supports the action.
-
-extensions and pixel locations accessed with [] brackets:
-vcp vos:Node/filename.fits[3][1:100,1:100] ./
-or
-RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
-where RA, DEC and RAD are all given in degrees
-
-If no X509 certificate given on commnad line then location specified by default service settings will be used.
-"""
 
 
 def vcp():
