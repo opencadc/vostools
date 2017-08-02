@@ -29,7 +29,7 @@ import urllib
 import six
 from xml.etree import ElementTree
 from copy import deepcopy
-from .NodeCache import NodeCache
+from .node_cache import NodeCache
 try:
     from .version import version
 except ImportError:
@@ -84,7 +84,7 @@ _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
 _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
-FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]+)'  # legal filename string
+FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]*)'  # legal filename string
                                     r'(?P<cutout>'   # Look for a cutout part
                                     r'(?P<pix>(\[\d*:?\d*\])?(\[[-+]?\d*:?[-+]?\d*,?[-+]?\d*:?[-+]?\d*\]))'  # pixel
                                     r'|'  # OR
@@ -1391,6 +1391,7 @@ class Client(object):
         # TODO: handle vospace to vospace copies.
 
         success = False
+        copy_failed_message = ""
         destination_size = None
         destination_md5 = None
         source_md5 = None
@@ -1407,7 +1408,7 @@ class Client(object):
                 disposition = True
             check_md5 = False
             cutout_match = FILENAME_PATTERN_MAGIC.search(source)
-            if cutout_match.group('cutout'):
+            if cutout_match is not None and cutout_match.group('cutout'):
                 view = 'cutout'
                 if cutout_match.group('pix'):
                     cutout = cutout_match.group('pix')
@@ -1423,6 +1424,7 @@ class Client(object):
                 cutout = None
                 check_md5 = True
                 source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
+
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout, view=view)
             while not success:
@@ -1458,16 +1460,17 @@ class Client(object):
                                 fout.flush()
                     destination_size = os.stat(destination).st_size
                     if check_md5:
-                        destination_md5 = md5_cache.MD5_Cache.computeMD5(destination)
+                        destination_md5 = md5_cache.MD5Cache.compute_md5(destination)
                         logger.debug("{0} {1}".format(source_md5, destination_md5))
                         assert destination_md5 == source_md5
                     success = True
                 except Exception as ex:
+                    copy_failed_message = str(ex)
                     logging.debug("Failed to GET {0}".format(get_url))
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
-            source_md5 = md5_cache.MD5_Cache.computeMD5(source)
+            source_md5 = md5_cache.MD5Cache.compute_md5(source)
             put_urls = self.get_node_url(destination, 'PUT')
             while not success:
                 if len(put_urls) == 0:
@@ -1480,12 +1483,13 @@ class Client(object):
                         break
                 put_url = put_urls.pop(0)
                 try:
-                    with open(source, 'rb') as fin:
+                    with open(source, str('rb')) as fin:
                         self.conn.session.put(put_url, data=fin)
                     node = self.get_node(destination, limit=0, force=True)
                     destination_md5 = node.props.get('MD5', ZERO_MD5)
                     assert destination_md5 == source_md5
                 except Exception as ex:
+                    copy_failed_message = str(ex)
                     logging.debug("FAILED to PUT to {0}".format(put_url))
                     logging.debug("Got error: {0}".format(ex))
                     continue
@@ -1493,7 +1497,8 @@ class Client(object):
                 break
 
         if not success:
-            raise OSError(errno.EFAULT, "Failed copying {0} -> {1}".format(source, destination))
+            raise OSError(errno.EFAULT, "Failed copying {0} -> {1}\n{2}".format(source, destination,
+                                                                               copy_failed_message))
         if disposition:
             return content_disposition
         if send_md5:
@@ -1529,7 +1534,7 @@ class Client(object):
                 return self.fix_uri(uri)
 
         # Check for filename values.
-        path = FILENAME_PATTERN_MAGIC.match(parts.path)
+        path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
         if path is None or path.group('filename') is None:
             raise OSError(errno.EINVAL, "Illegal vospace container name", parts.path)
         logger.debug("Match : {}".format(path.groupdict()))

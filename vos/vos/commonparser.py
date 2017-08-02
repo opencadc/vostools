@@ -1,92 +1,89 @@
-
+"""
+A common commandline parser for the VOS command line tool set.
+"""
 import logging
-import optparse
+import argparse
 import os
+import signal
 import sys
 from .version import version
 
 
+# handle interrupts nicely
+def signal_handler(signum, frame):
+    raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
 
-class CommonParser(optparse.OptionParser):
+signal.signal(signal.SIGINT, signal_handler)
+
+
+def exit_on_exception(ex):
+    """
+    Exit program due to an exception, print the exception and exit with error code.
+    :param ex:
+    :return:
+    """
+    logging.error(str(ex))
+    sys.exit(getattr(ex, 'errno', -1))
+
+
+def set_logging_level_from_args(args):
+    """Display version, set logging verbosity"""
+
+    # Logger verbosity
+    if args.debug:
+        args.log_level = logging.DEBUG
+    elif args.verbose:
+        args.log_level = logging.INFO
+    elif args.warning:
+        args.log_level = logging.WARNING
+    else:
+        args.log_level = logging.ERROR
+
+    log_format = "%(levelname)s %(module)s %(message)s"
+    if args.log_level < logging.INFO:
+        log_format = ("%(levelname)s %(asctime)s %(thread)d vos-" + str(version) +
+                      " %(module)s.%(funcName)s.%(lineno)d %(message)s")
+    logging.basicConfig(format=log_format, level=args.log_level)
+    logger = logging.getLogger('root')
+    logger.setLevel(args.log_level)
+
+    if args.vos_debug:
+        logger = logging.getLogger('vos')
+        logger.setLevel(logging.DEBUG)
+
+    if sys.version_info[1] > 6:
+        logging.getLogger().addHandler(logging.NullHandler())
+
+
+class CommonParser(argparse.ArgumentParser):
     """Class to hold and parse common command-line arguments for vos clients"""
+
+    add_option = argparse.ArgumentParser.add_argument
 
     def __init__(self, *args, **kwargs):
         # call the parent constructor
-        optparse.OptionParser.__init__(self, *args, **kwargs)
-
+        super(CommonParser, self).__init__(*args, formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           epilog="""Default service settings in ~/.config/vos/vos-config.
+        """,
+                                           **kwargs)
         # inherit the VOS client version
         self.version = version
         self.log_level = logging.ERROR
 
         # now add on the common parameters
-        self.add_option("--certfile",
-                        help="location of your CADC security certificate file",
-                        default=os.path.join(os.getenv("HOME", "."),
-                                             ".ssl/cadcproxy.pem"))
-        self.add_option("--token",
-                        help="token string (alternative to certfile)",
-                        default=None)
-        self.add_option("--version", action="store_true",
-                        default=False,
-                        help="Print the version (%s)" % version)
-        self.add_option("-d", "--debug", action="store_true", default=False,
-                        help="Print debug level log messages")
-        self.add_option("--vos-debug", action="store_true", help="Turn on VOS module debugging")
-        self.add_option("-v", "--verbose", action="store_true", default=False,
-                        help="Print verbose level log messages")
-        self.add_option("-w", "--warning", action="store_true", default=False,
-                        help="Print warning level log messages")
-
-        self.epilog =\
-"""The vos commands use a configuration file for user specific settings.
-A user can edit this file to change the behaviour of the vos commands.
-The configuration is typically found in the user's home directory in .config/vos/vos-config.
-
-The file contains sections with settings pertaining to that section. The current setting are:
-
-[vos]
-# The default vospace authority
-resourceID = ivo://cadc.nrc.ca/vospace
-
-[transfer]
-# The default transfer protocol
-protocol = http
-"""
-
-    def format_epilog(self, formatter):
-        return self.epilog
-
-    def process_informational_options(self):
-        """Display version, set logging verbosity"""
-        (opt, args) = self.parse_args()
-
-        if opt.version:
-            self.print_version()
-            sys.exit(0)
-
-        # Logger verbosity
-        if opt.debug:
-            self.log_level = logging.DEBUG
-        elif opt.verbose:
-            self.log_level = logging.INFO
-        elif opt.warning:
-            self.log_level = logging.WARNING
-        else:
-            self.log_level = logging.ERROR
-
-        log_format = "%(levelname)s %(module)s %(message)s"
-        if self.log_level < logging.INFO:
-            log_format = ("%(levelname)s %(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
-        logging.basicConfig(format=log_format, level=self.log_level)
-
-        if opt.vos_debug:
-            logger = logging.getLogger('vos')
-            logger.setLevel(logging.DEBUG)
-
-        if sys.version_info[1] > 6:
-            logger = logging.getLogger()
-            logger.addHandler(logging.NullHandler())
-
-
-
-
+        self.add_argument("--certfile",
+                          help="filename of your CADC X509 authentication certificate",
+                          default=os.path.join(os.getenv("HOME", "."),
+                                               ".ssl/cadcproxy.pem"))
+        self.add_argument("--token",
+                          help="authentication token string (alternative to certfile)",
+                          default=None)
+        self.add_argument("--version", action="version",
+                          version=version)
+        self.add_argument("-d", "--debug", action="store_true", default=False,
+                          help="print on command debug messages.")
+        self.add_argument("--vos-debug", action="store_true", help="Print on vos debug messages.")
+        self.add_argument("-v", "--verbose", action="store_true", default=False,
+                          help="print verbose messages")
+        self.add_argument("-w", "--warning", action="store_true", default=False,
+                          help="print warning messages only")

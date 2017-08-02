@@ -1,59 +1,48 @@
-#!python
-
-"""vls:  list the contents of a voSpace"""
+"""link one VOSpace Node to another."""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
+from .. import vos
+from argparse import ArgumentError
 
-from vos.commonparser import CommonParser
-import logging
-import sys
-from vos import vos
+DESCRIPTION = """
+vln creates a new VOSpace entry (LinkNode, target) that has the same modes as the source Node.
+It is useful for maintaining multiple copies of a Node in many places at once without using
+up storage for the ''copies''; instead, a link ''points'' to the original copy.
 
-def vln():
-    usage = """
-      vln vos:VOSpaceSource vos:VOSpaceTarget
+Only symbolic links are supported.
+
+vln vos:VOSpaceSource vos:VOSpaceTarget
 
 
-    examples:
+examples:
 
     vln vos:vospace/junk.txt vos:vospace/linkToJunk.txt
     vln vos:vospace/directory vos:vospace/linkToDirectory
     vln http://external.data.source vos:vospace/linkToExternalDataSource
 
-    """
+"""
 
-    parser = CommonParser(usage)
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
+def vln():
 
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
-
-    logger = logging.getLogger()
-    logger.setLevel(parser.log_level)
-    logger.addHandler(logging.StreamHandler())
-
-    if len(args) != 2:
-        parser.error("You must specify a source file and a target file")
-        sys.exit(-1)
-
-    if args[1][0:4] != "vos:":
-        parser.error("The target to source must be in vospace")
-        sys.exit(-1)
-
-    logger.debug("Connecting to vospace using certificate %s" % opt.certfile)
+    parser = CommonParser(description=DESCRIPTION)
+    parser.add_argument('source', help="location that link will point to.")
+    parser.add_argument('target', help="location of the LinkNode")
 
     try:
+        opt = parser.parse_args()
+        set_logging_level_from_args(opt)
+
+        if not (opt.source.startswith('vos:') or opt.source.startswith('http:')) or not opt.target.startswith('vos:'):
+            raise ArgumentError(None, "source must be vos node or http url, target must be vos node")
+
         client = vos.Client(vospace_certfile=opt.certfile, vospace_token=opt.token)
-    except Exception as e:
-        logger.error("VOS connection failed:  {0}".format(e))
-        sys.exit(-1)
+        client.link(opt.source, opt.target)
+    except ArgumentError as ex:
+        parser.print_usage()
+        exit_on_exception(ex)
+    except Exception as ex:
+        exit_on_exception(ex)
 
-    try:
-        client.link(args[0], args[1])
-    except Exception as e:
-        logger.error("Failed to make link from %s to %s" % (args[0], args[1]))
-        logger.error(getattr(e, 'strerror', 'Unknown Error'))
-        sys.exit(-1)
+vln.__doc__ = DESCRIPTION
