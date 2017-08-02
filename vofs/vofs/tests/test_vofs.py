@@ -11,11 +11,11 @@ from fuse import FUSE, FuseOSError, fuse_operations
 from errno import EIO, EAGAIN, EPERM, ENOENT
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
-from vofs import vofs
 import vos
 from vofs.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
-from vos.NodeCache import NodeCache
+from vos.node_cache import NodeCache
 from vofs.vofs import HandleWrapper, MyFuse, VOFS
+from vofs import vofs
 
 skipTests = False
 

@@ -37,6 +37,19 @@ vcp vos:VOSPACE/foo/*.txt .
 
 If no X509 certificate given on commnad line then location specified by default service settings will be used.
 """
+DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
+VOSpace service associated to the requested container is discovered via registry search.
+
+vcp can be used to cutout particular parts of a FITS file if the VOSpace server supports the action.
+
+extensions and pixel locations accessed with [] brackets:
+vcp vos:Node/filename.fits[3][1:100,1:100] ./
+or
+RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
+where RA, DEC and RAD are all given in degrees
+
+If no X509 certificate given on commnad line then location specified by default service settings will be used.
+"""
 
 
 def vcp():
@@ -173,18 +186,18 @@ def vcp():
              interrogate=False, overwrite=False, ignore=False):
         """
         Send source_name to destination, possibly looping over contents if source_name points to a directory.
-        
+
         source_name can specify cutout parameters if source is in VOSpace.  Cutout parameters are passed to vos.Client
-        vos.Client supports (RA,DEC,RAD) [in degrees] and [x1:x2,y1:y2] (in pixels) 
-        
+        vos.Client supports (RA,DEC,RAD) [in degrees] and [x1:x2,y1:y2] (in pixels)
+
         :param source_name: filename of the source to copy, can be a container or data node or directory or filename
         :param destination_name: where to copy the source to.
         :param exclude: pattern match against source names that will be excluded from recursive copy.
         :param include: only pattern match against source names that will be copied.
         :param interrogate: prompt before overwrite.
         :param overwrite: Should we overwrite existing destination?
-        :param ignore: ignore errors during recursive copy, just continue.        
-        :return:  
+        :param ignore: ignore errors during recursive copy, just continue.
+        :return:
         :raise e:
         """
         global exit_code
