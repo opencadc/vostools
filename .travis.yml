@@ -60,7 +60,7 @@ install:
    - pip install coveralls
 
 script:
-   - for i in $(ls -d */); do cd $i; pytest --cov $i || exit 1; cd ..; done
+    - for i in $(ls -d */); do cd $i; pytest -d --cov $i || exit 1; cd ..; done
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line

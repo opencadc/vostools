@@ -84,6 +84,7 @@ set CONTAINER = $BASE/$TIMESTAMP
 set MOUNTPOINT=/tmp/vospace
 set MCONTAINER = "$MOUNTPOINT/$TIMESTAMP"
 
+echo "MCONTAINER: $MCONTAINER"
 echo "TIMESTAMP: $TIMESTAMP"
 
 echo -n "** checking base URI"
@@ -129,7 +130,6 @@ cat $ANONLOGFILE >> $LOGFILE  # since the original gets removed
 echo " [OK]"
 
 echo -n "mount vospace using certificate"
-echo "$MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d"
 $MOUNTCMD $CERT --vospace="$BASE" --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$LOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
 sleep 3
 ls $MOUNTPOINT >& /dev/null || echo [FAIL] && exit -1
@@ -180,6 +180,17 @@ echo " [OK]"
 echo -n "delete non-existent data node "
 rm $MCONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
+
+echo -n "create-delete-recreate test"
+# create a file, then update and at the same time delete it. The files should be gone
+touch $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
+cp -rf $thisDir/something.png $MCONTAINER/recreate.png& rm $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
+sleep 3
+if (! -f $MCONTAINER/recreate.png) then
+    echo " [FAIL]" && exit -1
+endif
+echo " [OK]"
+
 
 # --- test exceeding the local cache ---
 echo -n "copy cache test data to container"

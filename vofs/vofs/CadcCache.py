@@ -29,7 +29,7 @@ libc = ctypes.cdll.LoadLibrary(libcPath)
 _flush_thread_count = 0
 
 logger = logging.getLogger('cache')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -210,7 +210,7 @@ class Cache(object):
                     fileHandle.metaData = CacheMetaData(fileHandle.cacheMetaDataFile, None, None, None)
                     if fileHandle.metaData.getNumReadBlocks() == len(fileHandle.metaData.bitmap):
                         fileHandle.fullyCached = True
-                        fileHandle.fileSize = os.path.getsize(fileHandle.cacheMetaDataFile)
+                        fileHandle.fileSize = os.path.getsize(fileHandle.cacheDataFile)
                     else:
                         fileHandle.fullyCached = False
                         fileHandle.fileSize = fileHandle.metaData.size
@@ -444,10 +444,19 @@ class Cache(object):
                 with existingFileHandle.fileLock:
                     Cache.atomicRename((oldDataPath, newDataPath),
                                        (oldMetaDataPath, newMetaDataPath))
+                    # create a new corresponding file handle
+                    newFileHandle = FileHandle(newPath, self, existingFileHandle.ioObject)
+                    self.fileHandleDict[newPath] = newFileHandle
+
+                    # delete the existing file handle from dictionary so its not found anymore but
+                    # update it to point to the new files so that existing processes that use it
+                    # can continue
+                    del self.fileHandleDict[existingFileHandle.path]
                     existingFileHandle.cacheDataFile = \
                         os.path.abspath(newDataPath)
                     existingFileHandle.cacheMetaDataFile = \
                         os.path.abspath(newMetaDataPath)
+                    existingFileHandle.path = newPath
             except KeyError:
                 # The file is not active, rename the files but there is no
                 # data structure to lock or fix.
@@ -533,7 +542,6 @@ class Cache(object):
         open and has been modified.
         """
         # logger.debug("gettattr %s:" % path)
-
         with self.cacheLock:
             # Make sure the file state doesn't change in the middle.
             try:
@@ -541,10 +549,16 @@ class Cache(object):
             except KeyError:
                 return None
             with fileHandle.fileLock:
+                try:
+                    f = os.stat(fileHandle.cacheDataFile)
+                except Exception as e:
+                    # error in accessing the cached version of the file. Remove from cache
+                    logger.debug('HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! {}'.format(path))
+                    self.unlinkFile(fileHandle.cacheDataFile)
+                    return None
                 if fileHandle.fileModified:
                     # logger.debug("file modified: %s" %
                     #              fileHandle.fileModified)
-                    f = os.stat(fileHandle.cacheDataFile)
                     # logger.debug("size = %d:" % f.st_size)
                     return dict((name, getattr(f, name))
                                 for name in dir(f)
@@ -762,8 +776,6 @@ class FileHandle(object):
         with self.ioObject.cacheFileDescriptorLock:
             self.ioObject.cacheFileDescriptor = os.open(self.cacheDataFile,
                                                         os.O_RDWR | os.O_CREAT)
-            # Why is there an fstat here?
-            info = os.fstat(self.ioObject.cacheFileDescriptor)
 
         # logger.debug("Created a cache file descriptor.")
         # When cache locks and file locks need to be held at the same time,
