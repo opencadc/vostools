@@ -46,7 +46,7 @@ def mountvofs():
                       help="Ensure HTTPS instead of HTTP is used to retrieve data (slower)")
     parser.add_option("--nothreads", help="Only run in a single thread, causes some blocking.", action="store_true")
 
-    (opt, args) = parser.parse_args()
+    opt = parser.parse_args()
     set_logging_level_from_args(opt)
 
     log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
