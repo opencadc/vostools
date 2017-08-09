@@ -184,22 +184,37 @@ echo " [OK]"
 echo -n "create-delete-recreate test"
 # create a file, then update and at the same time delete it. The files should be gone
 touch $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
-cp -rf $thisDir/something.png $MCONTAINER/recreate.png& rm $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
-sleep 3
+cp -rf $thisDir/something.png $MCONTAINER/recreate.png >& /dev/null & rm $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
+sleep 3 
 if (! -f $MCONTAINER/recreate.png) then
     echo " [FAIL]" && exit -1
 endif
 echo " [OK]"
 
+echo -n "rename container and then create a new container with the old name"
+mkdir $MCONTAINER/olddir || echo " [FAIL]" && exit -1
+echo -n " ."
+cp $thisDir/something.png $MCONTAINER/olddir/something.png || echo " [FAIL]" && exit -1
+echo -n "."
+mv $MCONTAINER/olddir $MCONTAINER/newdir || echo " [FAIL]" && exit -1
+echo -n "."
+ls $CONTAINER/newdir/something.png >& /dev/null && echo " [FAIL]" && exit -1
+echo -n "."
+mkdir $MCONTAINER/olddir || echo " [FAIL]" && exit -1
+echo -n "."
+cp $thisDir/something.png $MCONTAINER/olddir/something.png || echo " [FAIL]" && exit -1
+echo -n "."
+diff $MCONTAINER/newdir/something.png $MCONTAINER/olddir/something.png || echo " [FAIL]" && exit -1
+echo " [OK]"
 
 # --- test exceeding the local cache ---
-echo -n "copy cache test data to container"
+echo -n "copy cache test data to container "
 rm foo.dat >& /dev/null
 cat /dev/zero | head -c $CACHETEST_FSIZE_BYTES /dev/zero > foo.dat
 ls -l foo.dat
 foreach i ( `seq $CACHETEST_NFILES` )
     echo -n "."
-    echo "$CPCMD $CERT foo.dat $CONTAINER/foo$i.dat "
+    #echo "$CPCMD $CERT foo.dat $CONTAINER/foo$i.dat "
     $CPCMD $CERT foo.dat $CONTAINER/foo$i.dat >& /dev/null || echo " [FAIL]" && exit -1
 end
 rm foo.dat >& /dev/null
