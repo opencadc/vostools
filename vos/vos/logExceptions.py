@@ -1,6 +1,8 @@
+"""
+Many of the vos methods are decorated with this expection logger so that exception messages are displayed.
+"""
 import logging
 import traceback
-
 
 def logExceptions():
     """

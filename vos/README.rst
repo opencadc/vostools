@@ -56,8 +56,8 @@ Tutorial
 1. Get a `CANFAR
    account <http://www.canfar.phys.uvic.ca/canfar/auth/request.html>`__
 2. Install the vos package.
-3. Retrieve a X509/SSL certificate using the built in ``getCert``
-   script.
+3. Retrieve a X509/SSL certificate using the ``getCert``
+   script installed as part of the ``cadcutils`` package that is automatically installed wiht vos.
 4. Example Usage.
 
    1. Commandline usage:
@@ -65,10 +65,13 @@ Tutorial
       -  ``vls -l vos:`` [List a vospace]
       -  ``vcp vos:jkavelaars/test.txt ./`` [copies test.txt to the
          local directory from vospace]
+      -  ``vchmod g+q vos:VOSPACE/foo/bar.txt 'GROUP1, GROUP2, GROUP3' `` to give three user GROUPs permission
+         to write to this file.
       -  ``vmkdir --help`` [get a list of command line options and
          arguments]
       -  ``vmkdir``, ``vrm``, ``vrmdir``, ``vsync`` ``vcat``, ``vchmod``
          and ``vln``
+      -  The complete list of ``vos`` commmand line tools can be found using ``pydoc vos.commands``
 
    2. In a Python script (the example below provides a listing of a
       vospace container)
