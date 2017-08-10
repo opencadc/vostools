@@ -591,6 +591,7 @@ class TestCadcCache(unittest.TestCase):
             # Rename an existing active file.
             with testCache.open("/dir1/dir2/file2", True, False, testIOProxy, False) as fh:
                 testCache.renameFile("/dir1/dir2/file2", "/dir1/dir3/file3")
+                self.assertEqual("/dir1/dir3/file3", fh.path)
                 self.assertEqual(fh.cacheDataFile, os.path.join(
                     testCache.dataDir, "dir1/dir3/file3"))
                 self.assertEqual(fh.cacheMetaDataFile, os.path.join(
@@ -634,9 +635,15 @@ class TestCadcCache(unittest.TestCase):
             with self.assertRaises(ValueError):
                 testCache.renameFile("/dir1/file", "dir2/file")
 
-            # Rename a directory. Should fail.
-            with self.assertRaises(ValueError):
+            # Rename a directory.
+            with testCache.open("/dir1/dir2/file", True, False, testIOProxy,
+                                False) as fh:
+                self.assertEquals(1, len(testCache.fileHandleDict))
                 testCache.renameFile("/dir1/dir2", "/dir3")
+                self.assertEqual(0, len(testCache.fileHandleDict))
+                self.assertEqual("/dir3/file", fh.path)
+                self.assertTrue("/dir3" in fh.cacheDataFile)
+                self.assertTrue("/dir3" in fh.cacheMetaDataFile)
 
             # Cause an error when the meta data file is rename. This should
             # raise an exception and not rename either file.
@@ -710,19 +717,6 @@ class TestCadcCache(unittest.TestCase):
             with self.assertRaises(ValueError):
                 testCache.renameFile("/dir1/dir2", "/")
 
-            # Rename a file to a directory. For this one the meta data file is
-            # a directory.
-            with patch('os.path.isdir') as mockedisdir:
-                def returnFalse(arg):
-                    mockedisdir.side_effect = returnTrue
-                    return False
-
-                def returnTrue(arg):
-                    return True
-
-                mockedisdir.side_effect = returnFalse
-                with self.assertRaises(ValueError):
-                    testCache.renameFile("/something", "/something")
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_04_renameDir(self):

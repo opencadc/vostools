@@ -98,7 +98,7 @@ $CPCMD $CERT $CONTAINER/e1link/somefile /tmp >& /dev/null && echo " [FAIL]" && e
 echo " [OK]"
 
 echo -n "create link to unknown scheme in URI"
-$LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink > /dev/null || echo " [FAIL]" && exit -1
+$LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink > /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Follow the invalid link and fail"

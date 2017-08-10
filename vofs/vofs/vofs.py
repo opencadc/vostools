@@ -646,7 +646,10 @@ class VOFS(Operations):
             result = self.client.move(src, dest)
             logger.debug(str(result))
             if result:
-                self.cache.renameFile(src, dest)
+                if os.path.isdir(src):
+                    self.cache.renamedir(src, dest)
+                else:
+                    self.cache.renameFile(src, dest)
                 return 0
             return -1
         except Exception as e:
