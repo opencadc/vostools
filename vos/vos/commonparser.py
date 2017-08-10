@@ -23,7 +23,7 @@ def exit_on_exception(ex):
     :return:
     """
     logging.error(str(ex))
-    sys.exit(getattr(ex, 'errno', -1))
+    sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno', -1) else sys.exit(-1)
 
 
 def set_logging_level_from_args(args):

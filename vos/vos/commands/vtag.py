@@ -38,7 +38,7 @@ def vtag():
     set_logging_level_from_args(args)
 
     # the node should be the first argument, the rest should contain the key/val pairs
-    node = args.pop(0)
+    node = args.node
 
     props = []
     if args.remove:
