@@ -65,7 +65,7 @@ def mountvofs():
     fh.formatter = lf
     logger = logging.getLogger('vofs')
     logger.handlers = []
-    logger.setLevel(parser.log_level)
+    logger.setLevel(opt.log_level)
     logger.addHandler(fh)
 
     vos_logger = logging.getLogger('vos')

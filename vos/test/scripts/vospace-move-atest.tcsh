@@ -195,6 +195,11 @@ echo -n " verify "
 $LSCMD $CERT $CONTAINER/a/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
+echo -n "rename file when destination exists (fail)"
+$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/a/aa/bbb || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a/aa/aaa $CONTAINER/a/aa/bbb >& /dev/null && echo " [FAIL]" && exit -1
+echo " [OK]"
+
 echo -n "move a vos container to local file system (fail)"
 $MVCMD $CERT $CONTAINER/a notused.txt >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "

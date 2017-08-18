@@ -1,6 +1,9 @@
 """ keep track of vospace nodes that have been already been accessed during the current session."""
 import threading
+import logging
 
+logger = logging.getLogger('vos')
+#logger.setLevel(logging.ERROR)
 
 class NodeCache(dict):
     """ A dictionary like object that provides the ability to look up a VOSpace nodes metadata.
@@ -96,9 +99,13 @@ class NodeCache(dict):
                     if uri.startswith(self.uri):
                         del self.node_cache[uri]
 
+                # Clear the parent node as well to force an update
+                parent = self.uri[:self.uri.rfind("/")]
+                self.node_cache.pop(parent, None)
+
                 # Mark any watched nodes in the volatile sub-tree dirty
                 for watchedNode in self.node_cache.watched_nodes:
-                    if watchedNode.uri.startswith(self.uri):
+                    if watchedNode.uri.startswith(self.uri) or (watchedNode.uri == parent):
                         watchedNode.dirty = True
 
             return self

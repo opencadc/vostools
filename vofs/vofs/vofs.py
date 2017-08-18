@@ -7,6 +7,8 @@ import warnings
 import vos
 import sys
 import urllib
+import re
+from cadcutils import exceptions
 from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
 from errno import EIO, ENOENT, EPERM, EAGAIN, EFAULT
@@ -20,7 +22,7 @@ import six.moves
 
 
 logger = logging.getLogger('vofs')
-logger.setLevel(logging.ERROR)
+#logger.setLevel(logging.DEBUG)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -639,22 +641,33 @@ class VOFS(Operations):
 
     @logExceptions()
     def rename(self, src, dest):
-        """Rename a data node into a new container"""
+        """
+        Rename a data node into a new container. This is called only when both src and dest
+           are part of the mount.
+        """
         logger.debug("Original %s -> %s" % (src, dest))
+
+        try:
+            node = self.get_node(dest)
+            if node.type == "vos:DataNode":
+                # destination is an existing data node. Must be deleted first from the server or
+                # otherwise remove will fail
+                self.unlink(dest)
+                logger.debug('Deleted {}'.format(dest))
+        except exceptions.NotFoundException:
+            pass
+
         try:
             logger.debug("Moving %s to %s" % (src, dest))
             result = self.client.move(src, dest)
             logger.debug(str(result))
             if result:
-                if os.path.isdir(src):
-                    self.cache.renamedir(src, dest)
-                else:
-                    self.cache.renameFile(src, dest)
+                self.cache.renameFile(src, dest)
                 return 0
-            return -1
+            else:
+                return -1
         except Exception as e:
             logger.error("%s" % str(e))
-            import re
             if re.search('NodeLocked', str(e)) is not None:
                 raise OSError(EPERM)
             raise
