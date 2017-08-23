@@ -183,10 +183,20 @@ echo " [OK]"
 
 echo -n "create-delete-recreate test"
 # create a file, then update and at the same time delete it. The files should be gone
-touch $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
+echo "Test"  >> $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
 cp -rf $thisDir/something.png $MCONTAINER/recreate.png >& /dev/null & rm $MCONTAINER/recreate.png || echo " [FAIL]" && exit -1
 sleep 3 
 if (! -f $MCONTAINER/recreate.png) then
+    echo " [FAIL]" && exit -1
+endif
+echo " [OK]"
+
+echo -n "rename file where destination exists"
+echo "Test1"  >> $MCONTAINER/test1.txt || echo " [FAIL]" && exit -1
+echo "Test2"  >> $MCONTAINER/test2.txt || echo " [FAIL]" && exit -1
+mv -f $MCONTAINER/test1.txt $MCONTAINER/test2.txt
+grep "Test1"  $MCONTAINER/test2.txt >> /dev/null
+if ( $? != 0 ) then
     echo " [FAIL]" && exit -1
 endif
 echo " [OK]"

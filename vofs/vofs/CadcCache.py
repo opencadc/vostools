@@ -17,6 +17,7 @@ from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, \
 import ctypes
 import ctypes.util
 import logging
+import datetime
 
 from .SharedLock import SharedLock as SharedLock
 from .CacheMetaData import CacheMetaData as CacheMetaData
@@ -29,7 +30,7 @@ libc = ctypes.cdll.LoadLibrary(libcPath)
 _flush_thread_count = 0
 
 logger = logging.getLogger('cache')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -429,7 +430,6 @@ class Cache(object):
         if os.path.isdir(oldDataPath):
             self.renameDir(oldPath, newPath)
             return
-
         with self.cacheLock:
             # Make sure the new directory exists.
             try:
@@ -442,17 +442,20 @@ class Cache(object):
                 pass
 
             try:
-                existingFileHandle = self.fileHandleDict[oldPath]
+                fh = self.fileHandleDict[oldPath]
+                logger.debug("Found file handle for file {}".format(oldPath))
                 # If the file is active, rename its files with the lock held
                 # and remove the old reference from the file handle dictionary
                 # to allow subsequent uses of the old path
-                with existingFileHandle.fileLock:
+                with fh.fileLock:
                     Cache.atomicRename((oldDataPath, newDataPath),
                                        (oldMetaDataPath, newMetaDataPath))
-                    existingFileHandle.path = newPath
-                    existingFileHandle.cacheDataFile = newDataPath
-                    existingFileHandle.cacheMetaDataFile = newMetaDataPath
+                    fh.path = newPath
+                    fh.cacheDataFile = newDataPath
+                    fh.cacheMetaDataFile = newMetaDataPath
+                    self.fileHandleDict[newPath] = fh
                     del self.fileHandleDict[oldPath]
+                fh.fileModified = True
             except KeyError:
                 # The file is not active, rename the files but there is no
                 # data structure to lock or fix.
@@ -469,6 +472,7 @@ class Cache(object):
             for pair in renames:
                 if Cache.pathExists(pair[0]):
                     os.rename(pair[0], pair[1])
+                    os.utime(pair[1], None)
                     renamedList.append(pair)
         except:
             for pair in renamedList:

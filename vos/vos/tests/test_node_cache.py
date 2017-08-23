@@ -39,7 +39,7 @@ class TestNodeCache(unittest.TestCase):
         self.assertTrue('/a/b/c/d' in node_cache)
 
         with node_cache.volatile('/a/b/c/') as v:
-            self.assertTrue('/a/b' in node_cache)
+            self.assertTrue('/a/b' not in node_cache)
             self.assertFalse('/a/b/c' in node_cache)
             self.assertFalse('/a/b/c/' in node_cache)
             self.assertFalse('/a/b/c/d' in node_cache)
@@ -102,11 +102,12 @@ class TestNodeCache(unittest.TestCase):
             w.insert('d')
             self.assertEqual(node_cache['/a/b/c'], 'd')
 
-            # Make a sub-tree volatile. This should not effect the watched
-            # directory.
+            # Make a sub-tree volatile including the parent directory
             with node_cache.volatile('/a/b/c/d'):
-                self.assertEqual(node_cache['/a/b/c'], 'd')
+                self.assertEqual(node_cache['/a/b/c'], None)
 
+            w.dirty = False
+            w.insert('d')
             self.assertTrue('/a/b/c' in node_cache)
             with node_cache.volatile('/a/b/c'):
                 self.assertFalse('/a/b/c' in node_cache)

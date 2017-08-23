@@ -12,6 +12,7 @@ from errno import EIO, EAGAIN, EPERM, ENOENT
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
 import vos
+from cadcutils import exceptions
 from vofs.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
 from vos.node_cache import NodeCache
 from vofs.vofs import HandleWrapper, MyFuse, VOFS
@@ -666,6 +667,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.move.reset_mock()
         testfs.cache.renameFile.reset_mock()
         testfs.client.move.side_effect = Exception("str")
+        testfs.get_node = Mock(side_effect = exceptions.NotFoundException())
         with self.assertRaises(Exception):
             self.assertEqual(testfs.rename(src, dest), -1)
         testfs.client.move.assert_called_once_with(src, dest)
