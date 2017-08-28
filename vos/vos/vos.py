@@ -10,6 +10,7 @@ from future.utils import bytes_to_native_str
 import warnings
 import copy
 import errno
+from datetime import datetime
 import fnmatch
 try:
     from cStringIO import StringIO
@@ -109,7 +110,8 @@ logging.getLogger("requests").setLevel(logging.ERROR)
 
 
 def convert_vospace_time_to_seconds(str_date):
-    """A convenience method that takes a string from a vospace time field and converts it to seconds since epoch.
+    """A convenience method that takes a string from a vospace time field (UTC)
+    and converts it to seconds since epoch local time.
 
     :param str_date: string to parse into a VOSpace time
     :type str_date: unicode
@@ -118,7 +120,7 @@ def convert_vospace_time_to_seconds(str_date):
     """
     right = str_date.rfind(":") + 3
     mtime = time.mktime(time.strptime(str_date[0:right], '%Y-%m-%dT%H:%M:%S'))
-    return mtime - time.mktime(time.gmtime()) + time.mktime(time.localtime())
+    return mtime - round((datetime.utcnow() - datetime.now()).total_seconds())
 
 
 class URLParser(object):
@@ -1470,31 +1472,52 @@ class Client(object):
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
+            success = True
+            try:
+                destination_node = self.get_node(destination)
+                destination_md5 = destination_node.props.get('MD5', ZERO_MD5)
+            except Exception as ex:
+                destination_md5 = None
             source_md5 = md5_cache.MD5Cache.compute_md5(source)
-            put_urls = self.get_node_url(destination, 'PUT')
-            while not success:
-                if len(put_urls) == 0:
-                    if self.transfer_shortcut and not get_node_url_retried:
-                        put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
-                        # remove the first one as we already tried that one.
-                        put_urls.pop(0)
-                        get_node_url_retried = True
-                    else:
-                        break
-                put_url = put_urls.pop(0)
-                try:
-                    with open(source, str('rb')) as fin:
-                        self.conn.session.put(put_url, data=fin)
-                    node = self.get_node(destination, limit=0, force=True)
-                    destination_md5 = node.props.get('MD5', ZERO_MD5)
-                    assert destination_md5 == source_md5
-                except Exception as ex:
-                    copy_failed_message = str(ex)
-                    logging.debug("FAILED to PUT to {0}".format(put_url))
-                    logging.debug("Got error: {0}".format(ex))
-                    continue
-                success = True
-                break
+            if source_md5 == destination_md5:
+                logger.info('copy: src and dest are already the same -> update node metadata')
+                # post the node so that the modify time is updated
+                self.update(destination_node)
+                destination_size = os.stat(source).st_size
+            elif source_md5 == ZERO_MD5:
+                logger.info("destination: size is 0")
+                destination_size = 0
+                # TODO delete and recreate the node. Is there a better way to delete just the content of the node?
+                if destination_md5:
+                    self.delete(destination)
+                self.create(destination)
+            else:
+                # transfer the bytes
+                put_urls = self.get_node_url(destination, 'PUT')
+                success = False
+                while not success:
+                    if len(put_urls) == 0:
+                        if self.transfer_shortcut and not get_node_url_retried:
+                            put_urls = self.get_node_url(destination, method='PUT', full_negotiation=True)
+                            # remove the first one as we already tried that one.
+                            put_urls.pop(0)
+                            get_node_url_retried = True
+                        else:
+                            break
+                    put_url = put_urls.pop(0)
+                    try:
+                        with open(source, str('rb')) as fin:
+                            self.conn.session.put(put_url, data=fin)
+                        node = self.get_node(destination, limit=0, force=True)
+                        destination_md5 = node.props.get('MD5', ZERO_MD5)
+                        assert destination_md5 == source_md5
+                    except Exception as ex:
+                        copy_failed_message = str(ex)
+                        logging.debug("FAILED to PUT to {0}".format(put_url))
+                        logging.debug("Got error: {0}".format(ex))
+                        continue
+                    success = True
+                    break
 
         if not success:
             raise OSError(errno.EFAULT, "Failed copying {0} -> {1}\n{2}".format(source, destination,

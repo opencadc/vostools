@@ -40,12 +40,12 @@ def size_format(size):
 
 
 def date_format(epoch):
-    """given a time object return a unix-ls like formatted string"""
+    """given an epoch, return a unix-ls like formatted string"""
 
     time_tuple = time.localtime(epoch)
     if time.localtime().tm_year != time_tuple.tm_year:
         return time.strftime('%b %d  %Y ', time_tuple)
-    return time.strftime('%b %d %H:%S ', time_tuple)
+    return time.strftime('%b %d %H:%M ', time_tuple)
 
 
 __LIST_FORMATS__ = {'permissions': lambda value: "{:<11}".format(value),
