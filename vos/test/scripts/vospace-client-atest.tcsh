@@ -115,9 +115,33 @@ echo -n "check recursive create (non-existant parents) "
 echo "[TODO]"
 
 echo -n "copy file to existing container and non-existent data node "
-echo "$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png"
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
+
+echo -n "copy empty files"
+touch /tmp/zerosize.txt
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+# repeat
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+# change size
+echo "test" > /tmp/zerosize.txt
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
+# repeat
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
+# make it back 0 size
+/bin/cp /dev/null /tmp/zerosize.txt
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+# repeat
+$CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
+$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+
 
 echo -n "view existing data node "
 $LSCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1

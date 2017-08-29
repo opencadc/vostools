@@ -17,6 +17,7 @@ import re
 import glob
 import traceback
 import time
+import warnings
 from cadcutils import exceptions
 
 __all__ = ['vcp']
@@ -50,7 +51,7 @@ def vcp():
     parser.add_argument("--include", default=None, help="only copy files that match pattern")
     parser.add_argument("-i", "--interrogate", action="store_true", help="Ask before overwriting files")
     parser.add_argument("--overwrite", action="store_true",
-                        help="overwrite destination (skip check if source and destination content identical)")
+                        help="DEPRECATED")
     parser.add_argument("--quick", action="store_true",
                         help="assuming CANFAR VOSpace, only comptible with CANFAR VOSpace.",
                         default=False)
@@ -67,6 +68,9 @@ def vcp():
 
     dest = args.destination
     this_destination = dest
+
+    if args.overwrite:
+        warnings.warn("the --overwrite option is no longer supported")
 
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
@@ -209,12 +213,6 @@ def vcp():
                         ans = sys.stdin.readline().strip()
                         if ans != 'y':
                             raise Exception("File exists")
-
-                if not overwrite and access(destination_name, os.F_OK):
-                    # check if the MD5 of dest and source mathc, if they do then skip
-                    if get_md5(destination_name) == get_md5(source_name):
-                        logging.info("%s matches %s, skipping" % (source_name, destination_name))
-                        return
 
                 if not access(os.path.dirname(destination_name), os.F_OK):
                     raise OSError(errno.EEXIST,

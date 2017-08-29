@@ -6,6 +6,7 @@ import requests
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call, mock_open
 from vos import Client, Connection, Node, VOFile
+from vos import vos as vos
 
 # The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
 call.__wrapped__ = None
@@ -249,6 +250,8 @@ class TestClient(unittest.TestCase):
         test_client.conn = conn
         get_node_url_mock = Mock(return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
         test_client.get_node_url = get_node_url_mock
+        mock_update = Mock()
+        test_client.update = mock_update
             
         #patch Client.get_node to return our mocked node
         get_node_mock = Mock(return_value=node)
@@ -264,14 +267,55 @@ class TestClient(unittest.TestCase):
         computed_md5_mock.assert_called_once_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
         
-        # copy to vospace
+        # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         test_client.copy(osLocation, vospaceLocation)
+        mock_update.assert_called_once()
+        assert not get_node_url_mock.called
+
+        # make md5 different
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        mock_update.reset_mock()
+        props.get.side_effect= ['d00223344', md5sum]
+        test_client.copy(osLocation, vospaceLocation)
+        assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
         computed_md5_mock.assert_called_once_with(osLocation)
 
+        # copy 0 size file -> delete and create on client but no bytes transferred
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.return_value = vos.ZERO_MD5
+        props.get.side_effect = [md5sum]
+        mock_delete = Mock()
+        mock_create = Mock()
+        test_client.delete = mock_delete
+        test_client.create = mock_create
+        test_client.copy(osLocation, vospaceLocation)
+        mock_create.assert_called_once_with(vospaceLocation)
+        mock_delete.assert_called_once_with(vospaceLocation)
+        assert not get_node_url_mock.called
+
+        # copy new 0 size file -> reate on client but no bytes transferred
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        mock_delete.reset_mock()
+        mock_create.reset_mock()
+        computed_md5_mock.return_value = vos.ZERO_MD5
+        props.get.side_effect = [None]
+        mock_delete = Mock()
+        mock_create = Mock()
+        test_client.delete = mock_delete
+        test_client.create = mock_create
+        test_client.copy(osLocation, vospaceLocation)
+        mock_create.assert_called_once_with(vospaceLocation)
+        assert not mock_delete.called
+        assert not get_node_url_mock.called
+
         # error tests - md5sum mismatch
+        props.get.side_effect = [md5sum]
         computed_md5_mock.return_value = '000bad000'
         with self.assertRaises(OSError):
             test_client.copy(vospaceLocation, osLocation)
