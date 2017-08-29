@@ -338,7 +338,8 @@ class VOFS(Operations):
 
     @logExceptions()
     def create(self, path, flags, fi=None):
-        """Create a node. Currently ignores the ownership mode
+        """Create a node. Currently ignores the ownership mode and mapping to a filehandle (fi) is not supported.
+
         :param path: the container/dataNode in VOSpace to be created
         :param flags: Read/Write settings (eg. 600)
         :param fi: integer handle to assign to created file.
@@ -361,8 +362,6 @@ class VOFS(Operations):
             # chmod returns True if the mode changed but doesn't do update.
             self.client.update(node)
             self.getNode(path, force=True)
-
-        # now we can just open the file in the usual way and return the handle
         return self.open(path, os.O_WRONLY)
 
     def destroy(self, path):
