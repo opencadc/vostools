@@ -425,22 +425,24 @@ class TestClient(unittest.TestCase):
         session_mock.put.assert_called_with('http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
                                                  headers=headers, data=data)
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock())
     def test_update(self):
         node = Node(ElementTree.fromstring(NODE_XML))
 
         resp = Mock()
         resp.headers.get = Mock(return_value="https://www.canfar.phys.uvic.ca/vospace")
 
-        client = Client()
+        conn = Mock(spec=vos.Connection)
+        conn.session.post = Mock(return_value=resp)
+        client = Client(conn=conn)
         client.get_node_url = Mock(return_value='https://www.canfar.phys.uvic.ca/vospace')
-        client.conn = Mock()
-        client.conn.session.post = Mock(return_value=resp)
         client.get_transfer_error = Mock()
         client.protocol = 'https'
 
         data = str(node)
         property_url = 'https://www.canfar.phys.uvic.ca/vospace/nodeprops'
+        endpoints_mock = Mock()
+        endpoints_mock.properties = property_url
+        client.get_endpoints = Mock(return_value=endpoints_mock)
         result = client.update(node, False)
         self.assertEqual(result, 0)
         client.conn.session.post.assert_called_with('https://www.canfar.phys.uvic.ca/vospace',
@@ -452,10 +454,9 @@ class TestClient(unittest.TestCase):
                      headers={'Content-type': "text/text"})
         calls = [call1, call2]
 
-        client.conn = Mock()
+        client.conn = Mock(spec=vos.Connection)
         client.conn.session.post = Mock(return_value=resp)
-        with patch('vos.vos.EndPoints.properties', property_url):
-            result = client.update(node, True)
+        result = client.update(node, True)
         self.assertEqual(result, 0)
         client.conn.session.post.assert_has_calls(calls)
 
