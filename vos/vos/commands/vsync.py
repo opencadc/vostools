@@ -21,7 +21,12 @@ that listen to the queue and transfer files independently to VOSpace and report 
 file successfully copies to VOSpace.  
 
 At the completion of vsync an error report indicates if there were failures.  Run vsync repeatedly 
-until know errors are reported.
+until no errors are reported.
+
+eg.  vsync --cache_nodes --recursive --verbose ./local_dir vos:VOSPACE/remote_dir
+
+Using cache_nodes option will greatly improve the speed of repeated calls but does result in a 
+cache database file: ${HOME}/.config/vos/node_cache.db
 """
 
 HOME = os.getenv("HOME", "./")
