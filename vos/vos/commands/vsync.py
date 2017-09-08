@@ -30,7 +30,7 @@ cache database file: ${HOME}/.config/vos/node_cache.db
 """
 
 HOME = os.getenv("HOME", "./")
-
+global_md5_cache = None
 
 def vsync():
     def signal_handler(h_stream, h_frame):
@@ -69,7 +69,7 @@ def vsync():
         parser.error("Maximum of 30 streams exceeded")
 
     if opt.cache_nodes:
-        this_md5_cache = md5_cache.MD5Cache(cache_db=opt.cache_filename)
+        global_md5_cache = md5_cache.MD5Cache(cache_db=opt.cache_filename)
 
     destination = opt.destination
     if destination[0:4] != "vos:":
@@ -97,13 +97,13 @@ def vsync():
     def file_md5(this_filename):
         import os
         md5 = None
-        if opt.cache_nodes:
-            md5 = this_md5_cache.get(this_filename)
+        if global_md5_cache is not None:
+            md5 = global_md5_cache.get(this_filename)
         if md5 is None or md5[2] < os.stat(this_filename).st_mtime:
             md5 = compute_md5(this_filename)
-            if opt.cache_nodes:
+            if global_md5_cache is not None:
                 stat = os.stat(this_filename)
-                this_md5_cache.update(this_filename, md5, stat.st_size, stat.st_mtime)
+                global_md5_cache.update(this_filename, md5, stat.st_size, stat.st_mtime)
         else:
             md5 = md5[0]
         return md5
@@ -132,7 +132,7 @@ def vsync():
                     try:
                         node_info = None
                         if opt.cache_nodes:
-                            node_info = this_md5_cache.get(current_destination)
+                            node_info = global_md5_cache.get(current_destination)
                         if node_info is None:
                             logging.debug("Getting node info from VOSpace")
                             logging.debug(str(node_dict.keys()))
@@ -142,7 +142,7 @@ def vsync():
                             current_destination_length = node.attr['st_size']
                             current_destination_time = node.attr['st_ctime']
                             if opt.cache_nodes:
-                                this_md5_cache.update(current_destination, current_destination_md5,
+                                global_md5_cache.update(current_destination, current_destination_md5,
                                                       current_destination_length, current_destination_time)
                         else:
                             current_destination_md5 = node_info[0]
@@ -168,7 +168,7 @@ def vsync():
                     current_destination_length = node.attr['st_size']
                     current_destination_time = node.attr['st_ctime']
                     if opt.cache_nodes:
-                        this_md5_cache.update(current_destination,
+                        global_md5_cache.update(current_destination,
                                               current_destination_md5,
                                               current_destination_length,
                                               current_destination_time)
