@@ -84,10 +84,11 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
 _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
+
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
 FILENAME_PATTERN_MAGIC = re.compile(r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]*)'  # legal filename string
                                     r'(?P<cutout>'   # Look for a cutout part
-                                    r'(?P<pix>(\[\d*:?\d*\])?(\[[-+]?\d*:?[-+]?\d*,?[-+]?\d*:?[-+]?\d*\]))'  # pixel
+                                    r'(?P<pix>(\[\d*:?\d*\])?(\[[+-]?\*?\d*:?[+-]?\d*,?[+-]?\*?\d*:?[+-]?\d*\]))'  # pixel
                                     r'|'  # OR
                                     r'(?P<wcs>'  # possible wcs cutout
                                     r'\((?P<ra>[+]?\d*(\.\d*)?),'  # ra part
