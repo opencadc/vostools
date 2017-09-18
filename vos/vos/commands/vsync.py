@@ -30,9 +30,9 @@ cache database file: ${HOME}/.config/vos/node_cache.db
 """
 
 HOME = os.getenv("HOME", "./")
-global_md5_cache = None
 
 def vsync():
+    global_md5_cache = None
     def signal_handler(h_stream, h_frame):
         logging.debug("{} {}".format(h_stream, h_frame))
         logging.critical("Interrupt\n")

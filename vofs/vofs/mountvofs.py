@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 from sys import platform
 import os
 import logging
+import getpass
 
 from vos import vos
 from .version import version
@@ -51,8 +52,9 @@ def mountvofs():
 
     log_format = ("%(asctime)s %(thread)d vos-"+str(version)+" %(module)s.%(funcName)s.%(lineno)d %(message)s")
 
+    username = getpass.getuser() # not to be used for access control
     lf = logging.Formatter(fmt=log_format)
-    fh = logging.FileHandler(filename=os.path.abspath('/tmp/vos.exceptions'))
+    fh = logging.FileHandler(filename=os.path.abspath('/tmp/vos.{}.exceptions'.format(username)))
     fh.formatter = lf
 
     # send the 'logException' statements to a seperate log file.

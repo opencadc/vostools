@@ -26,6 +26,8 @@ echo "vospace-move-atest.tcsh"
 $THIS_DIR/vospace-move-atest.tcsh || echo "FAIL vospace-move-atest.tcsh" && exit -1
 echo "vospace-delete-permission-atest.tcsh"
 $THIS_DIR/vospace-delete-permission-atest.tcsh || echo "FAIL vospace-delete-permission-atest.tcsh" && exit -1
+echo "vospace-vsync-atest.tcsh"
+$THIS_DIR/vospace-vsync-atest.tcsh || echo "FAIL vospace-vsync-atest.tcsh" && exit -1
 echo "vospace-quota-atest.tcsh"
 $THIS_DIR/vospace-quota-atest.tcsh || echo "FAIL vospace-quota-atest.tcsh" && exit -1
 echo "vospace-link-atest.tcsh"
