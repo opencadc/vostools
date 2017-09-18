@@ -15,10 +15,30 @@ import signal
 from vos import vos, version
 from .. import md5_cache
 
+DESCRIPTION = """A script for sending files to VOSpace via multiple connection streams.
+
+The list of files is given on the command line have their MD5s generated and then compared to 
+the contents of VOSpace.  Files that do not exist in the destination VOSpace area or files that
+have different MD5 sums are then queued to be copied to VOSpace.  vsync launches mutlple threads
+that listen to the queue and transfer files independently to VOSpace and report success if the 
+file successfully copies to VOSpace.  
+
+At the completion of vsync an error report indicates if there were failures.  Run vsync repeatedly 
+until no errors are reported.
+
+eg.  vsync --cache_nodes --recursive --verbose ./local_dir vos:VOSPACE/remote_dir
+
+Using cache_nodes option will greatly improve the speed of repeated calls but does result in a 
+cache database file: ${HOME}/.config/vos/node_cache.db
+"""
+
+HOME = os.getenv("HOME", "./")
 
 def vsync():
-    def signal_handler(signal, frame):
-        logger.critical("Interupt\n")
+    global_md5_cache = None
+    def signal_handler(h_stream, h_frame):
+        logging.debug("{} {}".format(h_stream, h_frame))
+        logging.critical("Interrupt\n")
         sys.exit(-1)
     usage = """
       vsync [options] files vos:Destination/
