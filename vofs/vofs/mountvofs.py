@@ -98,7 +98,8 @@ def mountvofs():
             os.getenv('HOME', '.'), root.replace(":", "_")))
     if not os.access(mount, os.F_OK):
         os.makedirs(mount)
-    if platform == "darwin":
+    try:
+      if platform == "darwin":
         fuse = MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
                          cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
                          cache_max_flush_threads=opt.max_flush_threads,
@@ -115,7 +116,7 @@ def mountvofs():
                     noappledouble=True,
                     debug=opt.foreground,
                     foreground=opt.foreground)
-    else:
+      else:
         fuse = MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
                          cache_limit=opt.cache_limit, cache_nodes=opt.cache_nodes,
                          cache_max_flush_threads=opt.max_flush_threads,
@@ -126,3 +127,5 @@ def mountvofs():
                     readonly=readonly,
                     user_allow_other=opt.allow_other,
                     foreground=opt.foreground)
+    except Exception as ex:
+      logger.error(str(ex))
