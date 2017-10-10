@@ -42,6 +42,3 @@ def run():
     suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCommonParser)
     all_tests = unittest.TestSuite([suite1])
     return unittest.TextTestRunner(verbosity=2).run(all_tests)
-
-if __name__ == "__main__":
-    run()

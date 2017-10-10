@@ -42,7 +42,7 @@ VERSION = metadata.get('version', 'none')
 
 # generate the version file
 with open(os.path.join(PACKAGENAME, 'version.py'), 'w') as f:
-    f.write('version = \'{}\''.format(VERSION))	
+    f.write('version = \'{}\'\n'.format(VERSION))	
 
 # Treat everything in scripts except README.rst as a script to be installed
 scripts = [fname for fname in glob.glob(os.path.join('scripts', '*'))
