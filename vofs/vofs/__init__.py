@@ -4,4 +4,4 @@
 This application mounts a VOSpace service to the local file system
  using fuse.
 """
-from vofs import *
+from vofs import *  # noqa

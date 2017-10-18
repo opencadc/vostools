@@ -1,0 +1,4 @@
+usage: vtag [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+            [--vos-debug] [-v] [-w] [--remove]
+            node property [property ...]
+vtag: error:

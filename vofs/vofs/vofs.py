@@ -20,9 +20,8 @@ from vos.logExceptions import logExceptions
 import logging
 import six.moves
 
-
 logger = logging.getLogger('vofs')
-#logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
 
@@ -41,7 +40,6 @@ def flag2mode(flags):
 
 
 class MyIOProxy(IOProxy):
-
     def delNode(self, force=False):
         raise NotImplementedError("MyIOProxy.delNode")
 
@@ -56,25 +54,28 @@ class MyIOProxy(IOProxy):
         self.condition = CacheCondition(None)
 
     def __str__(self):
-        return "Path:{0}  Size:{1}  MD5:{2}  condition:{3}".format(self.path,
-                                                                   self.size,
-                                                                   self.md5,
-                                                                   self.condition)
+        return "Path:{0}  Size:{1}  MD5:{2}  condition:{3}".\
+            format(self.path, self.size, self.md5, self.condition)
 
     @logExceptions()
     def writeToBacking(self):
         """
         Write a file in the cache to the remote file.
         """
-        logger.debug("PUSHING %s to VOSpace @ %s" % (self.cacheFile.cacheDataFile, self.cacheFile.path))
-        logger.debug("opening a new vo file for {0}".format(self.cacheFile.path))
+        logger.debug("PUSHING %s to VOSpace @ %s" %
+                     (self.cacheFile.cacheDataFile, self.cacheFile.path))
+        logger.debug(
+            "opening a new vo file for {0}".format(self.cacheFile.path))
         dest_uri = self.vofs.get_node(self.cacheFile.path).uri
-        foo = self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
+        foo = self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri,
+                                    send_md5=True)
         return foo
-        # return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri, send_md5=True)
+        # return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri,
+        # send_md5=True)
 
     @logExceptions()
-    def readFromBacking(self, size=None, offset=0, block_size=Cache.IO_BLOCK_SIZE):
+    def readFromBacking(self, size=None, offset=0,
+                        block_size=Cache.IO_BLOCK_SIZE):
         """
         Read from VOSpace into cache
         """
@@ -91,16 +92,22 @@ class MyIOProxy(IOProxy):
         logger.debug("reading range: %s" % (str(byte_range)))
 
         if self.lastVOFile is None:
-            logger.debug("Opening a new vo file on {0}".format(self.cacheFile.path))
+            logger.debug(
+                "Opening a new vo file on {0}".format(self.cacheFile.path))
             self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
-                                                    mode=os.O_RDONLY, view="data", size=size, byte_range=byte_range,
+                                                    mode=os.O_RDONLY,
+                                                    view="data", size=size,
+                                                    byte_range=byte_range,
                                                     possible_partial_read=True)
         else:
-            logger.debug("Opening a existing vo file on {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
+            logger.debug("Opening a existing vo file on {0}".format(
+                self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
             self.lastVOFile.open(
-                self.lastVOFile.URLs[self.lastVOFile.urlIndex], byte_range=byte_range, possible_partial_read=True)
+                self.lastVOFile.URLs[self.lastVOFile.urlIndex],
+                byte_range=byte_range, possible_partial_read=True)
         try:
-            logger.debug("reading from {0}".format(self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
+            logger.debug("reading from {0}".format(
+                self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
             try:
                 resp = self.lastVOFile.read(return_response=True)
             except OSError:
@@ -112,7 +119,8 @@ class MyIOProxy(IOProxy):
                 # to client
                 self.lastVOFile = self.vofs.client.open(
                     self.cacheFile.path, mode=os.O_RDONLY, view="data",
-                    size=size, byte_range=byte_range, full_negotiation=True, possible_partial_read=True)
+                    size=size, byte_range=byte_range, full_negotiation=True,
+                    possible_partial_read=True)
                 resp = self.lastVOFile.read(return_response=True)
 
             if not self.cacheFile.gotHeader:
@@ -135,7 +143,8 @@ class MyIOProxy(IOProxy):
             self.lastVOFile.close()
             self.lastVOFile = None
 
-        logger.debug("Wrote: %d bytes to cache for %s" % (offset, self.cacheFile.path))
+        logger.debug(
+            "Wrote: %d bytes to cache for %s" % (offset, self.cacheFile.path))
 
     def get_md5(self):
         if self.md5 is None:
@@ -215,11 +224,13 @@ class VOFS(Operations):
     removexattr = None
 
     def setxattr(self, path, name, value, options, position=0):
-        logger.warning("Extended attributes not supported: {0} {1} {2} {3} {4}".format(path,
-                                                                                       name,
-                                                                                       value,
-                                                                                       options,
-                                                                                       position))
+        logger.warning(
+            "Extended attributes not supported: {0} {1} {2} {3} {4}".format(
+                path,
+                name,
+                value,
+                options,
+                position))
 
     def __init__(self, root, cache_dir, options, conn=None,
                  cache_limit=1024, cache_nodes=False,
@@ -251,7 +262,8 @@ class VOFS(Operations):
         # connection.
         try:
             self.client = vos.Client(root_node=root, conn=conn,
-                                     transfer_shortcut=True, secure_get=secure_get)
+                                     transfer_shortcut=True,
+                                     secure_get=secure_get)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
@@ -338,17 +350,20 @@ class VOFS(Operations):
 
     @logExceptions()
     def create(self, path, flags, fi=None):
-        """Create a node. Currently ignores the ownership mode and mapping to a filehandle (fi) is not supported.
+        """Create a node. Currently ignores the ownership mode and mapping to
+        a filehandle (fi) is not supported.
 
         :param path: the container/dataNode in VOSpace to be created
         :param flags: Read/Write settings (eg. 600)
         :param fi: integer handle to assign to created file.
         """
 
-        logger.debug("Creating a node: {0} with flags {1}".format(path, str(flags)))
+        logger.debug(
+            "Creating a node: {0} with flags {1}".format(path, str(flags)))
 
         if fi is not None:
-            warnings.warn("setting fi on call to create is not supported", NotImplemented)
+            warnings.warn("setting fi on call to create is not supported",
+                          NotImplemented)
 
         # Create is handle by the client.
         # This should fail if the base path doesn't exist
@@ -401,12 +416,15 @@ class VOFS(Operations):
         @type limit: int or None
         @rtype : vos.Node
         @param path: the VOSpace node to get
-        @param force: force retrieval (true) or provide cached version if available (false)?
-        @param limit: Number of child nodes to retrieve per request, if limit  is None then get max returned by service.
+        @param force: force retrieval (true) or provide cached version if
+        available (false)?
+        @param limit: Number of child nodes to retrieve per request, if limit
+        is None then get max returned by service.
         """
 
         # Pull the node meta data from VOSpace.
-        logger.debug("requesting node {0} from VOSpace. Force: {1}".format(path, force))
+        logger.debug(
+            "requesting node {0} from VOSpace. Force: {1}".format(path, force))
         node = self.client.get_node(path, force=force, limit=limit)
         logger.debug("Got node {0}".format(node.name))
         return node
@@ -421,14 +439,17 @@ class VOFS(Operations):
         # Try to get the attributes from the cache first. This will only return
         # a result if the files has been modified and not flushed to vospace.
         attr = self.cache.getAttr(path)
-        return attr is not None and attr or self.getNode(path, limit=0, force=False).attr
+        return attr is not None and attr or self.getNode(path, limit=0,
+                                                         force=False).attr
 
     def init(self, path):
         """Called on filesystem initialization. (Path is always /)
 
-        Here is where we start the worker threads for the queue that flushes nodes.
+        Here is where we start the worker threads for the queue that flushes
+        nodes.
         """
-        self.cache.flushNodeQueue = FlushNodeQueue(maxFlushThreads=self.cache.maxFlushThreads)
+        self.cache.flushNodeQueue = FlushNodeQueue(
+            maxFlushThreads=self.cache.maxFlushThreads)
 
     @logExceptions()
     def mkdir(self, path, mode):
@@ -441,7 +462,7 @@ class VOFS(Operations):
             if "read-only mode" in str(os_error):
                 raise FuseOSError(EPERM)
             raise FuseOSError(getattr(os_error, 'errno', EFAULT))
-        # self.chmod(path, mode)
+            # self.chmod(path, mode)
 
     # @logExceptions()
     def open(self, path, flags, *mode):
@@ -489,7 +510,8 @@ class VOFS(Operations):
 
         if not read_only and node and not locked:
             if node.type == "vos:DataNode":
-                parent_node = self.get_node(os.path.dirname(path), force=False, limit=1)
+                parent_node = self.get_node(os.path.dirname(path), force=False,
+                                            limit=1)
                 if parent_node.props.get('islocked', False):
                     logger.debug("%s is locked by parent node." % path)
                     locked = True
@@ -497,17 +519,21 @@ class VOFS(Operations):
                 try:
                     # sometimes target_nodes aren't internal... so then not
                     # locked
-                    target_node = self.get_node(node.target, force=False, limit=1)
+                    target_node = self.get_node(node.target, force=False,
+                                                limit=1)
                     if target_node.props.get('islocked', False):
                         logger.debug("{0} target node is locked.".format(path))
                         locked = True
                     else:
-                        target_parent_node = self.get_node(os.path.dirname(node.target), force=False, limit=1)
+                        target_parent_node = self.get_node(
+                            os.path.dirname(node.target), force=False, limit=1)
                         if target_parent_node.props.get('islocked', False):
-                            logger.debug("{0} parent node is locked.".format(path))
+                            logger.debug(
+                                "{0} parent node is locked.".format(path))
                             locked = True
                 except Exception as lock_exception:
-                    logger.warn("Error while checking for lock: {0}".format(str(lock_exception)))
+                    logger.warn("Error while checking for lock: {0}".format(
+                        str(lock_exception)))
                     pass
 
         if locked and not read_only:
@@ -525,8 +551,10 @@ class VOFS(Operations):
 
         logger.debug("IO Proxy initialized:{0}  in backing.".format(my_proxy))
 
-        # new file in cache library or if no node information (node not in vospace).
-        handle = self.cache.open(path, flags & os.O_WRONLY != 0, must_exist, my_proxy, self.cache_nodes)
+        # new file in cache library or if no node information
+        # (node not in vospace).
+        handle = self.cache.open(path, flags & os.O_WRONLY != 0, must_exist,
+                                 my_proxy, self.cache_nodes)
 
         logger.debug("Creating file:{0}  in backing.".format(path))
 
@@ -547,7 +575,8 @@ class VOFS(Operations):
         if file_id is None:
             raise FuseOSError(EIO)
 
-        logger.debug("reading range: %s %d %d %d" % (path, size, offset, file_id))
+        logger.debug(
+            "reading range: %s %d %d %d" % (path, size, offset, file_id))
 
         while True:
             try:
@@ -574,7 +603,8 @@ class VOFS(Operations):
 
         Currently doesn't provide correct capabilty for VOSpace FS.
         """
-        return self.get_node(path).name+"?link="+urllib.quote_plus(self.getNode(path).target)
+        return self.get_node(path).name + "?link=" + urllib.quote_plus(
+            self.getNode(path).target)
 
     @logExceptions()
     def readdir(self, path, file_id):
@@ -583,15 +613,17 @@ class VOFS(Operations):
         # reading from VOSpace can be slow, we'll do this in a thread
         with self.condition:
             if not self.loading_dir.get(path, False):
-                # TODO implement this as a multiprocess call instead of threading.
+                # TODO implement this as a multiprocess call instead of
+                # threading.
                 self.loading_dir[path] = True
-                six.moves._thread.start_new_thread(self.load_dir, (path, ))
+                six.moves._thread.start_new_thread(self.load_dir, (path,))
             while self.loading_dir.get(path, False):
                 logger.debug("Waiting ... ")
                 self.condition.wait()
-        return ['.', '..'] + [e.name for e in self.getNode(path,
-                                                           force=False,
-                                                           limit=None).node_list]
+        return ['.', '..'] + [e.name for e in
+                              self.getNode(path,
+                                           force=False,
+                                           limit=None).node_list]
 
     @logExceptions()
     def load_dir(self, path):
@@ -618,7 +650,9 @@ class VOFS(Operations):
             fh.cache_file_handle.flush()
         except CacheRetry as ce:
             logger.critical(str(ce))
-            logger.critical("Push to VOSpace reached FUSE timeout, continuing VOSpace push in background.")
+            logger.critical(
+                "Push to VOSpace reached FUSE timeout, continuing VOSpace push"
+                "in background.")
             pass
         return 0
 
@@ -641,16 +675,16 @@ class VOFS(Operations):
     @logExceptions()
     def rename(self, src, dest):
         """
-        Rename a data node into a new container. This is called only when both src and dest
-           are part of the mount.
+        Rename a data node into a new container. This is called only when both
+        src and dest are part of the mount.
         """
         logger.debug("Original %s -> %s" % (src, dest))
 
         try:
             node = self.get_node(dest)
             if node.type == "vos:DataNode":
-                # destination is an existing data node. Must be deleted first from the server or
-                # otherwise remove will fail
+                # destination is an existing data node. Must be deleted first
+                # from the server or otherwise remove will fail
                 self.unlink(dest)
                 logger.debug('Deleted {}'.format(dest))
         except exceptions.NotFoundException:
@@ -691,16 +725,22 @@ class VOFS(Operations):
             used = int(node.props.get('length', 2 ** 33))
             free = n_bytes - used
         logger.debug("Got properties: {0}".format(node.props))
-        sfs = {'f_bsize': block_size, 'f_frsize': block_size, 'f_blocks': int(n_bytes / block_size),
-               'f_bfree': int(free / block_size), 'f_bavail': int(free / block_size),
-               'f_files': len(node.node_list), 'f_ffree': 2 * 10, 'f_favail': 2 * 10, 'f_flags': 0,
+        sfs = {'f_bsize': block_size, 'f_frsize': block_size,
+               'f_blocks': int(n_bytes / block_size),
+               'f_bfree': int(free / block_size),
+               'f_bavail': int(free / block_size),
+               'f_files': len(node.node_list), 'f_ffree': 2 * 10,
+               'f_favail': 2 * 10, 'f_flags': 0,
                'f_namemax': 256}
         return sfs
 
     @logExceptions()
     def truncate(self, path, length, file_id=None):
         """Perform a file truncation to length bytes"""
-        logger.debug("Attempting to truncate {0}({1}) to length {2}".format(path, file_id, length))
+        logger.debug(
+            "Attempting to truncate {0}({1}) to length {2}".format(path,
+                                                                   file_id,
+                                                                   length))
 
         if file_id is None:
             # Ensure the file exists.
@@ -751,27 +791,28 @@ class VOFS(Operations):
         logger.debug("%s -> %s" % (path, fh))
         logger.debug("%d --> %d" % (offset, offset + size))
         return fh.cache_file_handle.write(data, size, offset)
-    
+
 
 class MyFuse(FUSE):
-    """ 
-    Customization of FUSE class in order to speed up reads and writes by passing
-    the destination buffer from the file system directly to the read and write
-    operation to fill it in and return the actual size that was
+    """
+    Customization of FUSE class in order to speed up reads and writes by
+    passing the destination buffer from the file system directly to the read
+    and write operation to fill it in and return the actual size that was
     filled in.
     """
     # add the readonly options to the list of options in FUSE
     FUSE.OPTIONS = list(FUSE.OPTIONS)
     FUSE.OPTIONS.append(('readonly', '-r'))
     FUSE.OPTIONS = tuple(FUSE.OPTIONS)
-    
+
     def read(self, path, buf, size, offset, fip):
         if self.raw_fi:
             fh = fip.contents
         else:
             fh = fip.contents.fh
 
-        retsize = self.operations('read', path.decode(self.encoding), size, offset, fh, buf)
+        retsize = self.operations('read', path.decode(self.encoding), size,
+                                  offset, fh, buf)
 
         assert retsize <= size, \
             'actual amount read %d greater than expected %d' % (retsize, size)

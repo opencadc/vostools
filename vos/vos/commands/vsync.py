@@ -78,10 +78,6 @@ def vsync():
         help=("Used to stress test the VOServer, also set --nstreams to a "
               "large value"))
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit()
-
     opt = parser.parse_args()
     set_logging_level_from_args(opt)
 

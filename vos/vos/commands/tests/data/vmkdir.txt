@@ -1,0 +1,4 @@
+usage: vmkdir [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+              [--vos-debug] [-v] [-w] [-p]
+              container_node
+vmkdir: error:

@@ -17,7 +17,8 @@ class TestCacheMetaData(unittest.TestCase):
         self.cleanupCacheMetadataDir()
 
     def cleanupCacheMetadataDir(self):
-        for root, dirs, files in os.walk(TestCacheMetaData.TEST_CACHE_PATH, topdown=False):
+        for root, dirs, files in os.walk(TestCacheMetaData.TEST_CACHE_PATH,
+                                         topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
             for name in dirs:
@@ -125,10 +126,11 @@ class TestCacheMetaData(unittest.TestCase):
         except ValueError:
             expected = 1
 
-        file1_repr = str("CacheMetaData(metaDataFile='{}file1', " \
-            "blocks=10, md5sum=9029, size=1025)".format(
-                TestCacheMetaData.TEST_CACHE_PATH))
-        aRepr.maxother = len(file1_repr) # avoid repr limitting the size of the return representation
+        file1_repr = str("CacheMetaData(metaDataFile='{}file1', "
+                         "blocks=10, md5sum=9029, size=1025)".
+                         format(TestCacheMetaData.TEST_CACHE_PATH))
+        # avoid repr limiting the size of the return representation
+        aRepr.maxother = len(file1_repr)
         self.assertEquals(str(file1_repr), repr(file1))
 
         self.assertEquals(1, expected)
@@ -139,15 +141,17 @@ class TestCacheMetaData(unittest.TestCase):
         self.assertTrue(not os.path.exists(
             TestCacheMetaData.TEST_CACHE_PATH + "file1"))
 
-        file2 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
-                              10, 0x2345, 1024)
+        file2 = CacheMetaData(
+            TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
+            10, 0x2345, 1024)
         self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH +
                           "/test/file1", file2.metaDataFile)
         self.assertEquals(10, file2.bitmap.length())
         self.assertEquals(0x2345, file2.md5sum)
         file2.persist()
-        file3 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
-                              10, 0x2345, 1025)
+        file3 = CacheMetaData(
+            TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
+            10, 0x2345, 1025)
         self.assertEquals(TestCacheMetaData.TEST_CACHE_PATH +
                           "/test/file1", file3.metaDataFile)
         self.assertEquals(10, file3.bitmap.length())
@@ -158,9 +162,9 @@ def run():
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCacheMetaData)
     return unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 if __name__ == '__main__':
     run()
-
 
 if __name__ == '__main__':
     unittest.main()

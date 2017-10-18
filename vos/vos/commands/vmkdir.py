@@ -9,7 +9,7 @@ from .. import vos
 
 DESCRIPTION = """creates a new VOSpace ContainerNode (aka directory).
 
-eg vmkdir vos:RootNode/NewContiner"""
+eg vmkdir vos:RootNode/NewContainer"""
 
 
 def vmkdir():

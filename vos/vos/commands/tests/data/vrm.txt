@@ -1,0 +1,4 @@
+usage: vrm [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w]
+           node [node ...]
+vrm: error:

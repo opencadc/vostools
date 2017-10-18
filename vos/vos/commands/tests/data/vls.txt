@@ -1,0 +1,4 @@
+usage: vls [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w] [--help] [-l] [-g] [-h] [-S] [-r] [-t]
+           node [node ...]
+vls: error:
