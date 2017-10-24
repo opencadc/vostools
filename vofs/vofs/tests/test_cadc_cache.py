@@ -692,7 +692,7 @@ class TestCadcCache(unittest.TestCase):
                         os.remove(dataFile)
                         os.remove(metaDataFile)
                         fh.release()
-                    except:
+                    except Exception:
                         pass
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1209,7 +1209,7 @@ class TestCadcCache(unittest.TestCase):
                                  False)
             try:
                 raise OSError()
-            except:
+            except Exception:
                 errInfo = sys.exc_info()
             fh.flushException = errInfo
             with self.assertRaises(OSError):

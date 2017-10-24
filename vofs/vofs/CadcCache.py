@@ -277,7 +277,7 @@ class Cache(object):
 
         try:
             self.checkCacheSpace()
-        except:
+        except Exception:
             pass
 
         return fileHandle
@@ -397,7 +397,7 @@ class Cache(object):
                         self.dataDir):] not in self.fileHandleDict
                 try:
                     osStat = os.stat(fp)
-                except:
+                except Exception:
                     continue
                 if inFileHandleDict and oldest_time > osStat.st_atime:
                     oldest_time = osStat.st_atime
@@ -500,7 +500,7 @@ class Cache(object):
                     os.rename(pair[0], pair[1])
                     os.utime(pair[1], None)
                     renamedList.append(pair)
-        except:
+        except Exception:
             for pair in renamedList:
                 os.rename(pair[1], pair[0])
             raise
@@ -1081,7 +1081,7 @@ class FileHandle(object):
             self.flushQueued = None
             try:
                 self.writerLock.release()
-            except:
+            except Exception:
                 pass
             self.deref()
             _flush_thread_count = _flush_thread_count - 1
@@ -1094,7 +1094,7 @@ class FileHandle(object):
 
         try:
             self.cache.checkCacheSpace()
-        except:
+        except Exception:
             pass
 
         return

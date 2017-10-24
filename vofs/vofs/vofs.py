@@ -299,7 +299,7 @@ class VOFS(Operations):
         logger.debug("Checking if -->{0}<-- is accessible".format(path))
         try:
             self.getNode(path)
-        except:
+        except Exception:
             return -1
         return 0
 
