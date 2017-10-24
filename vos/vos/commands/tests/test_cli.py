@@ -24,7 +24,7 @@ class MyExitError(Exception):
 outputs = [MyExitError] * (len(cmds.__all__) + 3)
 
 
-class TestVsync(unittest.TestCase):
+class TestCli(unittest.TestCase):
     """
     Basic tests of the command line interface for various vos commands.
     For each command it tests the invocation of the command without arguments

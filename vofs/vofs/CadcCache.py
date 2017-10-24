@@ -581,7 +581,7 @@ class Cache(object):
             with fileHandle.fileLock:
                 try:
                     f = os.stat(fileHandle.cacheDataFile)
-                except Exception as e:
+                except Exception:
                     # error in accessing the cached version of the file.
                     # Remove from cache
                     self.unlinkFile(fileHandle.cacheDataFile)
@@ -937,13 +937,13 @@ class FileHandle(object):
                     self.writeAborted = True
                     # logger.debug("Waiting for queued flush to complete.")
                     self.fileCondition.wait()
-            except Exception as e:
+            except Exception:
                 pass
                 # logger.debug("{0}".format(e))
 
             try:
                 self.writeAborted = False
-            except Exception as e:
+            except Exception:
                 pass
                 # logger.debug("{0}".format(e))
 
@@ -1073,7 +1073,7 @@ class FileHandle(object):
             self.metaData.persist()
             self.fileModified = False
 
-        except Exception as e:
+        except Exception:
             # logger.debug("Flush node failed")
             self.flushException = sys.exc_info()
             # logger.debug(str(self.flushException))

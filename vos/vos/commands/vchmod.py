@@ -6,8 +6,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+from ..commonparser import CommonParser, set_logging_level_from_args
+from ..commonparser import exit_on_exception
 import logging
 import sys
 import re

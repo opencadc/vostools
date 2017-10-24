@@ -60,8 +60,8 @@ def mountvofs():
     opt = parser.parse_args()
     set_logging_level_from_args(opt)
 
-    log_format = ("%(asctime)s %(thread)d vos-" + str(
-        version) + " %(module)s.%(funcName)s.%(lineno)d %(message)s")
+    log_format = ("%(asctime)s %(thread)d vos-" + str(version) +
+                  " %(module)s.%(funcName)s.%(lineno)d %(message)s")
 
     username = getpass.getuser()  # not to be used for access control
     lf = logging.Formatter(fmt=log_format)
