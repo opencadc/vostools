@@ -1,0 +1,34 @@
+usage: vln [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w]
+           source target
+
+vln creates a new VOSpace entry (LinkNode, target) that has the same modes as
+the source Node. It is useful for maintaining multiple copies of a Node in
+many places at once without using up storage for the ''copies''; instead, a
+link ''points'' to the original copy.
+
+Only symbolic links are supported.
+
+vln vos:VOSpaceSource vos:VOSpaceTarget
+
+examples:
+
+    vln vos:vospace/junk.txt vos:vospace/linkToJunk.txt
+    vln vos:vospace/directory vos:vospace/linkToDirectory
+    vln http://external.data.source vos:vospace/linkToExternalDataSource
+
+positional arguments:
+  source               location that link will point to.
+  target               location of the LinkNode
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+
+Default service settings in ~/.config/vos/vos-config.

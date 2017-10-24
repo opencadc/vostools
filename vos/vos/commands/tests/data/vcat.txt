@@ -1,0 +1,4 @@
+usage: vcat [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+            [--vos-debug] [-v] [-w] [-q]
+            source [source ...]
+vcat: error:

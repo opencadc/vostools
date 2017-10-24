@@ -1,0 +1,23 @@
+usage: vmkdir [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+              [--vos-debug] [-v] [-w] [-p]
+              container_node
+
+creates a new VOSpace ContainerNode (aka directory).
+
+eg vmkdir vos:RootNode/NewContiner
+
+positional arguments:
+  container_node       Name of the container node to craete.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  -p                   Create intermediate directories as required.
+
+Default service settings in ~/.config/vos/vos-config.

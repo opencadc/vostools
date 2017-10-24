@@ -1,0 +1,22 @@
+usage: vrm [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w]
+           node [node ...]
+
+remove a vospace data node; fails if container node or node is locked.
+
+eg. vrm vos:/root/node   -- deletes a data node
+
+positional arguments:
+  node                 dataNode or linkNode to delete from VOSpace
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+
+Default service settings in ~/.config/vos/vos-config.

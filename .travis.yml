@@ -17,7 +17,14 @@ install:
     - pip install coveralls
 
 script:
-    - for i in $(ls -d */); do cd $i; pytest --cov $i || exit 1; cd ..; done
+    - for i in $(ls -d */); do
+         cd $i;
+         pytest --cov $i || exit 1;
+         if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then
+         flake8 -v $i || break -1;
+         fi;
+         cd ..;
+         done
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line

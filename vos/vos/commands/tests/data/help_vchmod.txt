@@ -1,0 +1,39 @@
+usage: vchmod [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+              [--vos-debug] [-v] [-w] [-R]
+              mode node [groups [groups ...]]
+
+Set the read and write permission on VOSpace nodes.
+Permission string specifies the mode change to make.
+
+Changes to 'o' set the public permission, so only o+r and o-r are allowed.
+
+Changes to 'g' set the group permissions, g-r, g-w, g-rw to remove a group
+permission setting (removes all groups) and g+r, g+w, g+rw to add a group
+permission setting.  If Adding group permission then the applicable group
+must be included.
+
+e.g. vchmod g+r vos:RootNode/MyFile.txt  "Group1 Group2"
+
+Set read access to groups Group1 and Group2 (upto 4 groups can be specified).
+
+Permission setting is recursive, if a GroupB is part of GroupA then permissions
+given to members of GroupA are also provided to members of GroupB.
+
+positional arguments:
+  mode                 permission setting accepted modes:
+                       (og|go|o|g)[+-=](rw|wr|r\w)
+  node                 node to set mode on, eg: vos:Root/Container/file.txt
+  groups               name of group(s) to assign read/write permission to
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  -R, --recursive      Recursive set read/write properties
+
+Default service settings in ~/.config/vos/vos-config.

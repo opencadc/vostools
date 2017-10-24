@@ -18,5 +18,5 @@ from .vrmdir import vrmdir
 from .vsync import vsync
 from .vtag import vtag
 
-__all__ = ['vcp', 'vcat', 'vchmod', 'vcp', 'vln', 'vlock', 'vls', 'vmkdir', 'vmv', 'vrm', 'vrmdir', 'vsync', 'vtag']
-
+__all__ = ['vcp', 'vcat', 'vchmod', 'vln', 'vlock', 'vls', 'vmkdir',
+           'vmv', 'vrm', 'vrmdir', 'vsync', 'vtag']

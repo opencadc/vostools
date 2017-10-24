@@ -11,6 +11,8 @@ def mkdir_p(path, mode):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             os.chmod(path, mode)
         elif exc.errno == errno.EACCES:
-            raise OSError(errno.EACCES, "permission denied to create {0}".format(path))
+            raise OSError(errno.EACCES,
+                          "permission denied to create {0}".format(path))
         else:
-            raise OSError(errno.ENOTDIR, "{0} exists and is not a directory".format(path))
+            raise OSError(errno.ENOTDIR,
+                          "{0} exists and is not a directory".format(path))

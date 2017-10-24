@@ -1,0 +1,28 @@
+usage: vls [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w] [--help] [-l] [-g] [-h] [-S] [-r] [-t]
+           node [node ...]
+
+lists the contents of a VOSpace Node.
+
+Long listing provides the file size, ownership and read/write status of Node.
+
+positional arguments:
+  node                 VOSpace Node to list.
+
+optional arguments:
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  --help               show this help message and exit
+  -l, --long           verbose listing sorted by name
+  -g, --group          display group read/write information
+  -h, --human          make sizes human readable
+  -S, --Size           sort files by size
+  -r, --reverse        reverse the sort order
+  -t, --time           sort by time copied to VOSpace
+
+Default service settings in ~/.config/vos/vos-config.

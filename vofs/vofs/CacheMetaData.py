@@ -8,8 +8,8 @@ import logging
 
 logger = logging.getLogger('cache')
 
-class CacheMetaData(object):
 
+class CacheMetaData(object):
     def __init__(self, metaDataFile, blocks, md5sum, size):
         """
         Creates an instance of CacheMetaData for the given file. If the same
@@ -31,7 +31,7 @@ class CacheMetaData(object):
             f = open(self.metaDataFile, 'rb')
             persisted = pickle.load(f)
             if self.md5sum is None or persisted.md5sum == self.md5sum:
-                #persisted bitmap still valid. Used that instead
+                # persisted bitmap still valid. Used that instead
                 self.bitmap = persisted.bitmap
                 self.size = persisted.size
                 self.md5sum = persisted.md5sum
@@ -42,16 +42,19 @@ class CacheMetaData(object):
 
     def __str__(self):
         """To create a print representation that is informative."""
-        return "CacheMetaData: metaDataFile=%r bitmap=%r md5sum=%r size=%r" % (str(self.metaDataFile),
-                                                                               self.bitmap,
-                                                                               self.md5sum,
-                                                                               self.size)
+        return "CacheMetaData: metaDataFile=%r bitmap=%r md5sum=%r size=%r" % \
+               (str(self.metaDataFile),
+                self.bitmap,
+                self.md5sum,
+                self.size)
 
     def __repr__(self):
-        return "CacheMetaData(metaDataFile=%r, blocks=%r, md5sum=%r, size=%r)" % (str(self.metaDataFile),
-                                                                                  self.blocks,
-                                                                                  self.md5sum,
-                                                                                  self.size)
+        return ("CacheMetaData(metaDataFile=%r, blocks=%r, "
+                "md5sum=%r, size=%r)") % (str(self.metaDataFile),
+                                          self.blocks,
+                                          self.md5sum,
+                                          self.size)
+
     def setReadBlocks(self, start, end):
         """ To mark several blocks as read (start and end inclusive). """
         startBlock = start
@@ -62,7 +65,7 @@ class CacheMetaData(object):
             endBlock = self.bitmap.length() + end
         if startBlock > endBlock:
             raise ValueError('''Incorrect interval, max is %d > %d''' %
-                    (startBlock, endBlock))
+                             (startBlock, endBlock))
         for i in range(startBlock, endBlock + 1):
             self.setReadBlock(i)
 
@@ -103,7 +106,7 @@ class CacheMetaData(object):
                 startBlock = i
                 break
             if i == endBlock:
-                #all the blocks are cached already
+                # all the blocks are cached already
                 return (None, None)
 
         for i in reversed(range(startBlock, endBlock + 1)):

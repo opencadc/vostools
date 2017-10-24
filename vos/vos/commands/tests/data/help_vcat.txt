@@ -1,0 +1,23 @@
+usage: vcat [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+            [--vos-debug] [-v] [-w] [-q]
+            source [source ...]
+
+Write the content of source (eg. vos:Node/filename) to stdout.
+
+Accepts cutout syntax for FITS files; see vcp --help for syntax details
+
+positional arguments:
+  source               source to cat to stdout out.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  -q                   run quietly, exit on error without message
+
+Default service settings in ~/.config/vos/vos-config.

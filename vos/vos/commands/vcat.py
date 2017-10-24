@@ -4,12 +4,13 @@ from __future__ import (absolute_import, division, print_function,
 import sys
 import logging
 from ..vos import Client
-from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
+from ..commonparser import CommonParser, set_logging_level_from_args, \
+    exit_on_exception
 
 
 def _cat(uri, cert_filename=None):
     """Cat out the given uri stored in VOSpace.
-    
+
     :param uri: the VOSpace URI that will be piped to stdout.
     :type uri: basestring
     :param cert_filename: filename of the PEM certificate used to gain access.
@@ -28,16 +29,19 @@ def _cat(uri, cert_filename=None):
         if fh:
             fh.close()
 
+
 DESCRIPTION = """Write the content of source (eg. vos:Node/filename) to stdout.
 
 Accepts cutout syntax for FITS files; see vcp --help for syntax details"""
 
 
 def vcat():
-
     parser = CommonParser(description=DESCRIPTION)
-    parser.add_argument("source", help="source to cat to stdout out.", nargs="+")
-    parser.add_argument("-q", help="run quietly, exit on error without message", action="store_true")
+    parser.add_argument("source", help="source to cat to stdout out.",
+                        nargs="+")
+    parser.add_argument("-q",
+                        help="run quietly, exit on error without message",
+                        action="store_true")
 
     args = parser.parse_args()
     set_logging_level_from_args(args)
@@ -58,5 +62,6 @@ def vcat():
         exit_on_exception(ke)
 
     sys.exit(exit_code)
+
 
 vcat.__doc__ = DESCRIPTION

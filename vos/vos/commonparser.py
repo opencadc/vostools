@@ -11,19 +11,23 @@ from .version import version
 
 # handle interrupts nicely
 def signal_handler(signum, frame):
-    raise KeyboardInterrupt("SIGINT signal handler. {0} {1}".format(signum, frame))
+    raise KeyboardInterrupt(
+        "SIGINT signal handler. {0} {1}".format(signum, frame))
+
 
 signal.signal(signal.SIGINT, signal_handler)
 
 
 def exit_on_exception(ex):
     """
-    Exit program due to an exception, print the exception and exit with error code.
+    Exit program due to an exception, print the exception and exit with error
+    code.
     :param ex:
     :return:
     """
     logging.error(str(ex))
-    sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno', -1) else sys.exit(-1)
+    sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno',
+                                                  -1) else sys.exit(-1)
 
 
 def set_logging_level_from_args(args):
@@ -41,8 +45,9 @@ def set_logging_level_from_args(args):
 
     log_format = "%(levelname)s %(module)s %(message)s"
     if args.log_level < logging.INFO:
-        log_format = ("%(levelname)s %(asctime)s %(thread)d vos-" + str(version) +
-                      " %(module)s.%(funcName)s.%(lineno)d %(message)s")
+        log_format = (
+            "%(levelname)s %(asctime)s %(thread)d vos-" + str(version) +
+            " %(module)s.%(funcName)s.%(lineno)d %(message)s")
     logging.basicConfig(format=log_format, level=args.log_level)
     logger = logging.getLogger('root')
     logger.setLevel(args.log_level)
@@ -62,28 +67,33 @@ class CommonParser(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         # call the parent constructor
-        super(CommonParser, self).__init__(*args, formatter_class=argparse.RawDescriptionHelpFormatter,
-                                           epilog="""Default service settings in ~/.config/vos/vos-config.
-        """,
-                                           **kwargs)
+        super(CommonParser, self).__init__(
+            *args,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="Default service settings in ~/.config/vos/vos-config.",
+            **kwargs)
         # inherit the VOS client version
         self.version = version
         self.log_level = logging.ERROR
 
         # now add on the common parameters
-        self.add_argument("--certfile",
-                          help="filename of your CADC X509 authentication certificate",
-                          default=os.path.join(os.getenv("HOME", "."),
-                                               ".ssl/cadcproxy.pem"))
-        self.add_argument("--token",
-                          help="authentication token string (alternative to certfile)",
-                          default=None)
+        self.add_argument(
+            "--certfile",
+            help="filename of your CADC X509 authentication certificate",
+            default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
+        self.add_argument(
+            "--token",
+            help="authentication token string (alternative to certfile)",
+            default=None)
         self.add_argument("--version", action="version",
                           version=version)
         self.add_argument("-d", "--debug", action="store_true", default=False,
                           help="print on command debug messages.")
-        self.add_argument("--vos-debug", action="store_true", help="Print on vos debug messages.")
-        self.add_argument("-v", "--verbose", action="store_true", default=False,
+        self.add_argument("--vos-debug", action="store_true",
+                          help="Print on vos debug messages.")
+        self.add_argument("-v", "--verbose", action="store_true",
+                          default=False,
                           help="print verbose messages")
-        self.add_argument("-w", "--warning", action="store_true", default=False,
+        self.add_argument("-w", "--warning", action="store_true",
+                          default=False,
                           help="print warning messages only")

@@ -1,13 +1,17 @@
-""" keep track of vospace nodes that have been already been accessed during the current session."""
+""" keep track of vospace nodes that have been already been accessed during
+the current session."""
 import threading
 import logging
 
 logger = logging.getLogger('vos')
-#logger.setLevel(logging.ERROR)
+
+
+# logger.setLevel(logging.ERROR)
 
 class NodeCache(dict):
-    """ A dictionary like object that provides the ability to look up a VOSpace nodes metadata.
-     
+    """ A dictionary like object that provides the ability to look up a
+    VOSpace nodes metadata.
+
     usage:
          # Create a node cache:
          nodeCache = NodeCache()
@@ -33,14 +37,14 @@ class NodeCache(dict):
 
     def watch(self, uri):
         """Factory that returns a watch 2015 09 09.39169 for the given uri.
-        
+
         :param uri: the VOSpace uri to watch
         """
         return self.Watch(self, uri.rstrip('/'))
 
     def volatile(self, uri):
         """Factory for volatile objects.
-        
+
         :param uri: the VOSpace uri to tag as volatile
         """
         return self.Volatile(self, uri.rstrip('/'))
@@ -48,15 +52,15 @@ class NodeCache(dict):
     def __missing__(self, key):
         """Attempting to access a non-cached node returns None rather than
            raising an exception.
-        
-        :param key: the key in the dict being accessed (i.e. uri)   
+
+        :param key: the key in the dict being accessed (i.e. uri)
         """
         return None
 
     def __setitem__(self, key, value):
         """If an node is directly inserted into the cache, automatically create
            a watch.
-        
+
         :param key: the uri of the node being inserted into the dictionary.
         :param value:  the actual node object that will be stored.
         """
@@ -75,10 +79,11 @@ class NodeCache(dict):
 
         def __init__(self, node_cache, uri):
             """
-            
-            :param node_cache: the NOdeCache object this Volatile object is in. 
+
+            :param node_cache: the NOdeCache object this Volatile object is in.
             :type node_cache: NodeCache
-            :param uri: the VOSpace uri that references this node in the NodeCache
+            :param uri: the VOSpace uri that references this node in the
+            NodeCache
             :type uri: str
             """
             self.node_cache = node_cache
@@ -91,7 +96,8 @@ class NodeCache(dict):
             """
 
             with self.node_cache.lock:
-                # Add this volatile object to a list of all active volatile objects.
+                # Add this volatile object to a list of all active volatile
+                # objects.
                 self.node_cache.volatile_nodes.append(self)
 
                 # Remove any cached nodes in the volatile sub-tree.
@@ -105,7 +111,8 @@ class NodeCache(dict):
 
                 # Mark any watched nodes in the volatile sub-tree dirty
                 for watchedNode in self.node_cache.watched_nodes:
-                    if watchedNode.uri.startswith(self.uri) or (watchedNode.uri == parent):
+                    if watchedNode.uri.startswith(self.uri) or\
+                            (watchedNode.uri == parent):
                         watchedNode.dirty = True
 
             return self
@@ -123,12 +130,12 @@ class NodeCache(dict):
 
         def __init__(self, node_cache, uri):
             """
-            
-            :param node_cache: the NodeCache object containing the uri to watch.
+
+            :param node_cache: the NodeCache object containing the uri to
+            watch.
              :type node_cache: NodeCache
             :param uri: the uri in the NodeCache that will be watched.
             :type uri: str
-            
             """
             self.node_cache = node_cache
             self.uri = uri
@@ -152,7 +159,8 @@ class NodeCache(dict):
                 self.node_cache.watched_nodes.remove(self)
 
         def insert(self, value):
-            """ Insert an value, likely node object, into the cache, but only if the watch is not dirty."""
+            """ Insert an value, likely node object, into the cache, but only
+            if the watch is not dirty."""
             if not self.dirty:
                 # noinspection PyCallByClass
                 dict.__setitem__(self.node_cache, self.uri, value)

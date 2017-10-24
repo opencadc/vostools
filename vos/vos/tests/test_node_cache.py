@@ -116,8 +116,8 @@ class TestNodeCache(unittest.TestCase):
             w.insert('d')
             self.assertFalse('/a/b/c' in node_cache)
 
-        # Set up a watch and then make a parent node volatile. Caching should be
-        # disabled on the watched tree.
+        # Set up a watch and then make a parent node volatile. Caching should
+        # be disabled on the watched tree.
         with node_cache.watch('/a/b/c') as w:
             self.assertFalse('/a/b/c' in node_cache)
             w.insert('d')
@@ -157,6 +157,3 @@ def run():
     suite1 = unittest.TestLoader().loadTestsFromTestCase(TestNodeCache)
     all_tests = unittest.TestSuite([suite1])
     return unittest.TextTestRunner(verbosity=2).run(all_tests)
-
-if __name__ == "__main__":
-    run()

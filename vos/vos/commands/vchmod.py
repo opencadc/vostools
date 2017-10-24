@@ -6,7 +6,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args, exit_on_exception
+from ..commonparser import CommonParser, set_logging_level_from_args
+from ..commonparser import exit_on_exception
 import logging
 import sys
 import re
@@ -20,10 +21,12 @@ def __mode__(mode):
     :return: mode dictionary
      :rtype: re.groupdict
     """
-    _mode = re.match(r"(?P<who>og|go|o|g)(?P<op>[+\-=])(?P<what>rw|wr|r|w)", mode)
+    _mode = re.match(r"(?P<who>og|go|o|g)(?P<op>[+\-=])(?P<what>rw|wr|r|w)",
+                     mode)
     if _mode is None:
         raise ArgumentError(_mode, 'Invalid mode: {}'.format(mode))
     return _mode.groupdict()
+
 
 DESCRIPTION = """Set the read and write permission on VOSpace nodes.
 Permission string specifies the mode change to make.
@@ -39,21 +42,27 @@ e.g. vchmod g+r vos:RootNode/MyFile.txt  "Group1 Group2"
 
 Set read access to groups Group1 and Group2 (upto 4 groups can be specified).
 
-Permission setting is recursive, if a GroupB is part of GroupA then permissions given
-to members of GroupA are also provided to members of GroupB.
+Permission setting is recursive, if a GroupB is part of GroupA then permissions
+given to members of GroupA are also provided to members of GroupB.
 """
 
 
 def vchmod():
-
     # TODO:  seperate the sys.argv parsing from the actual command.
 
     parser = CommonParser(description=DESCRIPTION)
-    parser.add_argument('mode', type=__mode__, help='permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
-    parser.add_argument("node", help="node to set mode on, eg: vos:Root/Container/file.txt")
-    parser.add_argument('groups', nargs="*", help="name of group(s) to assign read/write permission to")
-    parser.add_option("-R", "--recursive", action='store_const', const=True,
-                      help="Recursive set read/write properties")
+    parser.add_argument(
+        'mode', type=__mode__,
+        help='permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
+    parser.add_argument(
+        "node",
+        help="node to set mode on, eg: vos:Root/Container/file.txt")
+    parser.add_argument(
+        'groups', nargs="*",
+        help="name of group(s) to assign read/write permission to")
+    parser.add_option(
+        "-R", "--recursive", action='store_const', const=True,
+        help="Recursive set read/write properties")
 
     opt = parser.parse_args()
 
@@ -73,7 +82,9 @@ def vchmod():
         if 'g' in mode['who']:
             if '-' == mode['op']:
                 if not len(group_names) == 0:
-                    raise ArgumentError(opt.groups, "Names of groups not valid with remove permission")
+                    raise ArgumentError(
+                        opt.groups,
+                        "Names of groups not valid with remove permission")
                 if 'r' in mode['what']:
                     props['readgroup'] = None
                 if "w" in mode['what']:
@@ -82,17 +93,22 @@ def vchmod():
                 if not len(group_names) == len(mode['what']):
                     name = len(mode['what']) > 1 and "names" or "name"
                     raise ArgumentError(None,
-                                        "{} group {} required for {}".format(len(mode['what']), name,
-                                                                             mode['what']))
+                                        "{} group {} required for {}".format(
+                                            len(mode['what']), name,
+                                            mode['what']))
                 if mode['what'].find('r') > -1:
                     # remove duplicate whitespaces
-                    read_groups = " ".join(group_names[mode['what'].find('r')].split())
-                    props['readgroup'] = (CADC_GMS_PREFIX +
-                                          read_groups.replace(" ", " " + CADC_GMS_PREFIX))
+                    read_groups = " ".join(
+                        group_names[mode['what'].find('r')].split())
+                    props['readgroup'] = \
+                        (CADC_GMS_PREFIX +
+                         read_groups.replace(" ", " " + CADC_GMS_PREFIX))
                 if mode['what'].find('w') > -1:
-                    wgroups = " ".join(group_names[mode['what'].find('w')].split())
-                    props['writegroup'] = (CADC_GMS_PREFIX +
-                                           wgroups.replace(" ", " " + CADC_GMS_PREFIX))
+                    wgroups = " ".join(
+                        group_names[mode['what'].find('w')].split())
+                    props['writegroup'] = \
+                        (CADC_GMS_PREFIX +
+                         wgroups.replace(" ", " " + CADC_GMS_PREFIX))
     except ArgumentError as er:
         parser.print_usage()
         logging.error(str(er))
@@ -118,5 +134,6 @@ def vchmod():
         sys.exit(client.update(node, opt.recursive))
     except Exception as ex:
         exit_on_exception(ex)
+
 
 vchmod.__doc__ = DESCRIPTION
