@@ -34,7 +34,7 @@ def size_format(size):
             length = float(size)
             scale = int(math.log(length) / math.log(1024))
             length = "%.0f%s" % (length / (1024.0 ** scale), size_unit[scale])
-        except:
+        except Exception:
             length = str(int(size))
     else:
         length = str(int(size))
@@ -121,7 +121,7 @@ def vls():
                     sorted_list = sorted(info_list,
                                          key=lambda name: name[1][sort_key],
                                          reverse=not opt.reverse)
-                except:
+                except Exception:
                     sorted_list = info_list
                 finally:
                     info_list = sorted_list
