@@ -35,6 +35,9 @@ after_success:
 
 jobs:
   include:
+    - stage: intTest
+      python: 3.5
+      script: ./.intTest
     - stage: publish
       python: 3.4
       deploy:

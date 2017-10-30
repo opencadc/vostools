@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Runs the integration tests for each module (if defined)
+
+# work only with modules that have integration testing
+# (test for presence of intTest directory)
+
+[ -z "$TRAVIS_INTTEST_PROXY" ] && echo "TRAVIS_INTTEST_PROXY not set - skip integration tests" && exit 0
+
+for cert in $(ls travis_inttest_proxy* | grep -v .pem); do
+    if [ ! -f $cert.pem ]; then
+        echo "$cert.pem not found"
+        openssl aes-256-cbc -pass "pass:$TRAVIS_INTTEST_PROXY" -in $cert -out $cert.pem -d -a
+    fi
+done
+
+for i in $(find . -type d -name intTest | awk -F '/' '{print $2}'); do
+    echo "Running integration tests for $i module"
+    cd $i
+    mkdir intTest/certs
+    for cert in $(ls ../*.pem); do
+        cp $cert intTest/certs
+    done
+    python setup.py intTest
+    cd -
+    echo "Done $i module"
+done
+
