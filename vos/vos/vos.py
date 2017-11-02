@@ -554,7 +554,7 @@ class Node(object):
                 if uri != prop.attrib.get('uri', None):
                     continue
                 found = True
-                if prop.attrib.get('text', None) == value:
+                if getattr(prop, 'text', None) == value:
                     break
                 changed = True
                 if value is None:

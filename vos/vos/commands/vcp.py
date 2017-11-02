@@ -419,7 +419,8 @@ def vcp():
             logging.error(message)
         exit_code = getattr(e, 'errno', -1)
 
-    sys.exit(exit_code)
+    if exit_code:
+        sys.exit(exit_code)
 
 
 vcp.__doc__ = DESCRIPTION
