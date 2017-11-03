@@ -10,6 +10,7 @@ import time
 import filecmp
 import shutil
 import getpass
+import hashlib
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(THIS_DIR, "data")
@@ -125,7 +126,7 @@ def exec_cmd(command, cert=None, args=None, return_status=0):
     return output
 
 
-def test_container(work_dir):
+def atest_container(work_dir):
     """ Some basic operations on the test container. """
     # ensure that the work_dir is not publicly readable
     out = exec_cmd(vls, cert1, '-l {}'.format(os.path.dirname(work_dir)))
@@ -160,7 +161,7 @@ def test_container(work_dir):
     assert_line('priv', ['drw-r-----', USER1, GR1, 'NONE'], out)
 
 
-def test_file_copy(work_dir):
+def atest_file_copy(work_dir):
     """ Tests copying a file to the container and back."""
     local_file_name = 'something.png'
     local_file = os.path.join(DATA_DIR, local_file_name)
@@ -197,7 +198,7 @@ def test_file_copy(work_dir):
     os.remove(tmp_file)
 
 
-def test_zero_lenght_files(work_dir):
+def atest_zero_lenght_files(work_dir):
     src_zerosize_file_name = 'src_zerosize.txt'
     src_zerosize_file = os.path.join(tmp_dir, src_zerosize_file_name)
 
@@ -255,5 +256,32 @@ def test_zero_lenght_files(work_dir):
 
 
 def test_cutout_downloads(work_dir):
-    # TODO need an example file to upload and perform cutouts on.
-    pass
+    """
+    Uploads a test file and performs cutout operations
+    :param work_dir:
+    :return:
+    """
+    src_cutout_file_name = 'cutout_test.fits'
+    src_cutout_file = os.path.join(DATA_DIR, src_cutout_file_name)
+
+    exec_cmd(vcp, cert1, '{} {}'.format(src_cutout_file, work_dir))
+    out = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
+    assert_line(src_cutout_file_name, ['-rw-rw----', USER1, GR, GR], out)
+
+    # download cutout
+    cutout_file = os.path.join(tmp_dir, 'cut.fits')
+    exec_cmd(vcp, cert1, '{}/{}[1] {}'.format(work_dir, src_cutout_file_name,
+                                              cutout_file))
+
+    assert '7eacb9c83d782bb4c927378a7073c9a1' == \
+        hashlib.md5(open(cutout_file, 'rb').read()).hexdigest()
+    os.remove(cutout_file)
+
+    # repeat with different cutout and use wild cards
+    cutout_file = os.path.join(tmp_dir, 'cut.fits')
+    out = exec_cmd(vcp, cert1, '{}/cut*fits[1:10,1:10] {}'.format(
+        work_dir, cutout_file))
+
+    assert '5e2a31e042bc26193089c3fd6287e5a8' == \
+           hashlib.md5(open(cutout_file, 'rb').read()).hexdigest()
+    os.remove(cutout_file)
