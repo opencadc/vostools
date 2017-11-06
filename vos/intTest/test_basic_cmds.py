@@ -1,4 +1,4 @@
-from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod
+from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv
 from six import StringIO
 from cadcutils import net
 from mock import patch, Mock
@@ -10,6 +10,7 @@ import time
 import filecmp
 import shutil
 import getpass
+import hashlib
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(THIS_DIR, "data")
@@ -119,13 +120,14 @@ def exec_cmd(command, cert=None, args=None, return_status=0):
         with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
             command()
     except SystemExit:
+        # an early exit is expected only if return_status is not 0
         assert return_status != 0
     output = stdout_mock.getvalue()
     logger.debug('Command output: {}'.format(output))
     return output
 
 
-def test_container(work_dir):
+def atest_container(work_dir):
     """ Some basic operations on the test container. """
     # ensure that the work_dir is not publicly readable
     out = exec_cmd(vls, cert1, '-l {}'.format(os.path.dirname(work_dir)))
@@ -159,8 +161,30 @@ def test_container(work_dir):
     out = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
     assert_line('priv', ['drw-r-----', USER1, GR1, 'NONE'], out)
 
+    # remove empty directory
+    out = exec_cmd(vrmdir, cert1, '{}/priv'.format(work_dir))
+    out = exec_cmd(vls, cert1, '{}/priv'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
 
-def test_file_copy(work_dir):
+    # remove non-empty directory
+    exec_cmd(vmkdir, cert1, '{}/pub/test'.format(work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/pub'.format(work_dir))
+    assert_line('test', ['drw-rw----', USER1, GR, GR], out)
+
+    exec_cmd(vrmdir, cert1, '{}/pub'.format(work_dir))
+    out = exec_cmd(vls, cert1, '{}/pub'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+    # delete non-existing directory
+    exec_cmd(vrmdir, cert1, '{}/pub'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+    # delete non-existing file
+    exec_cmd(vrm, cert1, '{}/nofile.txt'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+
+def atest_file_copy(work_dir):
     """ Tests copying a file to the container and back."""
     local_file_name = 'something.png'
     local_file = os.path.join(DATA_DIR, local_file_name)
@@ -188,8 +212,7 @@ def test_file_copy(work_dir):
     exec_cmd(vcp, cert1, '--quick {} {}'.format(remote_file, tmp_dir))
     assert filecmp.cmp(local_file, tmp_file)
 
-    # check download with a wildcard
-    os.remove(tmp_file)
+    # check download with a wildcard and override
     exec_cmd(vcp, cert1, '--quick {} {}'.\
         format(remote_file.replace('png', '*'), tmp_dir))
 
@@ -197,7 +220,7 @@ def test_file_copy(work_dir):
     os.remove(tmp_file)
 
 
-def test_zero_lenght_files(work_dir):
+def atest_zero_lenght_files(work_dir):
     src_zerosize_file_name = 'src_zerosize.txt'
     src_zerosize_file = os.path.join(tmp_dir, src_zerosize_file_name)
 
@@ -254,6 +277,131 @@ def test_zero_lenght_files(work_dir):
     assert filecmp.cmp(src_zerosize_file, dest_file)
 
 
-def test_cutout_downloads(work_dir):
-    # TODO need an example file to upload and perform cutouts on.
-    pass
+def atest_cutout_downloads(work_dir):
+    """
+    Uploads a test file and performs cutout operations
+    :param work_dir:
+    :return:
+    """
+    src_cutout_file_name = 'cutout_test.fits'
+    src_cutout_file = os.path.join(DATA_DIR, src_cutout_file_name)
+
+    exec_cmd(vcp, cert1, '{} {}'.format(src_cutout_file, work_dir))
+    out = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
+    assert_line(src_cutout_file_name, ['-rw-rw----', USER1, GR, GR], out)
+
+    # download cutout
+    cutout_file = os.path.join(tmp_dir, 'cut.fits')
+    exec_cmd(vcp, cert1, '{}/{}[1] {}'.format(work_dir, src_cutout_file_name,
+                                              cutout_file))
+
+    assert '7eacb9c83d782bb4c927378a7073c9a1' == \
+        hashlib.md5(open(cutout_file, 'rb').read()).hexdigest()
+    os.remove(cutout_file)
+
+    # repeat with different cutout and use wild cards
+    cutout_file = os.path.join(tmp_dir, 'cut.fits')
+    out = exec_cmd(vcp, cert1, '{}/cut*fits[1:10,1:10] {}'.format(
+        work_dir, cutout_file))
+
+    assert '5e2a31e042bc26193089c3fd6287e5a8' == \
+           hashlib.md5(open(cutout_file, 'rb').read()).hexdigest()
+    os.remove(cutout_file)
+
+
+def atest_move(work_dir):
+    local_test_file = os.path.join(DATA_DIR, 'something.png')
+    exec_cmd(vmkdir, cert1, '{}/a'.format(work_dir))
+    exec_cmd(vmkdir, cert1, '{}/a/aa'.format(work_dir))
+    exec_cmd(vcp, cert1, '{} {}/a/aa/aaa'.format(local_test_file, work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/a/aa'.format(work_dir))
+    assert_line('aaa', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # mv (rename) file
+    exec_cmd(vmv, cert1, '{0}/a/aa/aaa {0}/a/aa/bbb'.format(work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/a/aa'.format(work_dir))
+    assert_line('bbb', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # mv (rename) subdirectory
+    exec_cmd(vmv, cert1, '{0}/a/aa {0}/a/bb'.format(work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/a/bb'.format(work_dir))
+    assert_line('bbb', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # mv (rename) parent directory
+    exec_cmd(vmv, cert1, '{0}/a {0}/b'.format(work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/b/bb'.format(work_dir))
+    assert_line('bbb', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # mv data from one directory to another
+    exec_cmd(vcp, cert1, '{} {}/aaa'.format(local_test_file, work_dir))
+    exec_cmd(vmv, cert1, '{0}/aaa {0}/b/bb/'.format(work_dir))
+    out = exec_cmd(vls, cert1, '-l {}/b/bb'.format(work_dir))
+    assert_line('aaa', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+    assert_line('bbb', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+    out = exec_cmd(vls, cert1, '{}/aaa'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+    # Error cases
+    # mv data when destination data node exists (duplicate node error)
+    # mv data node to existing data node
+    out = exec_cmd(vmv, cert1, '{0}/b/bb/aaa {0}/b/bb/bbb'.format(work_dir), 1)
+    assert 'DuplicateNode destination is not a container' in out
+    out = exec_cmd(vls, cert1, '-l {}/b/bb'.format(work_dir))
+    assert_line('aaa', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+    assert_line('bbb', ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # mv container node to existing data node
+    exec_cmd(vmkdir, cert1, '{}/a'.format(work_dir))
+    out = exec_cmd(vmv, cert1, '{0}/a {0}/b/bb/bbb'.format(work_dir), 1)
+    assert 'DuplicateNode destination is not a container' in out
+
+    # circular move
+    out = exec_cmd(vmv, cert1, '{0}/b {0}/b/bb'.format(work_dir), 1)
+    # not a very informative message
+    assert 'Invalid Argument (target node is not a DataNode)' in out
+
+    # no source node
+    out = exec_cmd(vmv, cert1, '{0}/cc {0}/b'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+    # no destination node
+    out = exec_cmd(vmv, cert1, '{0}/b {0}/c/cc'.format(work_dir), 1)
+    assert 'NodeNotFound' in out
+
+    # source is local directory
+    out = exec_cmd(vmv, cert1, '/tmp {}'.format(work_dir), 1)
+    assert 'No scheme in /tmp' in out
+
+    # destination is local directory
+    out = exec_cmd(vmv, cert1, '{}/b /tmp'.format(work_dir), 1)
+    # Another non information message
+    assert 'InternalFault (invalid direction: Direction[/tmp])' in out
+
+    # source and destination are local directories
+    out = exec_cmd(vmv, cert1, '. /tmp', 1)
+    assert 'No scheme in .' in out
+
+
+def test_access(work_dir):
+    # test user only access directory
+    user1_dir = 'user1'
+    test_file_name = 'something.png'
+    test_file = os.path.join(DATA_DIR, test_file_name)
+    exec_cmd(vmkdir, cert1, '{}/{}'.format(work_dir, user1_dir))
+    exec_cmd(vchmod, cert1, 'og-wr {}/{}'.format(work_dir, user1_dir))
+    exec_cmd(vcp, cert1, '{} {}/{}/'.format(test_file, work_dir, user1_dir))
+    out = exec_cmd(vls, cert1, '-l {}/{}'.format(work_dir, user1_dir))
+    assert_line(test_file_name, ['-rw-------', USER1, 'NONE', 'NONE', '497927'], out)
+
+    # user2 cannot list, copy from/to, move from/to the directory, delete
+    out = exec_cmd(vcp, cert2, '{}/{}/{} .'.format(work_dir, user1_dir, test_file_name))
+    assert 'NotAuthorized' in out
+    out = exec_cmd(vcp, cert2, '{} {}/{}/test.txt'.format(test_file, work_dir, user1_dir))
+    assert 'NotAuthorized' in out
+    out = exec_cmd(vmkdir, cert2, '{}/{}/somedir'.format(work_dir, user1_dir))
+    assert 'NotAuthorized' in out
+    out = exec_cmd(vmv, cert2, '{1}/{2}/{0} {1}/{2}/test.txt'.format(
+        test_file_name, work_dir, user1_dir))
+    assert 'NotAuthorized' in out
+
+
