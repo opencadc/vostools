@@ -1,4 +1,4 @@
-from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv
+from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv, vln
 from six import StringIO
 from cadcutils import net
 from mock import patch, Mock
@@ -382,7 +382,7 @@ def atest_move(work_dir):
     assert 'No scheme in .' in out
 
 
-def test_access(work_dir):
+def atest_access(work_dir):
     # test user only access directory
     user1_dir = 'user1'
     test_file_name = 'something.png'
@@ -403,4 +403,100 @@ def test_access(work_dir):
     out = exec_cmd(vmv, cert2, '{1}/{2}/{0} {1}/{2}/test.txt'.format(
         test_file_name, work_dir, user1_dir))
     assert 'NotAuthorized' in out
+
+    # repeat after adding read/write access to gr1 (user 2 not a member)
+
+    # repeat after adding gr2 as read group
+
+    # repeat after adding gr2 as write group
+
+    # repeat after make public
+
+
+def test_link(work_dir):
+    test_file_name = 'something.png'
+    test_file = os.path.join(DATA_DIR, test_file_name)
+    exec_cmd(vmkdir, cert1, '{}/target'.format(work_dir))
+    exec_cmd(vln, cert1, '{0}/target {0}/link'.format(work_dir))
+    #upload file through the directory link
+    exec_cmd(vcp, cert1, '{} {}/link/'.format(test_file, work_dir))
+    # check it's there
+    out = exec_cmd(vls, cert1, '-l {}/target'.format(work_dir))
+    assert_line(test_file_name, ['-rw-rw----', USER1, GR, GR, '497927'], out)
+
+    # access file through the link as user2
+    # list
+    out = exec_cmd(vls, cert2, '-l {}/link'.format(work_dir))
+    assert_line(test_file_name, ['-rw-rw----', USER1, GR, GR, '497927'], out)
+    # download
+    exec_cmd(vcp, cert2, '{}/link/{} /{}/linktest.png'.format(
+        work_dir, test_file_name, tmp_dir))
+    assert filecmp.cmp(test_file, '{}/linktest.png'.format(tmp_dir))
+    os.remove('/{}/linktest.png'.format(tmp_dir))
+
+    # repeat the tests with a link to the file
+    exec_cmd(vln, cert1, '{0}/target/{1} {0}/lsomething.png'.format(
+        work_dir, test_file_name))
+
+    # access file through the link as user2
+    # list
+    out = exec_cmd(vls, cert2, '-l {}'.format(work_dir))
+    assert_line('lsomething.png', ['lrw-rw----', USER1, GR, GR, '0'], out)
+    # download (vcp only follows links with -L flag)
+    exec_cmd(vcp, cert2, '{}/lsomething.png {}/linktest.png'.format(
+        work_dir, tmp_dir))
+    assert not os.path.isfile('{}/linktest.png'.format(tmp_dir))
+
+    out = exec_cmd(vcp, cert2, '-L {}/lsomething.png {}/linktest.png'.format(
+        work_dir, tmp_dir))
+    assert filecmp.cmp(test_file, '{}/linktest.png'.format(tmp_dir))
+    os.remove('/{}/linktest.png'.format(tmp_dir))
+
+    # test link of link
+    # directory
+    exec_cmd(vln, cert1, '{0}/link {0}/link1'.format(work_dir))
+    out = exec_cmd(vls, cert2, '-l {}/link1'.format(work_dir))
+    assert_line(test_file_name, ['-rw-rw----', USER1, GR, GR, '497927'], out)
+    exec_cmd(vcp, cert2, '-L {}/link1/{} {}/linktest.png'.format(
+        work_dir, test_file_name, tmp_dir))
+    assert filecmp.cmp(test_file, '{}/linktest.png'.format(tmp_dir))
+    os.remove('/{}/linktest.png'.format(tmp_dir))
+    # file
+    exec_cmd(vln, cert1, '{0}/lsomething.png {0}/lsomething1.png'.format(
+        work_dir))
+    exec_cmd(vcp, cert2, '-L {}/lsomething1.png {}/linktest.png'.format(
+        work_dir, tmp_dir))
+    assert filecmp.cmp(test_file, '{}/linktest.png'.format(tmp_dir))
+    os.remove('/{}/linktest.png'.format(tmp_dir))
+
+    #TODO enable
+    # change destination permission to remove access
+    #exec_cmd(vchmod, cert1, 'go-rw {}/target/something.png'.format(work_dir))
+    # vcp should failed event when performed through the links (dir or file)
+    #out = exec_cmd(vcp, cert2, '{}/link/{} /{}/linktest.png'.format(
+    #    work_dir, test_file_name, tmp_dir), 1)
+    #assert 'PermissionDenied' in out
+    #out = exec_cmd(vcp, cert2, '-L {}/lsomething.png /{}/linktest.png'.format(
+    #    work_dir, test_file_name, tmp_dir), 1)
+    #assert 'PermissionDenied' in out
+    # even vls should fail
+    #out = exec_cmd(vls, cert2, '{}/link'.format(work_dir), 1)
+    #assert 'PermissionDenied' in out
+    #TODO add tests for links of links
+
+
+    # Fail cases
+    # Unknown authority
+    out = exec_cmd(vln, cert1,
+             'vos://unknown.authority~vospace/unknown {}/badlink'.format(
+                 work_dir), 1)
+    print(out)
+
+
+
+
+
+
+
+
 
