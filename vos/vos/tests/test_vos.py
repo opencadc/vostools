@@ -109,10 +109,8 @@ class TestClient(unittest.TestCase):
         mock_node.return_value = mock_node
         mock_node.name = 'testnode'
         mock_node.get_info.return_value = {'name': 'aa'}
-        mock_link_node = Mock(type='vos:LinkNode')
-        mock_link_node.target = 'vos:/somefile'
         client = Client()
-        client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
+        client.get_node = MagicMock(side_effect=[mock_node])
         self.assertEquals(
             {'testnode': mock_node.get_info.return_value}.items(),
             client.get_info_list('vos:/somenode'))

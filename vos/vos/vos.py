@@ -2439,18 +2439,17 @@ class Client(object):
         """Retrieve a list of tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
         """
+        isDir = uri.endswith('/')
         info_list = {}
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=None)
+        node = self.get_node(uri, limit=None, force=True)
         logger.debug(str(node))
-        while node.type == "vos:LinkNode":
-            uri = node.target
-            try:
-                node = self.get_node(uri, limit=None)
-            except Exception as exception:
-                logger.error(str(exception))
-                break
+        if isDir:
+            while node.type == "vos:LinkNode":
+                # resolve the link
+                uri = node.target
+                node = self.get_node(uri, limit=None, force=True)
         for thisNode in node.node_list:
             info_list[thisNode.name] = thisNode.get_info()
         if node.type in ["vos:DataNode", "vos:LinkNode"]:

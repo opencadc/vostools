@@ -25,7 +25,7 @@ def exit_on_exception(ex):
     :param ex:
     :return:
     """
-    print(str(ex))
+    sys.stderr.write('{}\n'.format(str(ex)))
     sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno',
                                                   -1) else sys.exit(-1)
 

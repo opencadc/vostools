@@ -24,15 +24,19 @@ def vrm():
                             vospace_token=args.token)
         for node in args.node:
             if not node.startswith('vos:'):
-                logging.error("%s is not a valid VOSpace handle".format(node))
-            if client.isfile(node) or client.get_node(node).islink():
-                logging.info("deleting {}".format(node))
-                client.delete(node)
+                raise Exception('{} is not a valid VOSpace handle'.format(node))
+            if not node.endswith('/'):
+                if client.get_node(node).islink():
+                    logging.info('deleting link {}'.format(node))
+                    client.delete(node)
+                elif client.isfile(node):
+                    logging.info('deleting {}'.format(node))
+                    client.delete(node)
             elif client.isdir(node):
-                logging.error("{} is a directory".format(node))
-            elif client.access(node):
-                logging.info("deleting link {}".format(node))
-                client.delete(node)
+                raise Exception('{} is a directory'.format(node))
+            else:
+                raise Exception('{} is not a directory'.format(node))
+
     except Exception as ex:
         exit_on_exception(ex)
 

@@ -133,9 +133,9 @@ def vls():
                     value = value is not None and value or ""
                     if col in __LIST_FORMATS__:
                         sys.stdout.write(__LIST_FORMATS__[col](value))
-                    if item[1]["permissions"][0] == 'l':
-                        name_string = "%s -> %s" % (
-                            name_string, item[1]['target'])
+                if item[1]["permissions"][0] == 'l':
+                    name_string = '{} -> {}'.format(
+                        name_string, item[1]['target'])
                 sys.stdout.write("%s\n" % name_string)
     except Exception as ex:
         exit_on_exception(ex)
