@@ -73,15 +73,11 @@ def vsync():
         help=("overwrite copy on server regardless of modification/size/md5 "
               "checks"),
         action="store_true")
-    parser.add_option(
-        '--load_test', action="store_true",
-        help=("Used to stress test the VOServer, also set --nstreams to a "
-              "large value"))
 
     opt = parser.parse_args()
     set_logging_level_from_args(opt)
 
-    if opt.nstreams > 30 and not opt.load_test:
+    if opt.nstreams > 30:
         parser.error("Maximum of 30 streams exceeded")
 
     if opt.cache_nodes:

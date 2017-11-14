@@ -1,4 +1,4 @@
-from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv, vln
+from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv, vln, vsync
 from six import StringIO
 from cadcutils import net
 from mock import patch, Mock
@@ -35,6 +35,8 @@ USER2 = 'cadcinttest2'
 GR = 'CadcIT' # CadcIntTest1 and CadcIntTest2 members
 GR1 = 'CadcIT1' # CadcIntTest1 member
 GR2 = 'CadcIT2' # CadcIntTest2 member
+
+one_test = True # run just one test
 
 class MyExitError(Exception):
 
@@ -134,6 +136,7 @@ def exec_cmd(command, cert=None, args=None, return_status=0):
     return (output, stderr)
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_container(work_dir):
     """ Some basic operations on the test container. """
     # ensure that the work_dir is not publicly readable
@@ -191,6 +194,7 @@ def test_container(work_dir):
     assert 'NodeNotFound' in sterr
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_file_copy(work_dir):
     """ Tests copying a file to the container and back."""
     local_file_name = 'something.png'
@@ -227,6 +231,7 @@ def test_file_copy(work_dir):
     os.remove(tmp_file)
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_zero_lenght_files(work_dir):
     src_zerosize_file_name = 'src_zerosize.txt'
     src_zerosize_file = os.path.join(tmp_dir, src_zerosize_file_name)
@@ -284,6 +289,7 @@ def test_zero_lenght_files(work_dir):
     assert filecmp.cmp(src_zerosize_file, dest_file)
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_cutout_downloads(work_dir):
     """
     Uploads a test file and performs cutout operations
@@ -316,6 +322,7 @@ def test_cutout_downloads(work_dir):
     os.remove(cutout_file)
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_move(work_dir):
     local_test_file = os.path.join(DATA_DIR, 'something.png')
     exec_cmd(vmkdir, cert1, '{}/a'.format(work_dir))
@@ -389,7 +396,8 @@ def test_move(work_dir):
     assert 'No scheme in .' in sterr
 
 
-def atest_access(work_dir):
+@pytest.mark.skipif(one_test, reason='One test mode')
+def test_access(work_dir):
     # test user only access directory
     user1_dir = 'user1'
     test_file_name = 'something.png'
@@ -420,6 +428,7 @@ def atest_access(work_dir):
     # repeat after make public
 
 
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_link(work_dir):
     test_file_name = 'something.png'
     test_file = os.path.join(DATA_DIR, test_file_name)
@@ -590,7 +599,44 @@ def test_link(work_dir):
     assert 'NodeNotFound' in sterr
 
 
+#@pytest.mark.skipif(one_test, reason='One test mode')
+def test_vsync(work_dir):
+    """
+    Tests vsync functionality
+    :param work_dir:
+    :return:
+    """
+    #
+    os.makedirs('{}/tosync'.format(tmp_dir))
+    open('{}/tosync/test1.txt'.format(tmp_dir), 'w+').close()
+    exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
+    stout, sterr = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
+    assert_line('tosync', ['drw-rw----', USER1, GR, GR, '0'], stout)
+    exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
 
+    # rsync a few empty files
+    #os.mkdir('{}/tosync/1'.format(tmp_dir))
+    #open('{}/tosync/1/test1.txt'.format(tmp_dir), 'w+').close()
+    #open('{}/tosync/a/test2.txt'.format(tmp_dir), 'w+').close()
+    #open('{}/tosync/test3.txt'.format(tmp_dir), 'w+').close()
+    #stout, sterr = exec_cmd(vsync, cert1, '-r {}/tosync {}/'.format(tmp_dir, work_dir), 1)
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/tosync'.format(work_dir))
+    assert_line('test1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('test2.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('test3.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+
+    # change size
+    with open('{}/tosync/test2.txt'.format(tmp_dir), 'w') as f:
+        f.write("This is a test")
+
+    with open('{}/tosync/test3.txt'.format(tmp_dir), 'w') as f:
+        f.write("This is yet anoter test")
+
+    exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/tosync'.format(work_dir))
+    assert_line('test1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('test2.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('test3.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
 
 
 
