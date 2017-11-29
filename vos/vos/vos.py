@@ -1513,7 +1513,6 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
-
         if source[0:4] == "vos:":
             if destination is None:
                 # Set the destination, initially, to the same directory as
@@ -1542,7 +1541,22 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_md5 = self.get_node(source).props.get('MD5', ZERO_MD5)
+                if os.path.isfile(destination):
+                    # check if the local file is up to date before doing the
+                    # transfer
+                    source_md5 = \
+                        self.get_node(source).props.get('MD5', ZERO_MD5)
+                    destination_md5 =\
+                        md5_cache.MD5Cache.compute_md5(destination)
+                    if source_md5 == destination_md5:
+                        logger.info(
+                            'copy: src and dest are already the same')
+                        destination_size = os.stat(destination).st_size
+                        if disposition:
+                            return None
+                        if send_md5:
+                            return destination_md5
+                        return destination_size
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
                                          view=view)
