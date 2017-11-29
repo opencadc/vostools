@@ -264,7 +264,8 @@ class TestClient(unittest.TestCase):
         # time to test...
         vospaceLocation = 'vos://test/foo'
         osLocation = '/tmp/foo'
-        os.remove(osLocation)
+        if os.path.isfile(osLocation):
+            os.remove(osLocation)
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
