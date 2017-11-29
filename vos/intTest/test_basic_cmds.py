@@ -1,4 +1,5 @@
 from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv, vln, vsync
+from vos.commands import vtag, vlock
 from six import StringIO
 from cadcutils import net
 from mock import patch, Mock
@@ -20,6 +21,7 @@ cert2 = os.path.join(THIS_DIR, "certs/travis_inttest_proxy2.pem")
 
 user = getpass.getuser()
 basedir = "vos:adriand"
+quota_dir = 'vos:cadcinttest2' # TODO
 testdir = os.path.join(basedir, "cadcIntTest")
 container_name = '{}-{}'.format(user, time.strftime('%Y-%m-%dT%H-%M-%S'))
 container = os.path.join(testdir, container_name)
@@ -428,11 +430,11 @@ def test_access(work_dir):
     # repeat after make public
 
 
-@pytest.mark.skipif(one_test, reason='One test mode')
+#@pytest.mark.skipif(one_test, reason='One test mode')
 def test_link(work_dir):
     test_file_name = 'something.png'
     test_file = os.path.join(DATA_DIR, test_file_name)
-    exec_cmd(vmkdir, cert1, '{}/target'.format(work_dir))
+    exec_cmd(vmkdir, cert1, '-d {}/target'.format(work_dir))
     exec_cmd(vln, cert1, '{0}/target {0}/link'.format(work_dir))
     #upload file through the directory link
     exec_cmd(vcp, cert1, '{} {}/link/'.format(test_file, work_dir))
@@ -500,17 +502,17 @@ def test_link(work_dir):
 
     #TODO enable
     # change destination permission to remove access
-    #exec_cmd(vchmod, cert1, 'go-rw {}/target/something.png'.format(work_dir))
+    exec_cmd(vchmod, cert1, 'go-rw {}/target/something.png'.format(work_dir))
     # vcp should failed event when performed through the links (dir or file)
-    #stout, sterr = exec_cmd(vcp, cert2, '{}/link/{} /{}/linktest.png'.format(
-    #    work_dir, test_file_name, tmp_dir), 1)
-    #assert 'PermissionDenied' in sterr
-    #stout, sterr = exec_cmd(vcp, cert2, '-L {}/lsomething.png /{}/linktest.png'.format(
-    #    work_dir, test_file_name, tmp_dir), 1)
-    #assert 'PermissionDenied' in sterr
+    stout, sterr = exec_cmd(vcp, cert2, '-d {}/link/{} /{}/linktest.png'.format(
+        work_dir, test_file_name, tmp_dir), 1)
+    assert 'PermissionDenied' in sterr
+    stout, sterr = exec_cmd(vcp, cert2, '-L {}/lsomething.png /{}/linktest.png'.format(
+        work_dir, test_file_name, tmp_dir), 1)
+    assert 'PermissionDenied' in sterr
     # even vls should fail
-    #stout, sterr = exec_cmd(vls, cert2, '{}/link'.format(work_dir), 1)
-    #assert 'PermissionDenied' in sterr
+    stout, sterr = exec_cmd(vls, cert2, '{}/link'.format(work_dir), 1)
+    assert 'PermissionDenied' in sterr
     #TODO add tests for links of links
 
 
@@ -599,7 +601,7 @@ def test_link(work_dir):
     assert 'NodeNotFound' in sterr
 
 
-#@pytest.mark.skipif(one_test, reason='One test mode')
+@pytest.mark.skipif(one_test, reason='One test mode')
 def test_vsync(work_dir):
     """
     Tests vsync functionality
@@ -608,18 +610,17 @@ def test_vsync(work_dir):
     """
     #
     os.makedirs('{}/tosync'.format(tmp_dir))
-    open('{}/tosync/test1.txt'.format(tmp_dir), 'w+').close()
     exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
     stout, sterr = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
     assert_line('tosync', ['drw-rw----', USER1, GR, GR, '0'], stout)
+    # run it again to make sure it does not block
     exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
 
     # rsync a few empty files
-    #os.mkdir('{}/tosync/1'.format(tmp_dir))
-    #open('{}/tosync/1/test1.txt'.format(tmp_dir), 'w+').close()
-    #open('{}/tosync/a/test2.txt'.format(tmp_dir), 'w+').close()
-    #open('{}/tosync/test3.txt'.format(tmp_dir), 'w+').close()
-    #stout, sterr = exec_cmd(vsync, cert1, '-r {}/tosync {}/'.format(tmp_dir, work_dir), 1)
+    open('{}/tosync/test1.txt'.format(tmp_dir), 'w+').close()
+    open('{}/tosync/test2.txt'.format(tmp_dir), 'w+').close()
+    open('{}/tosync/test3.txt'.format(tmp_dir), 'w+').close()
+    exec_cmd(vsync, cert1, '-r {}/tosync {}/'.format(tmp_dir, work_dir), 1)
     stout, sterr = exec_cmd(vls, cert1, '-l {}/tosync'.format(work_dir))
     assert_line('test1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
     assert_line('test2.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
@@ -635,11 +636,38 @@ def test_vsync(work_dir):
     exec_cmd(vsync, cert1, '{}/tosync {}/'.format(tmp_dir, work_dir))
     stout, sterr = exec_cmd(vls, cert1, '-l {}/tosync'.format(work_dir))
     assert_line('test1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
-    assert_line('test2.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
-    assert_line('test3.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('test2.txt', ['-rw-rw----', USER1, GR, GR, '14'], stout)
+    assert_line('test3.txt', ['-rw-rw----', USER1, GR, GR, '23'], stout)
 
 
+@pytest.mark.skipif(one_test, reason="One test mode")
+def test_quota():
+    # TODO create a very small (10-100kB) vospace for cert2 user
+    stout, sterr = exec_cmd(
+        vcp, cert2, '{}/something.png {}'.format(testdir, quota_dir), 1)
+    assert 'quota' in sterr
 
+
+@pytest.mark.skipif(one_test, reason="One test mode")
+def test_properties(work_dir):
+    lock_flag = 'ivo://cadc.nrc.ca/vospace/core#islocked'
+
+    exec_cmd(vmkdir, cert1, '{}/testlock'.format(work_dir))
+    stout, sterr = exec_cmd(vtag, cert1,
+                            '{}/testlock {}'.format(work_dir, lock_flag))
+    assert 'None' in stout
+
+    # lock the directory
+    exec_cmd(vlock, cert1, '--lock {}/testlock'.format(work_dir))
+    stout, sterr = exec_cmd(vtag, cert1,
+                            '{}/testlock {}'.format(work_dir, lock_flag))
+    assert 'true' in stout
+
+    # unlock the directory
+    exec_cmd(vlock, cert1, '--unlock {}/testlock'.format(work_dir))
+    stout, sterr = exec_cmd(vtag, cert1,
+                            '{}/testlock {}'.format(work_dir, lock_flag))
+    assert 'None' in stout
 
 
 
