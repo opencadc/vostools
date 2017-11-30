@@ -1505,7 +1505,7 @@ class Client(object):
         returned instead of size or MD5?
         :type disposition: bool
         :param copy_result place holder for returned copy status. The returned
-        value of type enum TRANSER_STATUS is stored in copy_status.status
+        value of type enum TRANSER_STATUS is stored in copy_result.status
         :type copy_result: any mutable object to which status attribute can
         be set
         :raises When a network problem occurs, it raises one of the
