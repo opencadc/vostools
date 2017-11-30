@@ -28,6 +28,7 @@ import stat
 import sys
 import time
 import urllib
+from enum import Enum
 import six
 from xml.etree import ElementTree
 from copy import deepcopy
@@ -83,6 +84,9 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
 
 # md5sum of a size zero file
 ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
+
+# status of a copy or ...
+TRANSFER_STATUS = Enum('TRANSFER_STATUS', ['REQUESTED', 'SKIPPED', 'SUCCESS'])
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
@@ -1481,7 +1485,8 @@ class Client(object):
         return MAGIC_GLOB_CHECK.search(s) is not None
 
     # @logExceptions()
-    def copy(self, source, destination, send_md5=False, disposition=False):
+    def copy(self, source, destination, send_md5=False, disposition=False,
+             copy_result=None):
         """copy from source to destination.
 
         One of source or destination must be a vospace location and the other
@@ -1499,6 +1504,10 @@ class Client(object):
         :param disposition: Should the filename from content disposition be
         returned instead of size or MD5?
         :type disposition: bool
+        :param copy_result place holder for returned copy status. The returned
+        value of type enum TRANSER_STATUS is stored in copy_status.status
+        :type copy_result: any mutable object to which status attribute can
+        be set
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1513,6 +1522,8 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
+        if copy_result:
+            copy_result.status = TRANSFER_STATUS.REQUESTED
         if source[0:4] == "vos:":
             if destination is None:
                 # Set the destination, initially, to the same directory as
@@ -1552,6 +1563,8 @@ class Client(object):
                         logger.info(
                             'copy: src and dest are already the same')
                         destination_size = os.stat(destination).st_size
+                        if copy_result:
+                            copy_result.status = TRANSFER_STATUS.SKIPPED
                         if disposition:
                             return None
                         if send_md5:
@@ -1626,9 +1639,16 @@ class Client(object):
                 logger.info(
                     'copy: src and dest are already the same -> '
                     'update node metadata')
+                if copy_result:
+                    copy_result.status = TRANSFER_STATUS.SKIPPED
                 # post the node so that the modify time is updated
                 self.update(destination_node)
                 destination_size = os.stat(source).st_size
+                if disposition:
+                    return content_disposition
+                if send_md5:
+                    return destination_md5
+                return destination_size
             elif source_md5 == ZERO_MD5:
                 logger.info("destination: size is 0")
                 destination_size = 0
@@ -1672,6 +1692,8 @@ class Client(object):
             raise OSError(errno.EFAULT,
                           "Failed copying {0} -> {1}\n{2}".
                           format(source, destination, copy_failed_message))
+        if copy_result:
+            copy_result.status = TRANSFER_STATUS.SUCCESS
         if disposition:
             return content_disposition
         if send_md5:

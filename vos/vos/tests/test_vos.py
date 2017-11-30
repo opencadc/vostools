@@ -276,43 +276,51 @@ class TestClient(unittest.TestCase):
 
         # repeat - local file and vospace file are now the same -> only
         # get_node is called to get the md5 of remote file
+        result = type('', (), {})()
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         get_node_mock.reset_mock()
-        test_client.copy(vospaceLocation, osLocation)
+        test_client.copy(vospaceLocation, osLocation, copy_result=result)
+        assert result.status == vos.TRANSFER_STATUS.SKIPPED
         assert not get_node_url_mock.called
         computed_md5_mock.assert_called_once_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
 
         # change the content of local files to trigger a new copy
+        result.status = None
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
-        test_client.copy(vospaceLocation, osLocation)
+        test_client.copy(vospaceLocation, osLocation, copy_result=result)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
+        assert result.status == vos.TRANSFER_STATUS.SUCCESS
         computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
 
         # copy to vospace when md5 sums are the same -> only update occurs
+        result.status = None
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = None
         computed_md5_mock.return_value = md5sum
-        test_client.copy(osLocation, vospaceLocation)
+        test_client.copy(osLocation, vospaceLocation, copy_result=result)
+        assert result.status == vos.TRANSFER_STATUS.SKIPPED
         mock_update.assert_called_once()
         assert not get_node_url_mock.called
 
         # make md5 different
+        result.status = None
         get_node_url_mock.reset_mock()
         get_node_url_mock.return_value =\
             ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
         props.get.side_effect = ['d00223344', md5sum]
-        test_client.copy(osLocation, vospaceLocation)
+        test_client.copy(osLocation, vospaceLocation, copy_result=result)
+        assert result.status == vos.TRANSFER_STATUS.SUCCESS
         assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
         computed_md5_mock.assert_called_once_with(osLocation)

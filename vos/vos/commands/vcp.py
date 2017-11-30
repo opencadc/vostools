@@ -280,9 +280,13 @@ def vcp():
                 while not skip:
                     try:
                         logging.debug("Starting call to copy")
+                        result = type('', (), {})()
                         client.copy(source_name, destination_name,
-                                    send_md5=True)
-                        logging.debug("Call to copy returned")
+                                    send_md5=True, copy_result=result)
+                        logging.info(
+                            "copy {} -> {} status: {}".format(
+                                source_name, destination_name,
+                                result.status.name))
                         break
                     except Exception as client_exception:
                         logging.debug("{}".format(client_exception))
