@@ -25,7 +25,10 @@ def exit_on_exception(ex):
     :param ex:
     :return:
     """
+    import traceback
     logging.error(str(ex))
+    tb = traceback.format_exc()
+    logging.debug(tb)
     sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno',
                                                   -1) else sys.exit(-1)
 

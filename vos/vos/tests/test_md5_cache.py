@@ -68,7 +68,7 @@ class TestMD5Cache(unittest.TestCase):
         cache = MD5Cache(cahce_file.name)
         with patch('six.moves.builtins.open',
                    mock_open(read_data=b''.join(buffer))):
-                self.assertEquals(expect_md5.hexdigest(),
+                self.assertEqual(expect_md5.hexdigest(),
                                   cache.compute_md5('fakefile', 4))
 
 

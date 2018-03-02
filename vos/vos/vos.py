@@ -2044,6 +2044,7 @@ class Client(object):
 
         transfer_xml = ElementTree.Element("vos:transfer")
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
+        print('****** {} -> {}'.format(uri, direction))
         ElementTree.SubElement(transfer_xml, "vos:target").text = uri
         ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
 
@@ -2453,10 +2454,10 @@ class Client(object):
         """Retrieve a list of tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
         """
-        info_list = {}
+        info_list = []
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=None)
+        node = self.get_node(uri)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
@@ -2466,10 +2467,10 @@ class Client(object):
                 logger.error(str(exception))
                 break
         for thisNode in node.node_list:
-            info_list[thisNode.name] = thisNode.get_info()
+            info_list.append(thisNode)
         if node.type in ["vos:DataNode", "vos:LinkNode"]:
-            info_list[node.name] = node.get_info()
-        return info_list.items()
+            info_list.append(node)
+        return info_list
 
     def listdir(self, uri, force=False):
         """
