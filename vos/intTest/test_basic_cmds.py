@@ -12,6 +12,7 @@ import filecmp
 import shutil
 import getpass
 import hashlib
+import tempfile
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(THIS_DIR, "data")
@@ -38,7 +39,7 @@ GR = 'CadcIT' # CadcIntTest1 and CadcIntTest2 members
 GR1 = 'CadcIT1' # CadcIntTest1 member
 GR2 = 'CadcIT2' # CadcIntTest2 member
 
-one_test = True # run just one test
+one_test = False # run just one test
 
 class MyExitError(Exception):
 
@@ -100,7 +101,9 @@ def assert_line(file, expected_fields, actual_output,
     if not file:
         file = ''
     for line in actual_output.split('\n'):
-        if (len(line.strip()) > 0) and (file in line):
+        if (len(line.strip()) > 0) and\
+            (('{} ->'.format(file) in line) or  # link
+             (line.endswith(' {}'.format(file)))): # file or dir
             actual_fields = line.split()
             if ignore_timestamp:
                 del actual_fields[5:8]
@@ -139,6 +142,7 @@ def exec_cmd(command, cert=None, args=None, return_status=0):
 
 
 @pytest.mark.skipif(one_test, reason='One test mode')
+#@pytest.mark.skipif(True, reason='Need to fix')
 def test_container(work_dir):
     """ Some basic operations on the test container. """
     # ensure that the work_dir is not publicly readable
@@ -150,7 +154,7 @@ def test_container(work_dir):
     exec_cmd(vmkdir, cert1, '{}/{}'.format(work_dir, 'pub'))
 
     stout, sterr = exec_cmd(vls, cert1, '-l {}'.format(work_dir))
-    assert_line(None, ['drw-rw----', USER1, GR, GR], stout)
+    assert_line('pub', ['drw-rw----', USER1, GR, GR], stout)
 
     # create a private directory with different permissions
     exec_cmd(vmkdir, cert1, '{}/{}'.format(work_dir, 'priv'))
@@ -194,6 +198,85 @@ def test_container(work_dir):
     # delete non-existing file
     exec_cmd(vrm, cert1, '{}/nofile.txt'.format(work_dir), 1)
     assert 'NodeNotFound' in sterr
+
+
+@pytest.mark.skipif(one_test, reason='One test mode')
+def test_gobling(work_dir):
+    """ Tests copying a file to the container and back."""
+    local_file_name = 'something.png'
+    remote_test_dir = '{}/{}'.format(work_dir, 'glob')
+    exec_cmd(vmkdir, cert1, remote_test_dir)
+    exec_cmd(vls, cert1, '-l {}'.format(remote_test_dir))
+
+    # create the following structure and test globing on it:
+    # glob/test1/t1.txt
+    # glob/test1/t12.txt
+    # glob/test2/t22.txt
+    # glob/test2/t2/
+    # glob/atest/at
+
+    exec_cmd(vmkdir, cert1, '{}/test1'.format(remote_test_dir))
+    (f, tmp) = tempfile.mkstemp()
+    exec_cmd(vcp, cert1, '--quick {} {}/test.txt'.format(tmp, remote_test_dir))
+    exec_cmd(vcp, cert1, '{} {}/test1/t1.txt'.format(tmp, remote_test_dir))
+    exec_cmd(vcp, cert1, '{} {}/test1/t12.txt'.format(tmp, remote_test_dir))
+    exec_cmd(vmkdir, cert1, '{}/test2'.format(remote_test_dir))
+    exec_cmd(vmkdir, cert1, '{}/test2/t2'.format(remote_test_dir))
+    exec_cmd(vcp, cert1, '{} {}/test2/t22.txt'.format(tmp, remote_test_dir))
+    exec_cmd(vmkdir, cert1, '{}/atest'.format(remote_test_dir))
+    exec_cmd(vmkdir, cert1, '{}/atest/at'.format(remote_test_dir))
+
+    stout, sterr = exec_cmd(vls, cert1, '{}/test*'.format(remote_test_dir))
+    expected = 'test.txt\n\ntest1:\nt1.txt\nt12.txt\n\ntest2:\nt2\nt22.txt\n'
+    assert expected == stout
+
+    # detail display
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/test*'.format(remote_test_dir))
+    assert 'test1:\n' in stout
+    assert 'test2:\n' in stout
+    assert_line('test.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t12.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t2', ['drw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t22.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/*test*'.format(remote_test_dir))
+    assert 'test1:\n' in stout
+    assert 'test2:\n' in stout
+    assert 'atest:\n' in stout
+    assert_line('test.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t1.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t12.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t2', ['drw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t22.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('at', ['drw-rw----', USER1, GR, GR, '0'], stout)
+
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/?test*'.format(remote_test_dir))
+    # only the content of atest displayed
+    assert_line('at', ['drw-rw----', USER1, GR, GR, '0'], stout)
+
+    stout, sterr = exec_cmd(vls, cert1, '-l {}/test[2,3]'.format(
+        remote_test_dir))
+    # only the content of test2 is displayed
+    assert_line('t2', ['drw-rw----', USER1, GR, GR, '0'], stout)
+    assert_line('t22.txt', ['-rw-rw----', USER1, GR, GR, '0'], stout)
+
+    # test vcp
+    tempdir = tempfile.mkdtemp()
+    stout, sterr = exec_cmd(vcp, cert1, '-d {}/test1/t* {}'.format(
+        remote_test_dir, tempdir), 1)
+    local_t1 = os.path.join(tempdir, 't1.txt')
+    local_t12 = os.path.join(tempdir, 't12.txt')
+    assert os.path.isfile(local_t1)
+    assert os.path.isfile(local_t12)
+
+    # repeat
+    os.remove(local_t1)
+    os.remove(local_t12)
+    exec_cmd(vcp, cert1, '-d {}/test1/t*2* {}/'.format(
+        remote_test_dir, tempdir))
+    assert not os.path.isfile(local_t1)
+    assert os.path.isfile(local_t12)
 
 
 @pytest.mark.skipif(one_test, reason='One test mode')
@@ -258,7 +341,7 @@ def test_zero_lenght_files(work_dir):
     # download
     dest_file = os.path.join(tmp_dir, 'dest_zerosize.txt')
     exec_cmd(vcp, cert1, '{}/{} {}'.format(work_dir,
-             src_zerosize_file_name, dest_file))
+             src_zerosize_file_name, dest_file, 1))
     assert filecmp.cmp(src_zerosize_file, dest_file)
 
     # change the size of the file and repeat
@@ -411,15 +494,15 @@ def test_access(work_dir):
     assert_line(test_file_name, ['-rw-------', USER1, 'NONE', 'NONE', '497927'], stout)
 
     #TODO user2 cannot list, copy from/to, move from/to the directory, delete
-    stout, sterr = exec_cmd(vcp, cert2, '{}/{}/{} .'.format(work_dir, user1_dir, test_file_name))
-    assert 'NotAuthorized' in sterr
-    stout, sterr = exec_cmd(vcp, cert2, '{} {}/{}/test.txt'.format(test_file, work_dir, user1_dir))
-    assert 'NotAuthorized' in sterr
-    stout, sterr = exec_cmd(vmkdir, cert2, '{}/{}/somedir'.format(work_dir, user1_dir))
-    assert 'NotAuthorized' in sterr
+    stout, sterr = exec_cmd(vcp, cert2, '{}/{}/{} .'.format(work_dir, user1_dir, test_file_name), return_status=1)
+    assert 'PermissionDenied' in sterr
+    stout, sterr = exec_cmd(vcp, cert2, '{} {}/{}/test.txt'.format(test_file, work_dir, user1_dir), return_status=1)
+    assert 'PermissionDenied' in sterr
+    stout, sterr = exec_cmd(vmkdir, cert2, '{}/{}/somedir'.format(work_dir, user1_dir), return_status=1)
+    assert 'PermissionDenied' in sterr
     stout, sterr = exec_cmd(vmv, cert2, '{1}/{2}/{0} {1}/{2}/test.txt'.format(
-        test_file_name, work_dir, user1_dir))
-    assert 'NotAuthorized' in sterr
+        test_file_name, work_dir, user1_dir), return_status=1)
+    assert 'PermissionDenied' in sterr
 
     # repeat after adding read/write access to gr1 (user 2 not a member)
 
@@ -430,7 +513,8 @@ def test_access(work_dir):
     # repeat after make public
 
 
-#@pytest.mark.skipif(one_test, reason='One test mode')
+@pytest.mark.skipif(one_test, reason='One test mode')
+@pytest.mark.skipif(True, reason='To fix')
 def test_link(work_dir):
     test_file_name = 'something.png'
     test_file = os.path.join(DATA_DIR, test_file_name)
@@ -444,7 +528,7 @@ def test_link(work_dir):
 
     # access file through the link as user2
     # list the link
-    stout, sterr = exec_cmd(vls, cert2, '-l {}/link'.format(work_dir))
+    stout, sterr = exec_cmd(vls, cert2, '-l {}'.format(work_dir))
     # list the target
     assert_line('link',
                 ['lrw-rw----', USER1, GR, GR,
@@ -482,7 +566,7 @@ def test_link(work_dir):
     # test link of link
     # directory
     exec_cmd(vln, cert1, '{0}/link {0}/link1'.format(work_dir))
-    stout, sterr = exec_cmd(vls, cert2, '-l {}/link1'.format(work_dir))
+    stout, sterr = exec_cmd(vls, cert2, '-l {}'.format(work_dir))
     assert_line('link1', ['lrw-rw----', USER1, GR, GR, '0', 'link1', '->',
                           '{}/link'.format(work_dir).replace(
                           'vos:', 'vos://cadc.nrc.ca!vospace/')], stout)
@@ -511,7 +595,7 @@ def test_link(work_dir):
         work_dir, test_file_name, tmp_dir), 1)
     assert 'PermissionDenied' in sterr
     # even vls should fail
-    stout, sterr = exec_cmd(vls, cert2, '{}/link'.format(work_dir), 1)
+    stout, sterr = exec_cmd(vls, cert2, '{}/link/{}'.format(work_dir, test_file_name), 1)
     assert 'PermissionDenied' in sterr
     #TODO add tests for links of links
 
@@ -641,6 +725,7 @@ def test_vsync(work_dir):
 
 
 @pytest.mark.skipif(one_test, reason="One test mode")
+@pytest.mark.skipif(True, reason="Need to create vospace allocation")
 def test_quota():
     # TODO create a very small (10-100kB) vospace for cert2 user
     stout, sterr = exec_cmd(

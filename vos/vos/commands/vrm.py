@@ -24,7 +24,8 @@ def vrm():
                             vospace_token=args.token)
         for node in args.node:
             if not node.startswith('vos:'):
-                raise Exception('{} is not a valid VOSpace handle'.format(node))
+                raise Exception(
+                    '{} is not a valid VOSpace handle'.format(node))
             if not node.endswith('/'):
                 if client.get_node(node).islink():
                     logging.info('deleting link {}'.format(node))

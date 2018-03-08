@@ -109,11 +109,11 @@ class TestClient(unittest.TestCase):
         mock_node.return_value = mock_node
         mock_node.name = 'testnode'
         mock_node.get_info.return_value = {'name': 'aa'}
+        mock_link_node = Mock(type='vos:LinkNode')
+        mock_link_node.target = 'vos:/somefile'
         client = Client()
-        client.get_node = MagicMock(side_effect=[mock_node])
-        self.assertEquals(
-            {'testnode': mock_node.get_info.return_value}.items(),
-            client.get_info_list('vos:/somenode'))
+        client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
+        self.assertEquals([mock_node], client.get_info_list('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
@@ -262,23 +262,51 @@ class TestClient(unittest.TestCase):
         # time to test...
         vospaceLocation = 'vos://test/foo'
         osLocation = '/tmp/foo'
+        if os.path.isfile(osLocation):
+            os.remove(osLocation)
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
+        assert get_node_mock.called
+
+        # repeat - local file and vospace file are now the same -> only
+        # get_node is called to get the md5 of remote file
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation)
+        assert not get_node_url_mock.called
+        computed_md5_mock.assert_called_once_with(osLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation)
+
+        # change the content of local files to trigger a new copy
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='data')
+        computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
 
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = None
+        computed_md5_mock.return_value = md5sum
         test_client.copy(osLocation, vospaceLocation)
         mock_update.assert_called_once()
         assert not get_node_url_mock.called
 
         # make md5 different
         get_node_url_mock.reset_mock()
+        get_node_url_mock.return_value =\
+            ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
         props.get.side_effect = ['d00223344', md5sum]

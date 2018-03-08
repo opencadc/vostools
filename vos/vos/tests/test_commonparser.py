@@ -19,8 +19,8 @@ class TestCommonParser(unittest.TestCase):
         sys.argv = ['myapp', '-w']
         args = common_parser.parse_args()
         set_logging_level_from_args(args)
-        self.assertEquals(version, common_parser.version)
-        self.assertEquals(logging.WARNING, logging.getLogger('root').level)
+        self.assertEqual(version, common_parser.version)
+        self.assertEqual(logging.WARNING, logging.getLogger('root').level)
 
         # Remove all handlers associated with the root logger object.
         for handler in logging.root.handlers[:]:
@@ -29,8 +29,8 @@ class TestCommonParser(unittest.TestCase):
         sys.argv = ['myapp', '-d']
         args = common_parser.parse_args()
         set_logging_level_from_args(args)
-        self.assertEquals(logging.DEBUG, logging.getLogger().level)
-        self.assertEquals(version, common_parser.version)
+        self.assertEqual(logging.DEBUG, logging.getLogger().level)
+        self.assertEqual(version, common_parser.version)
 
         common_parser = CommonParser()
         sys.argv = ['myapp', '--version']
