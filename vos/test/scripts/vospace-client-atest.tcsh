@@ -103,7 +103,6 @@ echo "[OK]"
 
 echo -n "check inherit + change certain properties "
 $MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
-echo "$CHMODCMD $CERT g+r $CONTAINER/priv test:g3"
 $CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
 $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
