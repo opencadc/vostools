@@ -554,7 +554,7 @@ class Node(object):
                 if uri != prop.attrib.get('uri', None):
                     continue
                 found = True
-                if prop.attrib.get('text', None) == value:
+                if getattr(prop, 'text', None) == value:
                     break
                 changed = True
                 if value is None:
@@ -1541,12 +1541,12 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
+                source_md5 = \
+                    self.get_node(source).props.get('MD5', ZERO_MD5)
                 if os.path.isfile(destination):
                     # check if the local file is up to date before doing the
                     # transfer
-                    source_md5 = \
-                        self.get_node(source).props.get('MD5', ZERO_MD5)
-                    destination_md5 =\
+                    destination_md5 = \
                         md5_cache.MD5Cache.compute_md5(destination)
                     if source_md5 == destination_md5:
                         logger.info(
@@ -1607,7 +1607,9 @@ class Client(object):
                             destination)
                         logger.debug(
                             "{0} {1}".format(source_md5, destination_md5))
-                        assert destination_md5 == source_md5
+                        assert destination_md5 == source_md5, \
+                            ('Source and destination md5 do not match: '
+                             '{} vs. {}').format(source_md5, destination_md5)
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -2453,23 +2455,23 @@ class Client(object):
         """Retrieve a list of tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
         """
-        info_list = {}
+        info_list = []
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=None)
+        node = self.get_node(uri, limit=None, force=True)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
             try:
-                node = self.get_node(uri, limit=None)
+                node = self.get_node(uri, limit=None, force=True)
             except Exception as exception:
                 logger.error(str(exception))
                 break
         for thisNode in node.node_list:
-            info_list[thisNode.name] = thisNode.get_info()
+            info_list.append(thisNode)
         if node.type in ["vos:DataNode", "vos:LinkNode"]:
-            info_list[node.name] = node.get_info()
-        return info_list.items()
+            info_list.append(node)
+        return info_list
 
     def listdir(self, uri, force=False):
         """

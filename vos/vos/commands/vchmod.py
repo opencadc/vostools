@@ -131,7 +131,9 @@ def vchmod():
         if 'ispublic' in props:
             node.set_public(props['ispublic'])
         logging.debug("Node: {0}".format(node))
-        sys.exit(client.update(node, opt.recursive))
+        status = client.update(node, opt.recursive)
+        if status:
+            sys.exit(status)
     except Exception as ex:
         exit_on_exception(ex)
 

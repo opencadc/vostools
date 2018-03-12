@@ -108,37 +108,67 @@ def vls():
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
 
+        files = []
+        dirs = []
         for node in opt.node:
             if not node.startswith('vos:'):
                 raise ArgumentError(opt.node,
                                     "Invalid node name: {}".format(node))
             logging.debug("getting listing of: %s" % str(node))
-            info_list = client.get_info_list(node)
+            targets = client.glob(node)
 
-            if sort_key:
-                # noinspection PyBroadException
-                try:
-                    sorted_list = sorted(info_list,
-                                         key=lambda name: name[1][sort_key],
-                                         reverse=not opt.reverse)
-                except Exception:
-                    sorted_list = info_list
-                finally:
-                    info_list = sorted_list
+            # segragate files from directories
+            for target in targets:
+                if client.get_node(target).isdir():
+                    dirs.append(target)
+                else:
+                    files.append(target)
 
-            for item in info_list:
-                name_string = item[0]
-                for col in columns:
-                    value = item[1].get(col, None)
-                    value = value is not None and value or ""
-                    if col in __LIST_FORMATS__:
-                        sys.stdout.write(__LIST_FORMATS__[col](value))
-                    if item[1]["permissions"][0] == 'l':
-                        name_string = "%s -> %s" % (
-                            name_string, item[1]['target'])
-                sys.stdout.write("%s\n" % name_string)
+        info_list = []
+        for f in files:
+            client.get_node(f)
+            info_list = info_list + client.get_info_list(f)
+
+        _display_target(columns, info_list, opt, sort_key)
+
+        for d in dirs:
+            n = client.get_node(d, limit=None, force=True)
+            if (len(dirs) + len(files)) > 1:
+                sys.stdout.write('\n{}:\n'.format(n.name))
+                if opt.long:
+                    sys.stdout.write('total: {}\n'.format(
+                        int(n.get_info()['size'])))
+            info_list = client.get_info_list(d)
+            _display_target(columns, info_list, opt, sort_key)
+
     except Exception as ex:
         exit_on_exception(ex)
+
+
+def _display_target(columns, info_list, opt, sort_key):
+    if sort_key:
+        # noinspection PyBroadException
+        try:
+            sorted_list = \
+                sorted(info_list,
+                       key=lambda name: name.get_info()[sort_key],
+                       reverse=not opt.reverse)
+        except Exception:
+            sorted_list = info_list
+        finally:
+            info_list = sorted_list
+    for n in info_list:
+        name_string = n.name
+        info = n.get_info()
+        for col in columns:
+            value = info.get(col, None)
+            value = value is not None and value or ""
+            if col in __LIST_FORMATS__:
+                sys.stdout.write(__LIST_FORMATS__[col](value))
+            if info["permissions"][0] == 'l':
+                name_string = "%s -> %s" % (
+                    name_string, info['target'])
+        sys.stdout.write("%s\n" % name_string)
 
 
 vls.__doc__ = DESCRIPTION

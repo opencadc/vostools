@@ -401,8 +401,9 @@ def vcp():
         exit_code = getattr(ke, 'errno', -1)
     except ParseError:
         exit_code = errno.EREMOTE
-        logging.error(
-            "Failure at server while copying {0} -> {1}".format(source, dest))
+        sys.stderr.write(
+            "Failure at server while copying {0} -> {1}\n".format(
+                source, dest))
     except Exception as e:
         message = str(e)
         if re.search('NodeLocked', str(e)) is not None:
@@ -410,16 +411,17 @@ def vcp():
                 "Use vlock to unlock the node before copying to %s." %
                 this_destination)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
-            logging.error(
-                "Failure at remote server while copying {0} -> {1}".format(
+            sys.stderr.write(
+                "Failure at remote server while copying {0} -> {1}\n".format(
                     source, dest))
         else:
             logging.debug("Exception throw: %s %s" % (type(e), str(e)))
             logging.debug(traceback.format_exc())
-            logging.error(message)
+            sys.stderr.write(message)
         exit_code = getattr(e, 'errno', -1)
 
-    sys.exit(exit_code)
+    if exit_code:
+        sys.exit(exit_code)
 
 
 vcp.__doc__ = DESCRIPTION

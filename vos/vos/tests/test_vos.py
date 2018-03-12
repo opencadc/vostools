@@ -113,9 +113,7 @@ class TestClient(unittest.TestCase):
         mock_link_node.target = 'vos:/somefile'
         client = Client()
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
-        self.assertEquals(
-            {'testnode': mock_node.get_info.return_value}.items(),
-            client.get_info_list('vos:/somenode'))
+        self.assertEquals([mock_node], client.get_info_list('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
@@ -272,7 +270,7 @@ class TestClient(unittest.TestCase):
                                                   method='GET',
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
-        assert not get_node_mock.called
+        assert get_node_mock.called
 
         # repeat - local file and vospace file are now the same -> only
         # get_node is called to get the md5 of remote file
