@@ -2,11 +2,15 @@
 
 import os
 import unittest
+import pytest
 import requests
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call
 from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
+from six.moves.urllib.parse import urlparse
+from six.moves import urllib
+
 
 # The following is a temporary workaround for Python issue 25532
 # (https://bugs.python.org/issue25532)
@@ -32,6 +36,33 @@ NODE_XML = """
 
 class Object(object):
     pass
+
+
+def test_get_node_url():
+    client = Client()
+    with pytest.raises(TypeError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', sort='Blah')
+    with pytest.raises(ValueError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
+
+    response = Mock()
+    response.status_code = 303
+    client.conn.session.get = Mock(return_value=response)
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.DATE)).query
+    assert(urllib.parse.unquote(equery) ==
+           'sort={}'.format(vos.SortNodeProperty.DATE.value))
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.LENGTH, order='asc')).query
+    assert (urllib.parse.unquote(equery) ==
+            'order=asc&sort={}'.format(vos.SortNodeProperty.LENGTH.value))
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                                          sort=vos.SortNodeProperty.TITLE,
+                                          order='desc')).query
+    assert (urllib.parse.unquote(equery) ==
+            'order=desc&sort={}'.format(vos.SortNodeProperty.TITLE.value))
 
 
 class TestClient(unittest.TestCase):

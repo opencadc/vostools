@@ -1910,6 +1910,8 @@ class Client(object):
 
         if sort is not None and not isinstance(sort, SortNodeProperty):
             raise TypeError('sort must be an instace of vos.NodeProperty Enum')
+        if order not in [None, 'asc', 'desc']:
+            raise ValueError('order must be either "asc" or "desc"')
         if view in ['data', 'cutout'] and method == 'GET':
             node = self.get_node(uri, limit=0)
             if node.islink():
