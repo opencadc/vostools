@@ -795,7 +795,8 @@ class Node(object):
         nl = page.node_list
         current_index = 0
         run = True
-        while run:
+        while run and nl:
+            print('{} - {}'.format(current_index, nl))
             yield_node = nl[current_index]
             current_index = current_index + 1
             if current_index == len(nl):
