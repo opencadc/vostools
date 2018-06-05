@@ -9,13 +9,13 @@ import sys
 from .version import version
 
 
-# handle interrupts nicely
 def signal_handler(signum, frame):
-    raise KeyboardInterrupt(
-        "SIGINT signal handler. {0} {1}".format(signum, frame))
+    """Exit without calling cleanup handlers, flushing stdio buffers, etc. """
+    os._exit(signum)
 
 
-signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)    # Ctrl-C
+signal.signal(signal.SIGPIPE, signal_handler)   # Pipe gone (head, more etc)
 
 
 def exit_on_exception(ex):

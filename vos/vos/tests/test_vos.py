@@ -113,7 +113,8 @@ class TestClient(unittest.TestCase):
         mock_link_node.target = 'vos:/somefile'
         client = Client()
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
-        self.assertEquals([mock_node], client.get_info_list('vos:/somenode'))
+        self.assertEquals([mock_node],
+                          client.get_children_info('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
