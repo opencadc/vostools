@@ -811,7 +811,9 @@ class Node(object):
                         # that must be the last node
                         run = False
                     else:
-                        current_index = 0
+                        # skip first returned entry as it is the same with
+                        # the last one from the previous batch
+                        current_index = 1
                 else:
                     run = False
             with client.nodeCache.watch(yield_node.uri) as childWatch:
