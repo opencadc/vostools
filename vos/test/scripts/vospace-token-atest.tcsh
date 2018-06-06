@@ -44,13 +44,13 @@ set CONTAINER = $BASE/$TIMESTAMP
 echo "Test CONTAINER: $CONTAINER"
 
 # Start with a token scoped to user's entire tree
-set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}`"
+set TOKEN = "'`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}`'"
 
 echo -n "create containers"
 
 echo $MKDIRCMD --token="$TOKEN" -p $CONTAINER/A 
-$MKDIRCMD --token="$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
-$MKDIRCMD --token="$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
+$MKDIRCMD --token "$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
+$MKDIRCMD --token "$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "set permissions"

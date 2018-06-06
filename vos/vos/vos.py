@@ -83,7 +83,6 @@ class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
     LENGTH = 'ivo://ivoa.net/vospace/core#length'
     DATE = 'ivo://ivoa.net/vospace/core#date'
-    TITLE = 'ivo://ivoa.net/vospace/core#title'
 
 
 CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
@@ -2551,6 +2550,30 @@ class Client(object):
             return [node]
         else:
             return node.get_children(self, sort, order, 500)
+
+    def get_info_list(self, uri):
+        """Retrieve a list of tuples of (NodeName, Info dict).
+        Similar to the method above except that information is loaded
+        directly into memory.
+        :param uri: the Node to get info about.
+        """
+        info_list = []
+        uri = self.fix_uri(uri)
+        logger.debug(str(uri))
+        node = self.get_node(uri, limit=None, force=True)
+        logger.debug(str(node))
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            try:
+                node = self.get_node(uri, limit=None, force=True)
+            except Exception as exception:
+                logger.error(str(exception))
+                break
+        for thisNode in node.node_list:
+            info_list.append(thisNode)
+        if node.type in ["vos:DataNode", "vos:LinkNode"]:
+            info_list.append(node)
+        return info_list
 
     def listdir(self, uri, force=False):
         """

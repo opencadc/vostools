@@ -127,7 +127,7 @@ def vls():
         elif opt.time:
             sort = vos.SortNodeProperty.DATE
         else:
-            sort = vos.SortNodeProperty.TITLE
+            sort = None
 
         if opt.reverse:
             order = 'desc'

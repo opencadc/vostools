@@ -61,12 +61,8 @@ def test_get_node_url():
     assert('sort={}'.format(vos.SortNodeProperty.LENGTH.value) in args)
 
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                                          sort=vos.SortNodeProperty.TITLE,
                                           order='desc')).query
-    args = urllib.parse.unquote(equery).split('&')
-    assert(2 == len(args))
-    assert('order=desc' in args)
-    assert('sort={}'.format(vos.SortNodeProperty.TITLE.value) in args)
+    assert('order=desc' == urllib.parse.unquote(equery))
 
 
 class TestClient(unittest.TestCase):
