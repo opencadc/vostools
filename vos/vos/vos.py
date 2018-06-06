@@ -12,6 +12,7 @@ import copy
 import errno
 from datetime import datetime
 import fnmatch
+from enum import Enum
 
 try:
     from cStringIO import StringIO
@@ -75,6 +76,14 @@ VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
 VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
+
+
+# sorting-related uris
+class SortNodeProperty(Enum):
+    """ URIs of node properties used for sorting"""
+    LENGTH = 'ivo://ivoa.net/vospace/core#length'
+    DATE = 'ivo://ivoa.net/vospace/core#date'
+
 
 CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
                  'manifest': '{}#manifest'.format(VO_CADC_VIEW_URI),
@@ -760,6 +769,56 @@ class Node(object):
                 for nodeNode in nodesNode.findall(Node.NODE):
                     self.add_child(nodeNode)
         return self._node_list
+
+    def get_children(self, client, sort, order, limit=500):
+        """ Gets an iterator over the nodes held to by a ContainerNode"""
+        # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
+        # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
+        # on the firt call was less than 500, we likely got them
+        # all during the init
+        if not self.isdir():
+            return
+
+        if self.node_list is not None:
+            # children already downloaded
+            for i in self.node_list:
+                yield i.uri
+
+        # stream children
+        xml_file = StringIO(
+            client.open(self.uri, os.O_RDONLY,
+                        limit=limit, sort=sort,
+                        order=order).read().decode('UTF-8'))
+        xml_file.seek(0)
+        page = Node(ElementTree.parse(xml_file).getroot())
+        nl = page.node_list
+        current_index = 0
+        run = True
+        while run and nl:
+            yield_node = nl[current_index]
+            current_index = current_index + 1
+            if current_index == len(nl):
+                if len(nl) == limit:
+                    # do another page read
+                    xml_file = StringIO(
+                        client.open(self.uri, os.O_RDONLY, next_uri=nl[-1].uri,
+                                    sort=sort, order=order,
+                                    limit=limit).read().decode('UTF-8'))
+                    xml_file.seek(0)
+                    page = Node(ElementTree.parse(xml_file).getroot())
+                    nl = page.node_list
+                    if len(nl) == 1 and nl[0].uri == yield_node.uri:
+                        # that must be the last node
+                        run = False
+                    else:
+                        # skip first returned entry as it is the same with
+                        # the last one from the previous batch
+                        current_index = 1
+                else:
+                    run = False
+            with client.nodeCache.watch(yield_node.uri) as childWatch:
+                childWatch.insert(yield_node)
+            yield yield_node
 
     def add_child(self, child_element_tree):
         """
@@ -1812,7 +1871,8 @@ class Client(object):
         return node
 
     def get_node_url(self, uri, method='GET', view=None, limit=None,
-                     next_uri=None, cutout=None, full_negotiation=None):
+                     next_uri=None, cutout=None, sort=None, order=None,
+                     full_negotiation=None):
         """Split apart the node string into parts and return the correct URL
         for this node.
 
@@ -1834,6 +1894,11 @@ class Client(object):
         :param cutout: The cutout pattern to apply to the file at the service
         end: applies to view='cutout' only.
         :type cutout: str, None
+        :param sort: node property to sort on
+        :type sort: vos.NodeProperty, None
+        :param order: Order of sorting, Ascending ('asc' - default) or
+        Descending ('desc')
+        :type order: unicode, None
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
@@ -1844,6 +1909,10 @@ class Client(object):
         """
         uri = self.fix_uri(uri)
 
+        if sort is not None and not isinstance(sort, SortNodeProperty):
+            raise TypeError('sort must be an instace of vos.NodeProperty Enum')
+        if order not in [None, 'asc', 'desc']:
+            raise ValueError('order must be either "asc" or "desc"')
         if view in ['data', 'cutout'] and method == 'GET':
             node = self.get_node(uri, limit=0)
             if node.islink():
@@ -1864,7 +1933,7 @@ class Client(object):
                 logger.debug("Getting URLs for: {0}".format(target))
                 return self.get_node_url(target, method=method, view=view,
                                          limit=limit, next_uri=next_uri,
-                                         cutout=cutout,
+                                         cutout=cutout, sort=sort, order=order,
                                          full_negotiation=full_negotiation)
 
         logger.debug("Getting URL for: " + str(uri))
@@ -1900,6 +1969,10 @@ class Client(object):
             fields = {}
             if limit is not None:
                 fields['limit'] = limit
+            if sort is not None:
+                fields['sort'] = sort.value
+            if order is not None:
+                fields['order'] = order
             if view is not None:
                 fields['view'] = view
             if next_uri is not None:
@@ -1965,7 +2038,9 @@ class Client(object):
                                      full_negotiation=True,
                                      limit=limit,
                                      next_uri=next_uri,
-                                     cutout=cutout)
+                                     cutout=cutout,
+                                     sort=sort,
+                                     order=order)
 
         logger.debug("Sending short cut url: {0}".format(url))
         return [url]
@@ -2204,7 +2279,7 @@ class Client(object):
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
              limit=None, next_uri=None, size=None, cutout=None,
-             byte_range=None,
+             byte_range=None, sort=None, order=None,
              full_negotiation=False, possible_partial_read=False):
         """Create a VOFile connection to the specified uri or url.
 
@@ -2236,6 +2311,11 @@ class Client(object):
         :param byte_range: The range of bytes to request, rather than getting
         the entire file.
         :type byte_range: unicode, None
+        :param sort: node property to sort on
+        :type sort: vos.NodeProperty, None
+        :param order: Sorting order. Values: asc for ascending (default), desc
+        for descending
+        :type order: unicode, None
         :param full_negotiation: force this interaction to use the full UWS
         interaction to get the url for the resource
         :type full_negotiation: bool
@@ -2282,7 +2362,7 @@ class Client(object):
                             return self.open(target, mode, view, head, url,
                                              limit,
                                              next_uri, size, cutout,
-                                             byte_range)
+                                             byte_range, sort, order)
                         else:
                             # A target external link
                             # TODO Need a way of passing along authentication.
@@ -2305,7 +2385,7 @@ class Client(object):
         if url is None:
             url = self.get_node_url(uri, method=method, view=view,
                                     limit=limit, next_uri=next_uri,
-                                    cutout=cutout,
+                                    cutout=cutout, sort=sort, order=order,
                                     full_negotiation=full_negotiation)
             if url is None:
                 raise OSError(errno.EREMOTE)
@@ -2451,8 +2531,32 @@ class Client(object):
             response = self.conn.session.delete(url)
             response.raise_for_status()
 
+    def get_children_info(self, uri, sort=None, order=None):
+        """Returns an iterator over tuples of (NodeName, Info dict)
+        :param uri: the Node to get info about.
+        :param sort: node property to sort on (vos.NodeProperty)
+        :param order: order of sorting: 'asc' - default or 'desc'
+        """
+        uri = self.fix_uri(uri)
+        logger.debug(str(uri))
+        node = self.get_node(uri, limit=0, force=True)
+        logger.debug(str(node))
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            try:
+                node = self.get_node(uri, limit=0, force=True)
+            except Exception as exception:
+                logger.error(str(exception))
+                break
+        if node.type in ["vos:DataNode", "vos:LinkNode"]:
+            return [node]
+        else:
+            return node.get_children(self, sort, order, 500)
+
     def get_info_list(self, uri):
-        """Retrieve a list of tuples of (NodeName, Info dict)
+        """Retrieve a list of tuples of (NodeName, Info dict).
+        Similar to the method above except that information is loaded
+        directly into memory.
         :param uri: the Node to get info about.
         """
         info_list = []

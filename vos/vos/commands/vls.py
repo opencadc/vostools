@@ -101,9 +101,6 @@ def vls():
             columns.extend(
                 ['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-        # determine if their is a sorting order
-        sort_key = (opt.time and "date") or (opt.Size and "size") or False
-
         # create a client to send VOSpace command
         client = vos.Client(vospace_certfile=opt.certfile,
                             vospace_token=opt.token)
@@ -124,51 +121,49 @@ def vls():
                 else:
                     files.append(target)
 
-        info_list = []
-        for f in files:
-            client.get_node(f)
-            info_list = info_list + client.get_info_list(f)
+        # determine if their is a sorting order
+        if opt.Size:
+            sort = vos.SortNodeProperty.LENGTH
+        elif opt.time:
+            sort = vos.SortNodeProperty.DATE
+        else:
+            sort = None
 
-        _display_target(columns, info_list, opt, sort_key)
+        if opt.reverse:
+            order = 'desc'
+        else:
+            order = 'asc'
+
+        for f in files:
+            for row in client.get_children_info(f, sort, order):
+                _display_target(columns, row)
 
         for d in dirs:
-            n = client.get_node(d, limit=None, force=True)
+            n = client.get_node(d, limit=0, force=True)
             if (len(dirs) + len(files)) > 1:
                 sys.stdout.write('\n{}:\n'.format(n.name))
                 if opt.long:
                     sys.stdout.write('total: {}\n'.format(
                         int(n.get_info()['size'])))
-            info_list = client.get_info_list(d)
-            _display_target(columns, info_list, opt, sort_key)
+            for row in client.get_children_info(d, sort, order):
+                _display_target(columns, row)
 
     except Exception as ex:
         exit_on_exception(ex)
 
 
-def _display_target(columns, info_list, opt, sort_key):
-    if sort_key:
-        # noinspection PyBroadException
-        try:
-            sorted_list = \
-                sorted(info_list,
-                       key=lambda name: name.get_info()[sort_key],
-                       reverse=not opt.reverse)
-        except Exception:
-            sorted_list = info_list
-        finally:
-            info_list = sorted_list
-    for n in info_list:
-        name_string = n.name
-        info = n.get_info()
-        for col in columns:
-            value = info.get(col, None)
-            value = value is not None and value or ""
-            if col in __LIST_FORMATS__:
-                sys.stdout.write(__LIST_FORMATS__[col](value))
-            if info["permissions"][0] == 'l':
-                name_string = "%s -> %s" % (
-                    name_string, info['target'])
-        sys.stdout.write("%s\n" % name_string)
+def _display_target(columns, row):
+    name_string = row.name
+    info = row.get_info()
+    for col in columns:
+        value = info.get(col, None)
+        value = value is not None and value or ""
+        if col in __LIST_FORMATS__:
+            sys.stdout.write(__LIST_FORMATS__[col](value))
+        if info["permissions"][0] == 'l':
+            name_string = "%s -> %s" % (
+                row.name, info['target'])
+    sys.stdout.write("%s\n" % name_string)
 
 
 vls.__doc__ = DESCRIPTION

@@ -2,11 +2,15 @@
 
 import os
 import unittest
+import pytest
 import requests
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call
 from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
+from six.moves.urllib.parse import urlparse
+from six.moves import urllib
+
 
 # The following is a temporary workaround for Python issue 25532
 # (https://bugs.python.org/issue25532)
@@ -32,6 +36,33 @@ NODE_XML = """
 
 class Object(object):
     pass
+
+
+def test_get_node_url():
+    client = Client()
+    with pytest.raises(TypeError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', sort='Blah')
+    with pytest.raises(ValueError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
+
+    response = Mock()
+    response.status_code = 303
+    client.conn.session.get = Mock(return_value=response)
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.DATE)).query
+    assert(urllib.parse.unquote(equery) ==
+           'sort={}'.format(vos.SortNodeProperty.DATE.value))
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.LENGTH, order='asc')).query
+    args = urllib.parse.unquote(equery).split('&')
+    assert(2 == len(args))
+    assert('order=asc' in args)
+    assert('sort={}'.format(vos.SortNodeProperty.LENGTH.value) in args)
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                                          order='desc')).query
+    assert('order=desc' == urllib.parse.unquote(equery))
 
 
 class TestClient(unittest.TestCase):
@@ -113,7 +144,8 @@ class TestClient(unittest.TestCase):
         mock_link_node.target = 'vos:/somefile'
         client = Client()
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
-        self.assertEquals([mock_node], client.get_info_list('vos:/somenode'))
+        self.assertEquals([mock_node],
+                          client.get_children_info('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)

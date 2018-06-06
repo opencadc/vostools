@@ -1,7 +1,7 @@
 #!/bin/tcsh -f
 
 if (! ${?VOSPACE_WEBSERVICE} ) then
-        setenv VOSPACE_WEBSERVICE 'www.canfar.phys.uvic.ca'
+        setenv VOSPACE_WEBSERVICE 'www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL $VOSPACE_WEBSERVICE"
 else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
@@ -48,9 +48,8 @@ set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}
 
 echo -n "create containers"
 
-echo $MKDIRCMD --token="$TOKEN" -p $CONTAINER/A 
-$MKDIRCMD --token="$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
-$MKDIRCMD --token="$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
+$MKDIRCMD --token "$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
+$MKDIRCMD --token "$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "set permissions"
