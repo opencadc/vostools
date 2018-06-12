@@ -56,54 +56,22 @@ for entry_point in entry_point_list:
     entry_points['console_scripts'].append('{0} = {1}'.format(entry_point[0],
                                                               entry_point[1]))
 
-# add the --cov option to the test command
-class PyTest(TestCommand):
-    """class py.test for the testing
+if sys.argv[1] in ['test', 'intTest', 'allTest']:
+    if sys.argv[1] == 'test':
+        target = PACKAGENAME
+    elif sys.argv[1] == 'intTest':
+        target = 'intTest'
+    else:
+        target = '{} intTest'.format(PACKAGENAME)
 
-    """
-    user_options = []
+    if (len(sys.argv) > 2):
+        # set the arguments after pytest as arguments to python-cov
+        # to generate coverage report, use '--cov --cov-report <type, e.g. html|xml>'
+        addopts = ' '.join(sys.argv[2:])
+    elif (len(sys.argv) == 2):
+        addopts = ''
 
-    def __init__(self, dist, **kw):
-        TestCommand.__init__(self, dist, **kw)
-        self.pytest_args = ['--cov', PACKAGENAME]
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        err_no = pytest.main(self.pytest_args)
-        sys.exit(err_no)
-
-class PyIntTest(TestCommand):
-    """class py.test for the int testing
-
-    """
-    user_options = []
-
-    def __init__(self, dist, **kw):
-        TestCommand.__init__(self, dist, **kw)
-        self.pytest_args = ['intTest']
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        err_no = pytest.main(self.pytest_args)
-        sys.exit(err_no)
-
-class PyAllTest(TestCommand):
-    """class py.test for the unit and integration testing
-
-    """
-    user_options = []
-
-    def __init__(self, dist, **kw):
-        TestCommand.__init__(self, dist, **kw)
-        self.pytest_args = ['--cov', PACKAGENAME, PACKAGENAME, 'intTest']
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        err_no = pytest.main(self.pytest_args)
-        sys.exit(err_no)
+    sys.argv = [sys.argv[0], 'pytest', '--addopts', '{} {}'.format(target, addopts)]
 
 # Note that requires and provides should not be included in the call to
 # ``setup``, since these are now deprecated. See this link for more details:
@@ -136,7 +104,4 @@ setup(name=PACKAGENAME,
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6'
       ],
-      cmdclass = {
-          'coverage': PyTest, 'intTest': PyIntTest, 'allTest': PyAllTest
-      }
 )
