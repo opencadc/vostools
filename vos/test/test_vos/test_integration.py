@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import cStringIO
 
-from astropy.io import fits
+#from astropy.io import fits
 
 from hamcrest import assert_that, equal_to, has_length
 
