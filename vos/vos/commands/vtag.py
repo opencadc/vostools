@@ -36,7 +36,7 @@ def vtag():
     parser.add_argument(
         'property',
         help="Property whose value will be read, set or deleted",
-        nargs="+")
+        nargs="*")
     parser.add_option('--remove', action="store_true",
                       help='remove the listed property')
 
