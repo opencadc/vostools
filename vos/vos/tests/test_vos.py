@@ -5,7 +5,7 @@ import unittest
 import pytest
 import requests
 from xml.etree import ElementTree
-from mock import Mock, patch, MagicMock, call, ANY
+from mock import Mock, patch, MagicMock, call
 from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse

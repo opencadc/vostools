@@ -1962,7 +1962,7 @@ class Client(object):
             do_shortcut = False
 
         if not do_shortcut and method == 'GET' and view in ['data', 'cutout'] \
-            and not fhead:
+           and not fhead:
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method == 'PUT':
