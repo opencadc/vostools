@@ -5,7 +5,7 @@ import unittest
 import pytest
 import requests
 from xml.etree import ElementTree
-from mock import Mock, patch, MagicMock, call
+from mock import Mock, patch, MagicMock, call, ANY
 from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
@@ -45,7 +45,7 @@ def test_get_node_url():
     with pytest.raises(ValueError):
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
 
-    response = Mock()
+    response = Mock(spec=requests.Response)
     response.status_code = 303
     client.conn.session.get = Mock(return_value=response)
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
@@ -63,6 +63,19 @@ def test_get_node_url():
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                                           order='desc')).query
     assert('order=desc' == urllib.parse.unquote(equery))
+
+    # test fheads - make sure that the fheads=true param is set
+    transfer_url = 'https://some.location/some/headers'
+    client.conn.session.get = Mock(return_value=response)
+    response.headers = {'Location': transfer_url}
+    assert \
+        transfer_url == client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                                            fhead=True)[0]
+    # get the argument lists for client.conn.session.get
+    call = client.conn.session.get.call_args_list[0]
+    args, kwargs = call
+    # check fhead is amongst the other parameters
+    assert kwargs['params']['fhead'] == 'true'
 
 
 class TestClient(unittest.TestCase):
@@ -299,7 +312,7 @@ class TestClient(unittest.TestCase):
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET',
+                                                  method='GET', fhead=None,
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
         assert get_node_mock.called
@@ -321,7 +334,7 @@ class TestClient(unittest.TestCase):
         get_node_mock.reset_mock()
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET',
+                                                  method='GET', fhead=None,
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
@@ -386,6 +399,19 @@ class TestClient(unittest.TestCase):
 
         with self.assertRaises(OSError):
             test_client.copy(osLocation, vospaceLocation)
+
+        # requests just the headers
+        props.get.side_effect = [None]
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation, fhead=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET', fhead=True,
+                                                  cutout=None, view='data')
 
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
