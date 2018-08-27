@@ -1957,9 +1957,6 @@ class Client(object):
         else:
             do_shortcut = self.transfer_shortcut
 
-        #if view == 'header':
-        #    do_shortcut = False
-
         if not do_shortcut and method == 'GET' and view in ['data', 'cutout']:
             return self._get(uri, view=view, cutout=cutout)
 
