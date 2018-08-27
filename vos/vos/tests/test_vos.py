@@ -64,18 +64,18 @@ def test_get_node_url():
                                           order='desc')).query
     assert('order=desc' == urllib.parse.unquote(equery))
 
-    # test fheads - make sure that the fheads=true param is set
+    # test header view
     transfer_url = 'https://some.location/some/headers'
     client.conn.session.get = Mock(return_value=response)
     response.headers = {'Location': transfer_url}
-    assert \
-        transfer_url == client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                                            fhead=True)[0]
+    assert transfer_url == \
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                            view='header')[0]
     # get the argument lists for client.conn.session.get
     call = client.conn.session.get.call_args_list[0]
     args, kwargs = call
     # check fhead is amongst the other parameters
-    assert kwargs['params']['fhead'] == 'true'
+    assert kwargs['params']['view'] == 'header'
 
 
 class TestClient(unittest.TestCase):
@@ -312,7 +312,7 @@ class TestClient(unittest.TestCase):
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET', fhead=None,
+                                                  method='GET',
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
         assert get_node_mock.called
@@ -334,7 +334,7 @@ class TestClient(unittest.TestCase):
         get_node_mock.reset_mock()
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET', fhead=None,
+                                                  method='GET',
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
@@ -410,8 +410,8 @@ class TestClient(unittest.TestCase):
         get_node_mock.reset_mock()
         test_client.copy(vospaceLocation, osLocation, fhead=True)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET', fhead=True,
-                                                  cutout=None, view='data')
+                                                  method='GET',
+                                                  cutout=None, view='header')
 
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)

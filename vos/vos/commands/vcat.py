@@ -20,8 +20,10 @@ def _cat(uri, cert_filename=None, fhead=None):
     fh = None
     try:
         if uri[0:4] == "vos:":
-            fh = Client(vospace_certfile=cert_filename).\
-                open(uri, view='data', fhead=fhead)
+            view = 'data'
+            if fhead:
+                view = 'header'
+            fh = Client(vospace_certfile=cert_filename).open(uri, view=view)
             sys.stdout.write(fh.read(return_response=True).text)
             sys.stdout.write('\n\n')
         else:

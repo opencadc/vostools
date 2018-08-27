@@ -1552,7 +1552,7 @@ class Client(object):
         :type source: unicode
         :param destination: The VOSpace location to put the file to or the
         local destination.
-        :type destination: unicode
+        :type destination: Node
         :param send_md5: Should copy send back the md5 of the destination
         file or just the size?
         :type send_md5: bool
@@ -1599,6 +1599,9 @@ class Client(object):
                 else:
                     raise ValueError("Bad source name: ".format(source))
                 source = cutout_match.group('filename')
+            elif fhead:
+                view = 'header'
+                cutout = None
             else:
                 view = 'data'
                 cutout = None
@@ -1621,7 +1624,7 @@ class Client(object):
                         return destination_size
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
-                                         view=view, fhead=fhead)
+                                         view=view)
             while not success:
                 # If there are no urls available, drop through to full
                 # negotiation if that wasn't already tried
@@ -1629,8 +1632,7 @@ class Client(object):
                     if self.transfer_shortcut and not get_node_url_retried:
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
-                                                     full_negotiation=True,
-                                                     fhead=fhead)
+                                                     full_negotiation=True)
                         # remove the first one as we already tried that one.
                         get_urls.pop(0)
                         get_node_url_retried = True
@@ -1670,11 +1672,11 @@ class Client(object):
                             destination)
                         logger.debug(
                             "{0} {1}".format(source_md5, destination_md5))
-                        if not fhead and (destination_md5 != source_md5):
+                        if destination_md5 != source_md5:
                             raise IOError(
                                 'Source and destination md5 do not match: '
-                                '{} vs. {}').format(source_md5,
-                                                    destination_md5)
+                                '{} vs. {}'.format(source_md5,
+                                                   destination_md5))
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -1877,7 +1879,7 @@ class Client(object):
 
     def get_node_url(self, uri, method='GET', view=None, limit=None,
                      next_uri=None, cutout=None, sort=None, order=None,
-                     full_negotiation=None, fhead=False):
+                     full_negotiation=None):
         """Split apart the node string into parts and return the correct URL
         for this node.
 
@@ -1907,8 +1909,6 @@ class Client(object):
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
-        :param fhead: Return just the headers of a FITS file
-        :type fhead: bool
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1940,8 +1940,7 @@ class Client(object):
                 return self.get_node_url(target, method=method, view=view,
                                          limit=limit, next_uri=next_uri,
                                          cutout=cutout, sort=sort, order=order,
-                                         full_negotiation=full_negotiation,
-                                         fhead=fhead)
+                                         full_negotiation=full_negotiation)
 
         logger.debug("Getting URL for: " + str(uri))
 
@@ -1958,11 +1957,10 @@ class Client(object):
         else:
             do_shortcut = self.transfer_shortcut
 
-        if fhead:
-            do_shortcut = False
+        #if view == 'header':
+        #    do_shortcut = False
 
-        if not do_shortcut and method == 'GET' and view in ['data', 'cutout'] \
-           and not fhead:
+        if not do_shortcut and method == 'GET' and view in ['data', 'cutout']:
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method == 'PUT':
@@ -1974,7 +1972,7 @@ class Client(object):
                 "For cutout, must specify a view=cutout and for view=cutout"
                 "must specify cutout")
 
-        if method == 'GET' and view not in ['data', 'cutout'] and not fhead:
+        if method == 'GET' and view not in ['data', 'cutout', 'header']:
             # This is a request for the URL of the Node, which returns an XML
             # document that describes the node.
             fields = {}
@@ -2023,8 +2021,6 @@ class Client(object):
 
         if cutout is not None:
             args['cutout'] = cutout
-        if fhead:
-            args['fhead'] = 'true'
         headers = {"Content-type": "application/x-www-form-urlencoded",
                    "Accept": "text/plain"}
 
@@ -2054,8 +2050,7 @@ class Client(object):
                                      next_uri=next_uri,
                                      cutout=cutout,
                                      sort=sort,
-                                     order=order,
-                                     fhead=fhead)
+                                     order=order)
 
         logger.debug("Sending short cut url: {0}".format(url))
         return [url]
@@ -2295,8 +2290,7 @@ class Client(object):
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
              limit=None, next_uri=None, size=None, cutout=None,
              byte_range=None, sort=None, order=None,
-             full_negotiation=False, possible_partial_read=False,
-             fhead=False):
+             full_negotiation=False, possible_partial_read=False):
         """Create a VOFile connection to the specified uri or url.
 
         :rtype : VOFile
@@ -2336,8 +2330,6 @@ class Client(object):
         interaction to get the url for the resource
         :type full_negotiation: bool
         :param possible_partial_read:
-        :param fhead: Return just the headers of a FITS file
-        :type fhead: bool
         """
 
         # sometimes this is called with mode from ['w', 'r']
@@ -2380,8 +2372,7 @@ class Client(object):
                             return self.open(target, mode, view, head, url,
                                              limit,
                                              next_uri, size, cutout,
-                                             byte_range, sort, order,
-                                             fhead=fhead)
+                                             byte_range, sort, order)
                         else:
                             # A target external link
                             # TODO Need a way of passing along authentication.
@@ -2405,8 +2396,7 @@ class Client(object):
             url = self.get_node_url(uri, method=method, view=view,
                                     limit=limit, next_uri=next_uri,
                                     cutout=cutout, sort=sort, order=order,
-                                    full_negotiation=full_negotiation,
-                                    fhead=fhead)
+                                    full_negotiation=full_negotiation)
             if url is None:
                 raise OSError(errno.EREMOTE)
 
