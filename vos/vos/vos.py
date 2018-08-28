@@ -1541,7 +1541,7 @@ class Client(object):
 
     # @logExceptions()
     def copy(self, source, destination, send_md5=False, disposition=False,
-             fhead=None):
+             head=None):
         """copy from source to destination.
 
         One of source or destination must be a vospace location and the other
@@ -1559,8 +1559,9 @@ class Client(object):
         :param disposition: Should the filename from content disposition be
         returned instead of size or MD5?
         :type disposition: bool
-        :param fhead: Return just the headers of a FITS file
-        :type fhead: bool
+        :param head: Return just the headers of a file. Only FITS files
+        supported.
+        :type head: bool
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1599,7 +1600,7 @@ class Client(object):
                 else:
                     raise ValueError("Bad source name: ".format(source))
                 source = cutout_match.group('filename')
-            elif fhead:
+            elif head:
                 view = 'header'
                 cutout = None
             else:

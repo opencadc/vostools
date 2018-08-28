@@ -74,7 +74,7 @@ def test_get_node_url():
     # get the argument lists for client.conn.session.get
     call = client.conn.session.get.call_args_list[0]
     args, kwargs = call
-    # check fhead is amongst the other parameters
+    # check head is amongst the other parameters
     assert kwargs['params']['view'] == 'header'
 
 
@@ -408,7 +408,7 @@ class TestClient(unittest.TestCase):
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
-        test_client.copy(vospaceLocation, osLocation, fhead=True)
+        test_client.copy(vospaceLocation, osLocation, head=True)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='header')
