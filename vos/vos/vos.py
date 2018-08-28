@@ -1559,8 +1559,7 @@ class Client(object):
         :param disposition: Should the filename from content disposition be
         returned instead of size or MD5?
         :type disposition: bool
-        :param head: Return just the headers of a file. Only FITS files
-        supported.
+        :param head: Return just the headers of a file.
         :type head: bool
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the

@@ -20,9 +20,7 @@ def _cat(uri, cert_filename=None, head=None):
     fh = None
     try:
         if uri[0:4] == "vos:":
-            view = 'data'
-            if head:
-                view = 'header'
+            view = head and 'header' or 'data'
             fh = Client(vospace_certfile=cert_filename).open(uri, view=view)
             sys.stdout.write(fh.read(return_response=True).text)
             sys.stdout.write('\n\n')
@@ -44,9 +42,9 @@ def vcat():
     parser.add_argument("source", help="source to cat to stdout out.",
                         nargs="+")
     parser.add_argument("--head", action="store_true",
-                        help="retrieve the headers of FITS file "
-                             "from vospace. Returns error message when source "
-                             "is not FITS file")
+                        help="retrieve only the headers of file from vospace. "
+                             "Might return an error if server does not "
+                             "support operation on a given file type.")
     parser.add_argument("-q",
                         help="run quietly, exit on error without message",
                         action="store_true")
