@@ -78,6 +78,11 @@ def vcp():
     parser.add_argument(
         "--ignore", action="store_true", default=False,
         help="ignore errors and continue with recursive copy")
+    parser.add_argument(
+        "--head", action="store_true",
+        help="copy only the headers of a file from vospace. Might return an "
+             "error if the server does not support the operation on a given "
+             "file type")
 
     args = parser.parse_args()
 
@@ -195,7 +200,7 @@ def vcp():
             return glob.glob(pathname)
 
     def copy(source_name, destination_name, exclude=None, include=None,
-             interrogate=False, overwrite=False, ignore=False):
+             interrogate=False, overwrite=False, ignore=False, head=False):
         """
         Send source_name to destination, possibly looping over contents if
         source_name points to a directory.
@@ -215,6 +220,7 @@ def vcp():
         :param interrogate: prompt before overwrite.
         :param overwrite: Should we overwrite existing destination?
         :param ignore: ignore errors during recursive copy, just continue.
+        :param head: copy just the FITS headers
         :return:
         :raise e:
         """
@@ -236,7 +242,8 @@ def vcp():
                     logging.debug("%s -> %s" % (filename, source_name))
                     copy(os.path.join(source_name, filename),
                          os.path.join(destination_name, filename),
-                         exclude, include, interrogate, overwrite, ignore)
+                         exclude, include, interrogate, overwrite, ignore,
+                         head)
             else:
                 if interrogate:
                     if access(destination_name, os.F_OK):
@@ -281,7 +288,7 @@ def vcp():
                     try:
                         logging.debug("Starting call to copy")
                         client.copy(source_name, destination_name,
-                                    send_md5=True)
+                                    send_md5=True, head=head)
                         logging.debug("Call to copy returned")
                         break
                     except Exception as client_exception:
@@ -326,6 +333,11 @@ def vcp():
     source = args.source[0]
     try:
         for source_pattern in args.source:
+
+            if args.head and not source_pattern.startswith('vos:'):
+                logging.error("head only works for source files in vospace")
+                continue
+
             # define this empty cutout string.  Then we strip possible cutout
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
@@ -394,7 +406,7 @@ def vcp():
                 copy(source, this_destination, exclude=args.exclude,
                      include=args.include,
                      interrogate=args.interrogate, overwrite=args.overwrite,
-                     ignore=args.ignore)
+                     ignore=args.ignore, head=args.head)
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")

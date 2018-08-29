@@ -1540,7 +1540,8 @@ class Client(object):
         return MAGIC_GLOB_CHECK.search(s) is not None
 
     # @logExceptions()
-    def copy(self, source, destination, send_md5=False, disposition=False):
+    def copy(self, source, destination, send_md5=False, disposition=False,
+             head=None):
         """copy from source to destination.
 
         One of source or destination must be a vospace location and the other
@@ -1551,13 +1552,15 @@ class Client(object):
         :type source: unicode
         :param destination: The VOSpace location to put the file to or the
         local destination.
-        :type destination: unicode
+        :type destination: Node
         :param send_md5: Should copy send back the md5 of the destination
         file or just the size?
         :type send_md5: bool
         :param disposition: Should the filename from content disposition be
         returned instead of size or MD5?
         :type disposition: bool
+        :param head: Return just the headers of a file.
+        :type head: bool
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1596,6 +1599,9 @@ class Client(object):
                 else:
                     raise ValueError("Bad source name: ".format(source))
                 source = cutout_match.group('filename')
+            elif head:
+                view = 'header'
+                cutout = None
             else:
                 view = 'data'
                 cutout = None
@@ -1666,9 +1672,11 @@ class Client(object):
                             destination)
                         logger.debug(
                             "{0} {1}".format(source_md5, destination_md5))
-                        assert destination_md5 == source_md5, \
-                            ('Source and destination md5 do not match: '
-                             '{} vs. {}').format(source_md5, destination_md5)
+                        if destination_md5 != source_md5:
+                            raise IOError(
+                                'Source and destination md5 do not match: '
+                                '{} vs. {}'.format(source_md5,
+                                                   destination_md5))
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -1801,7 +1809,6 @@ class Client(object):
         :type limit: int, None
         :param force: force getting the node from the service, rather than
         returning a cached version.
-
         :return: The VOSpace Node
         :rtype: Node
 
@@ -1902,7 +1909,6 @@ class Client(object):
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
-
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1963,7 +1969,7 @@ class Client(object):
                 "For cutout, must specify a view=cutout and for view=cutout"
                 "must specify cutout")
 
-        if method == 'GET' and view not in ['data', 'cutout']:
+        if method == 'GET' and view not in ['data', 'cutout', 'header']:
             # This is a request for the URL of the Node, which returns an XML
             # document that describes the node.
             fields = {}
@@ -1977,6 +1983,7 @@ class Client(object):
                 fields['view'] = view
             if next_uri is not None:
                 fields['uri'] = next_uri
+
             tmp_url = '{}/{}'.format(endpoints.nodes, parts.path.strip('/'))
             # include the parameters into the url. Use Request to get it rigth
             req = requests.Request(method, tmp_url, params=fields)

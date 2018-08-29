@@ -45,7 +45,7 @@ def test_get_node_url():
     with pytest.raises(ValueError):
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
 
-    response = Mock()
+    response = Mock(spec=requests.Response)
     response.status_code = 303
     client.conn.session.get = Mock(return_value=response)
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
@@ -63,6 +63,19 @@ def test_get_node_url():
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                                           order='desc')).query
     assert('order=desc' == urllib.parse.unquote(equery))
+
+    # test header view
+    transfer_url = 'https://some.location/some/headers'
+    client.conn.session.get = Mock(return_value=response)
+    response.headers = {'Location': transfer_url}
+    assert transfer_url == \
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                            view='header')[0]
+    # get the argument lists for client.conn.session.get
+    call = client.conn.session.get.call_args_list[0]
+    args, kwargs = call
+    # check head is amongst the other parameters
+    assert kwargs['params']['view'] == 'header'
 
 
 class TestClient(unittest.TestCase):
@@ -386,6 +399,19 @@ class TestClient(unittest.TestCase):
 
         with self.assertRaises(OSError):
             test_client.copy(osLocation, vospaceLocation)
+
+        # requests just the headers
+        props.get.side_effect = [None]
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
 
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
