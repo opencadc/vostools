@@ -107,24 +107,14 @@ def vls():
 
         files = []
         dirs = []
-        for node in opt.node:
-            if not node.startswith('vos:'):
-                raise ArgumentError(opt.node,
-                                    "Invalid node name: {}".format(node))
-            logging.debug("getting listing of: %s" % str(node))
-            targets = client.glob(node)
-
-            # segragate files from directories
-            for target in targets:
-                if client.get_node(target).isdir():
-                    dirs.append(target)
-                else:
-                    files.append(target)
 
         # determine if their is a sorting order
+        sort_key = 'name'
         if opt.Size:
             sort = vos.SortNodeProperty.LENGTH
+            sort_key = 'size'
         elif opt.time:
+            sort_key = 'time'
             sort = vos.SortNodeProperty.DATE
         else:
             sort = None
@@ -134,9 +124,31 @@ def vls():
         else:
             order = 'asc'
 
-        for f in files:
-            for row in client.get_children_info(f, sort, order):
-                _display_target(columns, row)
+        for node in opt.node:
+            if not node.startswith('vos:'):
+                raise ArgumentError(opt.node,
+                                    "Invalid node name: {}".format(node))
+            logging.debug("getting listing of: %s" % str(node))
+            targets = client.glob(node)
+
+            # segragate files from directories
+            for target in targets:
+                target_info = client.get_node(target)
+                if target_info.isdir():
+                    dirs.append(target)
+                else:
+                    if sort_key == 'size':
+                        files.append((int(target_info.props['length']),
+                                      target_info))
+                    elif sort_key == 'time':
+                        files.append(
+                            (vos.convert_vospace_time_to_seconds(
+                                target_info.props['date']), target_info))
+                    else:
+                        files.append((target_info.name, target_info))
+        for f in sorted(files, key=lambda file: file[0],
+                        reverse=(order == 'desc')):
+                _display_target(columns, f[1])
 
         for d in dirs:
             n = client.get_node(d, limit=0, force=True)
