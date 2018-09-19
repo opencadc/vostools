@@ -68,6 +68,14 @@ Long listing provides the file size, ownership and read/write status of Node.
 """
 
 
+def _get_sort_key(node, sort):
+    if sort == vos.SortNodeProperty.LENGTH:
+        return int(node.props['length'])
+    elif sort == vos.SortNodeProperty.DATE:
+        return vos.convert_vospace_time_to_seconds(node.props['date'])
+    else:
+        return node.name
+
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
     parser.add_argument('node', nargs="+", help="VOSpace Node to list.")
@@ -109,12 +117,9 @@ def vls():
         dirs = []
 
         # determine if their is a sorting order
-        sort_key = 'name'
         if opt.Size:
             sort = vos.SortNodeProperty.LENGTH
-            sort_key = 'size'
         elif opt.time:
-            sort_key = 'time'
             sort = vos.SortNodeProperty.DATE
         else:
             sort = None
@@ -131,33 +136,27 @@ def vls():
             logging.debug("getting listing of: %s" % str(node))
             targets = client.glob(node)
 
-            # segragate files from directories
+            # segregate files from directories
             for target in targets:
-                target_info = client.get_node(target)
-                if target_info.isdir():
-                    dirs.append(target)
+                target_node = client.get_node(target)
+                if target_node.isdir():
+                    dirs.append((_get_sort_key(target_node, sort), target_node, target))
                 else:
-                    if sort_key == 'size':
-                        files.append((int(target_info.props['length']),
-                                      target_info))
-                    elif sort_key == 'time':
-                        files.append(
-                            (vos.convert_vospace_time_to_seconds(
-                                target_info.props['date']), target_info))
-                    else:
-                        files.append((target_info.name, target_info))
-        for f in sorted(files, key=lambda file: file[0],
+                    files.append((_get_sort_key(target_node, sort),
+                                  target_node))
+
+        for f in sorted(files, key=lambda ff: ff[0],
                         reverse=(order == 'desc')):
                 _display_target(columns, f[1])
 
-        for d in dirs:
-            n = client.get_node(d, limit=0, force=True)
+        for d in sorted(dirs, key=lambda dd: dd[0], reverse=(order == 'desc')):
+            n = d[1]
             if (len(dirs) + len(files)) > 1:
                 sys.stdout.write('\n{}:\n'.format(n.name))
                 if opt.long:
                     sys.stdout.write('total: {}\n'.format(
                         int(n.get_info()['size'])))
-            for row in client.get_children_info(d, sort, order):
+            for row in client.get_children_info(d[2], sort, order):
                 _display_target(columns, row)
 
     except Exception as ex:
