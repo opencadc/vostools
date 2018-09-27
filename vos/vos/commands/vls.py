@@ -125,9 +125,9 @@ def vls():
             sort = None
 
         if opt.reverse:
-            order = 'desc'
+            order = 'asc' if sort else 'desc'
         else:
-            order = 'asc'
+            order = 'desc' if sort else 'asc'
 
         for node in opt.node:
             if not node.startswith('vos:'):

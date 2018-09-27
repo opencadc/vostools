@@ -2546,12 +2546,12 @@ class Client(object):
         """
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=0, force=True)
+        node = self.get_node(uri, limit=0)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
             try:
-                node = self.get_node(uri, limit=0, force=True)
+                node = self.get_node(uri, limit=0)
             except Exception as exception:
                 logger.error(str(exception))
                 break
