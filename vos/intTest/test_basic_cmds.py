@@ -39,7 +39,7 @@ GR = 'CadcIT' # CadcIntTest1 and CadcIntTest2 members
 GR1 = 'CadcIT1' # CadcIntTest1 member
 GR2 = 'CadcIT2' # CadcIntTest2 member
 
-one_test = True # run just one test
+one_test = False  # run just one test
 
 class MyExitError(Exception):
 
