@@ -76,6 +76,7 @@ def _get_sort_key(node, sort):
     else:
         return node.name
 
+
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
     parser.add_argument('node', nargs="+", help="VOSpace Node to list.")
@@ -140,7 +141,8 @@ def vls():
             for target in targets:
                 target_node = client.get_node(target)
                 if target_node.isdir():
-                    dirs.append((_get_sort_key(target_node, sort), target_node, target))
+                    dirs.append((_get_sort_key(target_node, sort),
+                                 target_node, target))
                 else:
                     files.append((_get_sort_key(target_node, sort),
                                   target_node))

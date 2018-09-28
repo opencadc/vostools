@@ -2538,20 +2538,22 @@ class Client(object):
             response = self.conn.session.delete(url)
             response.raise_for_status()
 
-    def get_children_info(self, uri, sort=None, order=None):
+    def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
         :param sort: node property to sort on (vos.NodeProperty)
         :param order: order of sorting: 'asc' - default or 'desc'
+        :param force: if True force the read from server otherwise use local
+        cache
         """
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=0)
+        node = self.get_node(uri, limit=0, force=force)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
             try:
-                node = self.get_node(uri, limit=0)
+                node = self.get_node(uri, limit=0, force=force)
             except Exception as exception:
                 logger.error(str(exception))
                 break
