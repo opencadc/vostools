@@ -119,26 +119,27 @@ $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" 
 echo " [OK]"
 
 echo -n "copy empty files"
+rm -f /tmp/zerosize.txt
 touch /tmp/zerosize.txt
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
 # repeat
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
 # change size
 echo "test" > /tmp/zerosize.txt
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
 # repeat
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
 # make it back 0 size
 /bin/cp /dev/null /tmp/zerosize.txt
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
 # repeat
 $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
-$LSCMD -l $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
+$LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 
