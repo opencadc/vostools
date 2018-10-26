@@ -271,7 +271,7 @@ def vsync():
                 "Failed to open file {}, skipping".format(current_source))
             return
         import re
-        if re.match('^[A-Za-z0-9._\-();:&*$@!+=/]*$', current_source) is None:
+        if re.match(r'^[A-Za-z0-9._\-();:&*$@!+=/]*$', current_source) is None:
             logging.error(
                 "filename %s contains illegal characters, skipping" %
                 current_source)
@@ -376,7 +376,7 @@ def vsync():
 
     logging.info(
         ("Waiting for transfers to complete "
-         "********  CTRL-\ to interrupt  ********"))
+         r"********  CTRL-\ to interrupt  ********"))
 
     queue.join()
     end_time = time.time()

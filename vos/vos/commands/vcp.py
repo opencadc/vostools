@@ -107,11 +107,11 @@ def vcp():
         r'(.*?)(?P<cutout>(\[[\-+]?[\d*]+(:[\-+]?[\d*]+)?'
         r'(,[\-+]?[\d*]+(:[\-+]?[\d*]+)?)?\])+)$')
 
-    ra_dec_cutout_pattern = re.compile("([^()]*?)"
-                                       "(?P<cutout>\("
-                                       "(?P<ra>[\-+]?\d*(\.\d*)?),"
-                                       "(?P<dec>[\-+]?\d*(\.\d*)?),"
-                                       "(?P<rad>\d*(\.\d*)?)\))?")
+    ra_dec_cutout_pattern = re.compile(r"([^()]*?)"
+                                       r"(?P<cutout>\("
+                                       r"(?P<ra>[\-+]?\d*(\.\d*)?),"
+                                       r"(?P<dec>[\-+]?\d*(\.\d*)?),"
+                                       r"(?P<rad>\d*(\.\d*)?)\))?")
 
     # Warnings:
     # vcp destination specified with a trailing '/' implies ContainerNode
