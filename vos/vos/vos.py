@@ -114,7 +114,7 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 
 try:
     vos_config = util.Config(_CONFIG_PATH)
-except IOError as e:
+except IOError:
     # Assume this is the first invocation and the config file has not been
     # created yet => create it
     util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
@@ -153,9 +153,9 @@ class URLParser(object):
         self.args = None
         self.path = None
         m = re.match(
-            "(^(?P<scheme>[a-zA-Z]*):)?"
-            "(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
-            "(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
+            r"(^(?P<scheme>[a-zA-Z]*):)?"
+            r"(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
+            r"(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
         self.scheme = m.group('scheme')
         self.netloc = m.group('netloc')
         self.server = m.group('server')
@@ -1647,7 +1647,7 @@ class Client(object):
                         # content-disposition value, or source name.
                         content_disposition = response.headers.get(
                             'content-disposition', destination)
-                        content_disposition = re.search('.*filename=(\S*).*',
+                        content_disposition = re.search(r'.*filename=(\S*).*',
                                                         content_disposition)
                         if content_disposition is not None:
                             content_disposition = content_disposition.group(
@@ -1688,7 +1688,7 @@ class Client(object):
             try:
                 destination_node = self.get_node(destination)
                 destination_md5 = destination_node.props.get('MD5', ZERO_MD5)
-            except Exception as ex:
+            except Exception:
                 destination_md5 = None
             source_md5 = md5_cache.MD5Cache.compute_md5(source)
             if source_md5 == destination_md5:
