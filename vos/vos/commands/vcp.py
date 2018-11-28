@@ -4,7 +4,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .. import md5_cache
 from .. import vos
-from ..commonparser import CommonParser, set_logging_level_from_args
+from ..commonparser import CommonParser, set_logging_level_from_args,\
+    exit_on_exception
 
 try:
     from xml.etree.ElementTree import ParseError
@@ -16,7 +17,6 @@ import errno
 import os
 import re
 import glob
-import traceback
 import time
 import warnings
 from cadcutils import exceptions
@@ -413,24 +413,20 @@ def vcp():
         exit_code = getattr(ke, 'errno', -1)
     except ParseError:
         exit_code = errno.EREMOTE
-        sys.stderr.write(
-            "Failure at server while copying {0} -> {1}\n".format(
-                source, dest))
+        msg = "Failure at server while copying {0} -> {1}\n".format(source,
+                                                                    dest)
+        exit_on_exception(msg)
     except Exception as e:
-        message = str(e)
         if re.search('NodeLocked', str(e)) is not None:
-            logging.error(
-                "Use vlock to unlock the node before copying to %s." %
+            msg = "Use vlock to unlock the node before copying to {}.".format(
                 this_destination)
+            exit_on_exception(e, msg)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
-            sys.stderr.write(
-                "Failure at remote server while copying {0} -> {1}\n".format(
-                    source, dest))
+            msg = "Failure at remote server while copying {0} -> {1}\n".format(
+                    source, dest)
+            exit_on_exception(e, msg)
         else:
-            logging.debug("Exception throw: %s %s" % (type(e), str(e)))
-            logging.debug(traceback.format_exc())
-            sys.stderr.write(message)
-        exit_code = getattr(e, 'errno', -1)
+            exit_on_exception(e)
 
     if exit_code:
         sys.exit(exit_code)

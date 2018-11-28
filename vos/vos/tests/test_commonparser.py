@@ -3,9 +3,10 @@ import unittest
 import sys
 import logging
 from vos.commonparser import CommonParser
-from vos.commonparser import set_logging_level_from_args
+from vos.commonparser import set_logging_level_from_args, exit_on_exception
 from vos.version import version
 from mock import patch, Mock
+from six import StringIO
 
 
 class TestCommonParser(unittest.TestCase):
@@ -36,6 +37,21 @@ class TestCommonParser(unittest.TestCase):
         sys.argv = ['myapp', '--version']
         with patch('vos.commonparser.sys.exit', Mock()):
             common_parser.parse_args()
+
+    def test_exit_on_exception(self):
+        try:
+            # Exceptions needs a context, hence raising it
+            raise RuntimeError('Test')
+        except Exception as e:
+            with patch('sys.exit'):
+                with patch('sys.stderr', new_callable=StringIO) as stderr_mock:
+                    exit_on_exception(e)
+            self.assertEqual('ERROR:: Test\n', stderr_mock.getvalue())
+
+            with patch('sys.exit'):
+                with patch('sys.stderr', new_callable=StringIO) as stderr_mock:
+                    exit_on_exception(e, 'Error message')
+            self.assertEqual('ERROR:: Error message\n', stderr_mock.getvalue())
 
 
 def run():
