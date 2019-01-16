@@ -1592,6 +1592,7 @@ class TestCadcCache(unittest.TestCase):
         testFile2 = cache.dataDir + "/dir1/dir2/file2"
         # add files to the cache
         self.makeTestFile(testFile1, 3 * 1024 * 1024)
+        time.sleep(1)  # eliminate any potential timing issues
         self.makeTestFile(testFile2, 2 * 1024 * 1024)
 
         # get the total size (5M) and the oldest file (testFile1)
