@@ -948,7 +948,7 @@ class TestCadcCache(unittest.TestCase):
         cm = CadcCache.Cache(self.testdir, 100)
         self.assertIsInstance(cm, CadcCache.Cache)
         self.assertEqual(os.stat(cache_dir).st_mode &
-                          stat.S_IRWXU, stat.S_IRWXU)
+                         stat.S_IRWXU, stat.S_IRWXU)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_00_constructor6(self):
@@ -973,7 +973,7 @@ class TestCadcCache(unittest.TestCase):
         cm = CadcCache.Cache(self.testdir, 100)
         self.assertIsInstance(cm, CadcCache.Cache)
         self.assertEqual(os.stat(meta_data_dir).st_mode &
-                          stat.S_IRWXU, stat.S_IRWXU)
+                         stat.S_IRWXU, stat.S_IRWXU)
         os.chmod(meta_data_dir, stat.S_IRWXU)
 
     def setUp_testdirectory(self):
@@ -1596,13 +1596,13 @@ class TestCadcCache(unittest.TestCase):
 
         # get the total size (5M) and the oldest file (testFile1)
         self.assertEqual((testFile1, 5 * 1024 * 1024),
-                          cache.determineCacheSize())
+                         cache.determineCacheSize())
 
         # mark file1 as in use
         cache.fileHandleDict[testVospaceFile1] = None
         # get the total size (5M) and the oldest not in use file (testFile2)
         self.assertEqual((testFile2, 5 * 1024 * 1024),
-                          cache.determineCacheSize())
+                         cache.determineCacheSize())
 
         # mark file2 as in use
         cache.fileHandleDict[testVospaceFile2] = None
@@ -1635,14 +1635,14 @@ class TestCadcCache(unittest.TestCase):
         cache.checkCacheSpace()
         # get the total remaining size (5M) of the remaining file (file2)
         self.assertEqual((testFile2, 2 * 1024 * 1024),
-                          cache.determineCacheSize())
+                         cache.determineCacheSize())
 
         # add file3, file2 is oldest and should be dleleted
         self.makeTestFile(testFile3, 3 * 1024 * 1024)
         cache.checkCacheSpace()
         # get the total size (3M) of the remaining file (file1)
         self.assertEqual((testFile3, 3 * 1024 * 1024),
-                          cache.determineCacheSize())
+                         cache.determineCacheSize())
 
         # add file2 back and mark file3 as in use. file2 is going to be deleted
         self.makeTestFile(testFile2, 2 * 1024 * 1024)

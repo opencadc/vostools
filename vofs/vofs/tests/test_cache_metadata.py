@@ -30,7 +30,7 @@ class TestCacheMetaData(unittest.TestCase):
         file1 = CacheMetaData(TestCacheMetaData.TEST_CACHE_PATH + "file1", 10,
                               0x2345, 1024)
         self.assertEqual(TestCacheMetaData.TEST_CACHE_PATH +
-                          "file1", file1.metaDataFile)
+                         "file1", file1.metaDataFile)
         self.assertEqual(10, file1.bitmap.length())
         file1.setReadBlocks(2, 5)
         self.assertEqual(4, file1.bitmap.count_bits())
@@ -74,7 +74,7 @@ class TestCacheMetaData(unittest.TestCase):
         file1 = CacheMetaData(
             TestCacheMetaData.TEST_CACHE_PATH + "file1", 10, 0x2345, 1025)
         self.assertEqual(TestCacheMetaData.TEST_CACHE_PATH +
-                          "file1", file1.metaDataFile)
+                         "file1", file1.metaDataFile)
         self.assertEqual(10, file1.bitmap.length())
         self.assertEqual(0x2345, file1.md5sum)
         self.assertEqual(1025, file1.size)
@@ -145,7 +145,7 @@ class TestCacheMetaData(unittest.TestCase):
             TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
             10, 0x2345, 1024)
         self.assertEqual(TestCacheMetaData.TEST_CACHE_PATH +
-                          "/test/file1", file2.metaDataFile)
+                         "/test/file1", file2.metaDataFile)
         self.assertEqual(10, file2.bitmap.length())
         self.assertEqual(0x2345, file2.md5sum)
         file2.persist()
@@ -153,7 +153,7 @@ class TestCacheMetaData(unittest.TestCase):
             TestCacheMetaData.TEST_CACHE_PATH + "/test/file1",
             10, 0x2345, 1025)
         self.assertEqual(TestCacheMetaData.TEST_CACHE_PATH +
-                          "/test/file1", file3.metaDataFile)
+                         "/test/file1", file3.metaDataFile)
         self.assertEqual(10, file3.bitmap.length())
         self.assertEqual(0x2345, file3.md5sum)
 
