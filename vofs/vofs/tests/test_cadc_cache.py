@@ -1630,9 +1630,11 @@ class TestCadcCache(unittest.TestCase):
         testFile3 = cache.dataDir + testVospaceFile3
         # add files to the cache
         self.makeTestFile(testFile1, 3 * 1024 * 1024)
+        time.sleep(.5)  # to avoid race conditions
         self.makeTestFile(testFile2, 2 * 1024 * 1024)
 
         # cleanup time. file1 should disappear
+        time.sleep(.5)  # to avoid race conditions
         cache.checkCacheSpace()
         # get the total remaining size (5M) of the remaining file (file2)
         self.assertEqual((testFile2, 2 * 1024 * 1024),
@@ -1640,6 +1642,7 @@ class TestCadcCache(unittest.TestCase):
 
         # add file3, file2 is oldest and should be dleleted
         self.makeTestFile(testFile3, 3 * 1024 * 1024)
+        time.sleep(.5)  # to avoid race conditions
         cache.checkCacheSpace()
         # get the total size (3M) of the remaining file (file1)
         self.assertEqual((testFile3, 3 * 1024 * 1024),
@@ -1647,6 +1650,7 @@ class TestCadcCache(unittest.TestCase):
 
         # add file2 back and mark file3 as in use. file2 is going to be deleted
         self.makeTestFile(testFile2, 2 * 1024 * 1024)
+        time.sleep(.5)  # to avoid race conditions
         cache.fileHandleDict[testVospaceFile3] = None
         cache.checkCacheSpace()
         # get the total size (3M) of the remaining file (file1) but file1 is in
@@ -1655,6 +1659,7 @@ class TestCadcCache(unittest.TestCase):
 
         # add file2 back but also mark it as in use.
         self.makeTestFile(testFile2, 2 * 1024 * 1024)
+        time.sleep(.5)  # to avoid race conditions
         cache.fileHandleDict[testVospaceFile2] = None
         cache.checkCacheSpace()
         # no files deleted as all of them are in use
