@@ -149,7 +149,7 @@ def vls():
 
         for f in sorted(files, key=lambda ff: ff[0],
                         reverse=(order == 'desc')):
-                _display_target(columns, f[1])
+            _display_target(columns, f[1])
 
         for d in sorted(dirs, key=lambda dd: dd[0], reverse=(order == 'desc')):
             n = d[1]
