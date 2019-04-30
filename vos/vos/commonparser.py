@@ -12,11 +12,13 @@ from .version import version
 
 def signal_handler(signum, frame):
     """Exit without calling cleanup handlers, flushing stdio buffers, etc. """
+    logging.info('Received signal {}. Exiting.'.format(signum))
     os._exit(signum)
 
 
 signal.signal(signal.SIGINT, signal_handler)    # Ctrl-C
-signal.signal(signal.SIGPIPE, signal_handler)   # Pipe gone (head, more etc)
+# Disabled due to unexpected SIGPIPE signals that do not warn the user
+# signal.signal(signal.SIGPIPE, signal_handler)   # Pipe gone (head, more etc)
 
 
 def exit_on_exception(ex, message=None):
