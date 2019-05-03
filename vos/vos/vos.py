@@ -212,7 +212,6 @@ class Connection(object):
         before the connection is downgraded to 'anonymous'
         """
         if resource_id == 'ivo://cadc.nrc.ca/vospace':
-            print('*****{}'.format(resource_id))
             warnings.warn('Deprecated resource id {}'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
