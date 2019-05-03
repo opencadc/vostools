@@ -127,9 +127,6 @@ def _rename_vospace_resource():
                     'ivo://cadc.nrc.ca/vospace',
                     'ivo://cadc.nrc.ca/vault')
                 open(_CONFIG_PATH, 'w').write(config_content)
-                warnings.warn(
-                    'resource ivo://cadc.nrc.ca/vospace is deprecated '
-                    'and it was replaced with ivo://cadc.nrc.ca/vault')
         except Exception as e:
             warnings.warn('Error trying to access {} config file: {}'.format(
                 _CONFIG_PATH, str(e)))
@@ -212,7 +209,9 @@ class Connection(object):
         before the connection is downgraded to 'anonymous'
         """
         if resource_id == 'ivo://cadc.nrc.ca/vospace':
-            warnings.warn('Deprecated resource id {}'.format(resource_id))
+            warnings.warn(
+                'Deprecated resource id {}. Use ivo://cadc.nrc.ca/vault '
+                'instead'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
                 "Connection object no longer uses http_debug setting.",
