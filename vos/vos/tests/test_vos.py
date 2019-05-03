@@ -10,6 +10,7 @@ from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
+import warnings
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -76,6 +77,38 @@ def test_get_node_url():
     args, kwargs = call
     # check head is amongst the other parameters
     assert kwargs['params']['view'] == 'header'
+
+
+@patch('vos.vos.os.path.exists', Mock())
+def test_rename_vospace_resource():
+    with warnings.catch_warnings(record=True) as w:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        with patch('vos.vos.open') as open_mock:
+            old_content = 'blah'
+            new_config_mock = Mock()
+            open_mock.return_value.read.return_value = old_content
+            open_mock.return_value.write = new_config_mock
+            vos._rename_vospace_resource()
+        assert new_config_mock.called_once_with(old_content)
+        # nothing changed so no warnings
+        assert len(w) == 0
+
+    new_config_mock.reset_mock()
+    with warnings.catch_warnings(record=True) as w:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        with patch('vos.vos.open') as open_mock:
+            old_content = 'blah\nresourceID=ivo://cadc.nrc.ca/vospace\nfoo'
+            new_content = Mock()
+            open_mock.return_value.read.return_value = old_content
+            open_mock.return_value.write = new_content
+            vos._rename_vospace_resource()
+        assert new_config_mock.called_once_with(old_content.replace(
+            'vospace', 'vault'))
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
+        assert "deprecated" in str(w[-1].message)
 
 
 class TestClient(unittest.TestCase):

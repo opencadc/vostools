@@ -112,7 +112,32 @@ FILENAME_PATTERN_MAGIC = re.compile(
     )
 MAGIC_GLOB_CHECK = re.compile('[*?[]')
 
+
+logging.getLogger("requests").setLevel(logging.ERROR)
+
+
+def _rename_vospace_resource():
+    # temporary function to deal with renaming of the
+    # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+    if os.path.exists(_CONFIG_PATH):
+        try:
+            config_content = open(_CONFIG_PATH, 'r').read()
+            if 'ivo://cadc.nrc.ca/vospace' in config_content:
+                config_content = config_content.replace(
+                    'ivo://cadc.nrc.ca/vospace',
+                    'ivo://cadc.nrc.ca/vault')
+                open(_CONFIG_PATH, 'w').write(config_content)
+                warnings.warn(
+                    'resource ivo://cadc.nrc.ca/vospace is deprecated '
+                    'and it was replaced with ivo://cadc.nrc.ca/vault')
+        except Exception as e:
+            warnings.warn('Error trying to access {} config file: {}'.format(
+                _CONFIG_PATH, str(e)))
+            pass
+
+
 try:
+    _rename_vospace_resource()
     vos_config = util.Config(_CONFIG_PATH)
 except IOError:
     # Assume this is the first invocation and the config file has not been
@@ -120,8 +145,6 @@ except IOError:
     util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
     # now read parse it again
     vos_config = util.Config(_CONFIG_PATH)
-
-logging.getLogger("requests").setLevel(logging.ERROR)
 
 
 def convert_vospace_time_to_seconds(str_date):
@@ -188,6 +211,9 @@ class Connection(object):
         attempt to find user/password combination in the .netrc file is made
         before the connection is downgraded to 'anonymous'
         """
+        if resource_id == 'ivo://cadc.nrc.ca/vospace':
+            print('*****{}'.format(resource_id))
+            warnings.warn('Deprecated resource id {}'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
                 "Connection object no longer uses http_debug setting.",
