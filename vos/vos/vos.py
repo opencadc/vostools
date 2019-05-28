@@ -1820,6 +1820,10 @@ class Client(object):
                                                                        '!')
 
         path = os.path.normpath(filename).strip('/')
+        # accessing root results in path='.' wich is not a valid root path.
+        # Therefore, remove the '.' character in this case
+        if path == '.':
+            path = ''
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
         return uri
@@ -2510,10 +2514,11 @@ class Client(object):
             # logger.debug(
             # "Got back %s from $Client.VOPropertiesEndPoint " % (con))
             # Start the job
-            self.conn.session.post(transfer_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=RUN",
-                                   headers={'Content-type': "text/text"})
+            self.conn.session.post(
+                transfer_url + "/phase",
+                allow_redirects=False,
+                data="PHASE=RUN",
+                headers={'Content-type': "application/x-www-form-urlencoded"})
             self.get_transfer_error(transfer_url, node.uri)
         else:
             resp = self.conn.session.post(url,

@@ -2,14 +2,14 @@
 
 if (! ${?VOSPACE_WEBSERVICE} ) then
         setenv VOSPACE_WEBSERVICE 'www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'
-	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL $VOSPACE_WEBSERVICE"
+	echo "VOSPACE_WEBSERVICE env variable not #set, use default WebService URL $VOSPACE_WEBSERVICE"
 else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 
-set ACCESS_PAGE=${VOSPACE_WEBSERVICE}/ac/login
+set ACCESS_PAGE=https://ws-cadc.canfar.net/ac/login
 echo "Using access page: $ACCESS_PAGE"
-set VOS_BASE = "vos://cadc.nrc.ca~vospace"
+set VOS_BASE = "vos://cadc.nrc.ca~vault"
 
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
@@ -57,7 +57,6 @@ $CHMODCMD --token="$TOKEN" o+r $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD --token="$TOKEN" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
 $CHMODCMD --token="$TOKEN" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
 echo " [OK]"
-
 # Get a new token scoped only to the /B subdir
 set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B`"
 
