@@ -583,7 +583,8 @@ class TestClient(unittest.TestCase):
                      headers={'Content-type': 'text/xml'})
         call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase',
                      allow_redirects=False, data="PHASE=RUN",
-                     headers={'Content-type': "text/text"})
+                     headers={
+                         'Content-type': 'application/x-www-form-urlencoded'})
         calls = [call1, call2]
 
         client.conn = Mock(spec=vos.Connection)
