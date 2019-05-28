@@ -69,8 +69,9 @@ echo "** test container: ${CONTAINER}"
 echo
 
 echo -n "view vospace root container "
-$LSCMD $CERT $VOROOT > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
+#$LSCMD $CERT $VOROOT > /dev/null || echo " [FAIL]" && exit -1
+#echo " [OK]"
+echo "[SKIP]"
 
 echo -n "view non-existent node "
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
@@ -172,12 +173,13 @@ $CPCMD $CERT "$BASE/test*.fits[1:10,1:10]" $TMPDIR || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "Do a real cutout of a known file"
-$CPCMD $CERT "vos:CADCRegtest1/DONOTDELETE_VOSPACE_CUTOUT_TEST.fits(34.436194,19.34665,0.01)" $TMPDIR/testcutout || echo " [FAIL]" && exit -1
-if (`cat $TMPDIR/testcutout | md5` != "cb7d6a829277975d1016a769970ec45a") then
-	echo " [FAIL]" && exit -1
-endif
-\rm -f $TMPDIR/testcutout
-echo "[OK]"
+#$CPCMD $CERT "vos:CADCRegtest1/DONOTDELETE_VOSPACE_CUTOUT_TEST.fits(34.436194,19.34665,0.01)" $TMPDIR/testcutout || echo " [FAIL]" && exit -1
+#if (`cat $TMPDIR/testcutout | md5` != "cb7d6a829277975d1016a769970ec45a") then
+    #	echo " [FAIL]" && exit -1
+    #endif
+    #\rm -f $TMPDIR/testcutout
+    #echo "[OK]"
+echo "[SKIP]"
 
 $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
 

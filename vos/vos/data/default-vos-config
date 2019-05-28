@@ -1,5 +1,5 @@
 [vos]
-resourceID = ivo://cadc.nrc.ca/vospace
+resourceID = ivo://cadc.nrc.ca/vault
 
 [transfer]
 protocol = http
