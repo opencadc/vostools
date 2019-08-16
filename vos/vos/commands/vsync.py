@@ -124,9 +124,10 @@ def vsync():
         return md5
 
     class ThreadCopy(Process):
-        def __init__(self, this_queue, this_client):
+        def __init__(self, this_queue):
             super(ThreadCopy, self).__init__()
-            self.client = this_client
+            self.client = vos.Client(vospace_certfile=opt.certfile,
+                                     vospace_token=opt.token)
             self.queue = this_queue
             self.filesSent = 0
             self.filesSkipped = 0
@@ -288,7 +289,7 @@ def vsync():
         list_of_streams = []
         for i in range(no_streams):
             logging.info("Launching VOSpace connection stream %d" % i)
-            t = ThreadCopy(queue, this_client=vospace_client)
+            t = ThreadCopy(queue)
             t.daemon = True
             t.start()
             list_of_streams.append(t)
