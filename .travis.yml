@@ -2,9 +2,9 @@ language: python
 
 python:
     - 2.7
-    - 3.4
     - 3.5
     - 3.6
+    - 3.7
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -19,7 +19,7 @@ script:
     - for i in $(ls -d */); do
          cd $i;
          pytest --cov $i || exit 1;
-         if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then
+         if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then
          flake8 -v $i || exit -1;
          fi;
          cd ..;
@@ -30,7 +30,7 @@ after_success:
     # below and replace "packagename" with the name of your package.
     # The coveragerc file may be customized as needed for your package.
     # Run coverage for all Python versions but submit only once - 3.5
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then coverage combine $(ls -d */.coverage) || exit 1; coveralls; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then coverage combine $(ls -d */.coverage) || exit 1; coveralls; fi
 
 jobs:
   include:
@@ -38,7 +38,7 @@ jobs:
       #python: 3.5
       #script: ./.intTest
     - stage: publish
-      python: 3.4
+      python: 3.7
       deploy:
          provider: script
          script: ./.publish.sh
