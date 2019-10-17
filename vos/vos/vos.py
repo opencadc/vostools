@@ -77,7 +77,6 @@ VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
-
 # sorting-related uris
 class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
@@ -1407,6 +1406,11 @@ class Client(object):
         SSL encryption.
         :type secure_get: bool
         """
+
+        if os.getenv('VOSPACE_WEBSERVICE', None):
+            msg = 'Using custom host: env.VOSPACE_WEBSERVICE={}'.\
+                  format(os.getenv('VOSPACE_WEBSERVICE', None))
+            logging.getLogger().warning(msg)
 
         if not isinstance(conn, Connection):
             vospace_certfile = vospace_certfile is None and\
