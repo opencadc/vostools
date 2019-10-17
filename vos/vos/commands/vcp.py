@@ -4,7 +4,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .. import md5_cache
 from .. import vos
-from ..commonparser import CommonParser, set_logging_level_from_args
+from ..commonparser import CommonParser, set_logging_level_from_args,\
+    exit_on_exception
 
 try:
     from xml.etree.ElementTree import ParseError
@@ -16,7 +17,6 @@ import errno
 import os
 import re
 import glob
-import traceback
 import time
 import warnings
 from cadcutils import exceptions
@@ -78,6 +78,11 @@ def vcp():
     parser.add_argument(
         "--ignore", action="store_true", default=False,
         help="ignore errors and continue with recursive copy")
+    parser.add_argument(
+        "--head", action="store_true",
+        help="copy only the headers of a file from vospace. Might return an "
+             "error if the server does not support the operation on a given "
+             "file type")
 
     args = parser.parse_args()
 
@@ -102,11 +107,11 @@ def vcp():
         r'(.*?)(?P<cutout>(\[[\-+]?[\d*]+(:[\-+]?[\d*]+)?'
         r'(,[\-+]?[\d*]+(:[\-+]?[\d*]+)?)?\])+)$')
 
-    ra_dec_cutout_pattern = re.compile("([^()]*?)"
-                                       "(?P<cutout>\("
-                                       "(?P<ra>[\-+]?\d*(\.\d*)?),"
-                                       "(?P<dec>[\-+]?\d*(\.\d*)?),"
-                                       "(?P<rad>\d*(\.\d*)?)\))?")
+    ra_dec_cutout_pattern = re.compile(r"([^()]*?)"
+                                       r"(?P<cutout>\("
+                                       r"(?P<ra>[\-+]?\d*(\.\d*)?),"
+                                       r"(?P<dec>[\-+]?\d*(\.\d*)?),"
+                                       r"(?P<rad>\d*(\.\d*)?)\))?")
 
     # Warnings:
     # vcp destination specified with a trailing '/' implies ContainerNode
@@ -195,7 +200,7 @@ def vcp():
             return glob.glob(pathname)
 
     def copy(source_name, destination_name, exclude=None, include=None,
-             interrogate=False, overwrite=False, ignore=False):
+             interrogate=False, overwrite=False, ignore=False, head=False):
         """
         Send source_name to destination, possibly looping over contents if
         source_name points to a directory.
@@ -215,6 +220,7 @@ def vcp():
         :param interrogate: prompt before overwrite.
         :param overwrite: Should we overwrite existing destination?
         :param ignore: ignore errors during recursive copy, just continue.
+        :param head: copy just the FITS headers
         :return:
         :raise e:
         """
@@ -236,7 +242,8 @@ def vcp():
                     logging.debug("%s -> %s" % (filename, source_name))
                     copy(os.path.join(source_name, filename),
                          os.path.join(destination_name, filename),
-                         exclude, include, interrogate, overwrite, ignore)
+                         exclude, include, interrogate, overwrite, ignore,
+                         head)
             else:
                 if interrogate:
                     if access(destination_name, os.F_OK):
@@ -281,7 +288,7 @@ def vcp():
                     try:
                         logging.debug("Starting call to copy")
                         client.copy(source_name, destination_name,
-                                    send_md5=True)
+                                    send_md5=True, head=head)
                         logging.debug("Call to copy returned")
                         break
                     except Exception as client_exception:
@@ -326,6 +333,11 @@ def vcp():
     source = args.source[0]
     try:
         for source_pattern in args.source:
+
+            if args.head and not source_pattern.startswith('vos:'):
+                logging.error("head only works for source files in vospace")
+                continue
+
             # define this empty cutout string.  Then we strip possible cutout
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
@@ -394,31 +406,27 @@ def vcp():
                 copy(source, this_destination, exclude=args.exclude,
                      include=args.include,
                      interrogate=args.interrogate, overwrite=args.overwrite,
-                     ignore=args.ignore)
+                     ignore=args.ignore, head=args.head)
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
         exit_code = getattr(ke, 'errno', -1)
     except ParseError:
         exit_code = errno.EREMOTE
-        sys.stderr.write(
-            "Failure at server while copying {0} -> {1}\n".format(
-                source, dest))
+        msg = "Failure at server while copying {0} -> {1}\n".format(source,
+                                                                    dest)
+        exit_on_exception(msg)
     except Exception as e:
-        message = str(e)
         if re.search('NodeLocked', str(e)) is not None:
-            logging.error(
-                "Use vlock to unlock the node before copying to %s." %
+            msg = "Use vlock to unlock the node before copying to {}.".format(
                 this_destination)
+            exit_on_exception(e, msg)
         elif getattr(e, 'errno', -1) == errno.EREMOTE:
-            sys.stderr.write(
-                "Failure at remote server while copying {0} -> {1}\n".format(
-                    source, dest))
+            msg = "Failure at remote server while copying {0} -> {1}\n".format(
+                    source, dest)
+            exit_on_exception(e, msg)
         else:
-            logging.debug("Exception throw: %s %s" % (type(e), str(e)))
-            logging.debug(traceback.format_exc())
-            sys.stderr.write(message)
-        exit_code = getattr(e, 'errno', -1)
+            exit_on_exception(e)
 
     if exit_code:
         sys.exit(exit_code)

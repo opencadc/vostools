@@ -39,7 +39,7 @@ GR = 'CadcIT' # CadcIntTest1 and CadcIntTest2 members
 GR1 = 'CadcIT1' # CadcIntTest1 member
 GR2 = 'CadcIT2' # CadcIntTest2 member
 
-one_test = False # run just one test
+one_test = False  # run just one test
 
 class MyExitError(Exception):
 
@@ -133,7 +133,7 @@ def exec_cmd(command, cert=None, args=None, return_status=0):
                 command()
     except SystemExit:
         # an early exit is expected only if return_status is not 0
-        assert return_status != 0
+        assert return_status != 0, stderr_mock.getvalue()
     output = stdout_mock.getvalue()
     stderr = stderr_mock.getvalue()
     logger.debug('Command output: {}'.format(output))
@@ -277,6 +277,42 @@ def test_gobling(work_dir):
         remote_test_dir, tempdir))
     assert not os.path.isfile(local_t1)
     assert os.path.isfile(local_t12)
+
+
+#@pytest.mark.skipif(one_test, reason='One test mode')
+def test_vls(work_dir):
+    """ Tests directory and file listing. The directory is statically
+    created and this test ensures that, whenever possible, 'vls' command uses
+    the same rules as the 'ls' counterpart to display and sort the content"""
+    lsdir = 'vlsdir'
+    tempdir = tempfile.mkdtemp()
+    rlsdir = '{}/DONOTDELETE/{}'.format(testdir,lsdir)
+    exec_cmd(vcp, cert1, '{} {}'.format(rlsdir, tempdir))
+    llsdir = '{}/{}'.format(tempdir, lsdir)
+
+    def cmp_cmds(opt, args):
+        # make directories absolute
+        rargs = ' '.join(['{}/{}'.format(rlsdir, i) for i in args.split()])
+        largs = ' '.join(['{}/{}'.format(llsdir, i) for i in args.split()])
+        if not rargs:
+            rargs = rlsdir
+        if not largs:
+            largs = llsdir
+        assert os.popen('ls -1 {} {}'.format(opt, largs)).read().replace(
+            '{}/'.format(llsdir), '') == \
+            exec_cmd(vls, cert1, '{} {}'.format(opt, rargs))[0], \
+            '[error]: {} (opt) - {} (args)'.format(opt, args)
+
+    cmp_cmds('', '')  # default listing
+    cmp_cmds('-r', '')
+    cmp_cmds('', '*')
+    cmp_cmds('-r', '*.txt')
+    cmp_cmds('', 'a*')
+    cmp_cmds('', '[ac]*')
+    cmp_cmds('-r', 'a b a.txt')
+    cmp_cmds('-S', '*.txt a/*.txt')
+    # Note size of directories different in vosapce and os
+    # Note 2 - can't compare timestamps since scp does not preserve them
 
 
 @pytest.mark.skipif(one_test, reason='One test mode')

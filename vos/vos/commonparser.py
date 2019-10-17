@@ -6,27 +6,35 @@ import argparse
 import os
 import signal
 import sys
+import traceback
 from .version import version
 
 
 def signal_handler(signum, frame):
     """Exit without calling cleanup handlers, flushing stdio buffers, etc. """
+    logging.info('Received signal {}. Exiting.'.format(signum))
     os._exit(signum)
 
 
 signal.signal(signal.SIGINT, signal_handler)    # Ctrl-C
-signal.signal(signal.SIGPIPE, signal_handler)   # Pipe gone (head, more etc)
+# Disabled due to unexpected SIGPIPE signals that do not warn the user
+# signal.signal(signal.SIGPIPE, signal_handler)   # Pipe gone (head, more etc)
 
 
-def exit_on_exception(ex):
+def exit_on_exception(ex, message=None):
     """
     Exit program due to an exception, print the exception and exit with error
     code.
     :param ex:
+    :param message: error message to display
     :return:
     """
-    import traceback
-    sys.stderr.write('ERROR:: {}\n'.format(str(ex)))
+    # Note: this could probably be updated to use an appropriate logging
+    # handler instead of writing to stderr
+    if message:
+        sys.stderr.write('ERROR:: {}\n'.format(message))
+    else:
+        sys.stderr.write('ERROR:: {}\n'.format(str(ex)))
     tb = traceback.format_exc()
     logging.debug(tb)
     sys.exit(getattr(ex, 'errno', -1)) if getattr(ex, 'errno',

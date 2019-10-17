@@ -112,16 +112,36 @@ FILENAME_PATTERN_MAGIC = re.compile(
     )
 MAGIC_GLOB_CHECK = re.compile('[*?[]')
 
+
+logging.getLogger("requests").setLevel(logging.ERROR)
+
+
+def _rename_vospace_resource():
+    # temporary function to deal with renaming of the
+    # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+    if os.path.exists(_CONFIG_PATH):
+        try:
+            config_content = open(_CONFIG_PATH, 'r').read()
+            if 'ivo://cadc.nrc.ca/vospace' in config_content:
+                config_content = config_content.replace(
+                    'ivo://cadc.nrc.ca/vospace',
+                    'ivo://cadc.nrc.ca/vault')
+                open(_CONFIG_PATH, 'w').write(config_content)
+        except Exception as e:
+            warnings.warn('Error trying to access {} config file: {}'.format(
+                _CONFIG_PATH, str(e)))
+            pass
+
+
 try:
+    _rename_vospace_resource()
     vos_config = util.Config(_CONFIG_PATH)
-except IOError as e:
+except IOError:
     # Assume this is the first invocation and the config file has not been
     # created yet => create it
     util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
     # now read parse it again
     vos_config = util.Config(_CONFIG_PATH)
-
-logging.getLogger("requests").setLevel(logging.ERROR)
 
 
 def convert_vospace_time_to_seconds(str_date):
@@ -153,9 +173,9 @@ class URLParser(object):
         self.args = None
         self.path = None
         m = re.match(
-            "(^(?P<scheme>[a-zA-Z]*):)?"
-            "(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
-            "(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
+            r"(^(?P<scheme>[a-zA-Z]*):)?"
+            r"(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
+            r"(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
         self.scheme = m.group('scheme')
         self.netloc = m.group('netloc')
         self.server = m.group('server')
@@ -188,6 +208,10 @@ class Connection(object):
         attempt to find user/password combination in the .netrc file is made
         before the connection is downgraded to 'anonymous'
         """
+        if resource_id == 'ivo://cadc.nrc.ca/vospace':
+            warnings.warn(
+                'Deprecated resource id {}. Use ivo://cadc.nrc.ca/vault '
+                'instead'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
                 "Connection object no longer uses http_debug setting.",
@@ -1540,7 +1564,8 @@ class Client(object):
         return MAGIC_GLOB_CHECK.search(s) is not None
 
     # @logExceptions()
-    def copy(self, source, destination, send_md5=False, disposition=False):
+    def copy(self, source, destination, send_md5=False, disposition=False,
+             head=None):
         """copy from source to destination.
 
         One of source or destination must be a vospace location and the other
@@ -1551,13 +1576,15 @@ class Client(object):
         :type source: unicode
         :param destination: The VOSpace location to put the file to or the
         local destination.
-        :type destination: unicode
+        :type destination: Node
         :param send_md5: Should copy send back the md5 of the destination
         file or just the size?
         :type send_md5: bool
         :param disposition: Should the filename from content disposition be
         returned instead of size or MD5?
         :type disposition: bool
+        :param head: Return just the headers of a file.
+        :type head: bool
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1596,6 +1623,9 @@ class Client(object):
                 else:
                     raise ValueError("Bad source name: ".format(source))
                 source = cutout_match.group('filename')
+            elif head:
+                view = 'header'
+                cutout = None
             else:
                 view = 'data'
                 cutout = None
@@ -1641,7 +1671,7 @@ class Client(object):
                         # content-disposition value, or source name.
                         content_disposition = response.headers.get(
                             'content-disposition', destination)
-                        content_disposition = re.search('.*filename=(\S*).*',
+                        content_disposition = re.search(r'.*filename=(\S*).*',
                                                         content_disposition)
                         if content_disposition is not None:
                             content_disposition = content_disposition.group(
@@ -1666,9 +1696,11 @@ class Client(object):
                             destination)
                         logger.debug(
                             "{0} {1}".format(source_md5, destination_md5))
-                        assert destination_md5 == source_md5, \
-                            ('Source and destination md5 do not match: '
-                             '{} vs. {}').format(source_md5, destination_md5)
+                        if destination_md5 != source_md5:
+                            raise IOError(
+                                'Source and destination md5 do not match: '
+                                '{} vs. {}'.format(source_md5,
+                                                   destination_md5))
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -1680,7 +1712,7 @@ class Client(object):
             try:
                 destination_node = self.get_node(destination)
                 destination_md5 = destination_node.props.get('MD5', ZERO_MD5)
-            except Exception as ex:
+            except Exception:
                 destination_md5 = None
             source_md5 = md5_cache.MD5Cache.compute_md5(source)
             if source_md5 == destination_md5:
@@ -1788,6 +1820,10 @@ class Client(object):
                                                                        '!')
 
         path = os.path.normpath(filename).strip('/')
+        # accessing root results in path='.' wich is not a valid root path.
+        # Therefore, remove the '.' character in this case
+        if path == '.':
+            path = ''
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
         return uri
@@ -1801,7 +1837,6 @@ class Client(object):
         :type limit: int, None
         :param force: force getting the node from the service, rather than
         returning a cached version.
-
         :return: The VOSpace Node
         :rtype: Node
 
@@ -1902,7 +1937,6 @@ class Client(object):
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
-
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1963,7 +1997,7 @@ class Client(object):
                 "For cutout, must specify a view=cutout and for view=cutout"
                 "must specify cutout")
 
-        if method == 'GET' and view not in ['data', 'cutout']:
+        if method == 'GET' and view not in ['data', 'cutout', 'header']:
             # This is a request for the URL of the Node, which returns an XML
             # document that describes the node.
             fields = {}
@@ -1977,6 +2011,7 @@ class Client(object):
                 fields['view'] = view
             if next_uri is not None:
                 fields['uri'] = next_uri
+
             tmp_url = '{}/{}'.format(endpoints.nodes, parts.path.strip('/'))
             # include the parameters into the url. Use Request to get it rigth
             req = requests.Request(method, tmp_url, params=fields)
@@ -2479,10 +2514,11 @@ class Client(object):
             # logger.debug(
             # "Got back %s from $Client.VOPropertiesEndPoint " % (con))
             # Start the job
-            self.conn.session.post(transfer_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=RUN",
-                                   headers={'Content-type': "text/text"})
+            self.conn.session.post(
+                transfer_url + "/phase",
+                allow_redirects=False,
+                data="PHASE=RUN",
+                headers={'Content-type': "application/x-www-form-urlencoded"})
             self.get_transfer_error(transfer_url, node.uri)
         else:
             resp = self.conn.session.post(url,
@@ -2531,20 +2567,22 @@ class Client(object):
             response = self.conn.session.delete(url)
             response.raise_for_status()
 
-    def get_children_info(self, uri, sort=None, order=None):
+    def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
         :param sort: node property to sort on (vos.NodeProperty)
         :param order: order of sorting: 'asc' - default or 'desc'
+        :param force: if True force the read from server otherwise use local
+        cache
         """
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=0, force=True)
+        node = self.get_node(uri, limit=0, force=force)
         logger.debug(str(node))
         while node.type == "vos:LinkNode":
             uri = node.target
             try:
-                node = self.get_node(uri, limit=0, force=True)
+                node = self.get_node(uri, limit=0, force=force)
             except Exception as exception:
                 logger.error(str(exception))
                 break

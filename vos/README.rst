@@ -65,7 +65,7 @@ Tutorial
       -  ``vls -l vos:`` [List a vospace]
       -  ``vcp vos:jkavelaars/test.txt ./`` [copies test.txt to the
          local directory from vospace]
-      -  ``vchmod g+q vos:VOSPACE/foo/bar.txt 'GROUP1, GROUP2, GROUP3' `` to give three user GROUPs permission
+      -  ``vchmod g+q vos:VOSPACE/foo/bar.txt 'GROUP1, GROUP2, GROUP3'`` to give three user GROUPs permission
          to write to this file.
       -  ``vmkdir --help`` [get a list of command line options and
          arguments]

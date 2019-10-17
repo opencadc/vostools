@@ -53,7 +53,7 @@ def vchmod():
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
         'mode', type=__mode__,
-        help='permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
+        help=r'permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')
     parser.add_argument(
         "node",
         help="node to set mode on, eg: vos:Root/Container/file.txt")

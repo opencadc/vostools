@@ -68,6 +68,15 @@ Long listing provides the file size, ownership and read/write status of Node.
 """
 
 
+def _get_sort_key(node, sort):
+    if sort == vos.SortNodeProperty.LENGTH:
+        return int(node.props['length'])
+    elif sort == vos.SortNodeProperty.DATE:
+        return vos.convert_vospace_time_to_seconds(node.props['date'])
+    else:
+        return node.name
+
+
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
     parser.add_argument('node', nargs="+", help="VOSpace Node to list.")
@@ -107,19 +116,6 @@ def vls():
 
         files = []
         dirs = []
-        for node in opt.node:
-            if not node.startswith('vos:'):
-                raise ArgumentError(opt.node,
-                                    "Invalid node name: {}".format(node))
-            logging.debug("getting listing of: %s" % str(node))
-            targets = client.glob(node)
-
-            # segragate files from directories
-            for target in targets:
-                if client.get_node(target).isdir():
-                    dirs.append(target)
-                else:
-                    files.append(target)
 
         # determine if their is a sorting order
         if opt.Size:
@@ -130,22 +126,39 @@ def vls():
             sort = None
 
         if opt.reverse:
-            order = 'desc'
+            order = 'asc' if sort else 'desc'
         else:
-            order = 'asc'
+            order = 'desc' if sort else 'asc'
 
-        for f in files:
-            for row in client.get_children_info(f, sort, order):
-                _display_target(columns, row)
+        for node in opt.node:
+            if not node.startswith('vos:'):
+                raise ArgumentError(opt.node,
+                                    "Invalid node name: {}".format(node))
+            logging.debug("getting listing of: %s" % str(node))
+            targets = client.glob(node)
 
-        for d in dirs:
-            n = client.get_node(d, limit=0, force=True)
+            # segregate files from directories
+            for target in targets:
+                target_node = client.get_node(target)
+                if target_node.isdir():
+                    dirs.append((_get_sort_key(target_node, sort),
+                                 target_node, target))
+                else:
+                    files.append((_get_sort_key(target_node, sort),
+                                  target_node))
+
+        for f in sorted(files, key=lambda ff: ff[0],
+                        reverse=(order == 'desc')):
+            _display_target(columns, f[1])
+
+        for d in sorted(dirs, key=lambda dd: dd[0], reverse=(order == 'desc')):
+            n = d[1]
             if (len(dirs) + len(files)) > 1:
                 sys.stdout.write('\n{}:\n'.format(n.name))
                 if opt.long:
                     sys.stdout.write('total: {}\n'.format(
                         int(n.get_info()['size'])))
-            for row in client.get_children_info(d, sort, order):
+            for row in client.get_children_info(d[2], sort, order):
                 _display_target(columns, row)
 
     except Exception as ex:

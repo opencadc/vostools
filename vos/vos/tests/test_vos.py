@@ -10,6 +10,7 @@ from vos import Client, Connection, Node, VOFile
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
+import warnings
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -45,7 +46,7 @@ def test_get_node_url():
     with pytest.raises(ValueError):
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
 
-    response = Mock()
+    response = Mock(spec=requests.Response)
     response.status_code = 303
     client.conn.session.get = Mock(return_value=response)
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
@@ -63,6 +64,51 @@ def test_get_node_url():
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                                           order='desc')).query
     assert('order=desc' == urllib.parse.unquote(equery))
+
+    # test header view
+    transfer_url = 'https://some.location/some/headers'
+    client.conn.session.get = Mock(return_value=response)
+    response.headers = {'Location': transfer_url}
+    assert transfer_url == \
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                            view='header')[0]
+    # get the argument lists for client.conn.session.get
+    call = client.conn.session.get.call_args_list[0]
+    args, kwargs = call
+    # check head is amongst the other parameters
+    assert kwargs['params']['view'] == 'header'
+
+
+@patch('vos.vos.os.path.exists', Mock())
+def test_rename_vospace_resource():
+    with warnings.catch_warnings(record=True) as w:
+        vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
+        assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
+               'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
+
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah'
+        new_config_mock = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_config_mock
+        vos._rename_vospace_resource()
+    assert new_config_mock.called_once_with(old_content)
+
+    new_config_mock.reset_mock()
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah\nresourceID=ivo://cadc.nrc.ca/vospace\nfoo'
+        new_content = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_content
+        vos._rename_vospace_resource()
+    assert new_config_mock.called_once_with(old_content.replace(
+        'vospace', 'vault'))
 
 
 class TestClient(unittest.TestCase):
@@ -387,6 +433,19 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             test_client.copy(osLocation, vospaceLocation)
 
+        # requests just the headers
+        props.get.side_effect = [None]
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
+
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
     @patch('vos.vos.VOFile')
@@ -524,7 +583,8 @@ class TestClient(unittest.TestCase):
                      headers={'Content-type': 'text/xml'})
         call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase',
                      allow_redirects=False, data="PHASE=RUN",
-                     headers={'Content-type': "text/text"})
+                     headers={
+                         'Content-type': 'application/x-www-form-urlencoded'})
         calls = [call1, call2]
 
         client.conn = Mock(spec=vos.Connection)
