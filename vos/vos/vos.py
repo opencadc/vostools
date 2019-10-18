@@ -1759,7 +1759,8 @@ class Client(object):
                         node = self.get_node(destination, limit=0, force=True)
                         destination_md5 = node.props.get('MD5', ZERO_MD5)
                         if destination_md5 != source_md5:
-                           raise Exception("Source md5 ({}) != destination md5 ({})".
+                            raise Exception(
+                               "Source md5 ({}) != destination md5 ({})".
                                format(source_md5, destination_md5))
                     except Exception as ex:
                         copy_failed_message = str(ex)
