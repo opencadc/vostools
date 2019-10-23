@@ -119,6 +119,12 @@ setup(name=PACKAGENAME,
       license=LICENSE,
       url=URL,
       long_description=readme(),
+      project_urls={
+          'Source': 'https://github.com/opencadc/vostoolsa',
+          'Travis CI': 'https://travis-ci.org/opencadc/vostools',
+          'Issues': 'https://travis-ci.org/opencadc/vostools/issues',
+          'VOSpace Standard': 'http://www.ivoa.net/documents/VOSpace/'
+      },
       zip_safe=False,
       use_2to3=False,
       setup_requires=['pytest-runner'],
