@@ -937,7 +937,8 @@ class VOFile(object):
                  follow_redirect=True, byte_range=None,
                  possible_partial_read=False):
         self.closed = True
-        assert isinstance(connector, Connection)
+        if not isinstance(connector, Connection):
+            raise AttributeError("BUG: Connection expected")
         self.connector = connector
         self.httpCon = None
         self.timeout = -1
@@ -1408,6 +1409,11 @@ class Client(object):
         :type secure_get: bool
         """
 
+        if os.getenv('VOSPACE_WEBSERVICE', None):
+            msg = 'Using custom host: env.VOSPACE_WEBSERVICE={}'.\
+                  format(os.getenv('VOSPACE_WEBSERVICE', None))
+            logging.getLogger().warning(msg)
+
         if not isinstance(conn, Connection):
             vospace_certfile = vospace_certfile is None and\
                 Client.VOSPACE_CERTFILE or vospace_certfile
@@ -1752,7 +1758,10 @@ class Client(object):
                             self.conn.session.put(put_url, data=fin)
                         node = self.get_node(destination, limit=0, force=True)
                         destination_md5 = node.props.get('MD5', ZERO_MD5)
-                        assert destination_md5 == source_md5
+                        if destination_md5 != source_md5:
+                            raise Exception(
+                               "Source md5 ({}) != destination md5 ({})".
+                               format(source_md5, destination_md5))
                     except Exception as ex:
                         copy_failed_message = str(ex)
                         logging.debug("FAILED to PUT to {0}".format(put_url))
@@ -2052,7 +2061,6 @@ class Client(object):
         response = self.conn.session.get(endpoints.transfer, params=args,
                                          headers=headers,
                                          allow_redirects=False)
-        assert isinstance(response, requests.Response)
         logging.debug("Transfer Server said: {0}".format(response.content))
 
         if response.status_code == 303:
