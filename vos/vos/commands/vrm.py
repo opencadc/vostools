@@ -5,8 +5,8 @@ from ..commonparser import set_logging_level_from_args, exit_on_exception, \
     CommonParser
 from .. import vos
 
-DESCRIPTION = """remove a file or a vospace data node; fails if container 
-node or node is locked. 
+DESCRIPTION = """remove a file or a vospace data node; fails if container
+node or node is locked.
 
 eg. vrm vos:/root/node   -- deletes a data node"""
 

@@ -24,7 +24,7 @@ from cadcutils import exceptions
 __all__ = ['vcp']
 
 DESCRIPTION = """Copy files to and from VOSpace storage. Always recursive
-for VOSpace. VOSpace service associated to the requested container and 
+for VOSpace. VOSpace service associated to the requested container and
 storage service are discovered via registry search.
 
 vcp can be used to cutout particular parts of a FITS file if the VOSpace
