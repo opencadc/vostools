@@ -238,7 +238,7 @@ def vcp():
             if isdir(source_name):
                 # make sure the destination exists...
                 if not isdir(destination_name):
-                    mkdir(destination_name)
+                    dmkdir(destination_name)
                 # for all files in the current source directory copy them to
                 # the destination directory
                 for filename in listdir(source_name):
