@@ -5,16 +5,21 @@ from ..commonparser import set_logging_level_from_args, exit_on_exception, \
     CommonParser
 from .. import vos
 
-DESCRIPTION = """remove a vospace data node; fails if container node or node is locked.
+DESCRIPTION = """remove a file or a vospace data node; fails if container 
+node or node is locked. 
 
 eg. vrm vos:/root/node   -- deletes a data node"""
 
 
 def vrm():
     parser = CommonParser(description=DESCRIPTION)
-    parser.add_argument('node',
-                        help='dataNode or linkNode to delete from VOSpace',
-                        nargs='+')
+    parser.add_argument(
+        'source',
+        help='file, dataNode or linkNode to delete from VOSpace',
+        nargs='+')
+    parser.add_argument(
+        "--resourceID", default=None,
+        help="resource ID of the Storage Inventory service to be used")
 
     args = parser.parse_args()
     set_logging_level_from_args(args)

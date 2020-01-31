@@ -23,9 +23,9 @@ from cadcutils import exceptions
 
 __all__ = ['vcp']
 
-DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
-VOSpace service associated to the requested container is discovered via
-registry search.
+DESCRIPTION = """Copy files to and from VOSpace storage. Always recursive
+for VOSpace. VOSpace service associated to the requested container and 
+storage service are discovered via registry search.
 
 vcp can be used to cutout particular parts of a FITS file if the VOSpace
 server supports the action.
@@ -54,6 +54,9 @@ def vcp():
     parser.add_argument(
         "destination",
         help="file/directory/dataNode/containerNode to copy to")
+    parser.add_argument(
+        "--resourceID", default=None,
+        help="resource ID of the Storage Inventory service to be used")
     parser.add_argument(
         "--exclude", default=None,
         help="skip files that match pattern (overrides include)")
@@ -179,7 +182,7 @@ def vcp():
         else:
             return os.listdir(dirname)
 
-    def mkdir(filename):
+    def dmkdir(filename):
         logging.debug("Making directory %s " % filename)
         if filename[0:4] == 'vos:':
             return client.mkdir(filename)
