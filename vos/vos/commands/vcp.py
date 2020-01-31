@@ -182,7 +182,7 @@ def vcp():
         else:
             return os.listdir(dirname)
 
-    def dmkdir(filename):
+    def mkdir(filename):
         logging.debug("Making directory %s " % filename)
         if filename[0:4] == 'vos:':
             return client.mkdir(filename)
@@ -238,7 +238,7 @@ def vcp():
             if isdir(source_name):
                 # make sure the destination exists...
                 if not isdir(destination_name):
-                    dmkdir(destination_name)
+                    mkdir(destination_name)
                 # for all files in the current source directory copy them to
                 # the destination directory
                 for filename in listdir(source_name):
