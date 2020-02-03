@@ -34,7 +34,7 @@ def delete_nodes(args):
 def delete_files(args):
     client = vos.StorageClient(storage_certfile=args.certfile,
                                storage_token=args.token,
-                               resource_id = args.resourceID)
+                               resource_id = args.resource-id)
     for file in args.source:
         if not file.startswith('vos:'):
             raise Exception(
@@ -51,7 +51,7 @@ def vrm():
         help='file, dataNode or linkNode to delete from VOSpace',
         nargs='+')
     parser.add_argument(
-        "--resourceID", default=None,
+        "--resource-id", default=None,
         help="resource ID of the Storage Inventory service to be used")
 
     args = parser.parse_args()
