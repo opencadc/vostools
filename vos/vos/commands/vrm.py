@@ -33,7 +33,8 @@ def delete_nodes(args):
 
 def delete_files(args):
     client = vos.StorageClient(storage_certfile=args.certfile,
-                               storage_token=args.token)
+                               storage_token=args.token,
+                               resource_id = args.resourceID)
     for file in args.source:
         if not file.startswith('vos:'):
             raise Exception(
