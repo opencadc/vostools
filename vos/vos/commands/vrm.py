@@ -32,11 +32,12 @@ def delete_nodes(args):
 
 
 def delete_files(args):
-    client = vos.StorageClient(storage_certfile=args.certfile,
+    # TODO: Change Client to StorageClient when it is available
+    client = vos.Client(storage_certfile=args.certfile,
                                storage_token=args.token,
-                               resource_id=args.resource-id)
+                               resource_id=args.resource_id)
     for file in args.source:
-        if not file.startswith('vos:'):
+        if file.startswith('vos:'):
             raise Exception(
                 '{} is not a valid storage handle'.format(file))
         else:
@@ -47,18 +48,18 @@ def delete_files(args):
 def vrm():
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
+        "--resource-id", default=None,
+        help="resource ID of the Storage Inventory service to be used")
+    parser.add_argument(
         'source',
         help='file, dataNode or linkNode to delete from VOSpace',
         nargs='+')
-    parser.add_argument(
-        "--resource-id", default=None,
-        help="resource ID of the Storage Inventory service to be used")
 
     args = parser.parse_args()
     set_logging_level_from_args(args)
 
     try:
-        if args.resourceID is None:
+        if args.resource_id is None:
             delete_nodes(args)
         else:
             delete_files(args)
