@@ -309,7 +309,13 @@ class TestClient(unittest.TestCase):
 
         # mock the props of the corresponding node
         props = MagicMock()
+        # props = {
+        #     'MD5': md5sum,
+        #     'type': 'text/plain',
+        #     'length':
+        # }
         props.get.return_value = md5sum
+        # props.get.side_effect = [md5sum, md5sum, md5sum, 'text/plain', 88]
         # add props to the mocked node
         node = MagicMock(spec=Node)
         node.props = props
@@ -355,6 +361,8 @@ class TestClient(unittest.TestCase):
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         get_node_mock.reset_mock()
+        props.reset_mock()
+        props.get.return_value = md5sum
         test_client.copy(vospaceLocation, osLocation)
         assert not get_node_url_mock.called
         computed_md5_mock.assert_called_once_with(osLocation)
@@ -387,7 +395,9 @@ class TestClient(unittest.TestCase):
             ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
-        props.get.side_effect = ['d00223344', md5sum]
+        props.reset_mock()
+        # props.get.side_effect = ['d00223344', md5sum]
+        props.get.side_effect = ['d00223344', 88, md5sum, 'text/plain']
         test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')

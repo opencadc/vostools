@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .. import md5_cache
-from .. import vos
+from .. import vos, storage_inventory
 from ..commonparser import CommonParser, set_logging_level_from_args,\
     exit_on_exception
 
@@ -97,9 +97,21 @@ def vcp():
     if dest[0:4] != 'vos:':
         dest = os.path.abspath(dest)
 
-    client = vos.Client(vospace_certfile=args.certfile,
-                        vospace_token=args.token,
-                        transfer_shortcut=args.quick)
+    # The --resource-id switch will be the thing that tells the vcp command
+    # to use the provided URIs with the Storage Inventory system.  This will
+    # usually be set to ivo://cadc.nrc.ca/raven for the Global Site, but can
+    # be set to any specific site at the user's own risk.
+    #
+    # jenkinsd 2020.01.03
+    #
+    if 'resource_id' in args:
+        client = storage_inventory.Client(args.resource_id, 
+                                          certfile=args.certfile,
+                                          token=args.token)
+    else:
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token,
+                            transfer_shortcut=args.quick)
 
     exit_code = 0
 
@@ -128,6 +140,11 @@ def vcp():
     def get_node(filename, limit=None):
         """Get node, from cache if possible"""
         return client.get_node(filename, limit=limit)
+
+    def get_metadata(self, uri):
+        """
+        Obtain metadata information about the Artifact for the given URI.
+        """
 
     # here are a series of methods that choose between calling the system
     # version or the vos version of various

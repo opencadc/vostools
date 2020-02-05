@@ -15,3 +15,4 @@
 
 """
 from .vos import Client, Connection, Node, VOFile  # noqa
+from .storage_inventory import Client as StorageInventoryClient
