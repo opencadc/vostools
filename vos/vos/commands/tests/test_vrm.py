@@ -129,7 +129,7 @@ class TestVRM(unittest.TestCase):
             delete_nodes(args)
         self.assertTrue('is not a directory' in str(ex.exception))
 
-    # TODO: Change Client to StorageClient when it is available
+    # TODO: alinga-- Change Client to StorageClient when it is available
     @patch('vos.vos.Client')
     def test_delete_files(self, client_mock):
         """Test the delete_files function in vrm"""

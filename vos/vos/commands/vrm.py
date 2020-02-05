@@ -33,10 +33,10 @@ def delete_nodes(args):
 
 
 def delete_files(args):
-    # TODO: Change Client to StorageClient when it is available
+    # TODO: alinga-- Change Client to StorageClient when it is available
     client = vos.Client(storage_certfile=args.certfile,
-                               storage_token=args.token,
-                               resource_id=args.resource_id)
+                        storage_token=args.token,
+                        resource_id=args.resource_id)
     for file in args.source:
         if file.startswith('vos:'):
             raise Exception(
