@@ -4,6 +4,7 @@ import logging
 from ..commonparser import set_logging_level_from_args, exit_on_exception, \
     CommonParser
 from .. import vos
+from cadcutils.util import utils
 
 DESCRIPTION = """remove a file or a vospace data node; fails if container
 node or node is locked.
@@ -40,7 +41,12 @@ def delete_files(args):
         if file.startswith('vos:'):
             raise Exception(
                 '{} is not a valid storage handle'.format(file))
-        else:
+        if file.endswith('/'):
+            raise Exception(
+                '{} is not a valid storage file handle'.format(file))
+        elif client.isdir(file):
+            raise Exception('{} is a directory'.format(file))
+        elif utils.is_uri_string(file):
             logging.info('deleting {}'.format(file))
             client.delete(file)
 

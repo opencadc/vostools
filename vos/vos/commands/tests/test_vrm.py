@@ -135,6 +135,7 @@ class TestVRM(unittest.TestCase):
         """Test the delete_files function in vrm"""
 
         # happy path
+        client_mock.return_value.isdir.return_value = False
         client_mock.return_value.delete_files.return_value = None
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
@@ -169,3 +170,62 @@ class TestVRM(unittest.TestCase):
         with self.assertRaises(Exception) as ex:
             delete_files(args)
         self.assertTrue('not a valid storage' in str(ex.exception))
+
+        # files ends with '/'
+        client_mock.return_value.delete_files.return_value = None
+        sys.argv = [
+            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
+            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/']
+        parser = CommonParser()
+        parser.add_argument(
+            "--resource-id", default=None,
+            help="resource ID of the Storage Inventory service to be used")
+        parser.add_argument(
+            'source',
+            help='file, dataNode or linkNode to delete from VOSpace',
+            nargs='+')
+        args = parser.parse_args()
+        with self.assertRaises(Exception) as ex:
+            delete_files(args)
+        self.assertTrue('not a valid storage file' in str(ex.exception))
+
+        # isdir
+        client_mock.return_value.isdir.return_value = True
+        client_mock.return_value.delete_files.return_value = None
+        sys.argv = [
+            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
+            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/test.txt']
+        parser = CommonParser()
+        parser.add_argument(
+            "--resource-id", default=None,
+            help="resource ID of the Storage Inventory service to be used")
+        parser.add_argument(
+            'source',
+            help='file, dataNode or linkNode to delete from VOSpace',
+            nargs='+')
+        args = parser.parse_args()
+        with self.assertRaises(Exception) as ex:
+            delete_files(args)
+        self.assertTrue('a directory' in str(ex.exception))
+
+        # wild card in file URI is not supported
+        client_mock.return_value.isdir.return_value = False
+        client_mock.return_value.delete_files.return_value = None
+        sys.argv = [
+            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
+            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/*.txt']
+        parser = CommonParser()
+        parser.add_argument(
+            "--resource-id", default=None,
+            help="resource ID of the Storage Inventory service to be used")
+        parser.add_argument(
+            'source',
+            help='file, dataNode or linkNode to delete from VOSpace',
+            nargs='+')
+        args = parser.parse_args()
+        with self.assertRaises(ValueError) as ex:
+            delete_files(args)
+        self.assertTrue('Invalid URL' in str(ex.exception))
