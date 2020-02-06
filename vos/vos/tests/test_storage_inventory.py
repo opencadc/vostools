@@ -180,14 +180,14 @@ class TestClient(unittest.TestCase):
 
         # error tests - md5sum mismatch
         headers['Content-MD5'] = '0000bad0000'
-        with self.assertRaises(OSError):
+        with self.assertRaises(IOError):
             test_client.copy(storageLocation, osLocation)
 
-        headers['Content-MD5'] = md5sum
+        headers['Content-MD5'] = md5sume
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = None
         computed_md5_mock.return_value = '0000bad0000'
-        with self.assertRaises(OSError):
+        with self.assertRaises(IOError):
             test_client.copy(osLocation, storageLocation)
 
         # requests just the headers
