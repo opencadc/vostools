@@ -86,7 +86,6 @@ class Client(object):
         self.resource_id = resource_id
         self.secure_get = secure_get
         self.token = token
-        self._endpoints = {self.resource_id: EndPoints(self.resource_id)}
 
         if conn:
             self.conn = conn
@@ -95,7 +94,7 @@ class Client(object):
                                    vospace_certfile=certfile,
                                    vospace_token=token)
 
-    def copy(self, source, destination, send_md5=True, disposition=False,
+    def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
         """
             Copy from the source to the destination.
@@ -157,8 +156,11 @@ class Client(object):
             raise ValueError('Unable to process copying {} to {}'.format(
                                 source, destination))
 
+    def get_endpoints(self):
+        return {self.resource_id: EndPoints(self.resource_id)}
+
     def transfer(self, uri, direction, view=None, cutout=None):
-        trans = Transfer(self._endpoints[self.resource_id])
+        trans = Transfer(self.get_endpoints())
         return trans.transfer(uri, direction, self.conn, self._get_protocol(),
                               view, cutout)
 
@@ -175,12 +177,9 @@ class Client(object):
         :return: destination size in bytes
         :rtype long
         """
-        source_md5 = md5_cache.MD5Cache.compute_md5(source)
-        artifact_uri = urlparse(source)
-        transfer = Transfer(self._endpoints[self.resource_id])
-        download_url = transfer.transfer(artifact_uri,
-                                         Transfer.DIRECTION_PULL_FROM,
-                                         self.conn, self._get_protocol())
+        source_md5 = self.get_metadata(source).get('content_md5')
+        download_url = self.transfer(source, Transfer.DIRECTION_PULL_FROM)
+
         stream = Stream(self.conn)
         return stream.download(download_url, source, source_md5, destination,
                                True, True)
@@ -197,13 +196,9 @@ class Client(object):
         :rtype {}
         """
         source_md5 = md5_cache.MD5Cache.compute_md5(source)
-        artifact_uri = urlparse(destination)
-        transfer = Transfer(self._endpoints[self.resource_id])
-        upload_url = transfer.transfer(artifact_uri,
-                                       Transfer.DIRECTION_PUSH_TO,
-                                       self.conn, self._get_protocol())
+        upload_url = self.transfer(destination, Transfer.DIRECTION_PUSH_TO)
         stream = Stream(self.conn)
-        return stream.upload(upload_url, artifact_uri, source, source_md5,
+        return stream.upload(upload_url, destination, source, source_md5,
                              self.get_metadata)
 
     def _get_protocol(self):
@@ -214,6 +209,9 @@ class Client(object):
 
     def _is_remote(self, uri):
         return uri.scheme and uri.scheme != 'file'
+
+    def _get_ws_client(self):
+        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT)
 
     def get_metadata(self, uri):
         """
@@ -233,9 +231,9 @@ class Client(object):
         """
         _uri = urlparse(uri)
         session_headers = {HEADER_DELEG_TOKEN: self.token}
-        ws_client = net.BaseWsClient(self.resource_id, EndPoints.subject,
-                                     VOS_AGENT,
-                                     session_headers=session_headers)
+        ws_client = self._get_ws_client()
+        ws_client.session_headers = session_headers
+
         response = ws_client.head(resource=(STANDARD_ID, _uri.path))
         headers = response.headers
 

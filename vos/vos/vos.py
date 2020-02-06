@@ -2824,15 +2824,15 @@ class Stream(object):
 
         return destination_size
 
-    def upload(self, artifact_uri, put_url, source, source_md5,
+    def upload(self, put_url, artifact_uri, source, source_md5,
                get_metadata_fn):
         """
         Upload the source data to the put_url.
 
+        :param put_url: The Service URL accepting PUTs.
+        :type put_url: unicode
         :param artifact_uri: The URI of the destination.
         :type artifact_uri: unicode
-        :param put_url: The URL to PUT to.
-        :type put_url: unicode
         :param source: The source data (file)
         :type source: unicode
         :param source_md5: The MD5 hash value
@@ -2848,7 +2848,7 @@ class Stream(object):
         metadata = get_metadata_fn(artifact_uri)
         destination_md5 = metadata.get('content_md5', ZERO_MD5)
         if destination_md5 != source_md5:
-            raise Exception(
+            raise IOError(
                 "Source md5 ({}) != destination md5 ({})".
                 format(source_md5, destination_md5))
         return metadata
