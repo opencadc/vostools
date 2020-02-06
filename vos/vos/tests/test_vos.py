@@ -309,13 +309,7 @@ class TestClient(unittest.TestCase):
 
         # mock the props of the corresponding node
         props = MagicMock()
-        # props = {
-        #     'MD5': md5sum,
-        #     'type': 'text/plain',
-        #     'length':
-        # }
         props.get.return_value = md5sum
-        # props.get.side_effect = [md5sum, md5sum, md5sum, 'text/plain', 88]
         # add props to the mocked node
         node = MagicMock(spec=Node)
         node.props = props
