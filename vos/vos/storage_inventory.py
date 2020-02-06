@@ -64,7 +64,7 @@ class Client(object):
       system.
     """
 
-    def __init__(self, resource_id=RAVEN_URI, certfile=None, conn=None,
+    def __init__(self, resource_id, certfile=None, conn=None,
                  secure_get=False, token=None):
         """
         :param resource_id:     The service Resource ID to use.  Defaults to
@@ -156,6 +156,15 @@ class Client(object):
         else:
             raise ValueError('Unable to process copying {} to {}'.format(
                                 source, destination))
+
+    def transfer(self, uri, direction, view=None, cutout=None):
+        trans = Transfer(self._endpoints[self.resource_id])
+        return trans.transfer(uri, direction, self.conn, self._get_protocol(),
+                              view, cutout)
+
+    def get_transfer_error(self, uri, url):
+        trans = Transfer(None)
+        return trans.get_transfer_error(self.conn, uri, url)
 
     def _get(self, source, destination):
         """
