@@ -183,7 +183,7 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(IOError):
             test_client.copy(storageLocation, osLocation)
 
-        headers['Content-MD5'] = md5sume
+        headers['Content-MD5'] = md5sum
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = None
         computed_md5_mock.return_value = '0000bad0000'
