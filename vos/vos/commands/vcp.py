@@ -105,7 +105,7 @@ def vcp():
     # jenkinsd 2020.01.03
     #
     if 'resource_id' in args:
-        client = storage_inventory.Client(args.resource_id, 
+        client = storage_inventory.Client(args.resource_id,
                                           certfile=args.certfile,
                                           token=args.token)
     else:

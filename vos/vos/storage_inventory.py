@@ -86,7 +86,6 @@ class Client(object):
         self.resource_id = resource_id
         self.secure_get = secure_get
         self.token = token
-        
         self._endpoints = {self.resource_id: EndPoints(self.resource_id)}
 
         if conn:
@@ -132,7 +131,7 @@ class Client(object):
         destination_uri = urlparse(destination)
         is_source_remote = self._is_remote(source_uri)
         is_destination_remote = self._is_remote(destination_uri)
-       
+
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
         elif is_source_remote:
@@ -176,7 +175,7 @@ class Client(object):
         stream = Stream(self.conn)
         return stream.download(download_url, source, source_md5, destination,
                                True, True)
-    
+
     def _put(self, source, destination):
         """
         Perform the upload and verify the MD5 post write.
@@ -191,13 +190,13 @@ class Client(object):
         source_md5 = md5_cache.MD5Cache.compute_md5(source)
         artifact_uri = urlparse(destination)
         transfer = Transfer(self._endpoints[self.resource_id])
-        upload_url = transfer.transfer(artifact_uri, 
+        upload_url = transfer.transfer(artifact_uri,
                                        Transfer.DIRECTION_PUSH_TO,
                                        self.conn, self._get_protocol())
         stream = Stream(self.conn)
         return stream.upload(upload_url, artifact_uri, source, source_md5,
                              self.get_metadata)
-    
+
     def _get_protocol(self):
         if self.secure_get:
             return 'https'

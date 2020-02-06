@@ -2844,7 +2844,7 @@ class Stream(object):
         """
         with open(source, str('rb')) as fin:
             self.conn.session.put(put_url, data=fin)
-            
+
         metadata = get_metadata_fn(artifact_uri)
         destination_md5 = metadata.get('content_md5', ZERO_MD5)
         if destination_md5 != source_md5:
