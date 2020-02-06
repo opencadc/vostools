@@ -141,12 +141,6 @@ def vcp():
         """Get node, from cache if possible"""
         return client.get_node(filename, limit=limit)
 
-    def get_metadata(self, uri):
-        """
-        Obtain metadata information about the Artifact for the given URI.
-        """
-        return client.get_metadata(uri)
-
     # here are a series of methods that choose between calling the system
     # version or the vos version of various
     # function, based on pattern matching.
