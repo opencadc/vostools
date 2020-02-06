@@ -2588,83 +2588,88 @@ class Transfer(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        endpoints = self.endpoints[uri]
-        protocol = {Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
-                    Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
+        if self.endpoints:
+            nodes = self.endpoints.nodes
+            trans = self.endpoints.transfer
 
-        transfer_xml = ElementTree.Element("vos:transfer")
-        transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
-        ElementTree.SubElement(transfer_xml, "vos:target").text = uri
-        ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
+            protocol = {Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
+                        Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
 
-        if view == 'move':
-            ElementTree.SubElement(transfer_xml,
-                                   "vos:keepBytes").text = "false"
+            transfer_xml = ElementTree.Element("vos:transfer")
+            transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
+            ElementTree.SubElement(transfer_xml, "vos:target").text = uri
+            ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
+
+            if view == 'move':
+                ElementTree.SubElement(transfer_xml,
+                                    "vos:keepBytes").text = "false"
+            else:
+                if view == 'defaultview':
+                    ElementTree.SubElement(transfer_xml, "vos:view").attrib[
+                        'uri'] = VO_VIEW_DEFAULT
+                elif view is not None:
+                    vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
+                    vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
+                    if cutout is not None and view == 'cutout':
+                        param = ElementTree.SubElement(vos_view, "vos:param")
+                        param.attrib['uri'] = CADC_VO_VIEWS[view]
+                        param.text = cutout
+                protocol_element = ElementTree.SubElement(transfer_xml,
+                                                        "vos:protocol")
+                protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
+                                                                protocol[
+                                                                    direction])
+
+            logging.debug(ElementTree.tostring(transfer_xml))
+            logging.debug("Sending to : {}".format(trans))
+
+            data = ElementTree.tostring(transfer_xml)
+            resp = conn.session.post(trans,
+                                data=data,
+                                allow_redirects=False,
+                                headers={'Content-Type': 'text/xml'})
+
+            logging.debug("{0}".format(resp))
+            logging.debug("{0}".format(resp.text))
+            if resp.status_code != 303:
+                raise OSError(resp.status_code,
+                            "Failed to get transfer service response.")
+            transfer_url = resp.headers.get('Location', None)
+
+            if conn.session.auth is not None and "auth" not in transfer_url:
+                transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
+
+            logging.debug("Got back from transfer URL: %s" % transfer_url)
+
+            # For a move this is the end of the transaction.
+            if view == 'move':
+                return not self.get_transfer_error(conn, transfer_url, uri)
+
+            # for get or put we need the protocol value
+            xfer_resp = conn.session.get(transfer_url, allow_redirects=False)
+            xfer_url = xfer_resp.headers.get('Location', None)
+            if conn.session.auth is not None and "auth" not in xfer_url:
+                xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
+            xml_string = conn.session.get(xfer_url).text
+            logging.debug("Transfer Document: %s" % xml_string)
+            transfer_document = ElementTree.fromstring(xml_string)
+            logging.debug(
+                "XML version: {0}".format(ElementTree.tostring(transfer_document)))
+            all_protocols = transfer_document.findall(Node.PROTOCOL)
+            if all_protocols is None or not len(all_protocols) > 0:
+                return self.get_transfer_error(conn, transfer_url, uri)
+
+            result = []
+            for protocol in all_protocols:
+                for node in protocol.findall(Node.ENDPOINT):
+                    result.append(node.text)
+            # if this is a connection to the 'rc' server then we reverse the
+            # urllist to test the fail-over process
+            if urlparse(nodes).netloc.startswith('rc'):
+                result.reverse()
+            return result
         else:
-            if view == 'defaultview':
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
-                    'uri'] = VO_VIEW_DEFAULT
-            elif view is not None:
-                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
-                if cutout is not None and view == 'cutout':
-                    param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = CADC_VO_VIEWS[view]
-                    param.text = cutout
-            protocol_element = ElementTree.SubElement(transfer_xml,
-                                                      "vos:protocol")
-            protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                              protocol[
-                                                                  direction])
-
-        logging.debug(ElementTree.tostring(transfer_xml))
-        logging.debug("Sending to : {}".format(endpoints.transfer))
-
-        data = ElementTree.tostring(transfer_xml)
-        resp = conn.session.post(endpoints.transfer,
-                            data=data,
-                            allow_redirects=False,
-                            headers={'Content-Type': 'text/xml'})
-
-        logging.debug("{0}".format(resp))
-        logging.debug("{0}".format(resp.text))
-        if resp.status_code != 303:
-            raise OSError(resp.status_code,
-                          "Failed to get transfer service response.")
-        transfer_url = resp.headers.get('Location', None)
-
-        if conn.session.auth is not None and "auth" not in transfer_url:
-            transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
-
-        logging.debug("Got back from transfer URL: %s" % transfer_url)
-
-        # For a move this is the end of the transaction.
-        if view == 'move':
-            return not self.get_transfer_error(conn, transfer_url, uri)
-
-        # for get or put we need the protocol value
-        xfer_resp = conn.session.get(transfer_url, allow_redirects=False)
-        xfer_url = xfer_resp.headers.get('Location', None)
-        if conn.session.auth is not None and "auth" not in xfer_url:
-            xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = conn.session.get(xfer_url).text
-        logging.debug("Transfer Document: %s" % xml_string)
-        transfer_document = ElementTree.fromstring(xml_string)
-        logging.debug(
-            "XML version: {0}".format(ElementTree.tostring(transfer_document)))
-        all_protocols = transfer_document.findall(Node.PROTOCOL)
-        if all_protocols is None or not len(all_protocols) > 0:
-            return self.get_transfer_error(conn, transfer_url, uri)
-
-        result = []
-        for protocol in all_protocols:
-            for node in protocol.findall(Node.ENDPOINT):
-                result.append(node.text)
-        # if this is a connection to the 'rc' server then we reverse the
-        # urllist to test the fail-over process
-        if urlparse(endpoints.nodes).netloc.startswith('rc'):
-            result.reverse()
-        return result
+            raise ValueError('No endpoints available.')
 
     def get_transfer_error(self, conn, url, uri):
         """Follow a transfer URL to the Error message

@@ -145,6 +145,7 @@ def vcp():
         """
         Obtain metadata information about the Artifact for the given URI.
         """
+        return client.get_metadata(uri)
 
     # here are a series of methods that choose between calling the system
     # version or the vos version of various
