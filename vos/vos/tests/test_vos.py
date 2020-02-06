@@ -39,6 +39,53 @@ class Object(object):
     pass
 
 
+def test_is_uri_string():
+    """ Test that is_uri_string unction can decipher if an identifier
+        string specifies a uri or a local file.
+    """
+
+    # handling of None argument
+    with pytest.raises(ValueError) as ex:
+        vos.is_uri_string(None)
+    assert('Missing identifier: None' in ex.value.args[0])
+
+    # handling of valid uri strings
+    valid_uri_str_1 = 'ivo://cadc.nrc.ca/file.fits'
+    valid_uri_str_2 = 'ivo://cadc.nrc.ca/files/'
+    valid_uri_str_list = [valid_uri_str_1, valid_uri_str_2]
+    for uri_str in valid_uri_str_list:
+        is_uri = vos.is_uri_string(uri_str)
+        assert(True == is_uri)
+
+    # handling of invalid uri strings
+    invalid_uri_str_1 = 'ivo://'                   # valid scheme only
+    invalid_uri_str_2 = 'ivo:/cadc.nrc.ca/files/'  # no netloc
+    invalid_uri_str_3 = 'ivo://cadc.nrc.ca'        # no path
+    invalid_uri_str_4 = 'ivo://cadc.nrc.ca/f*/'    # wild card no supported
+    invalid_uri_str_list = [invalid_uri_str_1, invalid_uri_str_2,
+                            invalid_uri_str_3, invalid_uri_str_4]
+    for uri_str in invalid_uri_str_list:
+        with pytest.raises(ValueError) as ex:
+            vos.is_uri_string(uri_str)
+        assert('Invalid URL' in ex.value.args[0])
+
+    # handling of valid file strings
+    valid_file_str_1 = 'foo.fits'
+    valid_file_str_2 = 'foo*.fits'
+    valid_file_str_3 = '*.fits'
+    valid_file_str_4 = './foo.fits'
+    valid_file_str_5 = './test/foo.fits'
+    valid_file_str_6 = '/tmp/foo.fits'
+    valid_file_str_7 = '.'
+    valid_file_str_list = [valid_file_str_1, valid_file_str_2,
+                           valid_file_str_3, valid_file_str_4,
+                           valid_file_str_5, valid_file_str_6,
+                           valid_file_str_7]
+    for file_str in valid_file_str_list:
+        is_uri = vos.is_uri_string(file_str)
+        assert(False == is_uri)
+
+
 def test_get_node_url():
     client = Client()
     with pytest.raises(TypeError):

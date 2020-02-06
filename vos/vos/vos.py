@@ -116,6 +116,31 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
+def is_uri_string(id_str):
+    """
+    Takes a file identifier string and determines if it specifies a URI.
+    At time of writing, wild card in path is considered invalid.
+
+    :param id_str A identifier string
+    :return True if we can use the identifier string to create a URI instance,
+            False if the identifier string does not start with '<scheme>:'
+    """
+
+    if id_str is None:
+        raise ValueError('Missing identifier: {}'.format(id_str))
+
+    url = urlparse(id_str)
+    if (len(url.scheme) == 0):
+        # missing scheme
+        return False
+    elif (len(url.netloc) == 0) or (len(url.path) == 0) or \
+        ('*' in url.path):
+        raise ValueError('Invalid URL: {}'.format(id_str))
+    else:
+        # a valid url
+        return True
+
+
 def _rename_vospace_resource():
     # temporary function to deal with renaming of the
     # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
