@@ -390,7 +390,6 @@ class TestClient(unittest.TestCase):
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
         props.reset_mock()
-        # props.get.side_effect = ['d00223344', md5sum]
         props.get.side_effect = ['d00223344', 88, md5sum, 'text/plain']
         test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
