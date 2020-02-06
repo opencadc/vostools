@@ -55,7 +55,7 @@ def test_is_uri_string():
     valid_uri_str_list = [valid_uri_str_1, valid_uri_str_2]
     for uri_str in valid_uri_str_list:
         is_uri = vos.is_uri_string(uri_str)
-        assert(True == is_uri)
+        assert(is_uri)
 
     # handling of invalid uri strings
     invalid_uri_str_1 = 'ivo://'                   # valid scheme only
@@ -83,7 +83,7 @@ def test_is_uri_string():
                            valid_file_str_7]
     for file_str in valid_file_str_list:
         is_uri = vos.is_uri_string(file_str)
-        assert(False == is_uri)
+        assert(not is_uri)
 
 
 def test_get_node_url():
