@@ -24,6 +24,13 @@ from .vos import Connection, EndPoints, Transfer, Stream
 from . import md5_cache
 
 urlparse = parse.urlparse
+
+# This is an encoder.  It will URL encode any URI component.
+# It is used in creating the DELETE URL by appending the
+# encoded URI to the end of the path.
+# 
+quote_plus = parse.quote_plus
+
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -126,10 +133,8 @@ class Client(object):
         elif not destination:
             raise ValueError('Destination is mandatory.')
 
-        source_uri = urlparse(source)
-        destination_uri = urlparse(destination)
-        is_source_remote = self._is_remote(source_uri)
-        is_destination_remote = self._is_remote(destination_uri)
+        is_source_remote = self._is_remote(source)
+        is_destination_remote = self._is_remote(destination)
 
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
@@ -155,6 +160,20 @@ class Client(object):
         else:
             raise ValueError('Unable to process copying {} to {}'.format(
                                 source, destination))
+
+    def delete(self, uri):
+        """Delete the Artifact
+        :param uri: The Artifact URI to delete.
+
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        logger.debug("delete {0}".format(uri))
+        url = '{}/{}'.format(self.get_endpoints()[self.resource_id].nodes,
+                             quote_plus(uri))
+        response = self.conn.session.delete(url)
+        response.raise_for_status()
 
     def get_endpoints(self):
         return {self.resource_id: EndPoints(self.resource_id)}
@@ -208,7 +227,8 @@ class Client(object):
             return 'http'
 
     def _is_remote(self, uri):
-        return uri.scheme and uri.scheme != 'file'
+        _uri = urlparse(uri)
+        return _uri.scheme and _uri.scheme != 'file'
 
     def _get_ws_client(self):
         return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT)
@@ -218,7 +238,7 @@ class Client(object):
         Obtain the general metadata for the artifact/node identified by the
         given uri.
 
-        :param uri: A VOSpace node URI in the format vos:/VOSpaceName/nodeName
+        :param uri: An Artifact URI.
         :type uri: unicode
         :return: A dict with the following keys:
                 - content_disposition: unicode filename disposition
