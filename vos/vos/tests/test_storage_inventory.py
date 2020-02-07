@@ -196,10 +196,24 @@ class TestClient(unittest.TestCase):
         computed_md5_mock.return_value = md5sum
         test_client.copy(storageLocation, osLocation, head=True)
 
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files'))
+    def test_delete(self):
+        conn = MagicMock(spec=Connection)
+        certfile = '/tmp/SomeCert.pem'
+        open(certfile, 'w+')
+        with patch('os.access'):
+            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
+                            certfile=certfile, conn=conn)
+        uri1 = 'iris:nosuchfile1'
+        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/iris%3Anosuchfile1'
+        client.conn.session.delete = Mock()
+        client.delete(uri1)
+        client.conn.session.delete.assert_called_once_with(url)
+
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
     @patch('vos.vos.VOFile')
-    @pytest.mark.skip
     def test_transfer_error(self, mock_vofile):
         vofile = MagicMock()
         mock_vofile.return_value = vofile
