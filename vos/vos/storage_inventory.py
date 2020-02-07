@@ -28,7 +28,7 @@ urlparse = parse.urlparse
 # This is an encoder.  It will URL encode any URI component.
 # It is used in creating the DELETE URL by appending the
 # encoded URI to the end of the path.
-# 
+#
 quote_plus = parse.quote_plus
 
 logger = logging.getLogger('vos')
@@ -38,7 +38,7 @@ logger.setLevel(logging.ERROR)
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 
 # Create an agent for URL communications.
-VOS_AGENT = 'vcp/' + version
+VOS_AGENT = 'vos/' + version
 
 # Transfer URI for negotiation
 VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
@@ -97,9 +97,10 @@ class Client(object):
         if conn:
             self.conn = conn
         else:
-            self.conn = Connection(resource_id=self.resource_id,
-                                   vospace_certfile=certfile,
-                                   vospace_token=token)
+            self.conn = Connection(vospace_certfile=certfile,
+                                   vospace_token=token,
+                                   http_debug=True,
+                                   resource_id=resource_id)
 
     def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
@@ -231,7 +232,8 @@ class Client(object):
         return _uri.scheme and _uri.scheme != 'file'
 
     def _get_ws_client(self):
-        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT)
+        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT,
+                                host=os.getenv('VOSPACE_WEBSERVICE', None))
 
     def get_metadata(self, uri):
         """
@@ -249,6 +251,7 @@ class Client(object):
                                 (i.e. application/fits)
         :rtype: {}
         """
+        logger.debug('vcp::get_metadata')
         _uri = urlparse(uri)
         session_headers = {HEADER_DELEG_TOKEN: self.token}
         ws_client = self._get_ws_client()

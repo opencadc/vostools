@@ -17,9 +17,12 @@ import errno
 import os
 import re
 import glob
+import six.moves.urllib.parse as urllibparse
 import time
 import warnings
 from cadcutils import exceptions
+
+urlparse = urllibparse.urlparse
 
 __all__ = ['vcp']
 
@@ -43,6 +46,15 @@ If no X509 certificate given on commnad line then location specified by
 default service settings will be used.
 """
 
+def _is_vos(fileuri):
+    if isinstance(fileuri, str):
+        fileuri = urlparse(fileuri)
+    return fileuri.scheme == 'vos'
+
+def _is_remote_file(fileuri):
+    if isinstance(fileuri, str):
+        fileuri = urlparse(fileuri)
+    return fileuri.scheme and fileuri.scheme != 'file'
 
 def vcp():
     # TODO split this into main and methods
@@ -94,7 +106,7 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if dest[0:4] != 'vos:':
+    if not _is_vos(dest) and not _is_remote_file(dest):
         dest = os.path.abspath(dest)
 
     # The --resource-id switch will be the thing that tells the vcp command
@@ -104,7 +116,7 @@ def vcp():
     #
     # jenkinsd 2020.01.03
     #
-    if 'resource_id' in args:
+    if 'resource_id' in args and args.resource_id is not None:
         client = storage_inventory.Client(args.resource_id,
                                           certfile=args.certfile,
                                           token=args.token)
@@ -148,18 +160,21 @@ def vcp():
 
     def isdir(filename):
         logging.debug("Doing an isdir on %s" % filename)
-        if filename[0:4] == "vos:":
+        _filename = urlparse(filename)
+        if _filename.scheme:
             return client.isdir(filename)
         else:
             return os.path.isdir(filename)
 
     def islink(filename):
         logging.debug("Doing an islink on %s" % filename)
-        if filename[0:4] == "vos:":
+        if _is_vos(filename):
             try:
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
                 return False
+        elif _is_remote_file(filename):
+            return False
         else:
             return os.path.islink(filename)
 
@@ -171,10 +186,18 @@ def vcp():
         @return: True/False
         """
         logging.debug("checking for access %s " % filename)
-        if filename[0:4] == "vos:":
+        if _is_vos(filename):
             try:
                 node = get_node(filename, limit=0)
                 return node is not None
+            except (
+                exceptions.NotFoundException, exceptions.ForbiddenException,
+                    exceptions.UnauthorizedException):
+                return False
+        elif _is_remote_file(filename):
+            try:
+                client.get_metadata(filename)
+                return True
             except (
                 exceptions.NotFoundException, exceptions.ForbiddenException,
                     exceptions.UnauthorizedException):
@@ -186,27 +209,30 @@ def vcp():
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if dirname[0:4] == "vos:":
+        if _is_vos(dirname) or _is_remote_file(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if filename[0:4] == 'vos:':
+        if _is_vos(filename) or _is_remote_file(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
 
     def get_md5(filename):
-        logging.debug("getting the MD5 for %s" % filename)
-        if filename[0:4] == 'vos:':
+        logging.debug("getting the MD5 for %s".format(filename))
+        if _is_vos(filename):
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
+        elif _is_remote_file(filename):
+            return client.get_metadata(filename).get('content_md5',
+                                                     vos.ZERO_MD5)
         else:
             return md5_cache.MD5Cache.compute_md5(filename)
 
     def lglob(pathname):
-        if pathname[0:4] == "vos:":
+        if _is_vos(pathname):
             return client.glob(pathname)
         else:
             return glob.glob(pathname)
@@ -354,7 +380,7 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if source_pattern[0:4] != "vos:":
+            if _is_vos(source_pattern) or _is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -372,7 +398,7 @@ def vcp():
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
             for source in sources:
-                if source[0:4] != "vos:":
+                if not _is_vos(source) and not _is_remote_file(source):
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
@@ -383,9 +409,10 @@ def vcp():
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
+                if (_is_vos(source) or _is_remote_file(source))\
+                        and (_is_vos(dest) or _is_remote_file(dest)):
                     raise Exception(
-                        "Can not (yet) copy from VOSpace to VOSpace.")
+                        "Can not (yet) copy from server to server.")
 
                 this_destination = dest
                 if isdir(source):

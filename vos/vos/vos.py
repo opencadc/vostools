@@ -1605,11 +1605,12 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
-        if source[0:4] == "vos:":
+        _source = urlparse(source)
+        if _source.scheme and _source.scheme != 'file':
             if destination is None:
                 # Set the destination, initially, to the same directory as
-                # the source (strip the vos:)
-                destination = os.path.dirname(source)[4:]
+                # the source (strip the scheme:)
+                destination = os.path.dirname(_source.path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
                 # content-disposition or
@@ -1722,7 +1723,7 @@ class Client(object):
                     put_url = put_urls.pop(0)
                     try:
                         stream = Stream(self.conn)
-                        stream.upload(destination, put_url, source, source_md5,
+                        stream.upload(put_url, destination, source, source_md5,
                                       self.get_metadata)
                     except Exception as ex:
                         copy_failed_message = str(ex)
