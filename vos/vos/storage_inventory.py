@@ -28,7 +28,7 @@ urlparse = parse.urlparse
 # This is an encoder.  It will URL encode any URI component.
 # It is used in creating the DELETE URL by appending the
 # encoded URI to the end of the path.
-# 
+#
 quote_plus = parse.quote_plus
 
 logger = logging.getLogger('vos')
