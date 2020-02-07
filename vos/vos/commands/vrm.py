@@ -3,7 +3,7 @@
 import logging
 from ..commonparser import set_logging_level_from_args, exit_on_exception, \
     CommonParser
-from .. import vos
+from .. import vos, storage_inventory
 
 DESCRIPTION = """remove a file or a vospace data node; fails if container
 node or node is locked.
@@ -32,10 +32,9 @@ def delete_nodes(args):
 
 
 def delete_files(args):
-    # TODO: alinga-- Change Client to StorageClient when it is available
-    client = vos.Client(storage_certfile=args.certfile,
-                        storage_token=args.token,
-                        resource_id=args.resource_id)
+    client = storage_inventory.Client(args.resource_id,
+                                      certfile=args.certfile,
+                                      token=args.token)
     for file in args.source:
         if file.startswith('vos:'):
             raise Exception(

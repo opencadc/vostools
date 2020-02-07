@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .. import md5_cache
-from .. import vos
+from .. import vos, storage_inventory
 from ..commonparser import CommonParser, set_logging_level_from_args,\
     exit_on_exception
 
@@ -113,10 +113,9 @@ def vcp():
         if not vos.is_uri_string(dest):
             dest = os.path.abspath(dest)
 
-        # TODO: alinga-- change to storage client when available
-        client = vos.Client(vospace_certfile=args.certfile,
-                            vospace_token=args.token,
-                            transfer_shortcut=args.quick)
+        client = storage_inventory.Client(args.resource_id,
+                                          certfile=args.certfile,
+                                          token=args.token)
     exit_code = 0
 
     cutout_pattern = re.compile(
@@ -213,9 +212,8 @@ def vcp():
         else:
             if vos.is_uri_string(filename):
                 # storage URI
-                # TODO: alinga-- should use client.get_file()
-                file = client.get_node(filename, limit=0)
-                return file is not None
+                metadata = client.get_metadata(filename)
+                return metadata['content_md5'] is not None
             else:
                 return os.access(filename, mode)
 
