@@ -171,7 +171,7 @@ class TestVRM(unittest.TestCase):
             delete_files(args)
         self.assertTrue('not a valid storage' in str(ex.exception))
 
-        # files ends with '/'
+        # files end with '/'
         client_mock.return_value.delete_files.return_value = None
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\

@@ -23,9 +23,9 @@ from cadcutils import exceptions
 
 __all__ = ['vcp']
 
-DESCRIPTION = """Copy files to and from VOSpace storage. Always recursive
-for VOSpace. VOSpace service associated to the requested container and
-storage service are discovered via registry search.
+DESCRIPTION = """Copy files to and from VOSpace or archive storage. 
+Always recursive for VOSpace. VOSpace service associated to the 
+requested container and storage service are discovered via registry search.
 
 vcp can be used to cutout particular parts of a FITS file if the VOSpace
 server supports the action.
@@ -36,7 +36,10 @@ or
 RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
 
-Wildcards in the path or filename work also:
+For archive storage, wildcards in fielname work:
+vcp *.fits cadc:TEST/
+
+For VOSpace, wildcards in the path or filename work also:
 vcp vos:VOSPACE/foo/*.txt .
 
 If no X509 certificate given on commnad line then location specified by
@@ -97,13 +100,23 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if dest[0:4] != 'vos:':
-        dest = os.path.abspath(dest)
+    # Currently resource_id must be specified to use storage
+    # and server to server copy is not supported
+    if args.resource_id is None:
+        if dest[0:4] != 'vos:':
+            dest = os.path.abspath(dest)
 
-    client = vos.Client(vospace_certfile=args.certfile,
-                        vospace_token=args.token,
-                        transfer_shortcut=args.quick)
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token,
+                            transfer_shortcut=args.quick)
+    else:
+        if not vos.is_uri_string(dest):
+            dest = os.path.abspath(dest)
 
+        # TODO: alinga-- change to storage client when available
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token,
+                            transfer_shortcut=args.quick)
     exit_code = 0
 
     cutout_pattern = re.compile(
@@ -116,17 +129,41 @@ def vcp():
                                        r"(?P<dec>[\-+]?\d*(\.\d*)?),"
                                        r"(?P<rad>\d*(\.\d*)?)\))?")
 
-    # Warnings:
+    # Warnings (applies to VOSpace only):
     # vcp destination specified with a trailing '/' implies ContainerNode
     #
     #    If destination has trailing '/' and exists but is a DataNode then
     #    error message is returned:  "Invalid Argument (target node is not a
     # DataNode)"
     #
-    #    vcp currently only works on the CADC VOSpace server.
     # Version: %s """ % (version.version)
 
     pass
+
+    def get_vos_sources(source_pattern):
+        # define this empty cutout string.  Then we strip possible cutout
+        # strings off the end of the pattern before matching.  This allows
+        # cutouts on the vos service. The shell does pattern matching for
+        # local files, so don't run glob on local files.
+        if source_pattern[0:4] != "vos:":
+            sources = [source_pattern]
+        else:
+            cutout_match = cutout_pattern.search(source_pattern)
+            cutout = None
+            if cutout_match is not None:
+                source_pattern = cutout_match.group(1)
+                cutout = cutout_match.group('cutout')
+            else:
+                ra_dec_match = ra_dec_cutout_pattern.search(source_pattern)
+                if ra_dec_match is not None:
+                    cutout = ra_dec_match.group('cutout')
+            logging.debug("cutout: {}".format(cutout))
+            sources = lglob(source_pattern)
+            if cutout is not None:
+                # stick back on the cutout pattern if there was one.
+                sources = [s + cutout for s in sources]
+
+        return sources
 
     def get_node(filename, limit=None):
         """Get node, from cache if possible"""
@@ -139,7 +176,7 @@ def vcp():
 
     def isdir(filename):
         logging.debug("Doing an isdir on %s" % filename)
-        if filename[0:4] == "vos:":
+        if filename[0:4] == "vos:" or vos.is_uri_string(filename):
             return client.isdir(filename)
         else:
             return os.path.isdir(filename)
@@ -151,6 +188,9 @@ def vcp():
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
                 return False
+        elif vos.is_uri_string(filename):
+            # storage does not support links
+            return False
         else:
             return os.path.islink(filename)
 
@@ -171,20 +211,26 @@ def vcp():
                     exceptions.UnauthorizedException):
                 return False
         else:
-            return os.access(filename, mode)
+            if vos.is_uri_string(filename):
+                # storage URI
+                # TODO: alinga-- should use client.get_file()
+                file = client.get_node(filename, limit=0)
+                return file is not None
+            else:
+                return os.access(filename, mode)
 
     def listdir(dirname):
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if dirname[0:4] == "vos:":
+        if dirname[0:4] == "vos:" or vos.is_uri_string(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if filename[0:4] == 'vos:':
+        if filename[0:4] == "vos:" or vos.is_uri_string(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
@@ -341,29 +387,13 @@ def vcp():
                 logging.error("head only works for source files in vospace")
                 continue
 
-            # define this empty cutout string.  Then we strip possible cutout
-            # strings off the end of the pattern before matching.  This allows
-            # cutouts on the vos service. The shell does pattern matching for
-            # local files, so don't run glob on local files.
-            if source_pattern[0:4] != "vos:":
-                sources = [source_pattern]
+            if args.resource_id is None:
+                sources = get_vos_sources(source_pattern)
             else:
-                cutout_match = cutout_pattern.search(source_pattern)
-                cutout = None
-                if cutout_match is not None:
-                    source_pattern = cutout_match.group(1)
-                    cutout = cutout_match.group('cutout')
-                else:
-                    ra_dec_match = ra_dec_cutout_pattern.search(source_pattern)
-                    if ra_dec_match is not None:
-                        cutout = ra_dec_match.group('cutout')
-                logging.debug("cutout: {}".format(cutout))
-                sources = lglob(source_pattern)
-                if cutout is not None:
-                    # stick back on the cutout pattern if there was one.
-                    sources = [s + cutout for s in sources]
+                sources = [source_pattern]
+
             for source in sources:
-                if source[0:4] != "vos:":
+                if source[0:4] != "vos:" and not vos.is_uri_string(source):
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
@@ -377,6 +407,11 @@ def vcp():
                 if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
                     raise Exception(
                         "Can not (yet) copy from VOSpace to VOSpace.")
+
+                # server to server copy is not yet implemented
+                if vos.is_uri_string(source) and vos.is_uri_string(dest):
+                    raise Exception(
+                        "Can not (yet) copy from server to server.")
 
                 this_destination = dest
                 if isdir(source):
