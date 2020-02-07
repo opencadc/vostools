@@ -23,7 +23,7 @@ from cadcutils import exceptions
 
 __all__ = ['vcp']
 
-DESCRIPTION = """Copy files to and from VOSpace or archive storage.
+DESCRIPTION = """Copy files to and from VOSpace or inventory storage.
 Always recursive for VOSpace. VOSpace service associated to the
 requested container and storage service are discovered via registry search.
 
@@ -36,7 +36,7 @@ or
 RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
 
-For archive storage, wildcards in fielname work:
+For inventory storage, wildcards in fielname work:
 vcp *.fits cadc:TEST/
 
 For VOSpace, wildcards in the path or filename work also:
@@ -388,7 +388,11 @@ def vcp():
             if args.resource_id is None:
                 sources = get_vos_sources(source_pattern)
             else:
-                sources = [source_pattern]
+                if vos.is_uri_string(source_pattern):
+                    sources = [source_pattern]
+                else:
+                    # support wild cards in a filename, e.g. *.fits
+                    sources = glob.glob(source_pattern)
 
             for source in sources:
                 if source[0:4] != "vos:" and not vos.is_uri_string(source):
