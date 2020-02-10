@@ -19,10 +19,10 @@ else
 endif
 
 if (! ${?CADC_DEBUG} ) then
+    set DEBUG_FLAG = ""
+else
     echo "Debugging is on.  Expect much output."
     set DEBUG_FLAG = "-d"
-else
-    set DEBUG_FLAG = ""
 endif
 
 if (! ${?TMPDIR} ) then

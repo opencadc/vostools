@@ -61,6 +61,9 @@ def vcp():
 
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
+        "--resource-id", default=None,
+        help="resource URI to use to lookup the storage inventory service (Minoc)")
+    parser.add_argument(
         "source", nargs="+",
         help="file/directory/dataNode/containerNode to copy from.")
     parser.add_argument(
@@ -283,27 +286,26 @@ def vcp():
                          exclude, include, interrogate, overwrite, ignore,
                          head)
             else:
-                if interrogate:
-                    if access(destination_name, os.F_OK):
-                        sys.stderr.write(
-                            "File %s exists.  Overwrite? (y/n): " %
-                            destination_name)
-                        ans = sys.stdin.readline().strip()
-                        if ans != 'y':
-                            raise Exception("File exists")
+                # if interrogate:
+                #     if access(destination_name, os.F_OK):
+                #         sys.stderr.write(
+                #             "File %s exists.  Overwrite? (y/n): " %
+                #             destination_name)
+                #         ans = sys.stdin.readline().strip()
+                #         if ans != 'y':
+                #             raise Exception("File exists")
 
-                if not access(os.path.dirname(destination_name), os.F_OK):
-                    raise OSError(errno.EEXIST,
-                                  "vcp: ContainerNode %s does not exist" %
-                                  os.path.dirname(
-                                      destination_name))
+                # if not access(os.path.dirname(destination_name), os.F_OK):
+                #     raise OSError(errno.EEXIST,
+                #                   "vcp: ContainerNode %s does not exist" %
+                #                   os.path.dirname(
+                #                       destination_name))
 
-                if not isdir(os.path.dirname(destination_name)) and not islink(
-                        os.path.dirname(destination_name)):
-                    raise OSError(errno.ENOTDIR,
-                                  "vcp: %s is not a ContainerNode or LinkNode"
-                                  % os.path.dirname(
-                                      destination_name))
+                # if not isdir(os.path.dirname(destination_name))):
+                #     raise OSError(errno.ENOTDIR,
+                #                   "vcp: %s is not a Bucket."
+                #                   % os.path.dirname(
+                #                       destination_name))
 
                 skip = False
                 if exclude is not None:
@@ -324,7 +326,8 @@ def vcp():
                 niters = 0
                 while not skip:
                     try:
-                        logging.debug("Starting call to copy")
+                        logging.debug("Starting call to copy with client {}".\
+                            format(type(client)))
                         client.copy(source_name, destination_name,
                                     send_md5=True, head=head)
                         logging.debug("Call to copy returned")
