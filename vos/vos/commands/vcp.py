@@ -73,9 +73,6 @@ def vcp():
         "destination",
         help="file/directory/dataNode/containerNode to copy to")
     parser.add_argument(
-        "--resource-id", default=None,
-        help="resource ID of the Storage Inventory service to be used")
-    parser.add_argument(
         "--exclude", default=None,
         help="skip files that match pattern (overrides include)")
     parser.add_argument(
