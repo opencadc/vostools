@@ -50,7 +50,7 @@ except ImportError:
 
 urlparse = six.moves.urllib.parse.urlparse
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
@@ -1630,11 +1630,12 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
-        if source[0:4] == "vos:":
+        _source = urlparse(source)
+        if _source.scheme and _source.scheme != 'file':
             if destination is None:
                 # Set the destination, initially, to the same directory as
-                # the source (strip the vos:)
-                destination = os.path.dirname(source)[4:]
+                # the source (strip the scheme:)
+                destination = os.path.dirname(_source.path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
                 # content-disposition or
@@ -1747,7 +1748,7 @@ class Client(object):
                     put_url = put_urls.pop(0)
                     try:
                         stream = Stream(self.conn)
-                        stream.upload(destination, put_url, source, source_md5,
+                        stream.upload(put_url, destination, source, source_md5,
                                       self.get_metadata)
                     except Exception as ex:
                         copy_failed_message = str(ex)
@@ -2162,12 +2163,24 @@ class Client(object):
                                  view="defaultview")
 
     def transfer(self, uri, direction, view=None, cutout=None):
-        trans = Transfer(self.get_endpoints(uri))
-        return trans.transfer(uri, direction, self.conn, self.protocol, view,
-                              cutout)
+        """
+        Issue a VOSpace transfer request and returned the negotiated URLs
+        :return transfer URLs
+        :rtype []
+        """
+        endpoints = self.get_endpoints(uri)
+        trans = Transfer()
+        result = trans.transfer(endpoints.transfer, uri, direction, self.conn,
+                                self.protocol, view, cutout)
+        # if this is a connection to the 'rc' server then we reverse the
+        # urllist to test the fail-over process
+        if urlparse(endpoints.nodes).netloc.startswith('rc'):
+            result.reverse()
+
+        return result
 
     def get_transfer_error(self, uri, url):
-        trans = Transfer(None)
+        trans = Transfer()
         return trans.get_transfer_error(self.conn, uri, url)
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
@@ -2593,13 +2606,12 @@ class Transfer(object):
     DIRECTION_PULL_FROM = "pullFromVoSpace"
     DIRECTION_PUSH_TO = "pushToVoSpace"
 
-    def __init__(self, endpoints):
+    def __init__(self):
         """
         Handle transfer related business.  This is here to be reused as needed.
         """
-        self.endpoints = endpoints
 
-    def transfer(self, uri, direction, conn, protocol,
+    def transfer(self, url, uri, direction, conn, protocol,
                  view=None, cutout=None):
         """Build the transfer XML document
         :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
@@ -2613,10 +2625,7 @@ class Transfer(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        if self.endpoints:
-            nodes = self.endpoints.nodes
-            trans = self.endpoints.transfer
-
+        if url:
             protocol = {Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
                         Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
 
@@ -2646,10 +2655,10 @@ class Transfer(object):
                                                                     direction])
 
             logging.debug(ElementTree.tostring(transfer_xml))
-            logging.debug("Sending to : {}".format(trans))
+            logging.debug("Sending to : {}".format(url))
 
             data = ElementTree.tostring(transfer_xml)
-            resp = conn.session.post(trans,
+            resp = conn.session.post(url,
                                 data=data,
                                 allow_redirects=False,
                                 headers={'Content-Type': 'text/xml'})
@@ -2688,10 +2697,6 @@ class Transfer(object):
             for protocol in all_protocols:
                 for node in protocol.findall(Node.ENDPOINT):
                     result.append(node.text)
-            # if this is a connection to the 'rc' server then we reverse the
-            # urllist to test the fail-over process
-            if urlparse(nodes).netloc.startswith('rc'):
-                result.reverse()
             return result
         else:
             raise ValueError('No endpoints available.')
@@ -2867,6 +2872,9 @@ class Stream(object):
         :return: Metadata dict for the uploaded Artifact.
         :rtype {}
         """
+        self.conn.session.headers.update({('Content-Length',\
+                                            '{}'.format(os.path.getsize(source)))})
+
         with open(source, str('rb')) as fin:
             self.conn.session.put(put_url, data=fin)
 

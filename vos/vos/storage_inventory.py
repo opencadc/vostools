@@ -32,16 +32,13 @@ urlparse = parse.urlparse
 quote_plus = parse.quote_plus
 
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 # Header for token access
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 
 # Create an agent for URL communications.
-VOS_AGENT = 'vcp/' + version
-
-# Transfer URI for negotiation
-VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
+VOS_AGENT = 'vos/' + version
 
 # Standard ID
 STANDARD_ID = 'http://www.opencadc.org/std/storage#files-1.0'
@@ -97,9 +94,10 @@ class Client(object):
         if conn:
             self.conn = conn
         else:
-            self.conn = Connection(resource_id=self.resource_id,
-                                   vospace_certfile=certfile,
-                                   vospace_token=token)
+            self.conn = Connection(vospace_certfile=certfile,
+                                   vospace_token=token,
+                                   http_debug=True,
+                                   resource_id=resource_id)
 
     def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
@@ -133,12 +131,14 @@ class Client(object):
         elif not destination:
             raise ValueError('Destination is mandatory.')
 
+        logger.debug('Checking sanity of inputs.')
         is_source_remote = self._is_remote(source)
         is_destination_remote = self._is_remote(destination)
 
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
         elif is_source_remote:
+            logger.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
             destination_size = self._get(source, destination)
             if send_md5:
                 return md5_cache.MD5Cache.compute_md5(destination)
@@ -150,6 +150,7 @@ class Client(object):
             else:
                 return destination_size
         elif is_destination_remote:
+            logger.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
             metadata = self._put(source, destination)
             if send_md5:
                 return metadata.get('content_md5')
@@ -179,12 +180,14 @@ class Client(object):
         return {self.resource_id: EndPoints(self.resource_id)}
 
     def transfer(self, uri, direction, view=None, cutout=None):
-        trans = Transfer(self.get_endpoints())
-        return trans.transfer(uri, direction, self.conn, self._get_protocol(),
-                              view, cutout)
+        transfer_url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), uri)
+        trans = Transfer()
+        return trans.transfer(transfer_url, uri, direction, self.conn,
+                              self._get_protocol(), view, cutout)
 
     def get_transfer_error(self, uri, url):
-        trans = Transfer(None)
+        trans = Transfer()
         return trans.get_transfer_error(self.conn, uri, url)
 
     def _get(self, source, destination):
@@ -197,9 +200,11 @@ class Client(object):
         :rtype long
         """
         source_md5 = self.get_metadata(source).get('content_md5')
-        download_url = self.transfer(source, Transfer.DIRECTION_PULL_FROM)
+        download_url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), source)
 
         stream = Stream(self.conn)
+        logger.debug('Downloading {}'.format(source))
         return stream.download(download_url, source, source_md5, destination,
                                True, True)
 
@@ -215,8 +220,11 @@ class Client(object):
         :rtype {}
         """
         source_md5 = md5_cache.MD5Cache.compute_md5(source)
-        upload_url = self.transfer(destination, Transfer.DIRECTION_PUSH_TO)
+
+        upload_url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), destination)
         stream = Stream(self.conn)
+        logger.debug('Uploading {}'.format(source))
         return stream.upload(upload_url, destination, source, source_md5,
                              self.get_metadata)
 
@@ -230,8 +238,10 @@ class Client(object):
         _uri = urlparse(uri)
         return _uri.scheme and _uri.scheme != 'file'
 
-    def _get_ws_client(self):
-        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT)
+    def _get_ws_client(self, session_headers=None):
+        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT,
+                                host=os.getenv('VOSPACE_WEBSERVICE', None),
+                                session_headers=session_headers)
 
     def get_metadata(self, uri):
         """
@@ -249,16 +259,16 @@ class Client(object):
                                 (i.e. application/fits)
         :rtype: {}
         """
-        _uri = urlparse(uri)
+        logger.debug('vcp::get_metadata')
         session_headers = {HEADER_DELEG_TOKEN: self.token}
         ws_client = self._get_ws_client()
         ws_client.session_headers = session_headers
 
-        response = ws_client.head(resource=(STANDARD_ID, _uri.path))
+        response = ws_client.head(resource=(STANDARD_ID, uri))
         headers = response.headers
 
         return {
-            'content_disposition': _uri.path,
+            'content_disposition': os.path.split(uri)[-1],
             'content_encoding': headers.get('Content-Encoding'),
             'content_length': headers.get('Content-Length'),
             'content_md5': headers.get('Content-MD5'),
