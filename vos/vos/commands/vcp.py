@@ -411,7 +411,8 @@ def vcp():
                         "Can not (yet) copy from VOSpace to VOSpace.")
 
                 # server to server copy is not yet implemented
-                if vos.is_uri_string(source) and vos.is_uri_string(dest):
+                if args.resource_id is not None and vos.is_uri_string(source)\
+                        and vos.is_uri_string(dest):
                     raise Exception(
                         "Can not (yet) copy from server to server.")
 
