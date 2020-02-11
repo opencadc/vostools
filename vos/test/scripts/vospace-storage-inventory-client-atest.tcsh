@@ -38,6 +38,8 @@ set SET_SITE_1_RESOURCE_ID = " --resource-id ${SITE_1_RESOURCE_ID}"
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+set DIFFCMD = "diff -q"
+
 set RMCMD = "vrm ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
 set CPCMD = "vcp ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
 set RMDIRCMD = "vrmdir ${DEBUG_FLAG}"
@@ -62,27 +64,53 @@ echo
 echo "** test resource: ${SITE_1_RESOURCE_ID}"
 echo
 
-
+echo "-----------"
 echo -n "Copy file to existing container and non-existent data node "
 $CPCMD $CERT $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "copy empty files"
-rm -f /tmp/zerosize.txt
-touch /tmp/zerosize.txt
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
-# repeat
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
-# change size
-echo "test" > /tmp/zerosize.txt
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
-# repeat
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
-# make it back 0 size
-/bin/cp /dev/null /tmp/zerosize.txt
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
-# repeat
-$CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
+echo "-----------"
+echo -n "Copy existing file from existing container "
+$CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo "-----------"
+echo -n "Copy/overwrite existing data node "
+$CPCMD $CERT $THIS_DIR/something.png.2 $CONTAINER/something.png || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "Check quick copy"
+$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
+$CPCMD $CERT $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+\rm -f $THIS_DIR/something.png.3
+echo " [OK]"
+
+# echo -n "Check pattern matched copy"
+# $CPCMD $CERT "$CONTAINER/something*" $TMPDIR || echo " [FAIL]" && exit -1
+# $CPCMD $CERT $THIS_DIR/something* $CONTAINER/pattern_dest || echo " [FAIL]" && exit -1
+# echo " [OK]"
+
+# Cutouts not supported yet.
+# jenkinsd 2020.02.11
+#
+# echo -n "Check pattern with cutout"
+# $CPCMD $CERT "$BASE/test*.fits[1:10,1:10]" $TMPDIR || echo " [FAIL]" && exit -1
+# echo " [OK]"
+
+# Not supported yet.
+# jenkinsd 2020.02.11
+#
+# echo -n "Copy empty files and should print message "
+# rm -f /tmp/zerosize.txt
+# touch /tmp/zerosize.txt
+# $CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
+# echo " [OK]"
+
+echo "-----------"
+echo -n "Cleanup "
+\rm -f $THIS_DIR/something.png.*
 echo " [OK]"
 
 echo

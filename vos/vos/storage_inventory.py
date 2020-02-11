@@ -200,9 +200,11 @@ class Client(object):
         :rtype long
         """
         source_md5 = self.get_metadata(source).get('content_md5')
-        download_url = self.transfer(source, Transfer.DIRECTION_PULL_FROM)
+        download_url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), source)
 
         stream = Stream(self.conn)
+        logger.debug('Downloading {}'.format(source))
         return stream.download(download_url, source, source_md5, destination,
                                True, True)
 
@@ -218,9 +220,9 @@ class Client(object):
         :rtype {}
         """
         source_md5 = md5_cache.MD5Cache.compute_md5(source)
-        logger.debug('Obtaining transfer URL for {}'.format(source))
-        upload_url = self.transfer(destination, Transfer.DIRECTION_PUSH_TO)
-        logger.debug('Transferring to {}'.format(upload_url))
+
+        upload_url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), destination)
         stream = Stream(self.conn)
         logger.debug('Uploading {}'.format(source))
         return stream.upload(upload_url, destination, source, source_md5,
@@ -236,9 +238,10 @@ class Client(object):
         _uri = urlparse(uri)
         return _uri.scheme and _uri.scheme != 'file'
 
-    def _get_ws_client(self):
+    def _get_ws_client(self, session_headers=None):
         return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT,
-                                host=os.getenv('VOSPACE_WEBSERVICE', None))
+                                host=os.getenv('VOSPACE_WEBSERVICE', None),
+                                session_headers=session_headers)
 
     def get_metadata(self, uri):
         """

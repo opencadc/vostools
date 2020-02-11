@@ -2847,6 +2847,9 @@ class Stream(object):
         :return: Metadata dict for the uploaded Artifact.
         :rtype {}
         """
+        self.conn.session.headers.update({('Content-Length',\
+                                            '{}'.format(os.path.getsize(source)))})
+
         with open(source, str('rb')) as fin:
             self.conn.session.put(put_url, data=fin)
 
