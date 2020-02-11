@@ -32,7 +32,7 @@ urlparse = parse.urlparse
 quote_plus = parse.quote_plus
 
 logger = logging.getLogger('vos')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 # Header for token access
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
