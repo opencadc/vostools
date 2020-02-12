@@ -138,7 +138,7 @@ class Client(object):
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
         elif is_source_remote:
-            logger.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
+            logging.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
             destination_size = self._get(source, destination)
             if send_md5:
                 return md5_cache.MD5Cache.compute_md5(destination)
@@ -150,7 +150,7 @@ class Client(object):
             else:
                 return destination_size
         elif is_destination_remote:
-            logger.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
+            logging.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
             metadata = self._put(source, destination)
             if send_md5:
                 return metadata.get('content_md5')

@@ -3,13 +3,16 @@
 date
 echo "###################"
 /bin/rm -rf ~/.config/cadc-registry
+setenv CADC_DEBUG ${CADC_DEBUG}
+setenv REQUESTS_CA_BUNDLE /etc/ssl/certs/ca-certificates.crt
+setenv VOSPACE_WEBSERVICE mach275.cadc.dao.nrc.ca
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
     setenv VOSPACE_WEBSERVICE 'www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'
 else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): ${VOSPACE_WEBSERVICE}"
 endif
-
+setenv CADC_TESTCERT_PATH /root/ssl
 if (! ${?CADC_TESTCERT_PATH} ) then
 	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
     exit -1
@@ -80,9 +83,15 @@ echo -n "Copy/overwrite existing data node "
 $CPCMD $CERT $THIS_DIR/something.png.2 $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "Check quick copy"
+echo -n "Upload check quick copy "
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "Download check quick copy "
 $CPCMD $CERT $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "Compare check quick copy "
 cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
 \rm -f $THIS_DIR/something.png.3
 echo " [OK]"

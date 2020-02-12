@@ -199,7 +199,8 @@ def vcp():
                 return False
         elif _is_remote_file(filename):
             try:
-                client.get_metadata(filename)
+                md = client.get_metadata(filename)
+                logging.debug('Found metadata {}'.format(md))
                 return True
             except (
                 exceptions.NotFoundException, exceptions.ForbiddenException,
@@ -237,6 +238,8 @@ def vcp():
     def lglob(pathname):
         if _is_vos(pathname):
             return client.glob(pathname)
+        elif _is_remote_file(pathname):
+            return [pathname]
         else:
             return glob.glob(pathname)
 
@@ -309,7 +312,7 @@ def vcp():
                             format(type(client)))
                         client.copy(source_name, destination_name,
                                     send_md5=True, head=head)
-                        logging.debug("Call to copy returned")
+                        logging.debug("Call to copy returned from {} to {}".format(source_name, destination_name))
                         break
                     except Exception as client_exception:
                         logging.debug("{}".format(client_exception))
@@ -375,12 +378,17 @@ def vcp():
                     if ra_dec_match is not None:
                         cutout = ra_dec_match.group('cutout')
                 logging.debug("cutout: {}".format(cutout))
-                sources = lglob(source_pattern)
+                logging.debug('GLOBbing {}'.format(source_pattern))
+                sources = lglob(source_pattern)                
                 if cutout is not None:
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
+
+                logging.debug('Sources are {}'.format(sources))
             for source in sources:
+                logging.debug('Checking source {}'.format(source))
                 if not _is_vos(source) and not _is_remote_file(source):
+                    logging.debug('Correcting path.')
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
