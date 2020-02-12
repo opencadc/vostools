@@ -2791,17 +2791,19 @@ class Transfer(object):
         cadcutils.exceptions module
         """
         if url:
-            protocol = {Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
-                        Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
+            protocol = {
+                Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
+                Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
 
             transfer_xml = ElementTree.Element("vos:transfer")
             transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
             ElementTree.SubElement(transfer_xml, "vos:target").text = uri
-            ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
+            ElementTree.SubElement(transfer_xml, "vos:direction").text = \
+                direction
 
             if view == 'move':
                 ElementTree.SubElement(transfer_xml,
-                                    "vos:keepBytes").text = "false"
+                                       "vos:keepBytes").text = "false"
             else:
                 if view == 'defaultview':
                     ElementTree.SubElement(transfer_xml, "vos:view").attrib[
@@ -2814,29 +2816,29 @@ class Transfer(object):
                         param.attrib['uri'] = CADC_VO_VIEWS[view]
                         param.text = cutout
                 protocol_element = ElementTree.SubElement(transfer_xml,
-                                                        "vos:protocol")
-                protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                                protocol[
-                                                                    direction])
+                                                          "vos:protocol")
+                protocol_element.attrib['uri'] = "{0}#{1}".format(
+                    Node.IVOAURL, protocol[direction])
 
             logging.debug(ElementTree.tostring(transfer_xml))
             logging.debug("Sending to : {}".format(url))
 
             data = ElementTree.tostring(transfer_xml)
             resp = conn.session.post(url,
-                                data=data,
-                                allow_redirects=False,
-                                headers={'Content-Type': 'text/xml'})
+                                     data=data,
+                                     allow_redirects=False,
+                                     headers={'Content-Type': 'text/xml'})
 
             logging.debug("{0}".format(resp))
             logging.debug("{0}".format(resp.text))
             if resp.status_code != 303:
                 raise OSError(resp.status_code,
-                            "Failed to get transfer service response.")
+                              "Failed to get transfer service response.")
             transfer_url = resp.headers.get('Location', None)
 
             if conn.session.auth is not None and "auth" not in transfer_url:
-                transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
+                transfer_url = transfer_url.replace('/vospace/',
+                                                    '/vospace/auth/')
 
             logging.debug("Got back from transfer URL: %s" % transfer_url)
 
@@ -2853,7 +2855,8 @@ class Transfer(object):
             logging.debug("Transfer Document: %s" % xml_string)
             transfer_document = ElementTree.fromstring(xml_string)
             logging.debug(
-                "XML version: {0}".format(ElementTree.tostring(transfer_document)))
+                "XML version: {0}".format(
+                    ElementTree.tostring(transfer_document)))
             all_protocols = transfer_document.findall(Node.PROTOCOL)
             if all_protocols is None or not len(all_protocols) > 0:
                 return self.get_transfer_error(conn, transfer_url, uri)
@@ -2917,16 +2920,16 @@ class Transfer(object):
                 else:
                     time.sleep(sleep_time)
                 phase = conn.session.get(phase_url,
-                                              allow_redirects=False).text
+                                         allow_redirects=False).text
                 logging.debug(
                     "Async transfer Phase for url %s: %s " % (url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
             conn.session.post(job_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=ABORT",
-                                   headers={"Content-type": 'text/text'})
+                              allow_redirects=False,
+                              data="PHASE=ABORT",
+                              headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
         status = VOFile(phase_url, conn, method="GET",
                         follow_redirect=False).read().decode('UTF-8')
@@ -3037,8 +3040,8 @@ class Stream(object):
         :return: Metadata dict for the uploaded Artifact.
         :rtype {}
         """
-        self.conn.session.headers.update({('Content-Length',\
-                                            '{}'.format(os.path.getsize(source)))})
+        self.conn.session.headers.update({(
+            'Content-Length', '{}'.format(os.path.getsize(source)))})
 
         with open(source, str('rb')) as fin:
             self.conn.session.put(put_url, data=fin)

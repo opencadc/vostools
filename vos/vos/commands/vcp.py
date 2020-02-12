@@ -49,15 +49,18 @@ If no X509 certificate given on commnad line then location specified by
 default service settings will be used.
 """
 
+
 def _is_vos(fileuri):
     if isinstance(fileuri, str):
         fileuri = urlparse(fileuri)
     return fileuri.scheme == 'vos'
 
+
 def _is_remote_file(fileuri):
     if isinstance(fileuri, str):
         fileuri = urlparse(fileuri)
     return fileuri.scheme and fileuri.scheme != 'file'
+
 
 def vcp():
     # TODO split this into main and methods
@@ -65,7 +68,8 @@ def vcp():
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
         "--resource-id", default=None,
-        help="resource URI to use to lookup the storage inventory service (Minoc)")
+        help="resource URI to use to lookup the storage inventory service "
+             "(Minoc)")
     parser.add_argument(
         "source", nargs="+",
         help="file/directory/dataNode/containerNode to copy from.")
@@ -310,11 +314,14 @@ def vcp():
                 niters = 0
                 while not skip:
                     try:
-                        logging.debug("Starting call to copy with client {}".\
-                            format(type(client)))
+                        logging.debug(
+                            "Starting call to copy with client {}".format(
+                                type(client)))
                         client.copy(source_name, destination_name,
                                     send_md5=True, head=head)
-                        logging.debug("Call to copy returned from {} to {}".format(source_name, destination_name))
+                        logging.debug(
+                            "Call to copy returned from {} to {}".format(
+                                source_name, destination_name))
                         break
                     except Exception as client_exception:
                         logging.debug("{}".format(client_exception))
@@ -367,7 +374,8 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if not _is_vos(source_pattern) and not _is_remote_file(source_pattern):
+            if not _is_vos(source_pattern) and \
+                    not _is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -381,7 +389,7 @@ def vcp():
                         cutout = ra_dec_match.group('cutout')
                 logging.debug("cutout: {}".format(cutout))
                 logging.debug('GLOBbing {}'.format(source_pattern))
-                sources = lglob(source_pattern)                
+                sources = lglob(source_pattern)
                 if cutout is not None:
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
@@ -440,13 +448,14 @@ def vcp():
                             ("vcp can not copy multiple things into a"
                              "non-existent location (%s)") % dest)
                 elif dest[-1] == '/' or isdir(dest):
-                    logging.debug('Checking if {} is a directory.'.format(dest))
+                    logging.debug(
+                        'Checking if {} is a directory.'.format(dest))
                     # we're copying into a directory
                     this_destination = os.path.join(dest,
                                                     os.path.basename(source))
 
-                logging.debug('Main copy from {} to {}'.format(source,
-                                                               this_destination))
+                logging.debug('Main copy from {} to {}'.format(
+                    source, this_destination))
                 copy(source, this_destination, exclude=args.exclude,
                      include=args.include,
                      interrogate=args.interrogate, overwrite=args.overwrite,

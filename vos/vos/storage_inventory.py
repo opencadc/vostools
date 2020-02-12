@@ -104,11 +104,11 @@ class Client(object):
         """
             Copy from the source to the destination.
 
-            One of source or destination must be a vospace location and the other
-            must be a local location.
+            One of source or destination must be a vospace location and the
+            other must be a local location.
 
-            :param source: The source file to send to VOSpace or the VOSpace node
-            to retrieve
+            :param source: The source file to send to VOSpace or the VOSpace
+            node to retrieve
             :type source: unicode
             :param destination: The VOSpace location to put the file to or the
             local destination.
@@ -138,7 +138,9 @@ class Client(object):
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
         elif is_source_remote:
-            logging.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
+            logging.debug(
+                'Source is remote.  Downloading from {} to {}'.format(
+                    source, destination))
             destination_size = self._get(source, destination)
             if send_md5:
                 return md5_cache.MD5Cache.compute_md5(destination)
@@ -150,7 +152,9 @@ class Client(object):
             else:
                 return destination_size
         elif is_destination_remote:
-            logging.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
+            logging.debug(
+                'Destination is remote.  Uploading from {} to {}'.format(
+                    source, destination))
             metadata = self._put(source, destination)
             if send_md5:
                 return metadata.get('content_md5')

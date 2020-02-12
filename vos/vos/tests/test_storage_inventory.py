@@ -2,18 +2,12 @@
 
 import os
 import unittest
-import pytest
 import requests
-import warnings
 
 from cadcutils import net
 from mock import Mock, patch, MagicMock, call
-from six.moves.urllib.parse import urlparse
-from six.moves import urllib
-from vos import Connection, Node, VOFile
-from vos import vos as vos
+from vos import Connection, Node
 from vos.storage_inventory import Client
-from xml.etree import ElementTree
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -37,6 +31,7 @@ TRANSFER_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
 class Object(object):
     pass
 
+
 class TestClient(unittest.TestCase):
     """Test the vos Client class.
     """
@@ -50,7 +45,8 @@ class TestClient(unittest.TestCase):
         open(certfile, 'w+')
         Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
-            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, certfile=certfile)
+            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
+                            certfile=certfile)
         self.assertTrue(client.conn.subject.certificate)
         self.assertFalse(client.conn.vo_token)
 
@@ -60,14 +56,15 @@ class TestClient(unittest.TestCase):
         self.assertFalse(client.conn.vo_token)
 
         # Specifying a token implies authenticated / http
-        client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, token='a_token_string')
+        client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
+                        token='a_token_string')
         self.assertTrue(client.conn.subject.anon)
         self.assertTrue(client.conn.vo_token)
 
         # Specifying both a certfile and token implies token (auth) / http
         with patch('os.access'):
-            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, certfile=certfile,
-                            token='a_token_string')
+            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
+                            certfile=certfile, token='a_token_string')
         self.assertTrue(client.conn.subject.anon)
         self.assertTrue(client.conn.vo_token)
 
@@ -153,13 +150,15 @@ class TestClient(unittest.TestCase):
 
         # copy to vospace when md5 sums are the same -> only update occurs
         computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e', md5sum]
+        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
+                                         md5sum]
         computed_md5_mock.return_value = md5sum
         test_client.copy(osLocation, storageLocation)
 
         # make md5 different
         computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e', md5sum]
+        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
+                                         md5sum]
         props.reset_mock()
         props.get.side_effect = ['d00223344', 88, md5sum, 'text/plain']
         test_client.copy(osLocation, storageLocation)
@@ -168,13 +167,15 @@ class TestClient(unittest.TestCase):
         # copy 0 size file -> delete and create on client but no bytes
         # transferred
         computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e', md5sum]
+        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
+                                         md5sum]
         props.get.side_effect = [md5sum]
         test_client.copy(osLocation, storageLocation)
 
         # copy new 0 size file -> reate on client but no bytes transferred
         computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e', md5sum]
+        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
+                                         md5sum]
         props.get.side_effect = [None]
         test_client.copy(osLocation, storageLocation)
 
@@ -206,7 +207,8 @@ class TestClient(unittest.TestCase):
             client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
                             certfile=certfile, conn=conn)
         uri1 = 'iris:nosuchfile1'
-        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/iris:nosuchfile1'
+        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/' \
+              'iris:nosuchfile1'
         client.conn.session.delete = Mock()
         client.delete(uri1)
         client.conn.session.delete.assert_called_once_with(url)
