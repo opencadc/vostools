@@ -294,5 +294,3 @@ class TestVRM(unittest.TestCase):
         for file_str in valid_file_str_list:
             is_uri = _is_uri_string(file_str)
             self.assertFalse(is_uri)
-
-
