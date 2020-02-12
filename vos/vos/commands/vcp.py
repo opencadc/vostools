@@ -286,27 +286,6 @@ def vcp():
                          exclude, include, interrogate, overwrite, ignore,
                          head)
             else:
-                # if interrogate:
-                #     if access(destination_name, os.F_OK):
-                #         sys.stderr.write(
-                #             "File %s exists.  Overwrite? (y/n): " %
-                #             destination_name)
-                #         ans = sys.stdin.readline().strip()
-                #         if ans != 'y':
-                #             raise Exception("File exists")
-
-                # if not access(os.path.dirname(destination_name), os.F_OK):
-                #     raise OSError(errno.EEXIST,
-                #                   "vcp: ContainerNode %s does not exist" %
-                #                   os.path.dirname(
-                #                       destination_name))
-
-                # if not isdir(os.path.dirname(destination_name))):
-                #     raise OSError(errno.ENOTDIR,
-                #                   "vcp: %s is not a Bucket."
-                #                   % os.path.dirname(
-                #                       destination_name))
-
                 skip = False
                 if exclude is not None:
                     for thisIgnore in exclude.split(','):
@@ -383,7 +362,7 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if _is_vos(source_pattern) or _is_remote_file(source_pattern):
+            if not _is_vos(source_pattern) and not _is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -406,6 +385,8 @@ def vcp():
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
                     raise Exception("Can't access source: %s " % source)
+
+                logging.debug('Source {} can be accessed.'.format(source))
 
                 if not args.follow_links and islink(source):
                     logging.info("{}: Skipping (symbolic link)".format(source))
@@ -442,9 +423,13 @@ def vcp():
                             ("vcp can not copy multiple things into a"
                              "non-existent location (%s)") % dest)
                 elif dest[-1] == '/' or isdir(dest):
+                    logging.debug('Checking if {} is a directory.'.format(dest))
                     # we're copying into a directory
                     this_destination = os.path.join(dest,
                                                     os.path.basename(source))
+
+                logging.debug('Main copy from {} to {}'.format(source,
+                                                               this_destination))
                 copy(source, this_destination, exclude=args.exclude,
                      include=args.include,
                      interrogate=args.interrogate, overwrite=args.overwrite,

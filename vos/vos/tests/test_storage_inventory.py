@@ -206,7 +206,7 @@ class TestClient(unittest.TestCase):
             client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
                             certfile=certfile, conn=conn)
         uri1 = 'iris:nosuchfile1'
-        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/iris%3Anosuchfile1'
+        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/iris:nosuchfile1'
         client.conn.session.delete = Mock()
         client.delete(uri1)
         client.conn.session.delete.assert_called_once_with(url)

@@ -20,7 +20,7 @@ try:
 except ImportError:
     version = 'unknown'
 
-from .vos import Connection, EndPoints, Transfer, Stream
+from .vos import Connection, Transfer, Stream
 from . import md5_cache
 
 urlparse = parse.urlparse
@@ -171,13 +171,10 @@ class Client(object):
         cadcutils.exceptions module
         """
         logger.debug("delete {0}".format(uri))
-        url = '{}/{}'.format(self.get_endpoints()[self.resource_id].nodes,
-                             quote_plus(uri))
+        url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), uri)
         response = self.conn.session.delete(url)
         response.raise_for_status()
-
-    def get_endpoints(self):
-        return {self.resource_id: EndPoints(self.resource_id)}
 
     def transfer(self, uri, direction, view=None, cutout=None):
         transfer_url = '{}/{}'.format(
@@ -239,7 +236,7 @@ class Client(object):
         return _uri.scheme and _uri.scheme != 'file'
 
     def _get_ws_client(self, session_headers=None):
-        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT,
+        return net.BaseWsClient(self.resource_id, net.Subject(), VOS_AGENT,
                                 host=os.getenv('VOSPACE_WEBSERVICE', None),
                                 session_headers=session_headers)
 
