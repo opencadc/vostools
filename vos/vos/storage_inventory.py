@@ -20,7 +20,7 @@ try:
 except ImportError:
     version = 'unknown'
 
-from .vos import Connection, EndPoints, Transfer, Stream
+from .vos import Connection, Transfer, Stream
 from . import md5_cache
 
 urlparse = parse.urlparse
@@ -138,7 +138,7 @@ class Client(object):
         if is_source_remote and is_destination_remote:
             raise ValueError('Unable to process server to server copying.')
         elif is_source_remote:
-            logger.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
+            logging.debug('Source is remote.  Downloading from {} to {}'.format(source, destination))
             destination_size = self._get(source, destination)
             if send_md5:
                 return md5_cache.MD5Cache.compute_md5(destination)
@@ -150,7 +150,7 @@ class Client(object):
             else:
                 return destination_size
         elif is_destination_remote:
-            logger.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
+            logging.debug('Destination is remote.  Uploading from {} to {}'.format(source, destination))
             metadata = self._put(source, destination)
             if send_md5:
                 return metadata.get('content_md5')
@@ -171,13 +171,10 @@ class Client(object):
         cadcutils.exceptions module
         """
         logger.debug("delete {0}".format(uri))
-        url = '{}/{}'.format(self.get_endpoints()[self.resource_id].nodes,
-                             quote_plus(uri))
+        url = '{}/{}'.format(
+            self._get_ws_client()._get_url((STANDARD_ID, None)), uri)
         response = self.conn.session.delete(url)
         response.raise_for_status()
-
-    def get_endpoints(self):
-        return {self.resource_id: EndPoints(self.resource_id)}
 
     def transfer(self, uri, direction, view=None, cutout=None):
         transfer_url = '{}/{}'.format(
@@ -239,7 +236,7 @@ class Client(object):
         return _uri.scheme and _uri.scheme != 'file'
 
     def _get_ws_client(self, session_headers=None):
-        return net.BaseWsClient(self.resource_id, EndPoints.subject, VOS_AGENT,
+        return net.BaseWsClient(self.resource_id, net.Subject(), VOS_AGENT,
                                 host=os.getenv('VOSPACE_WEBSERVICE', None),
                                 session_headers=session_headers)
 
