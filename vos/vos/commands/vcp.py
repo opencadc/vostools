@@ -388,11 +388,20 @@ def vcp():
             if _is_vos(source_pattern) or _is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
-                if vos.is_uri_string(source_pattern):
-                    sources = [source_pattern]
+                cutout_match = cutout_pattern.search(source_pattern)
+                cutout = None
+                if cutout_match is not None:
+                    source_pattern = cutout_match.group(1)
+                    cutout = cutout_match.group('cutout')
                 else:
-                    # support wild cards in a filename, e.g. *.fits
-                    sources = glob.glob(source_pattern)
+                    ra_dec_match = ra_dec_cutout_pattern.search(source_pattern)
+                    if ra_dec_match is not None:
+                        cutout = ra_dec_match.group('cutout')
+                logging.debug("cutout: {}".format(cutout))
+                sources = lglob(source_pattern)
+                if cutout is not None:
+                    # stick back on the cutout pattern if there was one.
+                    sources = [s + cutout for s in sources]
 
             for source in sources:
                 if not _is_vos(source) and not _is_remote_file(source):
@@ -412,8 +421,9 @@ def vcp():
                         "Can not (yet) copy from server to server.")
 
                 # server to server copy is not yet implemented
-                if args.resource_id is not None and vos.is_uri_string(source)\
-                        and vos.is_uri_string(dest):
+                if 'resource_id' in args and args.resource_id is not None\
+                        and _is_remote_file(source)\
+                        and _is_remote_file(dest):
                     raise Exception(
                         "Can not (yet) copy from server to server.")
 
