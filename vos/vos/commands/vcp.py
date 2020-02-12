@@ -208,12 +208,7 @@ def vcp():
                     exceptions.UnauthorizedException):
                 return False
         else:
-            if vos.is_uri_string(filename):
-                # storage URI
-                metadata = client.get_metadata(filename)
-                return metadata['content_md5'] is not None
-            else:
-                return os.access(filename, mode)
+            return os.access(filename, mode)
 
     def listdir(dirname):
         """Walk through the directory structure a al os.walk"""
