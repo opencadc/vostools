@@ -14,7 +14,7 @@ node or node is locked.
 eg. vrm vos:/root/node   -- deletes a data node"""
 
 
-def is_uri_string(id_str):
+def _is_uri_string(id_str):
     """
     Takes a file identifier string and determines if it specifies a URI.
     At time of writing, wild card in path is considered invalid.
@@ -72,7 +72,7 @@ def delete_files(args):
                 '{} is not a valid storage file handle'.format(file))
         elif client.isdir(file):
             raise Exception('{} is a directory'.format(file))
-        elif is_uri_string(file):
+        elif _is_uri_string(file):
             logging.info('deleting {}'.format(file))
             client.delete(file)
         else:
