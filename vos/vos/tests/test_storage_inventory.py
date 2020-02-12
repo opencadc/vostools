@@ -15,7 +15,8 @@ from vos.storage_inventory import Client
 call.__wrapped__ = None
 
 TRANSFER_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
-<vos:transfer xmlns:vos=\"http://www.ivoa.net/xml/VOSpace/v2.0\" version=\"2.1\">\
+<vos:transfer xmlns:vos=\"http://www.ivoa.net/xml/VOSpace/v2.0\" " \
+               "version=\"2.1\">\
   <vos:target>vos://example.com!vospace/mydir/myfile</vos:target>\
   <vos:direction>pullFromVoSpace</vos:direction>\
   <vos:protocol uri=\"ivo://ivoa.net/vospace/core#httpget\">\
@@ -198,7 +199,8 @@ class TestClient(unittest.TestCase):
         test_client.copy(storageLocation, osLocation, head=True)
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files'))
+           Mock(return_value='https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/'
+                             'minoc/files'))
     def test_delete(self):
         conn = MagicMock(spec=Connection)
         certfile = '/tmp/SomeCert.pem'
