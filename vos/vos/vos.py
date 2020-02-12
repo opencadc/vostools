@@ -50,7 +50,7 @@ except ImportError:
 
 urlparse = six.moves.urllib.parse.urlparse
 logger = logging.getLogger('vos')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
