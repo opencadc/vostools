@@ -257,7 +257,7 @@ class TestVRM(unittest.TestCase):
         # handling of None argument
         with self.assertRaises(ValueError) as ex:
             _is_uri_string(None)
-        assert('Missing identifier: None' in ex.value.args[0])
+        self.assertTrue('Missing identifier: None' in str(ex.exception))
 
         # handling of valid uri strings
         valid_uri_str_1 = 'ivo://cadc.nrc.ca/file.fits'
@@ -265,7 +265,7 @@ class TestVRM(unittest.TestCase):
         valid_uri_str_list = [valid_uri_str_1, valid_uri_str_2]
         for uri_str in valid_uri_str_list:
             is_uri = _is_uri_string(uri_str)
-            assert(is_uri)
+            self.assertTrue(is_uri)
 
         # handling of invalid uri strings
         invalid_uri_str_1 = 'ivo://'                   # valid scheme only
@@ -277,7 +277,7 @@ class TestVRM(unittest.TestCase):
         for uri_str in invalid_uri_str_list:
             with self.assertRaises(ValueError) as ex:
                 _is_uri_string(uri_str)
-            assert('Invalid URL' in ex.value.args[0])
+            self.assertTrue('Invalid URL' in str(ex.exception))
 
         # handling of valid file strings
         valid_file_str_1 = 'foo.fits'
@@ -293,6 +293,6 @@ class TestVRM(unittest.TestCase):
                                valid_file_str_7]
         for file_str in valid_file_str_list:
             is_uri = _is_uri_string(file_str)
-            assert(not is_uri)
+            self.assertFalse(is_uri)
 
 
