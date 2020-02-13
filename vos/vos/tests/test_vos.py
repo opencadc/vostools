@@ -376,16 +376,17 @@ class TestClient(unittest.TestCase):
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
-        get_node_url_mock.return_value = ['https://mysite.com/node/node123/cutout']
+        get_node_url_mock.return_value = \
+            ['https://mysite.com/node/node123/cutout']
         computed_md5_mock.reset_mock()
-        #computed_md5_mock.side_effect = ['d002233', md5sum]
+        # computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
-        test_client.copy('{}{}'.format(vospaceLocation, '[1][10:60]'), osLocation)
-        get_node_url_mock.assert_called_once_with(vospaceLocation,
-                                                  method='GET',
-                                                  cutout='[1][10:60]', view='cutout')
-        #computed_md5_mock.assert_called_with(osLocation)
-        #get_node_mock.assert_called_once_with(vospaceLocation)        
+        test_client.copy('{}{}'.format(vospaceLocation,
+                                       '[1][10:60]'), osLocation)
+        get_node_url_mock.assert_called_once_with(
+            vospaceLocation, method='GET', cutout='[1][10:60]', view='cutout')
+        # computed_md5_mock.assert_called_with(osLocation)
+        # get_node_mock.assert_called_once_with(vospaceLocation)
 
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
