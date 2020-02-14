@@ -120,7 +120,7 @@ def is_remote_file(fileuri):
     if isinstance(fileuri, str):
         fileuri = urlparse(fileuri)
     return fileuri.scheme and fileuri.scheme != 'file' \
-        and not '*' in fileuri.path
+        and '*' not in fileuri.path
 
 
 def _rename_vospace_resource():
