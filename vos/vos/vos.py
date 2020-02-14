@@ -116,6 +116,12 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
+def is_remote_file(fileuri):
+    if isinstance(fileuri, str):
+        fileuri = urlparse(fileuri)
+    return fileuri.scheme and fileuri.scheme != 'file'
+
+
 def _rename_vospace_resource():
     # temporary function to deal with renaming of the
     # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault

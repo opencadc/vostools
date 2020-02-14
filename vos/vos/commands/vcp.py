@@ -56,12 +56,6 @@ def _is_vos(fileuri):
     return fileuri.scheme == 'vos'
 
 
-def _is_remote_file(fileuri):
-    if isinstance(fileuri, str):
-        fileuri = urlparse(fileuri)
-    return fileuri.scheme and fileuri.scheme != 'file'
-
-
 def vcp():
     # TODO split this into main and methods
 
@@ -116,7 +110,7 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if not _is_vos(dest) and not _is_remote_file(dest):
+    if not _is_vos(dest) and not vos.is_remote_file(dest):
         dest = os.path.abspath(dest)
 
     # The --resource-id switch will be the thing that tells the vcp command
@@ -182,7 +176,7 @@ def vcp():
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
                 return False
-        elif _is_remote_file(filename):
+        elif vos.is_remote_file(filename):
             return False
         else:
             return os.path.islink(filename)
@@ -203,7 +197,7 @@ def vcp():
                 exceptions.NotFoundException, exceptions.ForbiddenException,
                     exceptions.UnauthorizedException):
                 return False
-        elif _is_remote_file(filename):
+        elif vos.is_remote_file(filename):
             try:
                 md = client.get_metadata(filename)
                 logging.debug('Found metadata {}'.format(md))
@@ -219,14 +213,14 @@ def vcp():
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if _is_vos(dirname) or _is_remote_file(dirname):
+        if _is_vos(dirname) or vos.is_remote_file(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if _is_vos(filename) or _is_remote_file(filename):
+        if _is_vos(filename) or vos.is_remote_file(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
@@ -235,7 +229,7 @@ def vcp():
         logging.debug("getting the MD5 for %s".format(filename))
         if _is_vos(filename):
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
-        elif _is_remote_file(filename):
+        elif vos.is_remote_file(filename):
             return client.get_metadata(filename).get('content_md5',
                                                      vos.ZERO_MD5)
         else:
@@ -244,7 +238,7 @@ def vcp():
     def lglob(pathname):
         if _is_vos(pathname):
             return client.glob(pathname)
-        elif _is_remote_file(pathname):
+        elif vos.is_remote_file(pathname):
             return [pathname]
         else:
             return glob.glob(pathname)
@@ -375,7 +369,7 @@ def vcp():
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
             if not _is_vos(source_pattern) and \
-                    not _is_remote_file(source_pattern):
+                    not vos.is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -397,7 +391,7 @@ def vcp():
                 logging.debug('Sources are {}'.format(sources))
             for source in sources:
                 logging.debug('Checking source {}'.format(source))
-                if not _is_vos(source) and not _is_remote_file(source):
+                if not _is_vos(source) and not vos.is_remote_file(source):
                     logging.debug('Correcting path.')
                     source = os.path.abspath(source)
                 # the source must exist, of course...
@@ -411,15 +405,15 @@ def vcp():
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if (_is_vos(source) or _is_remote_file(source))\
-                        and (_is_vos(dest) or _is_remote_file(dest)):
+                if (_is_vos(source) or vos.is_remote_file(source))\
+                        and (_is_vos(dest) or vos.is_remote_file(dest)):
                     raise Exception(
                         "Can not (yet) copy from server to server.")
 
                 # server to server copy is not yet implemented
                 if 'resource_id' in args and args.resource_id is not None\
-                        and _is_remote_file(source)\
-                        and _is_remote_file(dest):
+                        and vos.is_remote_file(source)\
+                        and vos.is_remote_file(dest):
                     raise Exception(
                         "Can not (yet) copy from server to server.")
 

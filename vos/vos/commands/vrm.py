@@ -14,31 +14,6 @@ node or node is locked.
 eg. vrm vos:/root/node   -- deletes a data node"""
 
 
-def _is_uri_string(id_str):
-    """
-    Takes a file identifier string and determines if it specifies a URI.
-    At time of writing, wild card in path is considered invalid.
-
-    :param id_str A identifier string
-    :return True if we can use the identifier string to create a URI instance,
-            False if the identifier string does not start with '<scheme>:'
-    """
-
-    if id_str is None:
-        raise ValueError('Missing identifier: {}'.format(id_str))
-
-    url = urlparse(id_str)
-    if (len(url.scheme) == 0):
-        # missing scheme
-        return False
-    elif (len(url.netloc) == 0) or (len(url.path) == 0) or \
-            ('*' in url.path):
-        raise ValueError('Invalid URL: {}'.format(id_str))
-    else:
-        # a valid url
-        return True
-
-
 def delete_nodes(args):
     client = vos.Client(vospace_certfile=args.certfile,
                         vospace_token=args.token)
@@ -72,7 +47,7 @@ def delete_files(args):
                 '{} is not a valid storage file handle'.format(file))
         elif client.isdir(file):
             raise Exception('{} is a directory'.format(file))
-        elif _is_uri_string(file):
+        elif vos.is_remote_file(file):
             logging.info('deleting {}'.format(file))
             client.delete(file)
         else:
