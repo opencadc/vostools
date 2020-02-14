@@ -117,6 +117,10 @@ echo " [OK]"
 # $CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
 # echo " [OK]"
 
+echo -n "delete existing data node "
+$RMCMD $CERT $CONTAINER/something.png  >& /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
 echo "-----------"
 echo -n "Cleanup "
 \rm -f $THIS_DIR/something.png.*
