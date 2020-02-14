@@ -116,23 +116,11 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
-def _no_wild_card(path):
-    filename = path
-    pos = path.rfind('*')
-    if pos > -1:
-        filename = path[pos:]
-
-    if '*' in filename:
-        return False
-    else:
-        return True
-
-
 def is_remote_file(fileuri):
     if isinstance(fileuri, str):
         fileuri = urlparse(fileuri)
     return fileuri.scheme and fileuri.scheme != 'file' \
-        and _no_wild_card(fileuri.path)
+        and not '*' in fileuri.path
 
 
 def _rename_vospace_resource():
