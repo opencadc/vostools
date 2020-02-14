@@ -139,7 +139,7 @@ class TestVRM(unittest.TestCase):
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
             test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/test.txt']
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -156,7 +156,7 @@ class TestVRM(unittest.TestCase):
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
             test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'vos://cadc.nrc.ca/TEST/test.txt']
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'vos:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -175,7 +175,7 @@ class TestVRM(unittest.TestCase):
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
             test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/']
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -195,7 +195,7 @@ class TestVRM(unittest.TestCase):
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
             test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/test.txt']
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -215,7 +215,7 @@ class TestVRM(unittest.TestCase):
         sys.argv = [
             'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
             test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad://cadc.nrc.ca/TEST/*.txt']
+            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/*.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -225,9 +225,9 @@ class TestVRM(unittest.TestCase):
             help='file, dataNode or linkNode to delete from VOSpace',
             nargs='+')
         args = parser.parse_args()
-        with self.assertRaises(ValueError) as ex:
+        with self.assertRaises(Exception) as ex:
             delete_files(args)
-        self.assertTrue('Invalid URL' in str(ex.exception))
+        self.assertTrue('not a valid storage file' in str(ex.exception))
 
         # deleting a local file is not supported
         client_mock.return_value.isdir.return_value = False

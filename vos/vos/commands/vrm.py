@@ -47,7 +47,7 @@ def delete_files(args):
                 '{} is not a valid storage file handle'.format(file))
         elif client.isdir(file):
             raise Exception('{} is a directory'.format(file))
-        elif vos.is_remote_file(file):
+        elif vos.is_remote_file(str(file)):
             logging.info('deleting {}'.format(file))
             client.delete(file)
         else:
