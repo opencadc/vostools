@@ -227,7 +227,7 @@ class TestVRM(unittest.TestCase):
         args = parser.parse_args()
         with self.assertRaises(Exception) as ex:
             delete_files(args)
-        self.assertTrue('not a valid storage file' in str(ex.exception))
+        self.assertTrue('Wild card not supported' in str(ex.exception))
 
         # deleting a local file is not supported
         client_mock.return_value.isdir.return_value = False

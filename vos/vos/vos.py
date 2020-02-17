@@ -119,8 +119,13 @@ logging.getLogger("requests").setLevel(logging.ERROR)
 def is_remote_file(fileuri):
     if isinstance(fileuri, str):
         fileuri = urlparse(fileuri)
-    return fileuri.scheme and fileuri.scheme != 'file' \
-        and '*' not in fileuri.path
+
+    if '*' in fileuri.path and fileuri.scheme != 'vos':
+        raise ValueError(
+            "Wild card not supported for inventory storage uri file path: {}".
+            format(fileuri.path))
+    else:
+        return fileuri.scheme and fileuri.scheme != 'file'
 
 
 def _rename_vospace_resource():
