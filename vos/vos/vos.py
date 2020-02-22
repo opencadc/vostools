@@ -125,7 +125,7 @@ def is_remote_file(fileuri):
             "Wild card not supported for inventory storage uri file path: {}".
             format(fileuri.path))
     else:
-        return fileuri.scheme and fileuri.scheme != 'file'
+        return len(fileuri.scheme) > 0 and fileuri.scheme != 'file'
 
 
 def _rename_vospace_resource():

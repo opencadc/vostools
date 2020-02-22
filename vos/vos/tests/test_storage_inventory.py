@@ -76,6 +76,8 @@ class TestClient(unittest.TestCase):
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being copied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
+        test_file_content = 'test file 123'
+        expected_test_file_size = len(test_file_content)
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
 
@@ -100,6 +102,7 @@ class TestClient(unittest.TestCase):
         session.get.return_value = response
         response.status_code = 200
         response.text = TRANSFER_XML
+        response.iter_content.return_value = test_file_content
 
         mock_post_response.status_code = 303
         mock_post_response.headers = headers
@@ -110,7 +113,7 @@ class TestClient(unittest.TestCase):
         test_client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, conn=conn)
 
         # Mock out the endpoints to avoid a true Registry service call.
-        nodes_url = 'https://ws-cadc.canfar.net/vault/nodes'
+        nodes_url = 'https://ws-cadc.canfar.net/minoc/nodes'
         endpoints_mock = Mock()
         endpoints_mock.nodes = nodes_url
         test_client.get_endpoints = Mock(return_value=endpoints_mock)
@@ -131,16 +134,23 @@ class TestClient(unittest.TestCase):
         osLocation = '/tmp/foo'
         if os.path.isfile(osLocation):
             os.remove(osLocation)
-        # copy from Storage Inventory
-        test_client.copy(storageLocation, osLocation)
+        self.assertFalse(os.path.exists(osLocation))
+        # copy from Storage Inventory, returns file size
+        actual_file_size = test_client.copy(storageLocation, osLocation)
+        self.assertTrue(os.path.isfile(osLocation))
+        self.assertEqual(expected_test_file_size, actual_file_size,
+                         'incorrect file size of copied file')
         computed_md5_mock.assert_called_once_with(osLocation)
+        self.assertTrue(os.path.isfile(osLocation))
 
         # repeat - local file and vospace file are now the same -> only
         # get_node is called to get the md5 of remote file
         computed_md5_mock.reset_mock()
         props.reset_mock()
         props.get.return_value = md5sum
-        test_client.copy(storageLocation, osLocation)
+        actual_file_size = test_client.copy(storageLocation, osLocation)
+        self.assertEqual(expected_test_file_size, actual_file_size,
+                         'incorrect file size of copied file')
         computed_md5_mock.assert_called_once_with(osLocation)
 
         # change the content of local files to trigger a new copy

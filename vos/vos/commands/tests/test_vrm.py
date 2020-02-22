@@ -38,11 +38,9 @@ class TestVRM(unittest.TestCase):
         mock_node = MagicMock()
         mock_node.islink.return_value = True
         client_mock.return_value.get_node.return_value = mock_node
-        client_mock.return_value.delete_nodes.return_value = None
-        sys.argv = [
-            'vrm', '--certfile',
-            '/usr/cadc/local/../dev/admin/test-certificates/\
-            x509_CADCRegtest1.pem', 'vos://cadc.nrc.ca/TEST/test.txt']
+        delete_mock = MagicMock()
+        client_mock.return_value.delete = delete_mock
+        sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -53,15 +51,15 @@ class TestVRM(unittest.TestCase):
             nargs='+')
         args = parser.parse_args()
         delete_nodes(args)
+        delete_mock.assert_called_once()
 
         # happy path, isfile
         mock_node.islink.return_value = False
         client_mock.return_value.get_node.return_value = mock_node
-        client_mock.return_value.is_file.return_value = True
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem',
-            'vos://cadc.nrc.ca/TEST/test.txt']
+        isfile_mock = MagicMock()
+        isfile_mock.return_value.isfile.return_value = True
+        client_mock.return_value.isfile = isfile_mock
+        sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -72,11 +70,10 @@ class TestVRM(unittest.TestCase):
             nargs='+')
         args = parser.parse_args()
         delete_nodes(args)
+        isfile_mock.assert_called_once()
 
         # not a vos node
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', 'ad://cadc.nrc.ca/TEST/']
+        sys.argv = ['vrm', 'ad://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -93,10 +90,7 @@ class TestVRM(unittest.TestCase):
         # isdir
         mock_node.isdir.return_value = True
         client_mock.return_value.get_node.return_value = mock_node
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem',
-            'vos://cadc.nrc.ca/TEST/']
+        sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -112,10 +106,7 @@ class TestVRM(unittest.TestCase):
 
         # not a directory
         client_mock.return_value.isdir.return_value = False
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem',
-            'vos://cadc.nrc.ca/TEST/']
+        sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -135,11 +126,10 @@ class TestVRM(unittest.TestCase):
 
         # happy path
         client_mock.return_value.isdir.return_value = False
-        client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
+        delete_mock = MagicMock()
+        client_mock.return_value.delete = delete_mock
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -150,13 +140,12 @@ class TestVRM(unittest.TestCase):
             nargs='+')
         args = parser.parse_args()
         delete_files(args)
+        delete_mock.assert_called_once()
 
         # not a storage file
         client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'vos:TEST/test.txt']
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', 'vos:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -172,10 +161,8 @@ class TestVRM(unittest.TestCase):
 
         # files end with '/'
         client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/']
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -192,10 +179,8 @@ class TestVRM(unittest.TestCase):
         # isdir
         client_mock.return_value.isdir.return_value = True
         client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -212,10 +197,8 @@ class TestVRM(unittest.TestCase):
         # wild card in file URI is not supported
         client_mock.return_value.isdir.return_value = False
         client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/*.txt']
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/*.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,
@@ -232,10 +215,8 @@ class TestVRM(unittest.TestCase):
         # deleting a local file is not supported
         client_mock.return_value.isdir.return_value = False
         client_mock.return_value.delete_files.return_value = None
-        sys.argv = [
-            'vrm', '--certfile', '/usr/cadc/local/../dev/admin/\
-            test-certificates/x509_CADCRegtest1.pem', '--resource-id',
-            'ivo:/cadc.nrc.ca/tbd/minoc', './TEST/test.txt']
+        sys.argv = ['vrm', '--resource-id',
+                    'ivo:/cadc.nrc.ca/tbd/minoc', './TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
             "--resource-id", default=None,

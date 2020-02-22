@@ -237,7 +237,7 @@ class Client(object):
 
     def _is_remote(self, uri):
         _uri = urlparse(uri)
-        return _uri.scheme and _uri.scheme != 'file'
+        return len(_uri.scheme) > 0 and _uri.scheme != 'file'
 
     def _get_ws_client(self, session_headers=None):
         return net.BaseWsClient(self.resource_id, net.Subject(), VOS_AGENT,
@@ -306,7 +306,8 @@ class Client(object):
             path = _uri.path
 
             if not _uri.scheme or _uri.scheme == 'file':
-                return os.path.isfile(path) or not path.endswith('/')
+                return os.path.isfile(path) or not path.endswith('/') or \
+                       not os.path.isdir(path)
             else:
                 return not path.endswith('/') and len(path.split('/')) > 1
         except OSError as ex:

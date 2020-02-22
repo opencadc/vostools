@@ -39,7 +39,7 @@ Optional Arguments | Description     |
 Examples:
 To reduce clutter, optional arguments are not included in the examples.
 
-Put a local file foo.fits into cadc:TEST. Please note that the '.' at the end will be required
+Put a local file foo.fits into cadc:TEST. 
 
     vcp foot.fits cadc:TEST/
 
