@@ -3,16 +3,14 @@
 date
 echo "###################"
 /bin/rm -rf ~/.config/cadc-registry
-setenv CADC_DEBUG ${CADC_DEBUG}
-setenv REQUESTS_CA_BUNDLE /etc/ssl/certs/ca-certificates.crt
-setenv VOSPACE_WEBSERVICE mach275.cadc.dao.nrc.ca
+
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
     setenv VOSPACE_WEBSERVICE 'www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'
 else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): ${VOSPACE_WEBSERVICE}"
 endif
-setenv CADC_TESTCERT_PATH /root/ssl
+
 if (! ${?CADC_TESTCERT_PATH} ) then
 	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
     exit -1
@@ -41,6 +39,16 @@ set SET_SITE_1_RESOURCE_ID = " --resource-id ${SITE_1_RESOURCE_ID}"
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+# Username / password for getting tokens
+echo "Enter credentials for a VOSpace account in which we will perform tests."
+echo -n "CADC Username: "
+set username = $<
+echo -n "Password: "
+stty -echo
+set password = $<
+echo
+stty echo
+
 set DIFFCMD = "diff -q"
 
 set RMCMD = "vrm ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
@@ -48,6 +56,7 @@ set CPCMD = "vcp ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
 set RMDIRCMD = "vrmdir ${DEBUG_FLAG}"
 
 set CERT = " --cert=$CERTFILE"
+set TOKEN = "--token ${TOKEN}"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
 set ROOT = "cadc:"
@@ -69,32 +78,32 @@ echo
 
 echo "-----------"
 echo -n "Copy file to existing container and non-existent data node "
-$CPCMD $CERT $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
+$CPCMD ${TOKEN} $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo "-----------"
-echo -n "Copy existing file from existing container "
-$CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-echo " [OK]"
+# echo "-----------"
+# echo -n "Copy existing file from existing container "
+# $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+# cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+# echo " [OK]"
 
-echo "-----------"
-echo -n "Copy/overwrite existing data node "
-$CPCMD $CERT $THIS_DIR/something.png.2 $CONTAINER/something.png || echo " [FAIL]" && exit -1
-echo " [OK]"
+# echo "-----------"
+# echo -n "Copy/overwrite existing data node "
+# $CPCMD $CERT $THIS_DIR/something.png.2 $CONTAINER/something.png || echo " [FAIL]" && exit -1
+# echo " [OK]"
 
-echo -n "Upload check quick copy "
-$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
-echo " [OK]"
+# echo -n "Upload check quick copy "
+# $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
+# echo " [OK]"
 
-echo -n "Download check quick copy "
-$CPCMD $CERT $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
-echo " [OK]"
+# echo -n "Download check quick copy "
+# $CPCMD $CERT $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+# echo " [OK]"
 
-echo -n "Compare check quick copy "
-cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
-\rm -f $THIS_DIR/something.png.3
-echo " [OK]"
+# echo -n "Compare check quick copy "
+# cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+# \rm -f $THIS_DIR/something.png.3
+# echo " [OK]"
 
 # echo -n "Check pattern matched copy"
 # $CPCMD $CERT "$CONTAINER/something*" $TMPDIR || echo " [FAIL]" && exit -1
@@ -117,9 +126,9 @@ echo " [OK]"
 # $CPCMD $CERT /tmp/zerosize.txt ${CONTAINER}/ || echo " [FAIL]" && exit -1
 # echo " [OK]"
 
-echo -n "delete existing data node "
-$RMCMD $CERT $CONTAINER/something.png  >& /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
+# echo -n "delete existing data node "
+# $RMCMD $CERT $CONTAINER/something.png  >& /dev/null || echo " [FAIL]" && exit -1
+# echo " [OK]"
 
 echo "-----------"
 echo -n "Cleanup "
