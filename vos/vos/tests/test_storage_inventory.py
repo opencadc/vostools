@@ -102,7 +102,7 @@ class TestClient(unittest.TestCase):
         session.get.return_value = response
         response.status_code = 200
         response.text = TRANSFER_XML
-        response.iter_content.return_value = test_file_content
+        response.iter_content.return_value = test_file_content.encode()
 
         mock_post_response.status_code = 303
         mock_post_response.headers = headers
