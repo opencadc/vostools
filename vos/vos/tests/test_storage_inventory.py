@@ -74,9 +74,9 @@ class TestClient(unittest.TestCase):
     @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
-        # the md5sum of the file being copied
+        # the md5sum of the file being c/testopied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
-        test_file_content = 'test file 123'
+        test_file_content = bytes('test file 123', 'utf-8')
         expected_test_file_size = len(test_file_content)
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
@@ -102,7 +102,7 @@ class TestClient(unittest.TestCase):
         session.get.return_value = response
         response.status_code = 200
         response.text = TRANSFER_XML
-        response.iter_content.return_value = test_file_content.encode()
+        response.iter_content.return_value = test_file_content
 
         mock_post_response.status_code = 303
         mock_post_response.headers = headers
