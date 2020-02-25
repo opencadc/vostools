@@ -76,8 +76,10 @@ class TestClient(unittest.TestCase):
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being c/testopied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
-        test_file_content = "test file 123".encode()
-        expected_test_file_size = len(test_file_content)
+        test_file_content_1 = "test file 123".encode()
+        test_file_content_2 = "some other test content 123".encode()
+        expected_test_file_size_1 = len(test_file_content_1)
+        expected_test_file_size_2 = len(test_file_content_2)
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
 
@@ -102,7 +104,7 @@ class TestClient(unittest.TestCase):
         session.get.return_value = response
         response.status_code = 200
         response.text = TRANSFER_XML
-        response.iter_content.return_value = [test_file_content]
+        response.iter_content.return_value = [test_file_content_1]
 
         mock_post_response.status_code = 303
         mock_post_response.headers = headers
@@ -118,9 +120,10 @@ class TestClient(unittest.TestCase):
         endpoints_mock.nodes = nodes_url
         test_client.get_endpoints = Mock(return_value=endpoints_mock)
 
+        content_length = 88
         mock_metadata_response = MagicMock()
         mock_metadata_response.headers = {
-            'Content-Length': 88,
+            'Content-Length': content_length,
             'Content-Type': 'application/fits',
             'Content-MD5': 'd41d8cd98f00b204e9800998ecf8427e'
         }
@@ -135,38 +138,41 @@ class TestClient(unittest.TestCase):
         if os.path.isfile(osLocation):
             os.remove(osLocation)
         self.assertFalse(os.path.exists(osLocation))
-        # copy from Storage Inventory, returns file size
+        # test get: copy from Storage Inventory, returns file size
         actual_file_size = test_client.copy(storageLocation, osLocation)
         self.assertTrue(os.path.isfile(osLocation))
-        self.assertEqual(expected_test_file_size, actual_file_size,
-                         'incorrect file size of copied file')
+        self.assertEqual(expected_test_file_size_1, actual_file_size,
+                         'get incorrect file size')
         computed_md5_mock.assert_called_once_with(osLocation)
-        self.assertTrue(os.path.isfile(osLocation))
 
-        # repeat - local file and vospace file are now the same -> only
-        # get_node is called to get the md5 of remote file
+        # test get: - local file and storage inventory file are the same
         computed_md5_mock.reset_mock()
-        props.reset_mock()
-        props.get.return_value = md5sum
+        #props.reset_mock()
+        #props.get.return_value = md5sum
         actual_file_size = test_client.copy(storageLocation, osLocation)
-        self.assertEqual(expected_test_file_size, actual_file_size,
-                         'incorrect file size of copied file')
+        self.assertEqual(expected_test_file_size_1, actual_file_size,
+                         'get incorrect file size')
         computed_md5_mock.assert_called_once_with(osLocation)
 
-        # change the content of local files to trigger a new copy
+        # test get: change the content of local files to trigger a new copy
         # computed_md5_mock.reset_mock()
+        response.iter_content.return_value = [test_file_content_2]
         computed_md5_mock.side_effect = [md5sum]
-        test_client.copy(storageLocation, osLocation)
+        actual_file_size = test_client.copy(storageLocation, osLocation)
         computed_md5_mock.assert_called_with(osLocation)
+        self.assertTrue(os.path.isfile(osLocation))
+        self.assertEqual(expected_test_file_size_2, actual_file_size,
+                         'get incorrect file size')
 
-        # copy to vospace when md5 sums are the same -> only update occurs
+        # test put: copy to vospace when md5 sums are the same ->
+        # only update occurs
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
                                          md5sum]
         computed_md5_mock.return_value = md5sum
         test_client.copy(osLocation, storageLocation)
 
-        # make md5 different
+        # test put: make md5 different
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
                                          md5sum]
@@ -175,7 +181,7 @@ class TestClient(unittest.TestCase):
         test_client.copy(osLocation, storageLocation)
         computed_md5_mock.assert_called_once_with(osLocation)
 
-        # copy 0 size file -> delete and create on client but no bytes
+        # test put: copy 0 size file -> delete and create on client but no bytes
         # transferred
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
