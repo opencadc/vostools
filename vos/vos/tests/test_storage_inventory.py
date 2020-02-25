@@ -147,8 +147,8 @@ class TestClient(unittest.TestCase):
 
         # test get: - local file and storage inventory file are the same
         computed_md5_mock.reset_mock()
-        #props.reset_mock()
-        #props.get.return_value = md5sum
+        props.reset_mock()
+        props.get.return_value = md5sum
         actual_file_size = test_client.copy(storageLocation, osLocation)
         self.assertEqual(expected_test_file_size_1, actual_file_size,
                          'get incorrect file size')
@@ -181,8 +181,8 @@ class TestClient(unittest.TestCase):
         test_client.copy(osLocation, storageLocation)
         computed_md5_mock.assert_called_once_with(osLocation)
 
-        # test put: copy 0 size file -> delete and create on client but no bytes
-        # transferred
+        # test put: copy 0 size file -> delete and create on client but
+        # no bytes transferred
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
                                          md5sum]
