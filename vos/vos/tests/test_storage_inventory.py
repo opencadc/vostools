@@ -76,7 +76,7 @@ class TestClient(unittest.TestCase):
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being c/testopied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
-        test_file_content = 'test file 123'.encode()
+        test_file_content = "test file 123".encode()
         expected_test_file_size = len(test_file_content)
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
@@ -102,7 +102,7 @@ class TestClient(unittest.TestCase):
         session.get.return_value = response
         response.status_code = 200
         response.text = TRANSFER_XML
-        response.iter_content.return_value = test_file_content
+        response.iter_content.return_value = [test_file_content]
 
         mock_post_response.status_code = 303
         mock_post_response.headers = headers
