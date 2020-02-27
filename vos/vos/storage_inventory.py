@@ -187,9 +187,9 @@ class Client(object):
         return trans.transfer(transfer_url, uri, direction, self.conn,
                               self._get_protocol(), view, cutout)
 
-    def get_transfer_error(self, uri, url):
+    def get_transfer_error(self, url, uri):
         trans = Transfer()
-        return trans.get_transfer_error(self.conn, uri, url)
+        return trans.get_transfer_error(self.conn, url, uri)
 
     def _get(self, source, destination):
         """
