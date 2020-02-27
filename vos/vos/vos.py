@@ -116,6 +116,18 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
+def is_remote_file(fileuri):
+    if isinstance(fileuri, str):
+        fileuri = urlparse(fileuri)
+
+    if '*' in fileuri.path and fileuri.scheme != 'vos':
+        raise ValueError(
+            "Wild card not supported for inventory storage uri file path: {}".
+            format(fileuri.path))
+    else:
+        return len(fileuri.scheme) > 0 and fileuri.scheme != 'file'
+
+
 def _rename_vospace_resource():
     # temporary function to deal with renaming of the
     # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
@@ -1605,11 +1617,12 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
-        if source[0:4] == "vos:":
+        _source = urlparse(source)
+        if _source.scheme and _source.scheme != 'file':
             if destination is None:
                 # Set the destination, initially, to the same directory as
-                # the source (strip the vos:)
-                destination = os.path.dirname(source)[4:]
+                # the source (strip the scheme:)
+                destination = os.path.dirname(_source.path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
                 # content-disposition or
@@ -1627,7 +1640,7 @@ class Client(object):
                         cutout_match.group('dec'),
                         cutout_match.group('rad'))
                 else:
-                    raise ValueError("Bad source name: ".format(source))
+                    raise ValueError("Bad source name: {}".format(source))
                 source = cutout_match.group('filename')
             elif head:
                 view = 'header'
@@ -1836,6 +1849,33 @@ class Client(object):
         uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
         return uri
+
+    def get_metadata(self, uri):
+        """
+        Obtain the general metadata for the artifact/node identified by the
+        given uri.
+
+        :param uri: A VOSpace node URI in the format vos:/VOSpaceName/nodeName
+        :type uri: unicode
+        :return: A dict with the following keys:
+                - content_disposition: unicode filename disposition
+                - content_encoding: unicode encoding value (i.e. gzip)
+                - content_length: long value; count of bytes
+                - content_md5: unicode hash value
+                - content_type: unicode content type string
+                                (i.e. application/fits)
+        :rtype: {}
+        """
+        vospace_node = self.get_node(uri, limit=0, force=True)
+        logging.debug('Getting metadata for {}'.format(uri))
+
+        return {
+            'content_disposition': os.path.split(uri)[-1],
+            'content_encoding': None,
+            'content_length': vospace_node.props.get('length'),
+            'content_md5': vospace_node.props.get('MD5'),
+            'content_type': vospace_node.props.get('type')
+        }
 
     def get_node(self, uri, limit=0, force=False):
         """connect to VOSpace and download the definition of VOSpace node
@@ -2159,77 +2199,9 @@ class Client(object):
         cadcutils.exceptions module
         """
         endpoints = self.get_endpoints(uri)
-        protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
-                    "pushToVoSpace": "{0}put".format(self.protocol)}
-
-        transfer_xml = ElementTree.Element("vos:transfer")
-        transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
-        ElementTree.SubElement(transfer_xml, "vos:target").text = uri
-        ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
-
-        if view == 'move':
-            ElementTree.SubElement(transfer_xml,
-                                   "vos:keepBytes").text = "false"
-        else:
-            if view == 'defaultview':
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
-                    'uri'] = VO_VIEW_DEFAULT
-            elif view is not None:
-                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
-                if cutout is not None and view == 'cutout':
-                    param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = CADC_VO_VIEWS[view]
-                    param.text = cutout
-            protocol_element = ElementTree.SubElement(transfer_xml,
-                                                      "vos:protocol")
-            protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                              protocol[
-                                                                  direction])
-
-        logging.debug(ElementTree.tostring(transfer_xml))
-        logging.debug("Sending to : {}".format(endpoints.transfer))
-
-        data = ElementTree.tostring(transfer_xml)
-        resp = self.conn.session.post(endpoints.transfer,
-                                      data=data,
-                                      allow_redirects=False,
-                                      headers={'Content-Type': 'text/xml'})
-
-        logging.debug("{0}".format(resp))
-        logging.debug("{0}".format(resp.text))
-        if resp.status_code != 303:
-            raise OSError(resp.status_code,
-                          "Failed to get transfer service response.")
-        transfer_url = resp.headers.get('Location', None)
-
-        if self.conn.session.auth is not None and "auth" not in transfer_url:
-            transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
-
-        logging.debug("Got back from transfer URL: %s" % transfer_url)
-
-        # For a move this is the end of the transaction.
-        if view == 'move':
-            return not self.get_transfer_error(transfer_url, uri)
-
-        # for get or put we need the protocol value
-        xfer_resp = self.conn.session.get(transfer_url, allow_redirects=False)
-        xfer_url = xfer_resp.headers.get('Location', None)
-        if self.conn.session.auth is not None and "auth" not in xfer_url:
-            xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = self.conn.session.get(xfer_url).text
-        logging.debug("Transfer Document: %s" % xml_string)
-        transfer_document = ElementTree.fromstring(xml_string)
-        logging.debug(
-            "XML version: {0}".format(ElementTree.tostring(transfer_document)))
-        all_protocols = transfer_document.findall(Node.PROTOCOL)
-        if all_protocols is None or not len(all_protocols) > 0:
-            return self.get_transfer_error(transfer_url, uri)
-
-        result = []
-        for protocol in all_protocols:
-            for node in protocol.findall(Node.ENDPOINT):
-                result.append(node.text)
+        trans = Transfer()
+        result = trans.transfer(endpoints.transfer, uri, direction, self.conn,
+                                self.protocol, view, cutout)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
         if urlparse(endpoints.nodes).netloc.startswith('rc'):
@@ -2245,80 +2217,8 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        error_codes = {'NodeNotFound': errno.ENOENT,
-                       'RequestEntityTooLarge': errno.E2BIG,
-                       'PermissionDenied': errno.EACCES,
-                       'OperationNotSupported': errno.EOPNOTSUPP,
-                       'InternalFault': errno.EFAULT,
-                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
-                       'ViewNotSupported': errno.ENOSYS,
-                       'InvalidArgument': errno.EINVAL,
-                       'InvalidURI': errno.EFAULT,
-                       'TransferFailed': errno.EIO,
-                       'DuplicateNode.': errno.EEXIST,
-                       'NodeLocked': errno.EPERM}
-        job_url = str.replace(url, "/results/transferDetails", "")
-
-        try:
-            phase_url = job_url + "/phase"
-            sleep_time = 1
-            roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = VOFile(phase_url, self.conn, method="GET",
-                           follow_redirect=False).read().decode('utf-8')
-            # do not remove the line below. It is used for testing
-            logging.debug("Job URL: " + job_url + "/phase")
-            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
-                # poll the job. Sleeping time in between polls is doubling
-                # each time until it gets to 32sec
-                total_time_slept = 0
-                if sleep_time <= 32:
-                    sleep_time *= 2
-                slept = 0
-                if logger.getEffectiveLevel() == logging.INFO:
-                    while slept < sleep_time:
-                        sys.stdout.write(
-                            "\r%s %s" % (phase, roller[total_time_slept %
-                                                       len(roller)]))
-                        sys.stdout.flush()
-                        slept += 1
-                        total_time_slept += 1
-                        time.sleep(1)
-                    sys.stdout.write("\r                    \n")
-                else:
-                    time.sleep(sleep_time)
-                phase = self.conn.session.get(phase_url,
-                                              allow_redirects=False).text
-                logging.debug(
-                    "Async transfer Phase for url %s: %s " % (url, phase))
-        except KeyboardInterrupt:
-            # abort the job when receiving a Ctrl-C/Interrupt from the client
-            logging.error("Received keyboard interrupt")
-            self.conn.session.post(job_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=ABORT",
-                                   headers={"Content-type": 'text/text'})
-            raise KeyboardInterrupt
-        status = VOFile(phase_url, self.conn, method="GET",
-                        follow_redirect=False).read().decode('UTF-8')
-
-        logger.debug("Phase:  {0}".format(status))
-        if status in ['COMPLETED']:
-            return False
-        if status in ['HELD', 'SUSPENDED', 'ABORTED']:
-            # re-queue the job and continue to monitor for completion.
-            raise OSError("UWS status: {0}".format(status), errno.EFAULT)
-        error_url = job_url + "/error"
-        error_message = self.conn.session.get(error_url).text
-        logger.debug(
-            "Got transfer error {0} on URI {1}".format(error_message, uri))
-        # Check if the error was that the link type is unsupported and try and
-        # follow that link.
-        target = re.search("Unsupported link target:(?P<target> .*)$",
-                           error_message)
-        if target is not None:
-            return target.group('target').strip()
-        raise OSError(error_codes.get(error_message, errno.EFAULT),
-                      "{0}: {1}".format(uri, error_message))
+        trans = Transfer()
+        return trans.get_transfer_error(self.conn, url, uri)
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
              limit=None, next_uri=None, size=None, cutout=None,
@@ -2737,3 +2637,306 @@ class Client(object):
         """
         return VOFile(url, self.conn, method="GET",
                       follow_redirect=False).read()
+
+
+class Transfer(object):
+    DIRECTION_PULL_FROM = "pullFromVoSpace"
+    DIRECTION_PUSH_TO = "pushToVoSpace"
+
+    def __init__(self):
+        """
+        Handle transfer related business.  This is here to be reused as needed.
+        """
+
+    def transfer(self, url, uri, direction, conn, protocol,
+                 view=None, cutout=None):
+        """Build the transfer XML document
+        :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
+        :param uri: the uri to transfer from or to VOSpace.
+        :param view: which view of the node (data/default/cutout/etc.) is
+        being transferred
+        :param cutout: a special parameter added to the 'cutout' view
+        request. e.g. '[0][1:10,1:10]'
+
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        if url:
+            protocol = {
+                Transfer.DIRECTION_PULL_FROM: "{0}get".format(protocol),
+                Transfer.DIRECTION_PUSH_TO: "{0}put".format(protocol)}
+
+            transfer_xml = ElementTree.Element("vos:transfer")
+            transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
+            ElementTree.SubElement(transfer_xml, "vos:target").text = uri
+            ElementTree.SubElement(transfer_xml, "vos:direction").text = \
+                direction
+
+            if view == 'move':
+                ElementTree.SubElement(transfer_xml,
+                                       "vos:keepBytes").text = "false"
+            else:
+                if view == 'defaultview':
+                    ElementTree.SubElement(transfer_xml, "vos:view").attrib[
+                        'uri'] = VO_VIEW_DEFAULT
+                elif view is not None:
+                    vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
+                    vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
+                    if cutout is not None and view == 'cutout':
+                        param = ElementTree.SubElement(vos_view, "vos:param")
+                        param.attrib['uri'] = CADC_VO_VIEWS[view]
+                        param.text = cutout
+                protocol_element = ElementTree.SubElement(transfer_xml,
+                                                          "vos:protocol")
+                protocol_element.attrib['uri'] = "{0}#{1}".format(
+                    Node.IVOAURL, protocol[direction])
+
+            logging.debug(ElementTree.tostring(transfer_xml))
+            logging.debug("Sending to : {}".format(url))
+
+            data = ElementTree.tostring(transfer_xml)
+            resp = conn.session.post(url,
+                                     data=data,
+                                     allow_redirects=False,
+                                     headers={'Content-Type': 'text/xml'})
+
+            logging.debug("{0}".format(resp))
+            logging.debug("{0}".format(resp.text))
+            if resp.status_code != 303:
+                raise OSError(resp.status_code,
+                              "Failed to get transfer service response.")
+            transfer_url = resp.headers.get('Location', None)
+
+            if conn.session.auth is not None and "auth" not in transfer_url:
+                transfer_url = transfer_url.replace('/vospace/',
+                                                    '/vospace/auth/')
+
+            logging.debug("Got back from transfer URL: %s" % transfer_url)
+
+            # For a move this is the end of the transaction.
+            if view == 'move':
+                return not self.get_transfer_error(conn, transfer_url, uri)
+
+            # for get or put we need the protocol value
+            xfer_resp = conn.session.get(transfer_url, allow_redirects=False)
+            xfer_url = xfer_resp.headers.get('Location', None)
+            if conn.session.auth is not None and "auth" not in xfer_url:
+                xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
+            xml_string = conn.session.get(xfer_url).text
+            logging.debug("Transfer Document: %s" % xml_string)
+            transfer_document = ElementTree.fromstring(xml_string)
+            logging.debug(
+                "XML version: {0}".format(
+                    ElementTree.tostring(transfer_document)))
+            all_protocols = transfer_document.findall(Node.PROTOCOL)
+            if all_protocols is None or not len(all_protocols) > 0:
+                return self.get_transfer_error(conn, transfer_url, uri)
+
+            result = []
+            for protocol in all_protocols:
+                for node in protocol.findall(Node.ENDPOINT):
+                    result.append(node.text)
+            return result
+        else:
+            raise ValueError('No endpoints available.')
+
+    def get_transfer_error(self, conn, url, uri):
+        """Follow a transfer URL to the Error message
+        :param url: The URL of the transfer request that had the error.
+        :param uri: The uri that we were trying to transfer (get or put).
+
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        error_codes = {'NodeNotFound': errno.ENOENT,
+                       'RequestEntityTooLarge': errno.E2BIG,
+                       'PermissionDenied': errno.EACCES,
+                       'OperationNotSupported': errno.EOPNOTSUPP,
+                       'InternalFault': errno.EFAULT,
+                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
+                       'ViewNotSupported': errno.ENOSYS,
+                       'InvalidArgument': errno.EINVAL,
+                       'InvalidURI': errno.EFAULT,
+                       'TransferFailed': errno.EIO,
+                       'DuplicateNode.': errno.EEXIST,
+                       'NodeLocked': errno.EPERM}
+        job_url = str.replace(url, "/results/transferDetails", "")
+
+        try:
+            phase_url = job_url + "/phase"
+            sleep_time = 1
+            roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
+            # TODO: technical debt
+            # 1. Move the Transfer class out of vos.py and into its own
+            #    module, say transfer.py
+            # 2. Replace VOFile with some custom code.
+            # Note:
+            # VOFile is too heavy for our purpose, should replace it with
+            # something lighter. For example, replace it with:
+            #     request = requests.Request("GET", phase_url[0])
+            #     vo_request = conn.session.prepare_request(request)
+            #     phase = read(vo_request).decode('utf-8')
+            # where read(vo_request) needs to be implemented locally and
+            #       performs the function of VOFile.read()
+            #
+            # alinga Feb. 27, 2020
+            phase = VOFile(phase_url, conn, method="GET",
+                           follow_redirect=False).read().decode('utf-8')
+            # do not remove the line below. It is used for testing
+            logging.debug("Job URL: " + job_url + "/phase")
+            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
+                # poll the job. Sleeping time in between polls is doubling
+                # each time until it gets to 32sec
+                total_time_slept = 0
+                if sleep_time <= 32:
+                    sleep_time *= 2
+                slept = 0
+                if logger.getEffectiveLevel() == logging.INFO:
+                    while slept < sleep_time:
+                        sys.stdout.write(
+                            "\r%s %s" % (phase, roller[total_time_slept %
+                                                       len(roller)]))
+                        sys.stdout.flush()
+                        slept += 1
+                        total_time_slept += 1
+                        time.sleep(1)
+                    sys.stdout.write("\r                    \n")
+                else:
+                    time.sleep(sleep_time)
+                phase = conn.session.get(phase_url,
+                                         allow_redirects=False).text
+                logging.debug(
+                    "Async transfer Phase for url %s: %s " % (url, phase))
+        except KeyboardInterrupt:
+            # abort the job when receiving a Ctrl-C/Interrupt from the client
+            logging.error("Received keyboard interrupt")
+            conn.session.post(job_url + "/phase",
+                              allow_redirects=False,
+                              data="PHASE=ABORT",
+                              headers={"Content-type": 'text/text'})
+            raise KeyboardInterrupt
+        # TODO: refer to technical debt above
+        status = VOFile(phase_url, conn, method="GET",
+                        follow_redirect=False).read().decode('UTF-8')
+
+        logger.debug("Phase:  {0}".format(status))
+        if status in ['COMPLETED']:
+            return False
+        if status in ['HELD', 'SUSPENDED', 'ABORTED']:
+            # re-queue the job and continue to monitor for completion.
+            raise OSError("UWS status: {0}".format(status), errno.EFAULT)
+        error_url = job_url + "/error"
+        error_message = conn.session.get(error_url).text
+        logger.debug(
+            "Got transfer error {0} on URI {1}".format(error_message, uri))
+        # Check if the error was that the link type is unsupported and try and
+        # follow that link.
+        target = re.search('Unsupported link target:(?P<target> .*)$',
+                           error_message)
+        if target is not None:
+            return target.group('target').strip()
+        raise OSError(error_codes.get(error_message, errno.EFAULT),
+                      '{0}: {1}'.format(uri, error_message))
+
+
+class Stream(object):
+    # 512 Kilobyte default chunk size.
+    DEFAULT_CHUNK_SIZE = 512 * 1024
+
+    # md5sum of a size zero file
+    ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
+
+    def __init__(self, conn, chunk_size=DEFAULT_CHUNK_SIZE):
+        """
+        Handle transfer related business.  This is here to be reused as needed.
+        """
+        self.conn = conn
+        self.chunk_size = chunk_size
+
+    def download(self, get_url, source, source_md5, destination, disposition,
+                 check_md5):
+        """
+        Stream bytes from the provided URL and write them to the given
+        destination.
+
+        :param get_url: The URL to GET from.
+        :type get_url: unicode
+        :param source: The source URI/file
+        :type soruce: unicode
+        :param source_md5: The MD5 hash value
+        :type source_md5: unicode
+        :param destination: The destination path to write to.
+        :type destination: unicode
+        :param disposition: Flag whether to honour the Content-Disposition
+        header
+        :type disposition: bool
+        :param check_md5: Flag whether to verify the destination MD5
+        :type disposition: bool
+        """
+        response = self.conn.session.get(get_url, timeout=(2, 5), stream=True)
+        if disposition:
+            # Build the destination location from the
+            # content-disposition value, or source name.
+            content_disposition = response.headers.get(
+                'content-disposition', destination)
+            content_disposition = re.search(r'.*filename=(\S*).*',
+                                            content_disposition)
+            if content_disposition is not None:
+                content_disposition = content_disposition.group(1).strip()
+            else:
+                content_disposition = os.path.split(source)[-1]
+            if os.path.isdir(destination):
+                destination = os.path.join(destination, content_disposition)
+        source_md5 = response.headers.get('Content-MD5', source_md5)
+        response.raise_for_status()
+        with open(destination, 'wb') as fout:
+            for chunk in response.iter_content(chunk_size=self.chunk_size):
+                if chunk:
+                    fout.write(chunk)
+                    fout.flush()
+        destination_size = os.stat(destination).st_size
+        if check_md5:
+            destination_md5 = md5_cache.MD5Cache.compute_md5(
+                destination)
+            logger.debug(
+                "{0} {1}".format(source_md5, destination_md5))
+            if destination_md5 != source_md5:
+                raise IOError(
+                    'Source and destination md5 do not match: '
+                    '{} vs. {}'.format(source_md5, destination_md5))
+
+        return destination_size
+
+    def upload(self, put_url, artifact_uri, source, source_md5,
+               get_metadata_fn):
+        """
+        Upload the source data to the put_url.
+
+        :param put_url: The Service URL accepting PUTs.
+        :type put_url: unicode
+        :param artifact_uri: The URI of the destination.
+        :type artifact_uri: unicode
+        :param source: The source data (file)
+        :type source: unicode
+        :param source_md5: The MD5 hash value
+        :type source_md5: unicode
+        :param get_metadata_fn:  Function to obtain metadata information
+        :type get_metadata_fn: function
+        :return: Metadata dict for the uploaded Artifact.
+        :rtype {}
+        """
+        self.conn.session.headers.update({(
+            'Content-Length', '{}'.format(os.path.getsize(source)))})
+
+        with open(source, str('rb')) as fin:
+            self.conn.session.put(put_url, data=fin)
+
+        metadata = get_metadata_fn(artifact_uri)
+        destination_md5 = metadata.get('content_md5', ZERO_MD5)
+        if destination_md5 != source_md5:
+            raise IOError(
+                "Source md5 ({}) != destination md5 ({})".
+                format(source_md5, destination_md5))
+        return metadata

@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .. import md5_cache
-from .. import vos
+from .. import vos, storage_inventory
 from ..commonparser import CommonParser, set_logging_level_from_args,\
     exit_on_exception
 
@@ -17,15 +17,18 @@ import errno
 import os
 import re
 import glob
+import six.moves.urllib.parse as urllibparse
 import time
 import warnings
 from cadcutils import exceptions
 
+urlparse = urllibparse.urlparse
+
 __all__ = ['vcp']
 
-DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
-VOSpace service associated to the requested container is discovered via
-registry search.
+DESCRIPTION = """Copy files to and from VOSpace or inventory storage.
+Always recursive for VOSpace. VOSpace service associated to the
+requested container and storage service are discovered via registry search.
 
 vcp can be used to cutout particular parts of a FITS file if the VOSpace
 server supports the action.
@@ -36,7 +39,10 @@ or
 RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
 
-Wildcards in the path or filename work also:
+For inventory storage, wildcards in fielname work:
+vcp *.fits cadc:TEST/
+
+For VOSpace, wildcards in the path or filename work also:
 vcp vos:VOSPACE/foo/*.txt .
 
 If no X509 certificate given on commnad line then location specified by
@@ -44,10 +50,20 @@ default service settings will be used.
 """
 
 
+def _is_vos(fileuri):
+    if isinstance(fileuri, str):
+        fileuri = urlparse(fileuri)
+    return fileuri.scheme == 'vos'
+
+
 def vcp():
     # TODO split this into main and methods
 
     parser = CommonParser(description=DESCRIPTION)
+    parser.add_argument(
+        "--resource-id", default=None,
+        help="resource URI to use to lookup the storage inventory service "
+             "(Minoc)")
     parser.add_argument(
         "source", nargs="+",
         help="file/directory/dataNode/containerNode to copy from.")
@@ -94,12 +110,24 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if dest[0:4] != 'vos:':
+    if not _is_vos(dest) and not vos.is_remote_file(dest):
         dest = os.path.abspath(dest)
 
-    client = vos.Client(vospace_certfile=args.certfile,
-                        vospace_token=args.token,
-                        transfer_shortcut=args.quick)
+    # The --resource-id switch will be the thing that tells the vcp command
+    # to use the provided URIs with the Storage Inventory system.  This will
+    # usually be set to ivo://cadc.nrc.ca/raven for the Global Site, but can
+    # be set to any specific site at the user's own risk.
+    #
+    # jenkinsd 2020.01.03
+    #
+    if 'resource_id' in args and args.resource_id is not None:
+        client = storage_inventory.Client(args.resource_id,
+                                          certfile=args.certfile,
+                                          token=args.token)
+    else:
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token,
+                            transfer_shortcut=args.quick)
 
     exit_code = 0
 
@@ -113,14 +141,13 @@ def vcp():
                                        r"(?P<dec>[\-+]?\d*(\.\d*)?),"
                                        r"(?P<rad>\d*(\.\d*)?)\))?")
 
-    # Warnings:
+    # Warnings (applies to VOSpace only):
     # vcp destination specified with a trailing '/' implies ContainerNode
     #
     #    If destination has trailing '/' and exists but is a DataNode then
     #    error message is returned:  "Invalid Argument (target node is not a
     # DataNode)"
     #
-    #    vcp currently only works on the CADC VOSpace server.
     # Version: %s """ % (version.version)
 
     pass
@@ -136,18 +163,21 @@ def vcp():
 
     def isdir(filename):
         logging.debug("Doing an isdir on %s" % filename)
-        if filename[0:4] == "vos:":
+        _filename = urlparse(filename)
+        if _filename.scheme:
             return client.isdir(filename)
         else:
             return os.path.isdir(filename)
 
     def islink(filename):
         logging.debug("Doing an islink on %s" % filename)
-        if filename[0:4] == "vos:":
+        if _is_vos(filename):
             try:
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
                 return False
+        elif vos.is_remote_file(filename):
+            return False
         else:
             return os.path.islink(filename)
 
@@ -159,10 +189,19 @@ def vcp():
         @return: True/False
         """
         logging.debug("checking for access %s " % filename)
-        if filename[0:4] == "vos:":
+        if _is_vos(filename):
             try:
                 node = get_node(filename, limit=0)
                 return node is not None
+            except (
+                exceptions.NotFoundException, exceptions.ForbiddenException,
+                    exceptions.UnauthorizedException):
+                return False
+        elif vos.is_remote_file(filename):
+            try:
+                md = client.get_metadata(filename)
+                logging.debug('Found metadata {}'.format(md))
+                return True
             except (
                 exceptions.NotFoundException, exceptions.ForbiddenException,
                     exceptions.UnauthorizedException):
@@ -174,28 +213,33 @@ def vcp():
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if dirname[0:4] == "vos:":
+        if _is_vos(dirname) or vos.is_remote_file(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if filename[0:4] == 'vos:':
+        if _is_vos(filename) or vos.is_remote_file(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
 
     def get_md5(filename):
-        logging.debug("getting the MD5 for %s" % filename)
-        if filename[0:4] == 'vos:':
+        logging.debug("getting the MD5 for %s".format(filename))
+        if _is_vos(filename):
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
+        elif vos.is_remote_file(filename):
+            return client.get_metadata(filename).get('content_md5',
+                                                     vos.ZERO_MD5)
         else:
             return md5_cache.MD5Cache.compute_md5(filename)
 
     def lglob(pathname):
-        if pathname[0:4] == "vos:":
+        if _is_vos(pathname):
             return client.glob(pathname)
+        elif vos.is_remote_file(pathname):
+            return [pathname]
         else:
             return glob.glob(pathname)
 
@@ -245,28 +289,6 @@ def vcp():
                          exclude, include, interrogate, overwrite, ignore,
                          head)
             else:
-                if interrogate:
-                    if access(destination_name, os.F_OK):
-                        sys.stderr.write(
-                            "File %s exists.  Overwrite? (y/n): " %
-                            destination_name)
-                        ans = sys.stdin.readline().strip()
-                        if ans != 'y':
-                            raise Exception("File exists")
-
-                if not access(os.path.dirname(destination_name), os.F_OK):
-                    raise OSError(errno.EEXIST,
-                                  "vcp: ContainerNode %s does not exist" %
-                                  os.path.dirname(
-                                      destination_name))
-
-                if not isdir(os.path.dirname(destination_name)) and not islink(
-                        os.path.dirname(destination_name)):
-                    raise OSError(errno.ENOTDIR,
-                                  "vcp: %s is not a ContainerNode or LinkNode"
-                                  % os.path.dirname(
-                                      destination_name))
-
                 skip = False
                 if exclude is not None:
                     for thisIgnore in exclude.split(','):
@@ -286,10 +308,14 @@ def vcp():
                 niters = 0
                 while not skip:
                     try:
-                        logging.debug("Starting call to copy")
+                        logging.debug(
+                            "Starting call to copy with client {}".format(
+                                type(client)))
                         client.copy(source_name, destination_name,
                                     send_md5=True, head=head)
-                        logging.debug("Call to copy returned")
+                        logging.debug(
+                            "Call to copy returned from {} to {}".format(
+                                source_name, destination_name))
                         break
                     except Exception as client_exception:
                         logging.debug("{}".format(client_exception))
@@ -342,7 +368,8 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if source_pattern[0:4] != "vos:":
+            if not _is_vos(source_pattern) and \
+                    not vos.is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -355,25 +382,40 @@ def vcp():
                     if ra_dec_match is not None:
                         cutout = ra_dec_match.group('cutout')
                 logging.debug("cutout: {}".format(cutout))
+                logging.debug('GLOBbing {}'.format(source_pattern))
                 sources = lglob(source_pattern)
                 if cutout is not None:
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
+
+                logging.debug('Sources are {}'.format(sources))
             for source in sources:
-                if source[0:4] != "vos:":
+                logging.debug('Checking source {}'.format(source))
+                if not _is_vos(source) and not vos.is_remote_file(source):
+                    logging.debug('Correcting path.')
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
                     raise Exception("Can't access source: %s " % source)
+
+                logging.debug('Source {} can be accessed.'.format(source))
 
                 if not args.follow_links and islink(source):
                     logging.info("{}: Skipping (symbolic link)".format(source))
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
+                if (_is_vos(source) or vos.is_remote_file(source))\
+                        and (_is_vos(dest) or vos.is_remote_file(dest)):
                     raise Exception(
-                        "Can not (yet) copy from VOSpace to VOSpace.")
+                        "Can not (yet) copy from server to server.")
+
+                # server to server copy is not yet implemented
+                if 'resource_id' in args and args.resource_id is not None\
+                        and vos.is_remote_file(source)\
+                        and vos.is_remote_file(dest):
+                    raise Exception(
+                        "Can not (yet) copy from server to server.")
 
                 this_destination = dest
                 if isdir(source):
@@ -400,9 +442,14 @@ def vcp():
                             ("vcp can not copy multiple things into a"
                              "non-existent location (%s)") % dest)
                 elif dest[-1] == '/' or isdir(dest):
+                    logging.debug(
+                        'Checking if {} is a directory.'.format(dest))
                     # we're copying into a directory
                     this_destination = os.path.join(dest,
                                                     os.path.basename(source))
+
+                logging.debug('Main copy from {} to {}'.format(
+                    source, this_destination))
                 copy(source, this_destination, exclude=args.exclude,
                      include=args.include,
                      interrogate=args.interrogate, overwrite=args.overwrite,

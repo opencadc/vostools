@@ -87,8 +87,10 @@ echo " [OK]"
 
 echo -n "remove the sub container"
 $RMDIRCMD --token="$TOKEN" $CONTAINER/B/test || echo " [FAIL]" && exit -1
-$LSCMD --token="$TOKEN" $CONTAINER/B | grep -q test
-if ( $status == 0 ) then
+
+echo -n "checking the remove was successful"
+set check_test = "`${LSCMD} --token='${TOKEN}' ${CONTAINER}/B | grep -q test`"
+if ( "${check_test}" != "" ) then
     echo " [FAIL]" && exit -1
 endif
 echo " [OK]"

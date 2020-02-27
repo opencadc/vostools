@@ -355,6 +355,8 @@ class TestClient(unittest.TestCase):
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         get_node_mock.reset_mock()
+        props.reset_mock()
+        props.get.return_value = md5sum
         test_client.copy(vospaceLocation, osLocation)
         assert not get_node_url_mock.called
         computed_md5_mock.assert_called_once_with(osLocation)
@@ -372,6 +374,20 @@ class TestClient(unittest.TestCase):
         computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation)
 
+        # change the content of local files to trigger a new copy
+        get_node_url_mock.reset_mock()
+        get_node_url_mock.return_value = \
+            ['https://mysite.com/node/node123/cutout']
+        computed_md5_mock.reset_mock()
+        # computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy('{}{}'.format(vospaceLocation,
+                                       '[1][10:60]'), osLocation)
+        get_node_url_mock.assert_called_once_with(
+            vospaceLocation, method='GET', cutout='[1][10:60]', view='cutout')
+        # computed_md5_mock.assert_called_with(osLocation)
+        # get_node_mock.assert_called_once_with(vospaceLocation)
+
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
@@ -387,7 +403,8 @@ class TestClient(unittest.TestCase):
             ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
-        props.get.side_effect = ['d00223344', md5sum]
+        props.reset_mock()
+        props.get.side_effect = ['d00223344', 88, md5sum, 'text/plain']
         test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
