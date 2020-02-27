@@ -2768,6 +2768,20 @@ class Transfer(object):
             phase_url = job_url + "/phase"
             sleep_time = 1
             roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
+            # TODO: technical debt
+            # 1. Move the Transfer class out of vos.py and into its own
+            #    module, say transfer.py
+            # 2. Replace VOFile with some custom code.
+            # Note:
+            # VOFile is too heavy for our purpose, should replace it with
+            # something lighter. For example, replace it with:
+            #     request = requests.Request("GET", phase_url[0])
+            #     vo_request = conn.session.prepare_request(request)
+            #     phase = read(vo_request).decode('utf-8')
+            # where read(vo_request) needs to be implemented locally and
+            #       performs the function of VOFile.read()
+            #
+            # alinga Feb. 27, 2020
             phase = VOFile(phase_url, conn, method="GET",
                            follow_redirect=False).read().decode('utf-8')
             # do not remove the line below. It is used for testing
@@ -2803,6 +2817,7 @@ class Transfer(object):
                               data="PHASE=ABORT",
                               headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
+        # TODO: refer to technical debt above
         status = VOFile(phase_url, conn, method="GET",
                         follow_redirect=False).read().decode('UTF-8')
 
