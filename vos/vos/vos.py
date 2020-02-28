@@ -1369,7 +1369,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
-    VO_TRANSFER_PROTOCOLS = ['http', 'https']
+    VO_TRANSFER_PROTOCOL = 'https'
 
     #  reserved vospace properties, not to be used for extended property
     #  setting
@@ -1387,7 +1387,7 @@ class Client(object):
 
     def __init__(self, vospace_certfile=None, root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
-                 secure_get=False, vospace_token=None):
+                 secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
 
         :param vospace_certfile: x509 proxy certificate file location.
@@ -1404,8 +1404,8 @@ class Client(object):
         :type transfer_shortcut: bool
         :param http_debug: turn on http debugging.
         :type http_debug: bool
-        :param secure_get: Use HTTPS: ie. transfer contents of files using
-        SSL encryption.
+        :param secure_get: Use HTTPS (by default): ie. transfer contents of
+        files using SSL encryption.
         :type secure_get: bool
         """
 
@@ -1421,13 +1421,7 @@ class Client(object):
                               vospace_token=vospace_token,
                               http_debug=http_debug)
 
-        self.protocol = vos_config.get('transfer', 'protocol')
-        if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
-            raise SystemError(
-                'Unsupported protocol {}. Valid protocols: {}. Update {}'.
-                format(self.protocol, self.VO_TRANSFER_PROTOCOLS,
-                       _CONFIG_PATH))
-
+        self.protocol = Client.VO_TRANSFER_PROTOCOL
         self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
