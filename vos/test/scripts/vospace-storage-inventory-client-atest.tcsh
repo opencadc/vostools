@@ -33,6 +33,8 @@ else
         echo "Using ${TMPDIR} for temporary files"
 endif
 
+#set ACCESS_PAGE=https://ws-cadc.canfar.net/ac/login
+#set VOS_BASE = "vos://cadc.nrc.ca~vault"
 set SITE_1_RESOURCE_ID = "ivo://cadc.nrc.ca/minoc"
 set SET_SITE_1_RESOURCE_ID = " --resource-id ${SITE_1_RESOURCE_ID}"
 
@@ -40,14 +42,16 @@ set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
 # Username / password for getting tokens
-echo "Enter credentials for a VOSpace account in which we will perform tests."
-echo -n "CADC Username: "
-set username = $<
-echo -n "Password: "
-stty -echo
-set password = $<
-echo
-stty echo
+#echo "Enter credentials for a VOSpace account in which we will perform tests."
+#echo -n "CADC Username: "
+#set username = $<
+#echo -n "Password: "
+#stty -echo
+#set password = $<
+#echo
+#stty echo
+
+#set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}`"
 
 set DIFFCMD = "diff -q"
 
@@ -56,7 +60,7 @@ set CPCMD = "vcp ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
 set RMDIRCMD = "vrmdir ${DEBUG_FLAG}"
 
 set CERT = " --cert=$CERTFILE"
-set TOKEN = "--token ${TOKEN}"
+#set TOKEN = "--token ${TOKEN}"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
 set ROOT = "cadc:"
@@ -78,7 +82,7 @@ echo
 
 echo "-----------"
 echo -n "Copy file to existing container and non-existent data node "
-$CPCMD ${TOKEN} $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
+$CPCMD ${CERT} $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 # echo "-----------"
