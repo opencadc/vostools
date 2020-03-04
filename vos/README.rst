@@ -50,6 +50,12 @@ and use
 
 ``python setup.py install --user``
 
+The CADC services use ``https`` for all HTTP communication.  Sometimes, this requires the ``requests`` library to explicitly
+trust the server certificate.  Simply set the ``REQUESTS_CA_BUNDLE`` environment variable to the appropriate trusted CA
+bundle on your operating system.  On most Linux systems, this will be ``/etc/ssl/certs/ca-certificates.crt``:
+
+``$ REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.ca vcp ...``
+
 Tutorial
 --------
 
@@ -57,7 +63,7 @@ Tutorial
    account <http://www.canfar.phys.uvic.ca/canfar/auth/request.html>`__
 2. Install the vos package.
 3. Retrieve a X509/SSL certificate using the ``getCert``
-   script installed as part of the ``cadcutils`` package that is automatically installed wiht vos.
+   script installed as part of the ``cadcutils`` package that is automatically installed with vos.
 4. Example Usage.
 
    1. Commandline usage:
@@ -82,6 +88,20 @@ Tutorial
           import vos
           client = vos.Client()
           client.listdir('vos:jkavelaars')
+
+
+Experimental
+------------
+
+The ``vcp`` and ``vrm`` commands can be used with the new CADC Storage Inventory system.  This is used for developers wanting
+to use the new system that is not yet public.  Activating it requires the use of the ``--resource-id`` switch.
+
+1. Example Usage:
+
+   1. Command line:
+
+      -  ``$ vcp --resource-id ivo://cadc.nrc.ca/minoc /tmp/* cadc:MYBUCKET/``
+      -  ``$ vrm --resource-id ivo://cadc.nrc.ca/minoc cadc:MYBUCKET/myfile.fits cadc:MYBUCKET/anotherfile.fits``
 
 Development
 -----------
