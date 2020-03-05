@@ -1369,7 +1369,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
-    VO_TRANSFER_PROTOCOL = 'https'
+    VO_TRANSFER_PROTOCOLS = ['https', 'http']
 
     #  reserved vospace properties, not to be used for extended property
     #  setting
@@ -1405,7 +1405,7 @@ class Client(object):
         :param http_debug: turn on http debugging.
         :type http_debug: bool
         :param secure_get: Use HTTPS (by default): ie. transfer contents of
-        files using SSL encryption.
+        files using SSL encryption. For future expansion, currently not used.
         :type secure_get: bool
         """
 
@@ -1421,7 +1421,7 @@ class Client(object):
                               vospace_token=vospace_token,
                               http_debug=http_debug)
 
-        self.protocol = Client.VO_TRANSFER_PROTOCOL
+        self.protocols = Client.VO_TRANSFER_PROTOCOLS
         self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
@@ -2028,8 +2028,8 @@ class Client(object):
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
 
-        # On GET override the protocol to be http (faster) unless a
-        # secure_get is requested.
+        # Future expansion: can use self.secure_get to filter the protocols
+        # sent to the server.
         protocol = {
             'GET': {'https': ((self.secure_get and Client.VO_HTTPSGET_PROTOCOL)
                               or Client.VO_HTTPGET_PROTOCOL),
@@ -2040,11 +2040,15 @@ class Client(object):
         # build the url for that will request the url that provides access to
         # the node.
 
+        protocol_list = []
+        for p in self.protocols:
+            protocol_list.append(protocol[method][p])
+
         url = endpoints.transfer
         args = {
             'TARGET': uri,
             'DIRECTION': direction[method],
-            'PROTOCOL': protocol[method][self.protocol],
+            'PROTOCOL': protocol_list,
             'view': view}
 
         if cutout is not None:
@@ -2152,9 +2156,17 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
+        get_protocol_list = []
+        for p in self.protocols:
+            get_protocol_list.append("{0}get".format(p))
+
+        put_protocol_list = []
+        for p in self.protocols:
+            put_protocol_list.append("{0}put".format(p))
+
         endpoints = self.get_endpoints(uri)
-        protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
-                    "pushToVoSpace": "{0}put".format(self.protocol)}
+        protocol = {"pullFromVoSpace": get_protocol_list,
+                    "pushToVoSpace": put_protocol_list}
 
         transfer_xml = ElementTree.Element("vos:transfer")
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
@@ -2175,11 +2187,12 @@ class Client(object):
                     param = ElementTree.SubElement(vos_view, "vos:param")
                     param.attrib['uri'] = CADC_VO_VIEWS[view]
                     param.text = cutout
-            protocol_element = ElementTree.SubElement(transfer_xml,
-                                                      "vos:protocol")
-            protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                              protocol[
-                                                                  direction])
+
+            for p in protocol[direction]:
+                protocol_element = ElementTree.SubElement(transfer_xml,
+                                                          "vos:protocol")
+                protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
+                                                                  p)
 
         logging.debug(ElementTree.tostring(transfer_xml))
         logging.debug("Sending to : {}".format(endpoints.transfer))
