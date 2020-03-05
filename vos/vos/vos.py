@@ -749,9 +749,12 @@ class Node(object):
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
         date = convert_vospace_time_to_seconds(self.props['date'])
-        creator = (re.search('CN=([^,]*)',
-                             self.props.get('creator', 'CN=unknown_000,'))
-                   .groups()[0].replace(' ', '_')).lower()
+        creator_str = re.search('CN=([^,]*)',
+                                self.props.get('creator', 'CN=unknown_000,'))
+        if creator_str is None:
+            creator = self.props.get('creator', 'CN=unknown_000,')
+        else:
+            creator = (creator_str.groups()[0].replace(' ', '_')).lower()
         perm = []
         for i in range(10):
             perm.append('-')
