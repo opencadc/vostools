@@ -71,8 +71,8 @@ def test_get_node_url():
 
     # test when sort == None, order != None, a ValueError is raised
     with pytest.raises(ValueError):
-        equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                                              order='desc')).query
+        urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                                     order='desc')).query
 
     # test header view
     transfer_url = 'https://some.location/some/headers'
