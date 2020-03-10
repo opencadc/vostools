@@ -87,19 +87,19 @@ class TestVls(unittest.TestCase):
         # vls command with sort == None, order == None
         mock_node1 = MagicMock(type='vos:DataNode')
         mock_node1.name = 'node1'
-        mock_node1.props = {'length':100, 'date':50000}
+        mock_node1.props = {'length': 100, 'date': 50000}
         mock_node1.isdir.return_value = False
         mock_node1.get_info.return_value = ''
 
         mock_node2 = MagicMock(type='vos:DataNode')
         mock_node2.name = 'node2'
-        mock_node2.props = {'length':30, 'date':70000}
+        mock_node2.props = {'length': 30, 'date': 70000}
         mock_node2.isdir.return_value = False
         mock_node2.get_info.return_value = ''
 
         mock_node3 = MagicMock(type='vos:DataNode')
         mock_node3.name = 'node3'
-        mock_node3.props = {'length':60, 'date':20000}
+        mock_node3.props = {'length': 60, 'date': 20000}
         mock_node3.isdir.return_value = False
         mock_node3.get_info.return_value = ''
 
