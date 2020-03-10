@@ -126,7 +126,7 @@ class TestVls(unittest.TestCase):
             cmd_attr()
             assert out == stdout_mock.getvalue()
 
-        # vls command with sort == None, order == reverse (i.e. not None)
+        # vls command with sort == size, order == reverse
         out = 'node2\nnode3\nnode1\n'
         with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
             vos_client_mock.return_value.get_node = \
