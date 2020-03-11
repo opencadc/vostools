@@ -75,7 +75,6 @@ import unittest
 from six import StringIO
 from mock import Mock, patch, MagicMock, call
 from vos import commands
-from argparse import ArgumentError
 
 # the following is a temporary workaround for python issue
 # 25532 (https://bugs.python.org/issue25532)
@@ -150,6 +149,6 @@ class TestVls(unittest.TestCase):
             vos_client_mock.return_value.get_node = \
                 MagicMock(side_effect=[mock_node2, mock_node3, mock_node1])
             sys.argv = ['vls', '-r', 'vos:/CADCRegtest1']
-            with self.assertRaises(MyExitError) as ex:
+            with self.assertRaises(MyExitError):
                 cmd_attr = getattr(commands, 'vls')
                 cmd_attr()
