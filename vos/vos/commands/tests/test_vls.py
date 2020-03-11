@@ -73,15 +73,23 @@ import sys
 import unittest
 
 from six import StringIO
-from mock import patch, MagicMock, call
+from mock import Mock, patch, MagicMock, call
 from vos import commands
+from argparse import ArgumentError
 
 # the following is a temporary workaround for python issue
 # 25532 (https://bugs.python.org/issue25532)
 call.__wrapped__ = None
 
 
+class MyExitError(Exception):
+
+    def __init__(self):
+        self.message = "MyExitError"
+
+
 class TestVls(unittest.TestCase):
+    @patch('sys.exit', Mock(side_effect=[MyExitError]))
     @patch('vos.vos.Client')
     def test_vls(self, vos_client_mock):
         # vls command with sort == None, order == None
@@ -135,3 +143,13 @@ class TestVls(unittest.TestCase):
             cmd_attr = getattr(commands, 'vls')
             cmd_attr()
             assert out == stdout_mock.getvalue()
+
+        # vls command with sort == None, order == reverse
+        out = 'node2\nnode3\nnode1\n'
+        with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
+            vos_client_mock.return_value.get_node = \
+                MagicMock(side_effect=[mock_node2, mock_node3, mock_node1])
+            sys.argv = ['vls', '-r', 'vos:/CADCRegtest1']
+            with self.assertRaises(MyExitError) as ex:
+                cmd_attr = getattr(commands, 'vls')
+                cmd_attr()
