@@ -1405,7 +1405,8 @@ class Client(object):
         :param http_debug: turn on http debugging.
         :type http_debug: bool
         :param secure_get: Use HTTPS (by default): ie. transfer contents of
-        files using SSL encryption. For future expansion, currently not used.
+        files using SSL encryption. Used for more and more unlikely case when
+        the service supports unsecure (HTTP) transfer.
         :type secure_get: bool
         """
 
@@ -2156,14 +2157,8 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        get_protocol_list = []
-        for p in self.protocols:
-            get_protocol_list.append("{0}get".format(p))
-
-        put_protocol_list = []
-        for p in self.protocols:
-            put_protocol_list.append("{0}put".format(p))
-
+        get_protocol_list = ['{0}get'.format(p) for p in self.protocols]
+        put_protocol_list = ['{0}put'.format(p) for p in self.protocols]
         endpoints = self.get_endpoints(uri)
         protocol = {"pullFromVoSpace": get_protocol_list,
                     "pushToVoSpace": put_protocol_list}
