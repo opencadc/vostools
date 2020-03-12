@@ -125,8 +125,8 @@ def vls():
         else:
             sort = None
 
-        if sort is None and opt.reverse:
-            raise ArgumentError("reverse cannot be used without sort")
+        if sort is None and opt.reverse == False:
+            order = None
         elif opt.reverse:
             order = 'asc' if sort else 'desc'
         else:
