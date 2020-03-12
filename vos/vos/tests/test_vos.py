@@ -80,7 +80,8 @@ def test_get_node_url():
 
 
 @patch('vos.vos.os.path.exists', Mock())
-def test_rename_vospace_resource():
+def test_update_config():
+    # test rename vospace resource
     with warnings.catch_warnings(record=True) as w:
         vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
         assert len(w) == 1
