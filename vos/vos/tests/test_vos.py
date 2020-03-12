@@ -96,7 +96,7 @@ def test_update_config():
         new_config_mock = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_config_mock
-        vos._rename_vospace_resource()
+        vos._update_config()
     assert new_config_mock.called_once_with(old_content)
 
     new_config_mock.reset_mock()
@@ -107,7 +107,7 @@ def test_update_config():
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
-        vos._rename_vospace_resource()
+        vos._update_config()
     assert new_config_mock.called_once_with(old_content.replace(
         'vospace', 'vault'))
 
