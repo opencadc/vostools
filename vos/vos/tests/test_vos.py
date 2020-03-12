@@ -99,6 +99,7 @@ def test_update_config():
         vos._update_config()
     assert new_config_mock.called_once_with(old_content)
 
+    # test rewrite vospace resource in config file
     new_config_mock.reset_mock()
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
@@ -110,6 +111,20 @@ def test_update_config():
         vos._update_config()
     assert new_config_mock.called_once_with(old_content.replace(
         'vospace', 'vault'))
+
+    # test rewrite transfer protocol in config file
+    new_config_mock.reset_mock()
+    protocol_text = "# transfer protocol configuration is no longer supported\n"
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah\nprotocol=http\nfoo'
+        new_content = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_content
+        vos._update_config()
+    assert new_config_mock.called_once_with(old_content.replace(
+        'protocol', '{}#protocol'.format(protocol_text)))
 
 
 class TestClient(unittest.TestCase):
