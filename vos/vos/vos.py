@@ -116,16 +116,29 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
-def _rename_vospace_resource():
-    # temporary function to deal with renaming of the
-    # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+def _update_config():
+    # temporary function to deal with:
+    # - renaming of the ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+    # - commenting out transfer protocol
     if os.path.exists(_CONFIG_PATH):
         try:
+            protocol_text = \
+                '# transfer protocol configuration is no longer supported'
+            changed = False
             config_content = open(_CONFIG_PATH, 'r').read()
             if 'ivo://cadc.nrc.ca/vospace' in config_content:
                 config_content = config_content.replace(
                     'ivo://cadc.nrc.ca/vospace',
                     'ivo://cadc.nrc.ca/vault')
+                changed = True
+            if protocol_text not in config_content and \
+                    'protocol' in config_content:
+                config_content = config_content.replace(
+                    'protocol',
+                    '{}\n# protocol'.format(protocol_text))
+                changed = True
+
+            if changed:
                 open(_CONFIG_PATH, 'w').write(config_content)
         except Exception as e:
             warnings.warn('Error trying to access {} config file: {}'.format(
@@ -134,7 +147,7 @@ def _rename_vospace_resource():
 
 
 try:
-    _rename_vospace_resource()
+    _update_config()
     vos_config = util.Config(_CONFIG_PATH)
 except IOError:
     # Assume this is the first invocation and the config file has not been
