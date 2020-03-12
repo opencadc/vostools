@@ -114,7 +114,8 @@ def test_update_config():
 
     # test rewrite transfer protocol in config file
     new_config_mock.reset_mock()
-    protocol_text = "# transfer protocol configuration is no longer supported\n"
+    protocol_text = \
+        "# transfer protocol configuration is no longer supported\n"
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
     with patch('vos.vos.open') as open_mock:
