@@ -62,17 +62,8 @@ def test_get_node_url():
     assert('sort={}'.format(vos.SortNodeProperty.LENGTH.value) in args)
 
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                                          sort=vos.SortNodeProperty.LENGTH,
                                           order='desc')).query
-    args = urllib.parse.unquote(equery).split('&')
-    assert(2 == len(args))
-    assert('order=desc' in args)
-    assert('sort={}'.format(vos.SortNodeProperty.LENGTH.value) in args)
-
-    # test when sort == None, order != None, a ValueError is raised
-    with pytest.raises(ValueError):
-        urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                                     order='desc')).query
+    assert('order=desc' == urllib.parse.unquote(equery))
 
     # test header view
     transfer_url = 'https://some.location/some/headers'

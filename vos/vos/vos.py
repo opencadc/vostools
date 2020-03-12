@@ -133,13 +133,6 @@ def _rename_vospace_resource():
             pass
 
 
-def _check_order(sort, order):
-    if (sort is None and order is not None):
-        raise ValueError(
-            'when sort is None, order should be None, but was {0}'.format(
-                order))
-
-
 try:
     _rename_vospace_resource()
     vos_config = util.Config(_CONFIG_PATH)
@@ -813,8 +806,6 @@ class Node(object):
         if not self.isdir():
             return
 
-        _check_order(sort, order)
-
         if self.node_list is not None:
             # children already downloaded
             for i in self.node_list:
@@ -1068,6 +1059,8 @@ class VOFile(object):
                                                   self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
                 exception = OSError(errno.EPERM, "VOSpace in read-only mode.")
+            if self.resp.status_code == 400 and "sorting options not supported" in msg:
+                exception = Exception("service does not support sorting")
             raise exception
 
         # Get the file size. We use this HEADER-CONTENT-LENGTH as a
@@ -1962,7 +1955,6 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        _check_order(sort, order)
         uri = self.fix_uri(uri)
 
         if sort is not None and not isinstance(sort, SortNodeProperty):
@@ -2382,7 +2374,6 @@ class Client(object):
         # really that's an error, but I thought I'd just accept those are
         # os.O_RDONLY
 
-        _check_order(sort, order)
         if type(mode) == str:
             mode = os.O_RDONLY
 
@@ -2597,7 +2588,6 @@ class Client(object):
         :param force: if True force the read from server otherwise use local
         cache
         """
-        _check_order(sort, order)
         uri = self.fix_uri(uri)
         logger.debug(str(uri))
         node = self.get_node(uri, limit=0, force=force)
