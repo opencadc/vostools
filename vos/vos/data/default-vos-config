@@ -1,7 +1,2 @@
 [vos]
 resourceID = ivo://cadc.nrc.ca/vault
-
-# transfer protocol configuration is no longer supported
-#[transfer]
-#protocol = http
-

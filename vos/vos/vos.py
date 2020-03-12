@@ -1422,6 +1422,12 @@ class Client(object):
                               vospace_token=vospace_token,
                               http_debug=http_debug)
 
+        protocol = vos_config.get('transfer', 'protocol')
+        if protocol is not None:
+            warn_msg = "Protocol is no longer supported and should be " \
+                       "removed from the config file."
+            warnings.warn(warn_msg, UserWarning)
+
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
         self.conn = conn
         self.rootNode = root_node
