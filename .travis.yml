@@ -11,7 +11,7 @@ sudo: false
 
 install:
     - pip install -U pip
-    - pip install twine
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then pip install twine; fi
     - for i in $(ls -d */); do cd $i; pip install -r dev_requirements.txt; cd ..; done
     - pip install coveralls
 
