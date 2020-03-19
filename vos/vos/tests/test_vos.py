@@ -80,7 +80,8 @@ def test_get_node_url():
 
 
 @patch('vos.vos.os.path.exists', Mock())
-def test_rename_vospace_resource():
+def test_update_config():
+    # test rename vospace resource
     with warnings.catch_warnings(record=True) as w:
         vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
         assert len(w) == 1
@@ -95,9 +96,10 @@ def test_rename_vospace_resource():
         new_config_mock = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_config_mock
-        vos._rename_vospace_resource()
+        vos._update_config()
     assert new_config_mock.called_once_with(old_content)
 
+    # test rewrite vospace resource in config file
     new_config_mock.reset_mock()
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
@@ -106,9 +108,24 @@ def test_rename_vospace_resource():
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
-        vos._rename_vospace_resource()
+        vos._update_config()
     assert new_config_mock.called_once_with(old_content.replace(
         'vospace', 'vault'))
+
+    # test rewrite transfer protocol in config file
+    new_config_mock.reset_mock()
+    protocol_text = \
+        "# transfer protocol configuration is no longer supported\n"
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah\nprotocol=http\nfoo'
+        new_content = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_content
+        vos._update_config()
+    assert new_config_mock.called_once_with(old_content.replace(
+        'protocol', '{}#protocol'.format(protocol_text)))
 
 
 class TestClient(unittest.TestCase):
