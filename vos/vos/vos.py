@@ -1316,7 +1316,7 @@ class EndPoints(object):
     # standard ids
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
-    VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
+    VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
 
     subject = net.Subject()  # default subject is for anonymous access
 
