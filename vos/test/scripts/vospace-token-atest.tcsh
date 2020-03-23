@@ -35,7 +35,15 @@ echo
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
 set VOROOT = "vos:"
-set VOHOME = "$VOROOT""$username"
+# use resourceID in vos-config to determine the base URI
+# vault uses CADCRegtest1, cavern uses home/cadcregtest1
+grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
+if ( $status == 0) then
+    set HOME_BASE = "home/""$username"
+else
+    set HOME_BASE = "$username"
+endif
+set VOHOME = "$VOROOT""$HOME_BASE"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
