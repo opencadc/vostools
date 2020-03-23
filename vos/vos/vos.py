@@ -116,16 +116,29 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
-def _rename_vospace_resource():
-    # temporary function to deal with renaming of the
-    # ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+def _update_config():
+    # temporary function to deal with:
+    # - renaming of the ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
+    # - commenting out transfer protocol
     if os.path.exists(_CONFIG_PATH):
         try:
+            protocol_text = \
+                '# transfer protocol configuration is no longer supported'
+            changed = False
             config_content = open(_CONFIG_PATH, 'r').read()
             if 'ivo://cadc.nrc.ca/vospace' in config_content:
                 config_content = config_content.replace(
                     'ivo://cadc.nrc.ca/vospace',
                     'ivo://cadc.nrc.ca/vault')
+                changed = True
+            if protocol_text not in config_content and \
+                    'protocol' in config_content:
+                config_content = config_content.replace(
+                    'protocol',
+                    '{}\n# protocol'.format(protocol_text))
+                changed = True
+
+            if changed:
                 open(_CONFIG_PATH, 'w').write(config_content)
         except Exception as e:
             warnings.warn('Error trying to access {} config file: {}'.format(
@@ -134,7 +147,7 @@ def _rename_vospace_resource():
 
 
 try:
-    _rename_vospace_resource()
+    _update_config()
     vos_config = util.Config(_CONFIG_PATH)
 except IOError:
     # Assume this is the first invocation and the config file has not been
@@ -1374,7 +1387,7 @@ class Client(object):
     VO_HTTPSGET_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsget'
     VO_HTTPSPUT_PROTOCOL = 'ivo://ivoa.net/vospace/core#httpsput'
     DWS = '/data/pub/'
-    VO_TRANSFER_PROTOCOLS = ['http', 'https']
+    VO_TRANSFER_PROTOCOLS = ['https', 'http']
 
     #  reserved vospace properties, not to be used for extended property
     #  setting
@@ -1392,7 +1405,7 @@ class Client(object):
 
     def __init__(self, vospace_certfile=None, root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
-                 secure_get=False, vospace_token=None):
+                 secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
 
         :param vospace_certfile: x509 proxy certificate file location.
@@ -1409,8 +1422,9 @@ class Client(object):
         :type transfer_shortcut: bool
         :param http_debug: turn on http debugging.
         :type http_debug: bool
-        :param secure_get: Use HTTPS: ie. transfer contents of files using
-        SSL encryption.
+        :param secure_get: Use HTTPS (by default): ie. transfer contents of
+        files using SSL encryption. Used for more and more unlikely case when
+        the service supports unsecure (HTTP) transfer.
         :type secure_get: bool
         """
 
@@ -1426,13 +1440,13 @@ class Client(object):
                               vospace_token=vospace_token,
                               http_debug=http_debug)
 
-        self.protocol = vos_config.get('transfer', 'protocol')
-        if self.protocol not in self.VO_TRANSFER_PROTOCOLS:
-            raise SystemError(
-                'Unsupported protocol {}. Valid protocols: {}. Update {}'.
-                format(self.protocol, self.VO_TRANSFER_PROTOCOLS,
-                       _CONFIG_PATH))
+        protocol = vos_config.get('transfer', 'protocol')
+        if protocol is not None:
+            warn_msg = "Protocol is no longer supported and should be " \
+                       "removed from the config file."
+            warnings.warn(warn_msg, UserWarning)
 
+        self.protocols = Client.VO_TRANSFER_PROTOCOLS
         self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
@@ -2039,8 +2053,8 @@ class Client(object):
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
 
-        # On GET override the protocol to be http (faster) unless a
-        # secure_get is requested.
+        # Future expansion: can use self.secure_get to filter the protocols
+        # sent to the server.
         protocol = {
             'GET': {'https': ((self.secure_get and Client.VO_HTTPSGET_PROTOCOL)
                               or Client.VO_HTTPGET_PROTOCOL),
@@ -2051,11 +2065,15 @@ class Client(object):
         # build the url for that will request the url that provides access to
         # the node.
 
+        protocol_list = []
+        for p in self.protocols:
+            protocol_list.append(protocol[method][p])
+
         url = endpoints.transfer
         args = {
             'TARGET': uri,
             'DIRECTION': direction[method],
-            'PROTOCOL': protocol[method][self.protocol],
+            'PROTOCOL': protocol_list,
             'view': view}
 
         if cutout is not None:
@@ -2163,9 +2181,11 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
+        get_protocol_list = ['{0}get'.format(p) for p in self.protocols]
+        put_protocol_list = ['{0}put'.format(p) for p in self.protocols]
         endpoints = self.get_endpoints(uri)
-        protocol = {"pullFromVoSpace": "{0}get".format(self.protocol),
-                    "pushToVoSpace": "{0}put".format(self.protocol)}
+        protocol = {"pullFromVoSpace": get_protocol_list,
+                    "pushToVoSpace": put_protocol_list}
 
         transfer_xml = ElementTree.Element("vos:transfer")
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
@@ -2186,11 +2206,12 @@ class Client(object):
                     param = ElementTree.SubElement(vos_view, "vos:param")
                     param.attrib['uri'] = CADC_VO_VIEWS[view]
                     param.text = cutout
-            protocol_element = ElementTree.SubElement(transfer_xml,
-                                                      "vos:protocol")
-            protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                              protocol[
-                                                                  direction])
+
+            for p in protocol[direction]:
+                protocol_element = ElementTree.SubElement(transfer_xml,
+                                                          "vos:protocol")
+                protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
+                                                                  p)
 
         logging.debug(ElementTree.tostring(transfer_xml))
         logging.debug("Sending to : {}".format(endpoints.transfer))

@@ -2,4 +2,3 @@
 resourceID = ivo://cadc.nrc.ca/vault
 
 [transfer]
-protocol = http
