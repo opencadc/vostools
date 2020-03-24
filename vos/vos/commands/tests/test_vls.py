@@ -144,11 +144,11 @@ class TestVls(unittest.TestCase):
             assert out == stdout_mock.getvalue()
 
         # vls command with sort == None, order == reverse
-        out = 'node2\nnode3\nnode1\n'
+        out = 'node3\nnode2\nnode1\n'
         with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
             vos_client_mock.return_value.get_node = \
                 MagicMock(side_effect=[mock_node2, mock_node3, mock_node1])
             sys.argv = ['vls', '-r', 'vos:/CADCRegtest1']
-            with self.assertRaises(MyExitError):
-                cmd_attr = getattr(commands, 'vls')
-                cmd_attr()
+            cmd_attr = getattr(commands, 'vls')
+            cmd_attr()
+            assert out == stdout_mock.getvalue()
