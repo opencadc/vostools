@@ -125,7 +125,7 @@ def vls():
         else:
             sort = None
 
-        if sort is None and opt.reverse == False:
+        if sort is None and opt.reverse is False:
             order = None
         elif opt.reverse:
             order = 'asc' if sort else 'desc'

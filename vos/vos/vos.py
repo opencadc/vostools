@@ -1072,7 +1072,8 @@ class VOFile(object):
                                                   self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
                 exception = OSError(errno.EPERM, "VOSpace in read-only mode.")
-            if self.resp.status_code == 400 and "sorting options not supported" in msg:
+            if self.resp.status_code == 400 and \
+                    "sorting options not supported" in msg:
                 exception = Exception("service does not support sorting")
             raise exception
 
