@@ -9,7 +9,6 @@ endif
 
 set ACCESS_PAGE=https://ws-cadc.canfar.net/ac/login
 echo "Using access page: $ACCESS_PAGE"
-set VOS_BASE = "vos://cadc.nrc.ca~vault"
 
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
@@ -34,16 +33,18 @@ set CHMODCMD = "vchmod"
 echo
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOROOT = "vos:"
+set VOROOT = "vos://"
 # use resourceID in vos-config to determine the base URI
 # vault uses CADCRegtest1, cavern uses home/cadcregtest1
-grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
+set RESOURCE_ID = `grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}'`
+set HOST = `echo $RESOURCE_ID | cut -d"/" -f3`
+echo $RESOURCE_ID | grep "cavern" >& /dev/null
 if ( $status == 0) then
-    set HOME_BASE = "home/""$username"
+    set VOS_BASE = "~cavern/home/""$username"
 else
-    set HOME_BASE = "$username"
+    set VOS_BASE = "~vault/""$username"
 endif
-set VOHOME = "$VOROOT""$HOME_BASE"
+set VOHOME = "$VOROOT""$HOST""$VOS_BASE"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
@@ -52,7 +53,7 @@ set CONTAINER = $BASE/$TIMESTAMP
 echo "Test CONTAINER: $CONTAINER"
 
 # Start with a token scoped to user's entire tree
-set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}`"
+set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOHOME}`"
 
 echo -n "create containers"
 
@@ -66,7 +67,7 @@ $CHMODCMD --token="$TOKEN" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
 $CHMODCMD --token="$TOKEN" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
 echo " [OK]"
 # Get a new token scoped only to the /B subdir
-set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOS_BASE}/${username}/atest/$TIMESTAMP/B`"
+set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOHOME}/atest/$TIMESTAMP/B`"
 
 echo -n "copy file to unscoped tree fails"
 $CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/A/ >& /dev/null
