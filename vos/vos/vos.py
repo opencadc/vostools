@@ -70,7 +70,7 @@ HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
 HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
 
-CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms#"
+CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms?"
 
 VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
 VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
