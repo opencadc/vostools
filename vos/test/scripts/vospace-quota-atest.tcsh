@@ -31,7 +31,7 @@ set VOROOT = "vos:"
 # vault uses CADCRegtest1, cavern uses home/cadcregtest1
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
-    set HOME_BASE = "home/cadauthtest2"
+    set HOME_BASE = "home/cadcauthtest2"
 else
     set HOME_BASE = "CADCAuthtest2"
 endif
