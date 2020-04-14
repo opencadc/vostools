@@ -762,9 +762,12 @@ class Node(object):
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
         date = convert_vospace_time_to_seconds(self.props['date'])
-        creator = (re.search('CN=([^,]*)',
-                             self.props.get('creator', 'CN=unknown_000,'))
-                   .groups()[0].replace(' ', '_')).lower()
+        creator_str = re.search('CN=([^,]*)',
+                                self.props.get('creator', 'CN=unknown_000,'))
+        if creator_str is None:
+            creator = self.props.get('creator', 'CN=unknown_000,')
+        else:
+            creator = (creator_str.groups()[0].replace(' ', '_')).lower()
         perm = []
         for i in range(10):
             perm.append('-')
@@ -1069,6 +1072,9 @@ class VOFile(object):
                                                   self.resp.status_code), msg)
             if self.resp.status_code == 500 and "read-only" in msg:
                 exception = OSError(errno.EPERM, "VOSpace in read-only mode.")
+            if self.resp.status_code == 400 and \
+                    "sorting options not supported" in msg:
+                exception = Exception("service does not support sorting")
             raise exception
 
         # Get the file size. We use this HEADER-CONTENT-LENGTH as a
@@ -1324,7 +1330,7 @@ class EndPoints(object):
     # standard ids
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
-    VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#sync'
+    VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
 
     subject = net.Subject()  # default subject is for anonymous access
 

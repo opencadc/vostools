@@ -37,7 +37,19 @@ set GROUP1 = "CADC_TEST1-Staff"
 set GROUP2 = "CADC_TEST2-Staff"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOHOME = "vos://cadc.nrc.ca\!vospace/CADCRegtest1"
+set VOROOT = "vos://"
+# use resourceID in vos-config to determine the base URI
+# vault uses CADCRegtest1, cavern uses home/cadcregtest1
+set RESOURCE_ID = `grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}'`
+set HOST = `echo $RESOURCE_ID | cut -d"/" -f3`
+echo $RESOURCE_ID | grep "cavern" >& /dev/null
+if ( $status == 0) then
+    set HOME_BASE = "\!cavern/home/cadcregtest1"
+else
+    set HOME_BASE = "\!vault/CADCRegtest1"
+endif
+
+set VOHOME = "$VOROOT""$HOST""$HOME_BASE"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
