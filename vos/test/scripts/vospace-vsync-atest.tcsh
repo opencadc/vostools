@@ -25,7 +25,16 @@ set ABS_TEST_DIR = /tmp/$TEST_DIR
 set CERT = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOHOME = "vos:CADCAuthtest1"
+set VOROOT = "vos:"
+# use resourceID in vos-config to determine the base URI
+# vault uses CADCRegtest1, cavern uses home/cadcregtest1
+grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
+if ( $status == 0) then
+    set HOME_BASE = "home/cadcauthtest1"
+else
+    set HOME_BASE = "CADCAuthtest1"
+endif
+set VOHOME = "$VOROOT""$HOME_BASE"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
