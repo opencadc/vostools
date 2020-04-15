@@ -2290,8 +2290,8 @@ class Client(object):
             phase_url = job_url + "/phase"
             sleep_time = 1
             roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = VOFile(phase_url, self.conn, method="GET",
-                           follow_redirect=False).read().decode('utf-8')
+            phase = self.conn.session.get(phase_url,
+                                          allow_redirects=False).text
             # do not remove the line below. It is used for testing
             logging.debug("Job URL: " + job_url + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
@@ -2325,8 +2325,7 @@ class Client(object):
                                    data="PHASE=ABORT",
                                    headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
-        status = VOFile(phase_url, self.conn, method="GET",
-                        follow_redirect=False).read().decode('UTF-8')
+        status = self.conn.session.get(phase_url, allow_redirects=False).text
 
         logger.debug("Phase:  {0}".format(status))
         if status in ['COMPLETED']:
