@@ -30,11 +30,11 @@ echo "vchmod command: " $CHMODCMD $CERT
 echo "vchmod command 1:    " $CHMODCMD $CERT1
 echo "vchmod command 2:    " $CHMODCMD $CERT2
 
-# group 3000 aka CADC_TEST1-Staff has members: CADCAuthtest1
-set GROUP1 = "CADC_TEST1-Staff"
+# group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
+set GROUP1 = "CADC_TEST_GROUP1"
 
-# group 3100 aka CADC_TEST2-Staff has members: CADCAuthtest1, CADCAuthtest2
-set GROUP2 = "CADC_TEST2-Staff"
+# group 3100 aka CADC_TEST_GROUP2 has members: CADCAuthtest1, CADCAuthtest2
+set GROUP2 = "CADC_TEST_GROUP2"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
 set VOROOT = "vos://"
