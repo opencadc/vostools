@@ -499,7 +499,7 @@ class TestClient(unittest.TestCase):
         # check arguments for session.get calls
         self.assertEquals(
             [call(vospace_url + '/phase', allow_redirects=False),
-            call(vospace_url + '/phase', allow_redirects=False)],
+             call(vospace_url + '/phase', allow_redirects=False)],
             session.get.call_args_list)
 
         # job encountered an internal error
