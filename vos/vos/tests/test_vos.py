@@ -472,7 +472,8 @@ class TestClient(unittest.TestCase):
 
         vospace_url = 'https://somevospace.server/vospace'
         session = Mock()
-        session.get.side_effect = [Mock(content='COMPLETED')]
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='COMPLETED')]
         conn = Mock(spec=Connection)
         conn.session = session
 
@@ -485,44 +486,47 @@ class TestClient(unittest.TestCase):
         vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
         self.assertFalse(test_client.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
-        session.get.assert_called_once_with(vospace_url + '/phase',
-                                            allow_redirects=False)
+        session.get.assert_called_with(vospace_url + '/phase',
+                                       allow_redirects=False)
 
         # job suspended
         session.reset_mock()
-        session.get.side_effect = [Mock(content=b'COMPLETED')]
-        vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ABORTED')]
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
         # check arguments for session.get calls
         self.assertEquals(
-            [call(vospace_url + '/phase', allow_redirects=False)],
+            [call(vospace_url + '/phase', allow_redirects=False),
+            call(vospace_url + '/phase', allow_redirects=False)],
             session.get.call_args_list)
 
         # job encountered an internal error
         session.reset_mock()
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'),
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ERROR'),
                                    Mock(text='InternalFault')]
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
         self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
+                           call(vospace_url + '/phase', allow_redirects=False),
                            call(vospace_url + '/error')],
                           session.get.call_args_list)
 
         # job encountered an unsupported link error
         session.reset_mock()
         link_file = 'testlink.fits'
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'),
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ERROR'),
                                    Mock(
                                        text="Unsupported link target: " +
                                             link_file)]
         self.assertEquals(link_file, test_client.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
         self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
+                           call(vospace_url + '/phase', allow_redirects=False),
                            call(vospace_url + '/error')],
                           session.get.call_args_list)
 
