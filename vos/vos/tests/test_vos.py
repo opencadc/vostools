@@ -483,7 +483,6 @@ class TestClient(unittest.TestCase):
         test_client.conn = conn
 
         # job successfully completed
-        vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
         self.assertFalse(test_client.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
         session.get.assert_called_with(vospace_url + '/phase',
