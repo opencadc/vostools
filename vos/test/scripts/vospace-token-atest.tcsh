@@ -41,8 +41,11 @@ set HOST = `echo $RESOURCE_ID | cut -d"/" -f3`
 echo $RESOURCE_ID | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set VOS_BASE = "~cavern/home/""$username"
+    set TESTING_CAVERN = "true"
+    echo "** using cavern"
 else
     set VOS_BASE = "~vault/""$username"
+    echo "** using vault"
 endif
 set VOHOME = "$VOROOT""$HOST""$VOS_BASE"
 set BASE = "$VOHOME/atest"
@@ -50,22 +53,32 @@ set BASE = "$VOHOME/atest"
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
 set CONTAINER = $BASE/$TIMESTAMP
 
+echo
+
 echo "Test CONTAINER: $CONTAINER"
 
 # Start with a token scoped to user's entire tree
 set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOHOME}`"
 
 echo -n "create containers"
-
-$MKDIRCMD --token "$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
-$MKDIRCMD --token "$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $MKDIRCMD --token "$TOKEN" -p $CONTAINER/A > /dev/null || echo " [FAIL]" && exit -1
+    $MKDIRCMD --token "$TOKEN" $CONTAINER/B > /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "set permissions"
-$CHMODCMD --token="$TOKEN" o+r $CONTAINER || echo " [FAIL]" && exit -1
-$CHMODCMD --token="$TOKEN" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
-$CHMODCMD --token="$TOKEN" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER || echo " [FAIL]" && exit -1
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER/A || echo " [FAIL]" && exit -1
+    $CHMODCMD --token="$TOKEN" o+r $CONTAINER/B || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
+
 # Get a new token scoped only to the /B subdir
 set TOKEN = "`curl -s -d username=$username -d password=$password ${ACCESS_PAGE}'?'scope=${VOHOME}/atest/$TIMESTAMP/B`"
 
@@ -77,30 +90,50 @@ endif
 echo " [OK]"
 
 echo -n "copy a file to scoped tree"
-$CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "check that the file got there"
-$LSCMD --token="$TOKEN" $CONTAINER/B | grep -q 'something.png' || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $LSCMD --token="$TOKEN" $CONTAINER/B | grep -q 'something.png' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "create sub container with file in it"
-$MKDIRCMD --token="$TOKEN" $CONTAINER/B/test > /dev/null || echo " [FAIL]" && exit -1
-$CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/test/ || echo " [FAIL]" && exit -1
-$LSCMD --token="$TOKEN" $CONTAINER/B/test | grep -q 'something.png' || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $MKDIRCMD --token="$TOKEN" $CONTAINER/B/test > /dev/null || echo " [FAIL]" && exit -1
+    $CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/test/ || echo " [FAIL]" && exit -1
+    $LSCMD --token="$TOKEN" $CONTAINER/B/test | grep -q 'something.png' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "remove the file in the sub container"
-$RMCMD --token="$TOKEN" $CONTAINER/B/test/something.png || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $RMCMD --token="$TOKEN" $CONTAINER/B/test/something.png || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "remove the sub container"
-$RMDIRCMD --token="$TOKEN" $CONTAINER/B/test || echo " [FAIL]" && exit -1
-$LSCMD --token="$TOKEN" $CONTAINER/B | grep -q test
-if ( $status == 0 ) then
-    echo " [FAIL]" && exit -1
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, scoped tokens not supported]"
+else
+    $RMDIRCMD --token="$TOKEN" $CONTAINER/B/test || echo " [FAIL]" && exit -1
+    $LSCMD --token="$TOKEN" $CONTAINER/B | grep -q test
+    if ( $status == 0 ) then
+        echo " [FAIL]" && exit -1
+    endif
+    echo " [OK]"
 endif
-echo " [OK]"
 
 echo
 echo "*** test sequence passed ***"

@@ -13,6 +13,8 @@ else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
 endif
 
+echo
+
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
@@ -43,8 +45,11 @@ set VOROOT = "vos:"
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "home/cadcregtest1"
+    set TESTING_CAVERN = "true"
+    echo "** using cavern"
 else
     set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
 endif
 set VOHOME = "$VOROOT""$HOME_BASE"
 set BASE = "$VOHOME/atest"
@@ -119,8 +124,8 @@ echo -n "testing read as CADCAuthtest2 vs $GROUP2 (allowed) "
 $LSCMD $CERT2 $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-echo -n "delete test container as CADCAuthtest2 (denied)"
-echo "$RMDIRCMD $CERT2 $CONTAINER"
+echo -n "delete test container as CADCAuthtest2 (denied) "
+echo -n "$RMDIRCMD $CERT2 $CONTAINER"
 $RMDIRCMD $CERT2 $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
@@ -139,13 +144,17 @@ $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT o+r $CONTAINER || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "copy file (inherit public)  "
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT1 $CONTAINER/something.png | grep -q '\-rw----r--' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permissioin inheritance not supported] "
+else
+    $LSCMD $CERT1 $CONTAINER/something.png | grep -q '\-rw----r--' || echo " [FAIL]" && exit -1
+    echo " [OK] "
+endif
 
 echo -n "cleanup"
 $RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
@@ -160,14 +169,14 @@ $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT o+r $CONTAINER || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----r--' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "copy file with --public "
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT o+r $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/something.png | grep -q '\-rw----r--' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "cleanup"
 $RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
@@ -183,13 +192,17 @@ $CHMODCMD $CERT o-r $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+r $CONTAINER $GROUP1 || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP > /dev/null || grep -q 'drw-r-----' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "copy file (inherit group-read)  "
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT1 $CONTAINER/something.png | grep '\-rw-r-----' | grep -q $GROUP1 || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permissioin inheritance not supported] "
+else
+    $LSCMD $CERT1 $CONTAINER/something.png | grep '\-rw-r-----' | grep -q $GROUP1 || echo " [FAIL]" && exit -1
+    echo " [OK] "
+endif
 
 echo -n "cleanup"
 $RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
@@ -204,14 +217,14 @@ $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT o-r $CONTAINER || echo " [FAIL CHMOD]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "copy file with --group-read "
 $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+r $CONTAINER/something.png $GROUP1 || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/something.png | grep '\-rw-r-----' | grep -q $GROUP1 || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "cleanup"
 $RMDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
@@ -226,7 +239,7 @@ $MKDIRCMD $CERT $CONTAINER || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT o-r $CONTAINER || echo " [FAIL CHMOD]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
-echo -n " [OK] "
+echo " [OK] "
 
 echo -n "try to set --public as CADCAuthtest1 (denied) "
 $CHMODCMD $CERT1 o+r $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1

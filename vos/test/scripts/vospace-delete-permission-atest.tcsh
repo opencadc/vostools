@@ -30,6 +30,8 @@ echo "vchmod command: " $CHMODCMD $CERT
 echo "vchmod command 1:    " $CHMODCMD $CERT1
 echo "vchmod command 2:    " $CHMODCMD $CERT2
 
+echo
+
 # group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
 set GROUP1 = "CADC_TEST_GROUP1"
 
@@ -45,8 +47,11 @@ set HOST = `echo $RESOURCE_ID | cut -d"/" -f3`
 echo $RESOURCE_ID | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "\!cavern/home/cadcregtest1"
+    set TESTING_CAVERN = "true"
+    echo "** using cavern"
 else
     set HOME_BASE = "\!vault/CADCRegtest1"
+    echo "** using vault"
 endif
 
 set VOHOME = "$VOROOT""$HOST""$HOME_BASE"
@@ -102,8 +107,12 @@ $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/sub1/sub2/something.png || echo 
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/sub1/sub2/something.png > /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
-$LSCMD $CERT $CONTAINER/sub1/sub2/something.png | grep -q "$GROUP1" || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheritance not supported]"
+else
+    $LSCMD $CERT $CONTAINER/sub1/sub2/something.png | grep -q "$GROUP1" || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "test delete container/sub1 (denied)"
 $RMDIRCMD $CERT2 $CONTAINER/sub1/sub2 >& /dev/null && echo " [FAIL]" && exit -1
@@ -112,15 +121,23 @@ $LSCMD $CERT $CONTAINER/sub1/sub2/something.png > /dev/null || echo " [FAIL]" &&
 echo " [OK]"
 
 echo -n "test delete container/sub1 (allowed)"
-$RMDIRCMD $CERT1 $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
-echo -n " verify "
-$LSCMD $CERT $CONTAINER/sub1 >& /dev/null && echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheritance not supported]"
+else
+    $RMDIRCMD $CERT1 $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
+    echo -n " verify "
+    $LSCMD $CERT $CONTAINER/sub1 >& /dev/null && echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 # start fresh
 
 echo -n "create container/sub1 "
-$MKDIRCMD $CERT $CONTAINER/sub1 || echo " [FAIL]" && exit -1
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheritance not supported]"
+else
+    $MKDIRCMD $CERT $CONTAINER/sub1 || echo " [FAIL]" && exit -1
+endif
 $CHMODCMD $CERT o-r $CONTAINER/sub1 || echo " [FAIL]" && exit -1
 $CHMODCMD $CERT g+w $CONTAINER/sub1 $GROUP1 || echo " [FAIL]" && exit -1
 echo " [OK]"

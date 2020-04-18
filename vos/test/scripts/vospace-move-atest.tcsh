@@ -13,6 +13,8 @@ else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
 endif
 
+echo
+
 set LSCMD = "vls"
 set MKDIRCMD = "vmkdir"
 set RMCMD = "vrm"
@@ -40,8 +42,10 @@ set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP2"
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "home/cadcregtest1"
+    echo "** using cavern"
 else
     set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
 endif
 
 set VOHOME = "vos:""$HOME_BASE"
