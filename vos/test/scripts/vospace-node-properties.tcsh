@@ -105,6 +105,7 @@ if ( ${?TESTING_CAVERN} ) then
         echo " [SKIPPED, recursive vchmod not supported]"
     else
         echo " [FAIL]" && exit -1
+    endif
 else
     $CHMODCMD $CERT -R g+r $CONTAINER $GROUP1 ||  echo " [FAIL]" && exit -1
     echo -n " verify "
@@ -149,6 +150,7 @@ if ( ${?TESTING_CAVERN} ) then
         echo " [SKIPPED, recursive vchmod not supported]"
     else
         echo " [FAIL]" && exit -1
+    endif
 else
     $CHMODCMD $CERT -R o+r $CONTAINER ||  echo " [FAIL]" && exit -1
     echo -n " verify "
