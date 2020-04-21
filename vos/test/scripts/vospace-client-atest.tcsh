@@ -45,8 +45,11 @@ set VOROOT = "vos:/"
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "home/cadcregtest1"
+    set TESTING_CAVERN = "true"
+    echo "** using cavern"
 else
     set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
 endif
 set VOHOME = "$VOROOT""$HOME_BASE"
 set BASE = "$VOHOME/atest"
@@ -84,6 +87,7 @@ echo "[SKIP]"
 echo -n "view non-existent node "
 $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
+
 echo -n "create private container "
 $MKDIRCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
@@ -93,30 +97,46 @@ $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "verify public=false after create "
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----r--' || echo " [FAIL]" && exit -1
-echo "[OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheitance not supported]"
+else
+    $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----r--' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "check set permission properties "
-$CHMODCMD $CERT g+rw $CONTAINER test:g1 test:g2 || echo " [FAIL]" && exit -1
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g1' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g2' || echo " [FAIL]" && exit -1
-echo "[OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheitance not supported]"
+else
+    $CHMODCMD $CERT g+rw $CONTAINER test:g1 test:g2 || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "check inherit permission properties "
-$MKDIRCMD $CERT $CONTAINER/pub || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g1' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g2' || echo " [FAIL]" && exit -1
-echo "[OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheitance not supported]"
+else
+    $MKDIRCMD $CERT $CONTAINER/pub || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "check inherit + change certain properties "
-$MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
-$CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
-$LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g2' || echo " [FAIL]" && exit -1
-echo "[OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, permission inheitance not supported]"
+else
+    $MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
+    $CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
+    $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g2' || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 
 echo -n "check recursive create (non-existant parents) "
 #$MKDIRCMD $CERT $CONTAINER/foo/bar/baz >& /dev/null || echo " [FAIL]" && exit -1
