@@ -2529,7 +2529,12 @@ class Client(object):
         url = self.get_node_url(node.uri)
         endpoints = self.get_endpoints(node.uri)
         if recursive:
-            property_url = endpoints.properties
+            try:
+                property_url = endpoints.properties
+            except KeyError as ex:
+                logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
+                raise Exception('Operation not supported')
+
             logger.debug("prop URL: {0}".format(property_url))
             try:
                 resp = self.conn.session.post(property_url,

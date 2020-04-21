@@ -99,7 +99,12 @@ echo " [OK]"
 
 echo -n "test vchmod with recursive option"
 if ( ${?TESTING_CAVERN} ) then
-    echo " [SKIPPED, recursive vchmod not supported]"
+    set ERROR = "`$CHMODCMD $CERT -R g+r $CONTAINER $GROUP1 |& cat`" 
+    echo "$ERROR" | grep -q "Operation not supported"
+    if ( $status == 0 ) then
+        echo " [SKIPPED, recursive vchmod not supported]"
+    else
+        echo " [FAIL]" && exit -1
 else
     $CHMODCMD $CERT -R g+r $CONTAINER $GROUP1 ||  echo " [FAIL]" && exit -1
     echo -n " verify "
@@ -125,7 +130,7 @@ endif
 
 echo -n "make a sub-container public"
 if ( ${?TESTING_CAVERN} ) then
-    echo " [SKIPPED, recursive vchmod not supported]"
+    echo " [SKIPPED, impromptu groups are not supported]"
 else
     $CHMODCMD $CERT o+r $CONTAINER/aaa/bbb ||  echo " [FAIL]" && exit -1
     echo -n " verify "
@@ -138,7 +143,12 @@ endif
 
 echo -n "recursively make all directories public"
 if ( ${?TESTING_CAVERN} ) then
-    echo " [SKIPPED, recursive vchmod not supported]"
+    set ERROR = "`$CHMODCMD $CERT -R o+r $CONTAINER |& cat`"
+    echo "$ERROR" | grep -q "Operation not supported"
+    if ( $status == 0 ) then
+        echo " [SKIPPED, recursive vchmod not supported]"
+    else
+        echo " [FAIL]" && exit -1
 else
     $CHMODCMD $CERT -R o+r $CONTAINER ||  echo " [FAIL]" && exit -1
     echo -n " verify "
