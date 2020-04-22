@@ -1,13 +1,20 @@
 # Test the vos Client class
- 
+
 import os
 import unittest
+import pytest
 import requests
 from xml.etree import ElementTree
-from mock import Mock, patch, MagicMock, call, mock_open
+from mock import Mock, patch, MagicMock, call
 from vos import Client, Connection, Node, VOFile
+from vos import vos as vos
+from six.moves.urllib.parse import urlparse
+from six.moves import urllib
+import warnings
 
-# The following is a temporary workaround for Python issue 25532 (https://bugs.python.org/issue25532)
+
+# The following is a temporary workaround for Python issue 25532
+# (https://bugs.python.org/issue25532)
 call.__wrapped__ = None
 
 NODE_XML = """
@@ -27,8 +34,98 @@ NODE_XML = """
         </vos:node>
         """
 
+
 class Object(object):
     pass
+
+
+def test_get_node_url():
+    client = Client()
+    with pytest.raises(TypeError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', sort='Blah')
+    with pytest.raises(ValueError):
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser', order='Blah')
+
+    response = Mock(spec=requests.Response)
+    response.status_code = 303
+    client.conn.session.get = Mock(return_value=response)
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.DATE)).query
+    assert(urllib.parse.unquote(equery) ==
+           'sort={}'.format(vos.SortNodeProperty.DATE.value))
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                      sort=vos.SortNodeProperty.LENGTH, order='asc')).query
+    args = urllib.parse.unquote(equery).split('&')
+    assert(2 == len(args))
+    assert('order=asc' in args)
+    assert('sort={}'.format(vos.SortNodeProperty.LENGTH.value) in args)
+
+    equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                                          order='desc')).query
+    assert('order=desc' == urllib.parse.unquote(equery))
+
+    # test header view
+    transfer_url = 'https://some.location/some/headers'
+    client.conn.session.get = Mock(return_value=response)
+    response.headers = {'Location': transfer_url}
+    assert transfer_url == \
+        client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                            view='header')[0]
+    # get the argument lists for client.conn.session.get
+    call = client.conn.session.get.call_args_list[0]
+    args, kwargs = call
+    # check head is amongst the other parameters
+    assert kwargs['params']['view'] == 'header'
+
+
+@patch('vos.vos.os.path.exists', Mock())
+def test_update_config():
+    # test rename vospace resource
+    with warnings.catch_warnings(record=True) as w:
+        vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
+        assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
+               'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
+
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah'
+        new_config_mock = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_config_mock
+        vos._update_config()
+    assert new_config_mock.called_once_with(old_content)
+
+    # test rewrite vospace resource in config file
+    new_config_mock.reset_mock()
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah\nresourceID=ivo://cadc.nrc.ca/vospace\nfoo'
+        new_content = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_content
+        vos._update_config()
+    assert new_config_mock.called_once_with(old_content.replace(
+        'vospace', 'vault'))
+
+    # test rewrite transfer protocol in config file
+    new_config_mock.reset_mock()
+    protocol_text = \
+        "# transfer protocol configuration is no longer supported\n"
+    # Cause all warnings to always be triggered.
+    warnings.simplefilter("always")
+    with patch('vos.vos.open') as open_mock:
+        old_content = 'blah\nprotocol=http\nfoo'
+        new_content = Mock()
+        open_mock.return_value.read.return_value = old_content
+        open_mock.return_value.write = new_content
+        vos._update_config()
+    assert new_config_mock.called_once_with(old_content.replace(
+        'protocol', '{}#protocol'.format(protocol_text)))
 
 
 class TestClient(unittest.TestCase):
@@ -37,7 +134,8 @@ class TestClient(unittest.TestCase):
 
     def off_quota(self):
         """
-        Test that a 413 raised by the server gets a reasonable error to the user.
+        Test that a 413 raised by the server gets a reasonable error to the
+        user.
         @return:
         """
         with patch('vos.vos.VOFile') as mockVOFile:
@@ -78,13 +176,13 @@ class TestClient(unittest.TestCase):
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
            Mock(return_value='http://foo.com/vospace'))
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
-    @patch('vos.vos.net.ws.RetrySession.send', Mock(return_value=Mock(spec=requests.Response, status_code=404)))
+    @patch('vos.vos.net.ws.RetrySession.send',
+           Mock(return_value=Mock(spec=requests.Response, status_code=404)))
     def test_open(self):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
             client = Client()
-            client.open('vos://foo/bar', mode=-1)
+            client.open('vos://foo/bar', mode=-10000)
 
         with self.assertRaises(OSError):
             client = Client()
@@ -97,62 +195,61 @@ class TestClient(unittest.TestCase):
         client.get_node_url = Mock(return_value=mock_vofile)
         vofile = client.open(None, url=None)
         self.assertEquals(vofile.url.URLs[0], 'http://foo.com/bar')
-        
-        
-    @patch('vos.vos.Node.get_info', Mock(return_value={'name':'aa'}))
+
+    @patch('vos.vos.Node.get_info', Mock(return_value={'name': 'aa'}))
     def test_get_info_list(self):
         # list tuples of a LinkNode
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.return_value = mock_node
         mock_node.name = 'testnode'
-        mock_node.get_info.return_value = {'name':'aa'}
+        mock_node.get_info.return_value = {'name': 'aa'}
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
         client = Client()
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
-        self.assertEquals({'testnode':mock_node.get_info.return_value}.items(), 
-                          client.get_info_list('vos:/somenode'))
-        
-                
+        self.assertEquals([mock_node],
+                          client.get_children_info('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
         mock_node.type = 'vos:ContainerNode'
         client = Client()
         client.get_node = Mock(return_value=mock_node)
-        self.assertEquals('vos:ContainerNode', client._node_type('vos:/somenode'))
+        self.assertEquals('vos:ContainerNode',
+                          client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
-        
+
         mock_node.type = 'vos:DataNode'
         self.assertEquals('vos:DataNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isfile('vos:/somenode'))
-        
+
         # through a link
         mock_node.type = 'vos:ContainerNode'
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
-        client.get_node = Mock(side_effect=
-                [mock_link_node, mock_node, mock_link_node, mock_node])
-        self.assertEquals('vos:ContainerNode', client._node_type('vos:/somenode'))
+        client.get_node = Mock(side_effect=[mock_link_node, mock_node,
+                                            mock_link_node, mock_node])
+        self.assertEquals('vos:ContainerNode',
+                          client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
-        
-        # through an external link - not sure why the type is DataNode in this case???
+
+        # through an external link - not sure why the type is DataNode in
+        # this case???
         mock_link_node.target = '/somefile'
         client.get_node = Mock(side_effect=[mock_link_node, mock_link_node])
         self.assertEquals('vos:DataNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isfile('vos:/somenode'))
-        
 
     patch('vos.EndPoints.nodes', Mock())
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
+
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
            Mock(return_value='http://foo.com/vospace'))
     def test_glob(self):
         # test the pattern matches in directories and file names
-        
+
         # simple test for listing of directory, no wild cards
-        
-        # NOTE: Mock class also has a 'name' attribute so we cannot 
+
+        # NOTE: Mock class also has a 'name' attribute so we cannot
         # instantiate a mock node with Mock(name='blah'). There are
         # two other wasy to do it as seen below
         mock_node = MagicMock(type='vos:ContainerNode')
@@ -160,18 +257,18 @@ class TestClient(unittest.TestCase):
         client = Client()
         client.get_node = Mock(return_value=mock_node)
         self.assertEquals(['vos:/anode/'], client.glob('vos:/anode/'))
-        
+
         # simple test for file listing of file
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.configure_mock(name='afile')
         client = Client()
         client.get_node = Mock(return_value=mock_node)
         self.assertEquals(['vos:/afile'], client.glob('vos:/afile'))
-        
+
         # create a mock directory structure on the form
-        # /anode/abc /anode/def - > anode/a* should return 
+        # /anode/abc /anode/def - > anode/a* should return
         # /anode/adc
-        
+
         mock_node = MagicMock(type='vos:ContainerNode')
         mock_node.configure_mock(name='anode')
         mock_child_node1 = Mock(type='vos:DataNode')
@@ -183,24 +280,23 @@ class TestClient(unittest.TestCase):
         mock_base_node = Mock(type='vos:ContainerNode')
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node]
-        mock_node.node_list = [mock_base_node, mock_child_node1, mock_child_node2]
+        mock_node.node_list = [mock_base_node, mock_child_node1,
+                               mock_child_node2]
         client = Client()
-        client.get_node = Mock(side_effect=[mock_node, mock_base_node, mock_node])
+        client.get_node = Mock(
+            side_effect=[mock_node, mock_base_node, mock_node])
         self.assertEquals(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
         self.assertEquals(['vos:/anode/abc'], client.glob('vos:/*node/abc'))
-        
+
         # test nodes:
         # /anode/.test1 /bnode/sometests /bnode/blah
         # /[a,c]node/*test* should return /bnode/somtests (.test1 is filtered
         # out as a special file)
 
-       
-        mock_child_node1 = Mock(type='vos:DataNode')
-        mock_child_node1.name = '.test1'
         mock_node1 = MagicMock(type='vos:ContainerNode')
         mock_node1.configure_mock(name='anode')
         mock_node1.node_list = [mock_child_node1]
-        
+
         mock_child_node2 = Mock(type='vos:DataNode')
         mock_child_node2.name = 'sometests'
         mock_child_node3 = Mock(type='vos:DataNode')
@@ -208,34 +304,33 @@ class TestClient(unittest.TestCase):
         mock_node2 = MagicMock(type='vos:ContainerNode')
         mock_node2.configure_mock(name='bnode')
         mock_node2.node_list = [mock_child_node2, mock_child_node3]
-        
+
         # because we use wild characters in the root node,
         # we need to create a corresponding node for the base node
         mock_base_node = Mock(type='vos:DataNode')
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node1, mock_node2]
         client = Client()
-        client.get_node = Mock(side_effect=[mock_base_node, mock_node1, mock_node2])
-        self.assertEquals(['vos:/bnode/sometests'], 
+        client.get_node = Mock(
+            side_effect=[mock_base_node, mock_node1, mock_node2])
+        self.assertEquals(['vos:/bnode/sometests'],
                           client.glob('vos:/[a,b]node/*test*'))
-        
-        
-    @patch('vos.vos.md5_cache.MD5_Cache.computeMD5')
+
+    @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
         # the md5sum of the file being copied
         md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
-        
-        #mock the props of the corresponding node        
+
+        # mock the props of the corresponding node
         props = MagicMock()
         props.get.return_value = md5sum
-        #add props to the mocked node
+        # add props to the mocked node
         node = MagicMock(spec=Node)
         node.props = props
 
-        
         # mock one by one the chain of connection.session.response.headers
         conn = MagicMock(spec=Connection)
         session = MagicMock()
@@ -245,42 +340,129 @@ class TestClient(unittest.TestCase):
         response.headers = headers
         session.get.return_value = response
         conn.session = session
-        
+
         test_client = Client()
         # use the mocked connection instead of the real one
         test_client.conn = conn
-        get_node_url_mock = Mock(return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
         test_client.get_node_url = get_node_url_mock
-            
-        #patch Client.get_node to return our mocked node
+        mock_update = Mock()
+        test_client.update = mock_update
+
+        # patch Client.get_node to return our mocked node
         get_node_mock = Mock(return_value=node)
         test_client.get_node = get_node_mock
-        
+
         # time to test...
         vospaceLocation = 'vos://test/foo'
         osLocation = '/tmp/foo'
+        if os.path.isfile(osLocation):
+            os.remove(osLocation)
         # copy from vospace
         test_client.copy(vospaceLocation, osLocation)
-        get_node_url_mock.assert_called_once_with(vospaceLocation, method='GET', 
-                                              cutout=None, view='data')
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='data')
         computed_md5_mock.assert_called_once_with(osLocation)
-        get_node_mock.assert_called_once_with(vospaceLocation)
-        
-        # copy to vospace
+        assert get_node_mock.called
+
+        # repeat - local file and vospace file are now the same -> only
+        # get_node is called to get the md5 of remote file
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation)
+        assert not get_node_url_mock.called
+        computed_md5_mock.assert_called_once_with(osLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation)
+
+        # change the content of local files to trigger a new copy
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='data')
+        computed_md5_mock.assert_called_with(osLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation)
+
+        # copy to vospace when md5 sums are the same -> only update occurs
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = None
+        computed_md5_mock.return_value = md5sum
         test_client.copy(osLocation, vospaceLocation)
+        mock_update.assert_called_once()
+        assert not get_node_url_mock.called
+
+        # make md5 different
+        get_node_url_mock.reset_mock()
+        get_node_url_mock.return_value =\
+            ['http://cadc.ca/test', 'http://cadc.ca/test']
+        computed_md5_mock.reset_mock()
+        mock_update.reset_mock()
+        props.get.side_effect = ['d00223344', md5sum]
+        test_client.copy(osLocation, vospaceLocation)
+        assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
         computed_md5_mock.assert_called_once_with(osLocation)
 
+        # copy 0 size file -> delete and create on client but no bytes
+        # transferred
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.return_value = vos.ZERO_MD5
+        props.get.side_effect = [md5sum]
+        mock_delete = Mock()
+        mock_create = Mock()
+        test_client.delete = mock_delete
+        test_client.create = mock_create
+        test_client.copy(osLocation, vospaceLocation)
+        mock_create.assert_called_once_with(vospaceLocation)
+        mock_delete.assert_called_once_with(vospaceLocation)
+        assert not get_node_url_mock.called
+
+        # copy new 0 size file -> reate on client but no bytes transferred
+        get_node_url_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        mock_delete.reset_mock()
+        mock_create.reset_mock()
+        computed_md5_mock.return_value = vos.ZERO_MD5
+        props.get.side_effect = [None]
+        mock_delete = Mock()
+        mock_create = Mock()
+        test_client.delete = mock_delete
+        test_client.create = mock_create
+        test_client.copy(osLocation, vospaceLocation)
+        mock_create.assert_called_once_with(vospaceLocation)
+        assert not mock_delete.called
+        assert not get_node_url_mock.called
+
         # error tests - md5sum mismatch
+        props.get.side_effect = [md5sum]
         computed_md5_mock.return_value = '000bad000'
         with self.assertRaises(OSError):
             test_client.copy(vospaceLocation, osLocation)
-        
+
         with self.assertRaises(OSError):
             test_client.copy(osLocation, vospaceLocation)
-    
+
+        # requests just the headers
+        props.get.side_effect = [None]
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
+
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
     @patch('vos.vos.VOFile')
@@ -290,7 +472,8 @@ class TestClient(unittest.TestCase):
 
         vospace_url = 'https://somevospace.server/vospace'
         session = Mock()
-        session.get.side_effect = [Mock(content='COMPLETED')] 
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='COMPLETED')]
         conn = Mock(spec=Connection)
         conn.session = session
 
@@ -298,47 +481,53 @@ class TestClient(unittest.TestCase):
 
         # use the mocked connection instead of the real one
         test_client.conn = conn
-        
+
         # job successfully completed
-        vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
         self.assertFalse(test_client.get_transfer_error(
-                vospace_url +'/results/transferDetails', 'vos://vospace'))
-        session.get.assert_called_once_with(vospace_url + '/phase', allow_redirects=False)
-        
+            vospace_url + '/results/transferDetails', 'vos://vospace'))
+        session.get.assert_called_with(vospace_url + '/phase',
+                                       allow_redirects=False)
+
         # job suspended
         session.reset_mock()
-        session.get.side_effect = [Mock(content=b'COMPLETED')]
-        vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ABORTED')]
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
-                vospace_url +'/results/transferDetails', 'vos://vospace')
-        #check arguments for session.get calls
-        self.assertEquals([call(vospace_url + '/phase', allow_redirects=False)], 
-                          session.get.call_args_list )
+                vospace_url + '/results/transferDetails', 'vos://vospace')
+        # check arguments for session.get calls
+        self.assertEquals(
+            [call(vospace_url + '/phase', allow_redirects=False),
+             call(vospace_url + '/phase', allow_redirects=False)],
+            session.get.call_args_list)
 
         # job encountered an internal error
         session.reset_mock()
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'), Mock(text='InternalFault')]
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ERROR'),
+                                   Mock(text='InternalFault')]
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
-                vospace_url +'/results/transferDetails', 'vos://vospace')
+                vospace_url + '/results/transferDetails', 'vos://vospace')
         self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/error')], 
-                          session.get.call_args_list )
+                           call(vospace_url + '/phase', allow_redirects=False),
+                           call(vospace_url + '/error')],
+                          session.get.call_args_list)
 
         # job encountered an unsupported link error
         session.reset_mock()
         link_file = 'testlink.fits'
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'),
-                                   Mock(text="Unsupported link target: " + link_file)]
+        session.get.side_effect = [Mock(text='COMPLETED'),
+                                   Mock(text='ERROR'),
+                                   Mock(
+                                       text="Unsupported link target: " +
+                                            link_file)]
         self.assertEquals(link_file, test_client.get_transfer_error(
-            vospace_url +'/results/transferDetails', 'vos://vospace'))
+            vospace_url + '/results/transferDetails', 'vos://vospace'))
         self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                   call(vospace_url + '/error')], 
-                  session.get.call_args_list )
-          
+                           call(vospace_url + '/phase', allow_redirects=False),
+                           call(vospace_url + '/error')],
+                          session.get.call_args_list)
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))
@@ -357,12 +546,11 @@ class TestClient(unittest.TestCase):
         with patch('vos.Client', client) as mock:
             mock.add_props(new_node)
             mock.conn.session.post.assert_called_with('http://foo.com/bar',
-                                                      headers=headers, data=data)
+                                                      headers=headers,
+                                                      data=data)
 
-
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='http://foo.com/vospace/nodes'))
+           Mock(return_value='http://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_create(self):
         uri = 'vos://create.vospace.auth!vospace/bar'
         client = Client()
@@ -373,7 +561,7 @@ class TestClient(unittest.TestCase):
         headers = {'size': str(len(data))}
 
         client = Client()
-        #client.get_node_url = Mock(return_value='http://foo.com/bar')
+        # client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
         client.conn = Mock()
         client.conn.session = session_mock
@@ -381,41 +569,47 @@ class TestClient(unittest.TestCase):
 
         result = client.create(uri)
         self.assertEquals(node, result)
-        session_mock.put.assert_called_with('http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
-                                                 headers=headers, data=data)
+        session_mock.put.assert_called_with(
+            'http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
+            headers=headers, data=data)
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock())
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_update(self):
         node = Node(ElementTree.fromstring(NODE_XML))
 
         resp = Mock()
-        resp.headers.get = Mock(return_value="https://www.canfar.phys.uvic.ca/vospace")
+        resp.headers.get = Mock(
+            return_value="https://www.canfar.phys.uvic.ca/vospace")
 
-        client = Client()
-        client.get_node_url = Mock(return_value='https://www.canfar.phys.uvic.ca/vospace')
-        client.conn = Mock()
-        client.conn.session.post = Mock(return_value=resp)
+        conn = Mock(spec=vos.Connection)
+        conn.session.post = Mock(return_value=resp)
+        client = Client(conn=conn)
+        client.get_node_url = Mock(
+            return_value='https://www.canfar.phys.uvic.ca/vospace')
         client.get_transfer_error = Mock()
         client.protocol = 'https'
 
         data = str(node)
         property_url = 'https://www.canfar.phys.uvic.ca/vospace/nodeprops'
+        endpoints_mock = Mock()
+        endpoints_mock.properties = property_url
+        client.get_endpoints = Mock(return_value=endpoints_mock)
         result = client.update(node, False)
         self.assertEqual(result, 0)
-        client.conn.session.post.assert_called_with('https://www.canfar.phys.uvic.ca/vospace',
-                                                      data=data, allow_redirects=False)
+        client.conn.session.post.assert_called_with(
+            'https://www.canfar.phys.uvic.ca/vospace',
+            data=data, allow_redirects=False)
 
         call1 = call(property_url, allow_redirects=False, data=data,
                      headers={'Content-type': 'text/xml'})
-        call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase', allow_redirects=False, data="PHASE=RUN",
-                     headers={'Content-type': "text/text"})
+        call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase',
+                     allow_redirects=False, data="PHASE=RUN",
+                     headers={
+                         'Content-type': 'application/x-www-form-urlencoded'})
         calls = [call1, call2]
 
-        client.conn = Mock()
+        client.conn = Mock(spec=vos.Connection)
         client.conn.session.post = Mock(return_value=resp)
-        with patch('vos.vos.EndPoints.properties', property_url):
-            result = client.update(node, True)
+        result = client.update(node, True)
         self.assertEqual(result, 0)
         client.conn.session.post.assert_has_calls(calls)
 
@@ -426,31 +620,36 @@ class TestClient(unittest.TestCase):
         """
         uri = "vos://foo.com!vospace/bar"
 
-        nodes = """
-            <vos:nodes>
-                <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file123" xs:type="vos:DataNode">
-                    <vos:properties>
-                        <vos:property uri='ivo://ivoa.net/vospace/core#date'>2016-05-10T09:52:13</vos:property>
-                    </vos:properties>
-                </vos:node>
-                <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file456" xs:type="vos:DataNode">
-                    <vos:properties>
-                        <vos:property uri='ivo://ivoa.net/vospace/core#date'>2016-05-19T09:52:14</vos:property>
-                    </vos:properties>
-                </vos:node>
-            </vos:nodes>
-        """
+        nodes = (' <vos:nodes>\n'
+                 '<vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file123" '
+                 'xs:type="vos:DataNode">\n'
+                 '   <vos:properties>\n'
+                 '       <vos:property '
+                 'uri="ivo://ivoa.net/vospace/core#date">2016-05-10T09:52:13'
+                 '</vos:property>\n'
+                 '   </vos:properties>\n'
+                 '</vos:node>\n'
+                 '<vos:node uri="vos://cadc.nrc.ca!vospace/mydir/file456" '
+                 'xs:type="vos:DataNode">\n'
+                 '   <vos:properties>\n'
+                 '       <vos:property uri="ivo://ivoa.net/vospace/core#date">'
+                 '2016-05-19T09:52:14</vos:property>\n'
+                 '   </vos:properties>\n'
+                 '</vos:node>\n'
+                 '</vos:nodes>\n')
 
         mock_vofile = Mock()
         client = Client()
         client.open = Mock(return_value=mock_vofile)
 
-        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, '').encode('UTF-8'))
+        mock_vofile.read = Mock(
+            return_value=NODE_XML.format(uri, '').encode('UTF-8'))
         my_node = client.get_node(uri, limit=0, force=False)
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 0)
 
-        mock_vofile.read = Mock(return_value=NODE_XML.format(uri, nodes).encode('UTF-8'))
+        mock_vofile.read = Mock(
+            return_value=NODE_XML.format(uri, nodes).encode('UTF-8'))
 
         my_node = client.get_node(uri, limit=2, force=True)
         self.assertEqual(uri, my_node.uri)
@@ -460,7 +659,6 @@ class TestClient(unittest.TestCase):
         self.assertEqual(uri, my_node.uri)
         self.assertEqual(len(my_node.node_list), 2)
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
     def test_move(self):
         mock_resp_403 = Mock(name="mock_resp_303")
         mock_resp_403.status_code = 403
@@ -475,8 +673,8 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             client.move(uri1, uri2)
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock(return_value='www.canfar.phys.uvic.ca'))
-    @patch('vos.vos.net.ws.WsCapabilities.get_access_url', Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_delete(self):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
@@ -495,7 +693,7 @@ class TestNode(unittest.TestCase):
 
     def test_compute_md5(self):
         pass
-        #from vos import vos
+        # from vos import vos
         # mock_file = MagicMock(spec=file, wraps=StringIO('a'))
         # foo = mock_file.open()
         # self.assertEqual(foo.read, 'a')
@@ -526,7 +724,7 @@ class TestNode(unittest.TestCase):
     def test_node_eq(self):
         # None node raises LoookupError
         with self.assertRaises(LookupError):
-            node = Node(None)
+            Node(None)
 
         # Node equality
         node1 = Node(ElementTree.Element(Node.NODE))
@@ -589,9 +787,9 @@ class TestNode(unittest.TestCase):
         self.assertEqual('2000', quota.text)
 
         # Delete a property
-        #node.change_prop('quota', None)
-        #quota = TestVos.get_node_property(node, 'quota')
-        #self.assertIsNone(quota)
+        # node.change_prop('quota', None)
+        # quota = TestVos.get_node_property(node, 'quota')
+        # self.assertIsNone(quota)
 
     def test_clear_properties(self):
         # Add a new property
@@ -625,7 +823,6 @@ class TestNode(unittest.TestCase):
 
 @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
        Mock(return_value='http://foo.com/vospace'))
-@patch('vos.vos.net.ws.WsCapabilities.get_service_host', Mock())
 class TestVOFile(unittest.TestCase):
     """Test the vos VOFile class.
     """
@@ -644,5 +841,3 @@ class TestVOFile(unittest.TestCase):
             self.assertEquals(5, vofile._fpos)
             vofile.seek(10, os.SEEK_END)
             self.assertEquals(15, vofile._fpos)
-
-

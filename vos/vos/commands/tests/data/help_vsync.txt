@@ -1,0 +1,54 @@
+usage: vsync [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+             [--vos-debug] [-v] [-w] [--ignore-checksum] [--cache_nodes]
+             [--cache_filename CACHE_FILENAME] [--recursive]
+             [--nstreams NSTREAMS] [--exclude EXCLUDE] [--include INCLUDE]
+             [--overwrite] [--load_test]
+             files [files ...] destination
+
+A script for sending files to VOSpace via multiple connection
+streams.
+
+The list of files is given on the command line have their MD5s generated and
+then compared to  the contents of VOSpace.  Files that do not exist in the
+destination VOSpace area or files that have different MD5 sums are then queued
+to be copied to VOSpace.  vsync launches mutlple threads that listen to the
+queue and transfer files independently to VOSpace and report success if the
+file successfully copies to VOSpace.
+
+At the completion of vsync an error report indicates if there were failures.
+Run vsync repeatedly until no errors are reported.
+
+eg:
+  vsync --cache_nodes --recursive --verbose ./local_dir vos:VOSPACE/remote_dir
+
+Using cache_nodes option will greatly improve the speed of repeated calls but
+does result in a  cache database file: ${HOME}/.config/vos/node_cache.db
+
+positional arguments:
+  files                 Files to copy to VOSpace
+  destination           VOSpace location to sync files to
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --certfile CERTFILE   filename of your CADC X509 authentication certificate
+  --token TOKEN         authentication token string (alternative to certfile)
+  --version             show program's version number and exit
+  -d, --debug           print on command debug messages.
+  --vos-debug           Print on vos debug messages.
+  -v, --verbose         print verbose messages
+  -w, --warning         print warning messages only
+  --ignore-checksum     dont check MD5 sum, use size and time instead
+  --cache_nodes         cache node MD5 sum in an sqllite db
+  --cache_filename CACHE_FILENAME
+                        Name of file to use for node cache
+  --recursive, -r       Do a recursive sync
+  --nstreams NSTREAMS, -n NSTREAMS
+                        Number of streams to run (MAX: 30)
+  --exclude EXCLUDE     ignore directories or files containing this pattern
+  --include INCLUDE     only include files matching this pattern
+  --overwrite           overwrite copy on server regardless of
+                        modification/size/md5 checks
+  --load_test           Used to stress test the VOServer, also set --nstreams
+                        to a large value
+
+Default service settings in ~/.config/vos/vos-config.

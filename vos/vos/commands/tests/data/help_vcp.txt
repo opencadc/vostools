@@ -1,0 +1,47 @@
+usage: vcp [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w] [--exclude EXCLUDE] [--include INCLUDE]
+           [-i] [--overwrite] [--quick] [-L] [--ignore]
+           source [source ...] destination
+
+Copy files to and from VOSpace. Always recursive.
+VOSpace service associated to the requested container is discovered via
+registry search.
+
+vcp can be used to cutout particular parts of a FITS file if the VOSpace
+server supports the action.
+
+extensions and pixel locations accessed with [] brackets:
+vcp vos:Node/filename.fits[3][1:100,1:100] ./
+or
+RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
+where RA, DEC and RAD are all given in degrees
+
+Wildcards in the path or filename work also:
+vcp vos:VOSPACE/foo/*.txt .
+
+If no X509 certificate given on commnad line then location specified by
+default service settings will be used.
+
+positional arguments:
+  source               file/directory/dataNode/containerNode to copy from.
+  destination          file/directory/dataNode/containerNode to copy to
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  --exclude EXCLUDE    skip files that match pattern (overrides include)
+  --include INCLUDE    only copy files that match pattern
+  -i, --interrogate    Ask before overwriting files
+  --overwrite          DEPRECATED
+  --quick              assuming CANFAR VOSpace, only comptible with CANFAR
+                       VOSpace.
+  -L, --follow-links   follow symbolic links. Default is to not follow links.
+  --ignore             ignore errors and continue with recursive copy
+
+Default service settings in ~/.config/vos/vos-config.

@@ -1,0 +1,4 @@
+usage: vrmdir [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+              [--vos-debug] [-v] [-w]
+              nodes [nodes ...]
+vrmdir: error:

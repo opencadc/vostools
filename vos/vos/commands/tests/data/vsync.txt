@@ -1,0 +1,7 @@
+usage: vsync [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+             [--vos-debug] [-v] [-w] [--ignore-checksum] [--cache_nodes]
+             [--cache_filename CACHE_FILENAME] [--recursive]
+             [--nstreams NSTREAMS] [--exclude EXCLUDE] [--include INCLUDE]
+             [--overwrite] [--load_test]
+             files [files ...] destination
+vsync: error:

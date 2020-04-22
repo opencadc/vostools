@@ -1,54 +1,40 @@
-#!python
-"""Create a directory (ContainerNode) in the VOSpace repositotry"""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+"""Delete a VOSpace ContainerNode (aka directory)"""
+from ..commonparser import CommonParser, set_logging_level_from_args, \
+    exit_on_exception
+import logging
+from vos import vos
 
-from vos.commonparser import CommonParser
-import time
-import os, sys, logging
-from optparse import OptionParser
-from vos import vos, version
+DESCRIPTION = """deletes a VOSpace container node (aka directory)
+
+e.g.   vrmdir vos:Root/MyContainer
+
+CAUTION:  The container need not be empty."""
+
 
 def vrmdir():
-    usage="""
-            vrmdir vos:/root/node   -- deletes a container node
+    parser = CommonParser(description=DESCRIPTION)
+    parser.add_argument('nodes', help="Container nodes to delete from VOSpace",
+                        nargs='+')
 
-    Version: %s """ % (version.version)
+    args = parser.parse_args()
 
-
-    parser = CommonParser(usage)
-
-    if len(sys.argv) == 1:
-            parser.print_help()
-            sys.exit()
-
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
+    set_logging_level_from_args(args)
 
     try:
-        client=vos.Client(vospace_certfile=opt.certfile,
-                          vospace_token=opt.token)
-    except Exception as e:
-        logging.error("Connection failed:  %s" %  (str(e)))
-        sys.exit(e.__getattribute__('errno', -1))
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token)
+        for container_node in args.nodes:
+            if not container_node.startswith("vos:"):
+                raise ValueError(
+                    "{} is not a valid VOSpace handle".format(container_node))
+            if client.isdir(container_node):
+                logging.info("deleting {}".format(container_node))
+                client.delete(container_node)
+            else:
+                raise ValueError(
+                    "{} is a not a container node".format(container_node))
+    except Exception as ex:
+        exit_on_exception(ex)
 
-    try:
-       for arg in args:
-          if arg[0:4]!="vos:":
-              logging.error("%s is not a valid VOSpace handle" % (arg))
-              sys.exit(-1)
-          if client.isdir(arg):
-              logging.info("deleting %s" %(arg))
-              client.delete(arg)
-          elif client.isfile(arg):
-              logging.error("%s is a file" % (arg))
-              sys.exit(-1)
-          else:
-              logging.error("%s file not found" % (arg))
-              sys.exit(-1)
-    except Exception as e:
-        import re
-        if re.search('NodeLocked', str(e)) != None:
-           logging.error("Use vlock to unlock %s before removing." %(arg))
-        logging.error("Connection failed:  %s" %  (str(e)))
-        sys.exit(-1)
+
+vrmdir.__doc__ = DESCRIPTION

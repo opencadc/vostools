@@ -1,0 +1,4 @@
+usage: vlock [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+             [--vos-debug] [-v] [-w] [--lock | --unlock]
+             node
+vlock: error:

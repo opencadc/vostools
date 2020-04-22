@@ -1,68 +1,48 @@
 language: python
 
-
 python:
     - 2.7
-    - 3.3
     - 3.4
     - 3.5
+    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
 
-# The apt packages below are needed for sphinx builds. A full list of packages
-# that can be included can be found here:
-#
-# https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
-
-addons:
-    apt:
-        packages:
-            - libfuse-dev
-#            - graphviz
-#            - texlive-latex-extra
-#            - dvipng
-
-env:
-    global:
-
-        - SETUP_CMD='test'
-
-    matrix:
-        # Make sure that egg_info works without dependencies
-        - SETUP_CMD='test'
-
-matrix:
-    include:
-
-        # Do a coverage test in Python 2.
-        - python: 2.7
-          env: SETUP_CMD='coverage'
-
-        # Do a egg-info test in Python 2.
-        - python: 2.7
-          env: SETUP_CMD='egg_info'
-
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        #- python: 2.7
-        #  env: SETUP_CMD='build_sphinx -w'
-
-    exclude:
-
-        #- python: 3.3
-        #  env: SETUP_CMD='test'
-          
 install:
-   - cd vos; pip install -r dev_requirements.txt; cd ..;
-   - cd vofs; pip install -r dev_requirements.txt; cd ..;
+    - pip install -U pip
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then pip install twine; fi
+    - for i in $(ls -d */); do cd $i; pip install -r dev_requirements.txt; cd ..; done
+    - pip install coveralls
 
 script:
-   - cd vos; python setup.py $SETUP_CMD || exit -1; cd ..
-   - cd vofs; python setup.py $SETUP_CMD || exit -1
+    - for i in $(ls -d */); do
+         cd $i;
+         pytest --cov $i || exit 1;
+         if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then
+         flake8 -v $i || exit -1;
+         fi;
+         cd ..;
+         done
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line
     # below and replace "packagename" with the name of your package.
     # The coveragerc file may be customized as needed for your package.
-    # - if [[ $SETUP_CMD == 'coverage' ]]; then coveralls; fi
+    # Run coverage for all Python versions but submit only once - 3.5
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then coverage combine $(ls -d */.coverage) || exit 1; coveralls; fi
+
+jobs:
+  include:
+      #- stage: intTest
+      #python: 3.5
+      #script: ./.intTest
+    - stage: publish
+      python: 3.4
+      deploy:
+         provider: script
+         script: ./.publish.sh
+         on:
+            tags: true
+            condition: ${PYPI_PASSWORD+x} = x
+            branch: master

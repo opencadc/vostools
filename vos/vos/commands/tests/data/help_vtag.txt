@@ -1,0 +1,37 @@
+usage: vtag [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+            [--vos-debug] [-v] [-w] [--remove]
+            node property [property ...]
+
+provides set/read/(list) functions for property(ies) of a
+node.
+
+Properties are attributes on the node.  There can be users attributes or
+system attributes.
+
+Only user attributes can be set.
+
+examples:
+
+set at property:  vtag vos:RootNode/MyImage.fits quality=good
+read a property:  vtag vos:RootNode/MyImage.fits quality
+delete a property: vtag vos:RootNode/MyImage.fits quality=
+                   or
+                   vtag vos:RootNode/MyImage.fits quality --remove
+list all property values:  vtag vos:RootNode/MyImage.fits
+
+positional arguments:
+  node                 Node to set property (tag/attribute) on
+  property             Property whose value will be read, set or deleted
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+  --remove             remove the listed property
+
+Default service settings in ~/.config/vos/vos-config.

@@ -1,5 +1,3 @@
-#!python
-
 """set the islocked property of a node.
 
 A node is locked by setting the islocked property. When a node is
@@ -9,55 +7,41 @@ from __future__ import (absolute_import, division, print_function,
 
 import logging
 import sys
-from vos import vos
-from vos.commonparser import CommonParser
-from vos.vos import Node 
-import os
-import signal
+from .. import vos
+from ..commonparser import CommonParser, exit_on_exception, \
+    set_logging_level_from_args
 
+DESCRIPTION = """Places/Removes a write lock on a VOSpace Node or reports lock
+status if no action requested."""
 
-
-def signal_handler(signal, frame):
-    raise KeyboardInterrupt("SIGINT signal handler")
 
 def vlock():
-    signal.signal(signal.SIGINT, signal_handler)
-
-    parser = CommonParser()
-
-    parser.add_option("--lock", action="store_true", help="Lock the node")
-    parser.add_option("--unlock", action="store_true", help="unLock the node")
-
-    (opt, args) = parser.parse_args()
-    parser.process_informational_options()
-
-    logger = logging.getLogger()
-    logger.setLevel(parser.log_level)
-    logger.addHandler(logging.StreamHandler())
-
-    lock = None
-    if opt.lock:
-       lock = 'true'
-    elif opt.unlock:
-       lock = 'false'
-
-    exit_code = 0
+    parser = CommonParser(description=DESCRIPTION)
+    parser.add_argument(
+        'node',
+        help="node to request / view lock on. (eg. vos:RootNode/File.txt")
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--lock", action="store_true", help="Lock the node")
+    action.add_argument("--unlock", action="store_true",
+                        help="unLock the node")
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile,vospace_token=opt.token)
-        node = client.get_node(args[0])
+        opt = parser.parse_args()
+        set_logging_level_from_args(opt)
+
+        client = vos.Client(vospace_certfile=opt.certfile,
+                            vospace_token=opt.token)
+        node = client.get_node(opt.node)
         if opt.lock or opt.unlock:
             lock = not opt.unlock and opt.lock
             node.is_locked = lock
             client.update(node)
         else:
-            print(node.is_locked)
+            logging.info(node.is_locked)
             if not node.is_locked:
-                exit_code = -1
-    except KeyboardInterrupt:
-        exit_code = -1
-    except Exception as e:
-        logger.error(str(e))
-        exit_code = -1
+                sys.exit(-1)
+    except Exception as ex:
+        exit_on_exception(ex)
 
-    sys.exit(exit_code)
+
+vlock.__doc__ = DESCRIPTION

@@ -7,15 +7,17 @@ import os
 import shutil
 import stat
 import ctypes
-from fuse import FUSE, FuseOSError, fuse_operations
-from errno import EIO, EAGAIN, EPERM, ENOENT
+from fuse import FuseOSError, fuse_operations
+from errno import EIO, EPERM, ENOENT
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch, ANY
-from vofs import vofs
 import vos
-from vofs.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, IOProxy, FlushNodeQueue
-from vos.NodeCache import NodeCache
+from cadcutils import exceptions
+from vofs.CadcCache import Cache, CacheRetry, CacheAborted, FileHandle, \
+    IOProxy, FlushNodeQueue
+from vos.node_cache import NodeCache
 from vofs.vofs import HandleWrapper, MyFuse, VOFS
+from vofs import vofs
 
 skipTests = False
 
@@ -25,7 +27,6 @@ class Object(object):
 
 
 class MyFileHandle(FileHandle):
-
     def __init__(self, path, cache, ioObject):
         anIOProxy = IOProxy()
         anIOProxy.writeToBacking = Mock()
@@ -40,7 +41,6 @@ class MyFileHandle(FileHandle):
 
 
 class MyFileHandle2(FileHandle):
-
     def __init__(self, path, cache, ioObject):
         anIOProxy = IOProxy()
         anIOProxy.writeToBacking = Mock()
@@ -144,7 +144,8 @@ class TestVOFS(unittest.TestCase):
     #     fileHandle.cache_file_handle.write = Mock()
     #     fileHandle.cache_file_handle.write.side_effect = CacheRetry("fake")
     #     with self.assertRaises(FuseOSError) as e:
-    #         testfs.write( "/dir1/dir2/file", "abcd", 4, 2048, fileHandle.get_id())
+    #         testfs.write( "/dir1/dir2/file", "abcd", 4, 2048,
+    # fileHandle.get_id())
     #     self.assertEqual(e.exception.errno, EAGAIN)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -155,7 +156,7 @@ class TestVOFS(unittest.TestCase):
             testfs.write("/dir1/dir2/file", "abcd", 4, 2048, -1)
         self.assertEqual(e.exception.errno, EIO)
 
-    #@unittest.skipIf(skipTests, "Individual tests")
+    # @unittest.skipIf(skipTests, "Individual tests")
     def testRead1(self):
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
 
@@ -183,7 +184,8 @@ class TestVOFS(unittest.TestCase):
 
         # Read from an invalid file handle.
         with self.assertRaises(FuseOSError) as e:
-            testfs.read(path="/dir1/dir2/file", buf=buf, size=4, offset=2048, file_id=-1)
+            testfs.read(path="/dir1/dir2/file", buf=buf, size=4, offset=2048,
+                        file_id=-1)
         self.assertEqual(e.exception.errno, EIO)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -205,7 +207,8 @@ class TestVOFS(unittest.TestCase):
                 wraps=mockFileHandle.return_value.readData)
             fh = myVofs.open(file, os.O_RDWR | os.O_CREAT, None)
             self.assertEqual(self.testCacheDir + "/data" + file,
-                             HandleWrapper.file_handle(fh) .cache_file_handle.cacheDataFile)
+                             HandleWrapper.file_handle(
+                                 fh).cache_file_handle.cacheDataFile)
             self.assertEqual(self.testCacheDir + "/metaData" + file,
                              HandleWrapper.file_handle(fh).cache_file_handle.
                              cacheMetaDataFile)
@@ -226,10 +229,11 @@ class TestVOFS(unittest.TestCase):
         # test file in the cache already
         myVofs.cache.getAttr = Mock()
         myVofs.cache.getAttr.return_value = Mock()
-        #fhMock = Mock()
-        #myVofs.cache.open = Mock()
-        #myVofs.cache.open.return_value = fhMock
-        with patch('vofs.vofs.MyIOProxy') as myIOProxy, patch('vofs.CadcCache.FileHandle') as mockFileHandle:
+        # fhMock = Mock()
+        # myVofs.cache.open = Mock()
+        # myVofs.cache.open.return_value = fhMock
+        with patch('vofs.vofs.MyIOProxy') as myIOProxy, patch(
+                'vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, myVofs.cache, None)
             mockFileHandle.return_value.readData = Mock(
@@ -242,7 +246,8 @@ class TestVOFS(unittest.TestCase):
             self.assertFalse(HandleWrapper.file_handle(
                 fh).cache_file_handle.fileModified)
             # TODO fullyCached = True or False?
-            # self.assertFalse(HandleWrapper.file_handle(fh).cache_file_handle.fullyCached)
+            # self.assertFalse(
+            # HandleWrapper.file_handle(fh).cache_file_handle.fullyCached)
 
             # test a read-only file
             mockFileHandle.return_value.readData.reset_mock()
@@ -297,12 +302,12 @@ class TestVOFS(unittest.TestCase):
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
         with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError) as e:
+            with self.assertRaises(FuseOSError):
                 testfs.create(file, os.O_RDWR)
 
         testfs.getNode = Mock(side_effect=FuseOSError(errno=5))
         with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError) as e:
+            with self.assertRaises(FuseOSError):
                 testfs.create(file, os.O_RDWR)
 
         node.props.get = Mock(return_value=False)
@@ -326,6 +331,7 @@ class TestVOFS(unittest.TestCase):
                 raise CacheRetry("Exception")
             else:
                 return
+
         mockRelease.callCount = 0
 
         # Raise a timeout exception
@@ -335,7 +341,7 @@ class TestVOFS(unittest.TestCase):
         basefh.path = file
         fh = HandleWrapper(basefh, False)
         myVofs = vofs.VOFS("vos:", self.testCacheDir, opt)
-        with self.assertRaises(CacheRetry) as e:
+        with self.assertRaises(CacheRetry):
             myVofs.release(file, fh.get_id())
 
         # Raise an IO error.
@@ -343,14 +349,14 @@ class TestVOFS(unittest.TestCase):
         basefh.fileModified = True
         basefh.path = file
         fh = HandleWrapper(basefh, False)
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(Exception):
             myVofs.release(file, fh.get_id())
 
         # Release an invalid file descriptor
         # TODO should this throw a FuseOSError?
-        with self.assertRaises(KeyError) as e:
+        with self.assertRaises(KeyError):
             myVofs.release(file, -1)
-        # self.assertEqual(e.exception.errno, EIO)
+            # self.assertEqual(e.exception.errno, EIO)
 
     @unittest.skipIf(skipTests, "Individual tests")
     def test_getattr(self):
@@ -636,8 +642,9 @@ class TestVOFS(unittest.TestCase):
                 Mock(wraps=HandleWrapper.file_handle(fh).cache_file_handle.
                      fsync)
             testfs.fsync(file, False, fh)
-            self.assertEqual(HandleWrapper.file_handle(fh).cache_file_handle.fsync.
-                             call_count, 0)
+            self.assertEqual(
+                HandleWrapper.file_handle(fh).cache_file_handle.fsync.
+                call_count, 0)
             testfs.release(file, fh)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -666,6 +673,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.move.reset_mock()
         testfs.cache.renameFile.reset_mock()
         testfs.client.move.side_effect = Exception("str")
+        testfs.get_node = Mock(side_effect=exceptions.NotFoundException())
         with self.assertRaises(Exception):
             self.assertEqual(testfs.rename(src, dest), -1)
         testfs.client.move.assert_called_once_with(src, dest)
@@ -676,7 +684,7 @@ class TestVOFS(unittest.TestCase):
         testfs.cache.renameFile.reset_mock()
         testfs.client.move.side_effect = Exception(
             "the node is NodeLocked so won't work")
-        with self.assertRaises(OSError) as e:
+        with self.assertRaises(OSError):
             self.assertEqual(testfs.rename(src, dest), -1)
         testfs.client.move.assert_called_once_with(src, dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
@@ -691,6 +699,7 @@ class TestVOFS(unittest.TestCase):
                 return "1234"
             else:
                 return None
+
         file = "/dir1/dir2/file"
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         node = Mock(spec=vos.Node)
@@ -721,7 +730,7 @@ class TestVOFS(unittest.TestCase):
         origRelease = FileHandle.release
         origTruncate = FileHandle.truncate
         with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
-                    patch('vofs.CadcCache.FileHandle') as mockFileHandle:
+                patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockFileHandle.return_value = MyFileHandle(
                 file, testfs.cache, None)
             mockFileHandle.return_value.readData = \
@@ -756,7 +765,7 @@ class TestVOFS(unittest.TestCase):
         # Truncate with an exception returned by the CadcCache truncate
         testfs.cache.open.reset_mock()
         with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
-                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
+                patch('vofs.CadcCache.FileHandle.readData'):
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
@@ -770,14 +779,15 @@ class TestVOFS(unittest.TestCase):
 
         # Truncate an already opened file given the file handle.
         with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
-                    patch('vofs.CadcCache.FileHandle.readData') as mockReadData:
+                patch('vofs.CadcCache.FileHandle.readData'):
             mockRelease.wraps = origRelease  # TODO This doesn't really work,
             # release is not called and so open
             # files are being leaked
             try:
                 fh = testfs.open(file, os.O_RDWR | os.O_CREAT, None)
                 testfs.cache.open.reset_mock()
-                with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
+                with patch(
+                        'vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                     mockTruncate.wraps = origTruncate  # TODO Same issue as the
                     # mockRelease TODO above.
                     testfs.truncate(file, 20, fh)
@@ -794,12 +804,11 @@ class TestVOFS(unittest.TestCase):
 
         testfs2 = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
         testfs2.client = testfs.client
-        testfs = None
         testfs2.cache.open = Mock(wraps=testfs2.cache.open)
 
         # Truncate a read only file handle.
         with patch('vofs.CadcCache.FileHandle.release') as mockRelease, \
-                    patch('vofs.CadcCache.FileHandle') as mockFileHandle:
+                patch('vofs.CadcCache.FileHandle') as mockFileHandle:
             mockRelease.wraps = origRelease
             mockFileHandle.return_value = MyFileHandle(file, testfs2.cache,
                                                        None)
@@ -808,7 +817,8 @@ class TestVOFS(unittest.TestCase):
             try:
                 fh = testfs2.open(file, os.O_RDONLY, None)
                 testfs2.cache.open.reset_mock()
-                with patch('vofs.CadcCache.FileHandle.truncate') as mockTruncate:
+                with patch(
+                        'vofs.CadcCache.FileHandle.truncate') as mockTruncate:
                     mockTruncate.wraps = origTruncate
                     with self.assertRaises(FuseOSError):
                         testfs2.truncate(file, 20, fh)
@@ -820,7 +830,7 @@ class TestVOFS(unittest.TestCase):
                 testfs2.release(file, fh)
 
         # Truncate with an invalid file descriptor.
-        with self.assertRaises(KeyError) as e:
+        with self.assertRaises(KeyError):
             testfs2.truncate(file, 20, -1)
 
     def test_getNode(self):
@@ -869,13 +879,13 @@ class SideEffect(object):
                 name = ""
             else:
                 name = self.name
-            raise ValueError("Mock side effect " + name + " arguments not in Controller: "
-                             + str(args) + ":" + str(keywords) + ": " +
-                             str(self.controller) + "***")
+            raise ValueError(
+                "Mock side effect " + name + " arguments not in Controller: "
+                + str(args) + ":" + str(keywords) + ": " +
+                str(self.controller) + "***")
 
 
 class TestMyIOProxy(unittest.TestCase):
-
     @unittest.skipIf(skipTests, "Individual tests")
     def testWriteToBacking(self):
         # Submit a write request for the whole file.
@@ -935,8 +945,9 @@ class TestMyIOProxy(unittest.TestCase):
 
                     # Submit a request for the whole file
                     testProxy.readFromBacking()
-                    client.open.assert_called_once_with(path, mode=os.O_RDONLY,
-                                                        view="data", size=None, range=None)
+                    client.open.assert_called_once_with(
+                        path, mode=os.O_RDONLY, view="data", size=None,
+                        range=None)
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 2)
 
@@ -946,8 +957,8 @@ class TestMyIOProxy(unittest.TestCase):
                     callCount[0] = 0
                     testProxy.readFromBacking(100, 200)
                     self.assertEqual(client.open.call_count, 1)
-                    vos_VOFILE.open.assert_called_once_with("url0",
-                                                            bytes="bytes=200-299")
+                    vos_VOFILE.open.assert_called_once_with(
+                        "url0", bytes="bytes=200-299")
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 2)
 
@@ -960,8 +971,8 @@ class TestMyIOProxy(unittest.TestCase):
                         "aborted")
                     testProxy.readFromBacking(150, 200)
                     self.assertEqual(client.open.call_count, 1)
-                    vos_VOFILE.open.assert_called_once_with("url0",
-                                                            bytes="bytes=200-349")
+                    vos_VOFILE.open.assert_called_once_with(
+                        "url0", bytes="bytes=200-349")
                     self.assertEqual(vos_VOFILE.close.call_count, 1)
                     self.assertEqual(vos_VOFILE.read.call_count, 1)
 
@@ -1019,6 +1030,7 @@ class TestMyIOProxy(unittest.TestCase):
 
         def side_effect(*args, **kwds):
             return returns.pop(0)
+
         vos_VOFILE.read = MagicMock(side_effect=side_effect)
         vos_VOFILE.close = Mock()
         client.open = Mock(return_value=vos_VOFILE)
@@ -1059,45 +1071,42 @@ class TestMyIOProxy(unittest.TestCase):
 
         testProxy.size = 27
         self.assertEqual(testProxy.getSize(), 27)
-        
-        
+
     @unittest.skipIf(skipTests, "Individual tests")
     @patch("fuse._libfuse")
     def test_MyFuse(self, mock_libfuse):
-        #Tests the ctor to make sure the arguments are passed
-        #correctly to the os
+        # Tests the ctor to make sure the arguments are passed
+        # correctly to the os
         conn = MagicMock()
         mock_libfuse.fuse_main_real.return_value = False
         fuseops = fuse_operations()
-        buf = ctypes.create_string_buffer(4)
-        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
-                 cache_limit=100,
-                 cache_max_flush_threads=3),
-            "/tmp/vospace",
-            fsname="vos:",
-            nothreads=5,
-            foreground=False)
-        #if it was easy to pick inside the args memory structures we would
-        #have checked the the real arguments passed to the fuse library
-        #instead of ANY
-        mock_libfuse.fuse_main_real.assert_called_with(5, ANY, ANY, 
-                                                       ctypes.sizeof(fuseops), 
+        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+                    cache_limit=100,
+                    cache_max_flush_threads=3),
+               "/tmp/vospace",
+               fsname="vos:",
+               nothreads=5,
+               foreground=False)
+        # if it was easy to pick inside the args memory structures we would
+        # have checked the the real arguments passed to the fuse library
+        # instead of ANY
+        mock_libfuse.fuse_main_real.assert_called_with(5, ANY, ANY,
+                                                       ctypes.sizeof(fuseops),
                                                        None)
-        
-        fuse = MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
-                 cache_limit=100,
-                 cache_max_flush_threads=3),
-            "/tmp/vospace",
-            fsname="vos:",
-            nothreads=5,
-            readonly=True,
-            user_allow_other=True,
-            foreground=False)
+
+        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+                    cache_limit=100,
+                    cache_max_flush_threads=3),
+               "/tmp/vospace",
+               fsname="vos:",
+               nothreads=5,
+               readonly=True,
+               user_allow_other=True,
+               foreground=False)
 
         mock_libfuse.fuse_main_real.assert_called_with(6, ANY, ANY,
                                                        ctypes.sizeof(fuseops),
                                                        None)
-
 
     @unittest.skipIf(skipTests, "Individual tests")
     @patch("vofs.vofs.FUSE.__init__")
@@ -1106,12 +1115,12 @@ class TestMyIOProxy(unittest.TestCase):
         conn = MagicMock()
         buf = ctypes.create_string_buffer(4)
         fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
-                 cache_limit=100,
-                 cache_max_flush_threads=3),
-            "/tmp/vospace",
-            fsname="vos:",
-            nothreads=5,
-            foreground=False)
+                           cache_limit=100,
+                           cache_max_flush_threads=3),
+                      "/tmp/vospace",
+                      fsname="vos:",
+                      nothreads=5,
+                      foreground=False)
         fuse.raw_fi = True
         fuse.encoding = 'ascii'
         fuse.operations = Mock()
@@ -1120,10 +1129,8 @@ class TestMyIOProxy(unittest.TestCase):
         fip.contents = 'somevalue'
         retsize = fuse.read("/some/path".encode('utf-8'), buf, 10, 1, fip)
         fuse.operations.assert_called_once_with(
-                        'read', '/some/path', 10, 1, 'somevalue', buf)
+            'read', '/some/path', 10, 1, 'somevalue', buf)
         self.assertEqual(3, retsize, "Wrong buffer size")
-
-
 
     @unittest.skipIf(skipTests, "Individual tests")
     @patch("vofs.vofs.FUSE.__init__")
@@ -1132,12 +1139,12 @@ class TestMyIOProxy(unittest.TestCase):
         conn = MagicMock()
         buf = ctypes.create_string_buffer(4)
         fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
-                 cache_limit=100,
-                 cache_max_flush_threads=3),
-            "/tmp/vospace",
-            fsname="vos:",
-            nothreads=5,
-            foreground=False)
+                           cache_limit=100,
+                           cache_max_flush_threads=3),
+                      "/tmp/vospace",
+                      fsname="vos:",
+                      nothreads=5,
+                      foreground=False)
         fuse.raw_fi = True
         fuse.encoding = 'ascii'
         fuse.operations = Mock()
@@ -1148,11 +1155,11 @@ class TestMyIOProxy(unittest.TestCase):
         fip.contents = mock_contents
         retsize = fuse.write("/some/path".encode('utf-8'), buf, 10, 1, fip)
         fuse.operations.assert_called_once_with(
-                        'write', '/some/path', buf, 10, 1, fh_mock)
+            'write', '/some/path', buf, 10, 1, fh_mock)
         self.assertEqual(3, retsize, "Wrong buffer size")
 
-class TestHandleWrapper(unittest.TestCase):
 
+class TestHandleWrapper(unittest.TestCase):
     @unittest.skipIf(skipTests, "Individual tests")
     def testAll(self):
         # Get the hand wrapper's id
@@ -1178,8 +1185,9 @@ def run():
     suite1 = unittest.TestLoader().loadTestsFromTestCase(TestVOFS)
     suite2 = unittest.TestLoader().loadTestsFromTestCase(TestMyIOProxy)
     suite3 = unittest.TestLoader().loadTestsFromTestCase(TestHandleWrapper)
-    alltests = unittest.TestSuite([suite1, suite2, suite3])
+    unittest.TestSuite([suite1, suite2, suite3])
     return unittest.TextTestRunner(verbosity=2).run(suite1)
+
 
 if __name__ == "__main__":
     run()

@@ -1,0 +1,5 @@
+usage: vcp [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w] [--exclude EXCLUDE] [--include INCLUDE]
+           [-i] [--overwrite] [--quick] [-L] [--ignore]
+           source [source ...] destination
+vcp: error:

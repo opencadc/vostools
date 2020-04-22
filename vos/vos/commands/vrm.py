@@ -1,61 +1,45 @@
 #!python
-"""Create a directory (ContainerNode) in the VOSpace repositotry"""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+"""remove a vospace data node, fails if container node or node is locked."""
+import logging
+from ..commonparser import set_logging_level_from_args, exit_on_exception, \
+    CommonParser
+from .. import vos
 
-from vos import vos
-import time
-import os, sys, logging
-from vos.commonparser import CommonParser
-from vos import vos, version
+DESCRIPTION = """remove a vospace data node; fails if container node or node is locked.
+
+eg. vrm vos:/root/node   -- deletes a data node"""
 
 
 def vrm():
-    usage="""
-            vrm vos:/root/node   -- deletes a data node
+    parser = CommonParser(description=DESCRIPTION)
+    parser.add_argument('node',
+                        help='dataNode or linkNode to delete from VOSpace',
+                        nargs='+')
 
-    Version: %s """ % (version.version)
-
-
-
-    parser=CommonParser(usage)
-
-    if len(sys.argv) == 1:
-            parser.print_help()
-            sys.exit()
-
-    (opt, args)=parser.parse_args()
-    parser.process_informational_options()
-
-    logger = logging.getLogger()
-    logger.setLevel(parser.log_level)
+    args = parser.parse_args()
+    set_logging_level_from_args(args)
 
     try:
-        client=vos.Client(vospace_certfile=opt.certfile, vospace_token=opt.token)
-    except Exception as e:
-        logger.error("Connection failed:  %s" %  (str(e)))
-        exit_code = getattr(e, 'errno', -1)
-        sys.exit(exit_code)
-
-    for arg in args:
-        if arg[0:4]!="vos:":
-            logger.error("%s is not a valid VOSpace handle" % (arg))
-        try:
-            if client.isfile(arg) or client.get_node(arg).islink():
-                logger.info("deleting %s" %(arg))
-                client.delete(arg)
-            elif client.isdir(arg):
-                logger.error("%s is a directory" % (arg))
-            elif client.access(arg):
-                logger.info("deleting link %s" %(arg))
-                client.delete(arg)
+        client = vos.Client(vospace_certfile=args.certfile,
+                            vospace_token=args.token)
+        for node in args.node:
+            if not node.startswith('vos:'):
+                raise Exception(
+                    '{} is not a valid VOSpace handle'.format(node))
+            if not node.endswith('/'):
+                if client.get_node(node).islink():
+                    logging.info('deleting link {}'.format(node))
+                    client.delete(node)
+                elif client.isfile(node):
+                    logging.info('deleting {}'.format(node))
+                    client.delete(node)
+            elif client.isdir(node):
+                raise Exception('{} is a directory'.format(node))
             else:
-                logger.error("%s file not found" % (arg))
-                sys.exit(-1)
-        except Exception as e:
-            import re
-            if re.search('NodeLocked',str(e)) != None:
-                logger.error("Use vlock to unlock %s before deleting." % (arg))
-            exit_code = getattr(e, 'errno', -1)
-            logger.error("Failed trying to delete {0}: {1}".format( arg, str(e)))
-            sys.exit(exit_code)
+                raise Exception('{} is not a directory'.format(node))
+
+    except Exception as ex:
+        exit_on_exception(ex)
+
+
+vrm.__doc__ = DESCRIPTION

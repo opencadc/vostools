@@ -1,0 +1,23 @@
+usage: vmv [-h] [--certfile CERTFILE] [--token TOKEN] [--version] [-d]
+           [--vos-debug] [-v] [-w]
+           source destination
+
+move node to newNode, if newNode is a container  then move node into newNode.
+
+e.g. vmv vos:/root/node vos:/root/newNode   --
+
+positional arguments:
+  source               The name of the node to move.
+  destination          VOSpace destination to move source to.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --certfile CERTFILE  filename of your CADC X509 authentication certificate
+  --token TOKEN        authentication token string (alternative to certfile)
+  --version            show program's version number and exit
+  -d, --debug          print on command debug messages.
+  --vos-debug          Print on vos debug messages.
+  -v, --verbose        print verbose messages
+  -w, --warning        print warning messages only
+
+Default service settings in ~/.config/vos/vos-config.

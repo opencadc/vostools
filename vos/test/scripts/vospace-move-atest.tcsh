@@ -13,6 +13,8 @@ else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
 endif
 
+echo
+
 set LSCMD = "vls"
 set MKDIRCMD = "vmkdir"
 set RMCMD = "vrm"
@@ -28,14 +30,25 @@ set CERT = "--cert=$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 set CERT2 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest2.pem"
 
-# group 3000 aka CADC_TEST1-Staff has members: CADCAuthtest1
-set GROUP1 = "ivo://cadc.nrc.ca/gms#CADC_TEST1-Staff"
+# group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
+set GROUP1 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP1"
 
-# group 3100 aka CADC_TEST2-Staff has members: CADCAuthtest1, CADCAuthtest2
-set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST2-Staff"
+# group 3100 aka CADC_TEST_GROUP2 has members: CADCAuthtest1, CADCAuthtest2
+set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP2"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set VOHOME = "vos:CADCRegtest1"
+# use resourceID in vos-config to determine the base URI
+# vault uses CADCRegtest1, cavern uses home/cadcregtest1
+grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
+if ( $status == 0) then
+    set HOME_BASE = "home/cadcregtest1"
+    echo "** using cavern"
+else
+    set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
+endif
+
+set VOHOME = "vos:""$HOME_BASE"
 set BASE = "$VOHOME/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
@@ -193,6 +206,11 @@ echo -n "test rename file"
 $MVCMD $CERT $CONTAINER/a/aa/bbb $CONTAINER/a/aa/aaa >& /dev/null || echo " [FAIL]" && exit -1
 echo -n " verify "
 $LSCMD $CERT $CONTAINER/a/aa/aaa > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "rename file when destination exists (fail)"
+$CPCMD $CERT $THIS_DIR/something.png $CONTAINER/a/aa/bbb || echo " [FAIL]" && exit -1
+$MVCMD $CERT $CONTAINER/a/aa/aaa $CONTAINER/a/aa/bbb >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "move a vos container to local file system (fail)"
