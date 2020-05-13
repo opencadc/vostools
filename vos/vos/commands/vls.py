@@ -56,8 +56,8 @@ __LIST_FORMATS__ = {'permissions': lambda value: "{:<11}".format(value),
                         value.replace(vos.CADC_GMS_PREFIX, "")),
                     'writeGroup': lambda value: " {:<15}".format(
                         value.replace(vos.CADC_GMS_PREFIX, "")),
-                    'isLocked': lambda value: " {:<8}".format("", "LOCKED")[
-                        value == "true"],
+                    'isLocked': lambda value: " {:<8}".format(["", "LOCKED"][
+                        value == "true"]),
                     'size': size_format,
                     'date': date_format}
 
