@@ -46,8 +46,11 @@ set VOROOT = "vos:"
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "home/cadcregtest1"
+    set TESTING_CAVERN = "true"
+    echo "** using cavern"
 else
     set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
 endif
 set VOHOME = "$VOROOT""$HOME_BASE"
 set BASE = "$VOHOME/atest/locktest"
@@ -102,27 +105,37 @@ echo
 
 echo "test case 2: "
 echo -n "lock container "
-$LOCKCMD $CERT $CONTAINER $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check container is locked $CONTAINER"
-$TAGCMD $CERT $CONTAINER $LIST_ARGS 
-echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS "
-$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
+else
+    $LOCKCMD $CERT $CONTAINER $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+    echo -n "check container is locked $CONTAINER"
+    $TAGCMD $CERT $CONTAINER $LIST_ARGS 
+    echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS "
+    $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
+
+echo
 
 echo "test case 3: "
 echo -n "unlock container "
-$LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check unlocked container "
-$TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q None && set SUCCESS = "true"
-
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
 else
-    echo " [FAIL]"
-    exit -1
+    $LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+    echo -n "check unlocked container "
+    $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q None && set SUCCESS = "true"
+
+    if ( ${SUCCESS} == "true" ) then
+        set SUCCESS = "false"
+        echo " [OK]"
+    else
+        echo " [FAIL]"
+        exit -1
+    endif
 endif
 
 echo
@@ -144,91 +157,85 @@ echo
 
 echo "test case 5: "
 echo -n "lock link "
-$LOCKCMD $CERT $CONTAINER/target $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check locked link "
-$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
+else
+    $LOCKCMD $CERT $CONTAINER/target $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+    echo -n "check locked link "
+    $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 echo
 
 echo "test case 6: "
 echo -n "unlock link "
-$LOCKCMD $CERT $CONTAINER/target $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check unlocked link "
-$TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q None && set SUCCESS = "true"
-
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
 else
-    echo " [FAIL]"
-    exit -1
+    $LOCKCMD $CERT $CONTAINER/target $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+    echo -n "check unlocked link "
+    $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q None && set SUCCESS = "true"
+
+    if ( ${SUCCESS} == "true" ) then
+        set SUCCESS = "false"
+        echo " [OK]"
+    else
+        echo " [FAIL]"
+        exit -1
+    endif
 endif
 echo
 
 echo "test case 7: "
 echo -n "check unlocked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
 else
-    echo " [FAIL]"
-    exit -1
+    $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS
+    $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
+    if ( ${SUCCESS} == "true" ) then
+        set SUCCESS = "false"
+        echo " [OK]"
+    else
+        echo " [FAIL]"
+        exit -1
+    endif
 endif
 
 echo
 
 echo "test case 8: "
 echo -n "lock node "
-$LOCKCMD $CERT $CONTAINER/something.png $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check locked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
-echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
+else
+    $LOCKCMD $CERT $CONTAINER/something.png $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
+    echo " [OK]"
+    echo -n "check locked node "
+    $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
+    echo " [OK]"
+endif
 echo
 
 echo "test case 9: "
 echo -n "unlock node "
-$LOCKCMD $CERT $CONTAINER/something.png $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check unlocked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
-    echo " [OK]"
+if ( ${?TESTING_CAVERN} ) then
+    echo " [SKIPPED, vos/issues/82]"
 else
-    echo " [FAIL]"
-    exit -1
-endif
-echo
-
-echo "test case 8: "
-echo -n "lock node "
-$LOCKCMD $CERT $CONTAINER/something.png $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check locked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo
-
-echo "test case 9: "
-echo -n "unlock node "
-$LOCKCMD $CERT $CONTAINER/something.png $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
-echo " [OK]"
-echo -n "check unlocked node "
-$TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
-
-if ( ${SUCCESS} == "true" ) then
-    set SUCCESS = "false"
+    $LOCKCMD $CERT $CONTAINER/something.png $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
     echo " [OK]"
-else
-    echo " [FAIL]"
-    exit -1
+    echo -n "check unlocked node "
+    $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
+    if ( ${SUCCESS} == "true" ) then
+        set SUCCESS = "false"
+        echo " [OK]"
+    else
+        echo " [FAIL]"
+        exit -1
+    endif
 endif
-
 echo
 
 # clean up

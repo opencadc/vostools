@@ -13,6 +13,8 @@ else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
 endif
 
+echo
+
 set LSCMD = "vls"
 set MKDIRCMD = "vmkdir"
 set RMCMD = "vrm"
@@ -28,11 +30,11 @@ set CERT = "--cert=$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 set CERT2 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest2.pem"
 
-# group 3000 aka CADC_TEST1-Staff has members: CADCAuthtest1
-set GROUP1 = "ivo://cadc.nrc.ca/gms#CADC_TEST1-Staff"
+# group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
+set GROUP1 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP1"
 
-# group 3100 aka CADC_TEST2-Staff has members: CADCAuthtest1, CADCAuthtest2
-set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST2-Staff"
+# group 3100 aka CADC_TEST_GROUP2 has members: CADCAuthtest1, CADCAuthtest2
+set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP2"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
 # use resourceID in vos-config to determine the base URI
@@ -40,8 +42,10 @@ set GROUP2 = "ivo://cadc.nrc.ca/gms#CADC_TEST2-Staff"
 grep "^resourceID" "$HOME/.config/vos/vos-config" | awk '{print $3}' | grep "cavern" >& /dev/null
 if ( $status == 0) then
     set HOME_BASE = "home/cadcregtest1"
+    echo "** using cavern"
 else
     set HOME_BASE = "CADCRegtest1"
+    echo "** using vault"
 endif
 
 set VOHOME = "vos:""$HOME_BASE"
