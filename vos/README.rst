@@ -23,7 +23,7 @@ authentication system is managed by the CADC Group Management Service
 (GMS).
 
 To retrieve an X509 security certificate for use with the ``vos`` tools
-use the *getCert* script included with this package.
+use the *cadc-get-cert* script included with this package.
 
 Additional information is available in the `CANFAR
 documentation <http://www.canfar.net/docs/vospace/>`__
