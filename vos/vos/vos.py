@@ -1647,7 +1647,7 @@ class Client(object):
                         cutout_match.group('dec'),
                         cutout_match.group('rad'))
                 else:
-                    raise ValueError("Bad source name: ".format(source))
+                    raise ValueError("Bad source name: {}".format(source))
                 source = cutout_match.group('filename')
             elif head:
                 view = 'header'
