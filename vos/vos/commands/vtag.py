@@ -7,7 +7,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import pprint
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, get_scheme
 from .. import vos
 
 DESCRIPTION = """provides set/read/(list) functions for property(ies) of a
@@ -59,8 +59,11 @@ def vtag():
         props = args.property
 
     try:
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
+        scheme = get_scheme(node)
+        client = vos.Client(
+            resource_id=vos.vos_config.get_resource_id(scheme),
+            vospace_certfile=opt.certfile,
+            vospace_token=opt.token)
         node = client.get_node(node)
         if len(props) == 0:
             # print all properties

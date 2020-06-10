@@ -4,10 +4,10 @@
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from ..vos import Client
+from ..vos import Client, vos_config
 from ..vos import CADC_GMS_PREFIX
 from ..commonparser import CommonParser, set_logging_level_from_args
-from ..commonparser import exit_on_exception
+from ..commonparser import exit_on_exception, get_scheme
 import logging
 import sys
 import re
@@ -117,7 +117,9 @@ def vchmod():
     logging.debug("Setting {} on {}".format(props, opt.node))
 
     try:
-        client = Client(vospace_certfile=opt.certfile,
+        scheme = get_scheme(opt.node)
+        client = Client(resource_id=vos_config.get_resource_id(scheme),
+                        vospace_certfile=opt.certfile,
                         vospace_token=opt.token)
         node = client.get_node(opt.node)
         if opt.recursive:

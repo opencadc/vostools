@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 from .. import md5_cache
 from .. import vos
 from ..commonparser import CommonParser, set_logging_level_from_args,\
-    exit_on_exception
+    exit_on_exception, get_scheme
 
 try:
     from xml.etree.ElementTree import ParseError
@@ -20,6 +20,7 @@ import glob
 import time
 import warnings
 from cadcutils import exceptions
+import six
 
 __all__ = ['vcp']
 
@@ -94,12 +95,8 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if dest[0:4] != 'vos:':
+    if not vos.is_remote_file(dest):
         dest = os.path.abspath(dest)
-
-    client = vos.Client(vospace_certfile=args.certfile,
-                        vospace_token=args.token,
-                        transfer_shortcut=args.quick)
 
     exit_code = 0
 
@@ -136,14 +133,14 @@ def vcp():
 
     def isdir(filename):
         logging.debug("Doing an isdir on %s" % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             return client.isdir(filename)
         else:
             return os.path.isdir(filename)
 
     def islink(filename):
         logging.debug("Doing an islink on %s" % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             try:
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
@@ -159,7 +156,7 @@ def vcp():
         @return: True/False
         """
         logging.debug("checking for access %s " % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             try:
                 node = get_node(filename, limit=0)
                 return node is not None
@@ -174,27 +171,27 @@ def vcp():
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if dirname[0:4] == "vos:":
+        if vos.is_remote_file(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if filename[0:4] == 'vos:':
+        if vos.is_remote_file(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
 
     def get_md5(filename):
         logging.debug("getting the MD5 for %s" % filename)
-        if filename[0:4] == 'vos:':
+        if vos.is_remote_file(filename):
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
         else:
             return md5_cache.MD5Cache.compute_md5(filename)
 
     def lglob(pathname):
-        if pathname[0:4] == "vos:":
+        if vos.is_remote_file(pathname):
             return client.glob(pathname)
         else:
             return glob.glob(pathname)
@@ -331,10 +328,11 @@ def vcp():
     # in the try before source gets defined at least we know where we were
     # starting.
     source = args.source[0]
+    clients = {}  # one client for each service
     try:
         for source_pattern in args.source:
 
-            if args.head and not source_pattern.startswith('vos:'):
+            if args.head and not vos.is_remote_file(source_pattern):
                 logging.error("head only works for source files in vospace")
                 continue
 
@@ -342,7 +340,17 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if source_pattern[0:4] != "vos:":
+            if vos.is_remote_file(source_pattern):
+                scheme = get_scheme(source_pattern)
+            else:
+                scheme = get_scheme(dest)
+            if scheme not in clients:
+                clients[scheme] = vos.Client(
+                    resource_id=vos.vos_config.get_resource_id(scheme),
+                    vospace_certfile=args.certfile, vospace_token=args.token,
+                    transfer_shortcut=args.quick)
+            client = clients[scheme]
+            if not vos.is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -360,7 +368,7 @@ def vcp():
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
             for source in sources:
-                if source[0:4] != "vos:":
+                if not vos.is_remote_file(source):
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
@@ -371,7 +379,7 @@ def vcp():
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
+                if vos.is_remote_file(source) and vos.is_remote_file(dest):
                     raise Exception(
                         "Can not (yet) copy from VOSpace to VOSpace.")
 

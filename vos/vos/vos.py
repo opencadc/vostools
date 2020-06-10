@@ -33,6 +33,7 @@ import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .node_cache import NodeCache
+from .vosconfig import VosConfig
 
 try:
     from .version import version
@@ -95,7 +96,10 @@ ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 _DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
-_CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
+if os.getenv('VOSPACE_CONFIG_FILE', None):
+    _CONFIG_PATH = os.getenv('VOSPACE_CONFIG_FILE')
+else:
+    _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
 FILENAME_PATTERN_MAGIC = re.compile(
@@ -120,6 +124,17 @@ def _update_config():
     # temporary function to deal with:
     # - renaming of the ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
     # - commenting out transfer protocol
+    # - support for multiple services
+    multitple_services_1 = \
+        '# List of VOSpace services known to vos, one entry per line:'
+    multitple_services_2 = \
+        ('# resourceID = <resourceID> [<prefix>(default vos)]\n'
+         '# prefix is used to identify files and directories on that '
+         'service with\n'
+         '# the command line. e.g. vos:path/to/file is the path to a file '
+         'on the VOSpace\n'
+         '# service with the vos prefix. Prefixes in the config file must '
+         'be unique.\n')
     if os.path.exists(_CONFIG_PATH):
         try:
             protocol_text = \
@@ -137,6 +152,11 @@ def _update_config():
                     'protocol',
                     '{}\n# protocol'.format(protocol_text))
                 changed = True
+            if multitple_services_1 not in config_content:
+                config_content = config_content.replace(
+                    '[vos]', '[vos]\n{}\n{}'.format(multitple_services_1,
+                                                    multitple_services_2))
+                changed = True
 
             if changed:
                 open(_CONFIG_PATH, 'w').write(config_content)
@@ -148,13 +168,28 @@ def _update_config():
 
 try:
     _update_config()
-    vos_config = util.Config(_CONFIG_PATH)
+    vos_config = VosConfig(_CONFIG_PATH)
 except IOError:
     # Assume this is the first invocation and the config file has not been
     # created yet => create it
     util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
     # now read parse it again
     vos_config = util.Config(_CONFIG_PATH)
+
+
+def is_remote_file(file_name):
+    if file_name.startswith(('vos://', 'http://', 'https://')):
+        # assume full uri
+        return True
+    file_scheme = urlparse(file_name).scheme
+    if file_scheme:
+        if vos_config.get_resource_id(prefix=file_scheme) is not None:
+            return True
+        else:
+            raise ValueError(
+                'Unsupported prefix {}. Check the config file at '
+                '~/.config/vos/vos-config'.format(file_scheme))
+    return False
 
 
 def convert_vospace_time_to_seconds(str_date):
@@ -206,7 +241,7 @@ class Connection(object):
 
     def __init__(self, vospace_certfile=None, vospace_token=None,
                  http_debug=False,
-                 resource_id=vos_config.get('vos', 'resourceID')):
+                 resource_id=None):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -1404,11 +1439,14 @@ class Client(object):
                 VOSPACE_CERTFILE = certfilepath
             break
 
-    def __init__(self, vospace_certfile=None, root_node=None, conn=None,
+    def __init__(self, resource_id=None, vospace_certfile=None,
+                 root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
                  secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
-
+        :param resourceID: resource ID of the service to work with.
+        Recommended to be used. When None, it uses the resourceID from the
+        vos config file (only if a single one defined)
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
@@ -1437,9 +1475,15 @@ class Client(object):
         if not isinstance(conn, Connection):
             vospace_certfile = vospace_certfile is None and\
                 Client.VOSPACE_CERTFILE or vospace_certfile
+            if not resource_id:
+                try:
+                    resource_id = vos_config.get_resource_id()
+                except ValueError:
+                    raise ValueError(
+                        'resourceID of the service must be specified in ctor')
             conn = Connection(vospace_certfile=vospace_certfile,
                               vospace_token=vospace_token,
-                              http_debug=http_debug)
+                              http_debug=http_debug, resource_id=resource_id)
 
         protocol = vos_config.get('transfer', 'protocol')
         if protocol is not None:
@@ -1625,11 +1669,12 @@ class Client(object):
         source_md5 = None
         get_node_url_retried = False
         content_disposition = None
-        if source[0:4] == "vos:":
+        if is_remote_file(source):
             if destination is None:
                 # Set the destination, initially, to the same directory as
-                # the source (strip the vos:)
-                destination = os.path.dirname(source)[4:]
+                # the source (strip the scheme)
+                #TODO check if correct
+                destination = os.path.dirname(urlparse(source).path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
                 # content-disposition or
@@ -1808,6 +1853,9 @@ class Client(object):
         possible.
 
         """
+        if '://' in uri:
+            # no much to do
+            return uri
         parts = URLParser(uri)
         # TODO
         # implement support for local files (parts.scheme=None
@@ -1819,9 +1867,7 @@ class Client(object):
             else:
                 return uri
         parts = URLParser(uri)
-        if parts.scheme != "vos":
-            # Just past this back, I don't know how to fix...
-            return uri
+
         # Check that path name compiles with the standard
         logger.debug("Got value of args: {0}".format(parts.args))
         if parts.args is not None and parts.args != "":
@@ -1831,6 +1877,12 @@ class Client(object):
             logger.debug("Got uri: {0}".format(uri))
             if uri is not None:
                 return self.fix_uri(uri)
+        if not vos_config.get_resource_id(parts.scheme):
+            # Just past this back, I don't know how to fix...
+            raise ValueError(
+                'Prefix {} is not configured. Please updat the vos config '
+                'file (~/.config/vos/vos-config) to associate it to a '
+                'resourceID'.format(parts.scheme))
 
         # Check for filename values.
         path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
@@ -1845,15 +1897,15 @@ class Client(object):
         host = parts.netloc
         if not host or host == '':
             # default host corresponds to the resource ID of the client
-            host = self.conn.resource_id.replace('ivo://', '').replace('/',
-                                                                       '!')
+            host = vos_config.get_resource_id(parts.scheme).\
+                replace('ivo://', '').replace('/', '!')
 
         path = os.path.normpath(filename).strip('/')
         # accessing root results in path='.' wich is not a valid root path.
         # Therefore, remove the '.' character in this case
         if path == '.':
             path = ''
-        uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
+        uri = "vos://{0}/{1}{2}".format(host, path, parts.args)
         logger.debug("Returning URI: {0}".format(uri))
         return uri
 
@@ -1881,7 +1933,8 @@ class Client(object):
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
-                if uri.startswith('vos:') or uri.startswith('ad:'):
+                # TODO removed ad. Not sure it was used
+                if is_remote_file(uri):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read().decode('UTF-8')
                     xml_file = StringIO(vo_xml_string)
@@ -2686,7 +2739,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if uri[0:4] == "vos:":
+            if is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return "vos:DataNode"
@@ -2696,7 +2749,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if uri[0:4] == "vos:":
+            if is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return int(requests.head(uri).headers.get('Content-Length', 0))

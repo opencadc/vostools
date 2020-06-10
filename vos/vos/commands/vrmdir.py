@@ -1,6 +1,6 @@
 """Delete a VOSpace ContainerNode (aka directory)"""
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, get_scheme
 import logging
 from vos import vos
 
@@ -21,12 +21,18 @@ def vrmdir():
     set_logging_level_from_args(args)
 
     try:
-        client = vos.Client(vospace_certfile=args.certfile,
-                            vospace_token=args.token)
+        clients = {}
         for container_node in args.nodes:
-            if not container_node.startswith("vos:"):
+            if not vos.is_remote_file(container_node):
                 raise ValueError(
                     "{} is not a valid VOSpace handle".format(container_node))
+            scheme = get_scheme(container_node)
+            if scheme not in clients:
+                clients[scheme] = vos.Client(
+                    resource_id=vos.vos_config.get_resource_id(scheme),
+                    vospace_certfile=args.certfile,
+                    vospace_token=args.token)
+            client = clients[scheme]
             if client.isdir(container_node):
                 logging.info("deleting {}".format(container_node))
                 client.delete(container_node)

@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import logging
 import math
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, get_scheme
 import sys
 import time
 from .. import vos
@@ -110,9 +110,6 @@ def vls():
             columns.extend(
                 ['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-        # create a client to send VOSpace command
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
 
         files = []
         dirs = []
@@ -132,11 +129,19 @@ def vls():
         else:
             order = 'desc' if sort else 'asc'
 
+        clients = {}  # a client for each resource ID
         for node in opt.node:
-            if not node.startswith('vos:'):
+            if not vos.is_remote_file(file_name=node):
                 raise ArgumentError(opt.node,
                                     "Invalid node name: {}".format(node))
             logging.debug("getting listing of: %s" % str(node))
+            scheme = get_scheme(node)
+            if scheme not in clients:
+                clients[scheme] = vos.Client(
+                    resource_id=vos.vos_config.get_resource_id(scheme),
+                    vospace_certfile=opt.certfile,
+                    vospace_token=opt.token)
+            client = clients[scheme]
             targets = client.glob(node)
 
             # segregate files from directories

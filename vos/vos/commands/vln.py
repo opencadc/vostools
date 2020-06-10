@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, get_scheme
 from .. import vos
 from argparse import ArgumentError
 
@@ -35,14 +35,16 @@ def vln():
         opt = parser.parse_args()
         set_logging_level_from_args(opt)
 
-        if not (opt.source.startswith('vos:') or opt.source.startswith(
-                'http:')) or not opt.target.startswith('vos:'):
+        if not vos.is_remote_file(opt.source) or \
+                not vos.is_remote_file(opt.target):
             raise ArgumentError(
                 None,
                 "source must be vos node or http url, target must be vos node")
-
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
+        scheme = get_scheme(opt.target)
+        client = vos.Client(
+            resource_id=vos.vos_config.get_resource_id(scheme),
+            vospace_certfile=opt.certfile,
+            vospace_token=opt.token)
         client.link(opt.source, opt.target)
     except ArgumentError as ex:
         parser.print_usage()
