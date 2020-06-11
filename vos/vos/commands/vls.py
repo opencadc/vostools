@@ -9,6 +9,7 @@ from ..commonparser import CommonParser, set_logging_level_from_args, \
 import sys
 import time
 from .. import vos
+from ..vosconfig import vos_config
 from argparse import ArgumentError
 
 # this is a pointer to the module object instance itself.
@@ -110,7 +111,6 @@ def vls():
             columns.extend(
                 ['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-
         files = []
         dirs = []
 
@@ -138,7 +138,7 @@ def vls():
             scheme = get_scheme(node)
             if scheme not in clients:
                 clients[scheme] = vos.Client(
-                    resource_id=vos.vos_config.get_resource_id(scheme),
+                    resource_id=vos_config.get_resource_id(scheme),
                     vospace_certfile=opt.certfile,
                     vospace_token=opt.token)
             client = clients[scheme]

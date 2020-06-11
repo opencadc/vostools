@@ -9,6 +9,7 @@ import sys
 import traceback
 import six
 from .version import version
+from .vosconfig import _CONFIG_PATH
 
 
 def signal_handler(signum, frame):
@@ -79,10 +80,14 @@ class CommonParser(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         # call the parent constructor
+        if os.path.isfile(_CONFIG_PATH):
+            epilog = 'Default service settings in {}.'.format(_CONFIG_PATH)
+        else:
+            epilog = ''
         super(CommonParser, self).__init__(
             *args,
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            epilog="Default service settings in ~/.config/vos/vos-config.",
+            epilog=epilog,
             **kwargs)
         # inherit the VOS client version
         self.version = version

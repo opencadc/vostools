@@ -3,8 +3,9 @@ from six.moves import builtins
 import requests
 import unittest2 as unittest
 from mock import Mock, MagicMock, patch
+import os
 
-from vos import vos, Connection
+from vos import vos, Connection, vosconfig
 
 # To run individual tests, set the value of skipTests to True, and comment
 # out the @unittest.skipIf line at the top of the test to be run.
@@ -16,6 +17,12 @@ class Object(builtins.object):
 
 
 class TestVOFile(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestVOFile, cls).setUpClass()
+        # make sure we are using the default config file
+        os.environ['VOSPACE_CONFIG_FILE'] = vosconfig._DEFAULT_CONFIG_PATH
 
     def __init__(self, *args, **kwargs):
         super(TestVOFile, self).__init__(*args, **kwargs)
@@ -45,7 +52,7 @@ class TestVOFile(unittest.TestCase):
         mockHttpResponse200.status = 200
         mockHttpResponse200.read.return_value = "Testing"
         mockHttpResponse200.len.return_value = 10
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         mockHttpRequest = Mock(name="HttpRequest")
 
         # set a 503 response first followed by a 200 response
@@ -89,7 +96,7 @@ class TestVOFile(unittest.TestCase):
         mock_resp.headers.get.side_effect = getheader
         mock_resp.text = 'Try again later'
 
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         conn.session.send = Mock(return_value=mock_resp)
         vofile = vos.VOFile(["Some URL"], conn, "GET")
         req = requests.Request("GET", "http://some/url")
@@ -127,7 +134,7 @@ class TestVOFile(unittest.TestCase):
         mockHttpResponse200.getheader.return_value = 1
         mockHttpResponse200.status = 200
         mockHttpResponse200.read.return_value = "Testing"
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         mockHttpRequest = Mock(name="HttpRequest")
 
         # set a 412 response first followed by a 200 response
@@ -169,7 +176,7 @@ class TestVOFile(unittest.TestCase):
         mock_resp_503.headers = {'Content-Length': 10, 'Content-MD5': 12345,
                                  'Retry-After': 1}
 
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
 
         # test successful - use first url
         self.responses = [mock_resp_200]
@@ -219,7 +226,7 @@ class TestVOFile(unittest.TestCase):
     @patch.object(Connection, 'get_connection')
     def test_checkstatus(self, mock_get_connection):
         # Verify the md5sum and size are extracted from the HTTP header
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         # test successful - use first url
         vofile = vos.VOFile(None, conn, "GET")
         mock_resp = Object

@@ -6,4 +6,3 @@
 # service with the vos prefix. Prefixes in the config file must be unique.
 resourceID = ivo://cadc.nrc.ca/vault vos
 
-[transfer]

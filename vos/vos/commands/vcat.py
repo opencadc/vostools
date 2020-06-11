@@ -6,7 +6,6 @@ import logging
 from ..vos import Client, is_remote_file, vos_config
 from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, get_scheme
-import six
 
 
 def _cat(uri, cert_filename=None, head=None):

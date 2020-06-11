@@ -33,13 +33,13 @@ import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .node_cache import NodeCache
-from .vosconfig import VosConfig
+from .vosconfig import vos_config
 
 try:
     from .version import version
 except ImportError:
     version = "unknown"
-from cadcutils import net, exceptions, util
+from cadcutils import net, exceptions
 from . import md5_cache
 
 try:
@@ -94,12 +94,6 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
 # md5sum of a size zero file
 ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-_DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
-if os.getenv('VOSPACE_CONFIG_FILE', None):
-    _CONFIG_PATH = os.getenv('VOSPACE_CONFIG_FILE')
-else:
-    _CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
 FILENAME_PATTERN_MAGIC = re.compile(
@@ -118,63 +112,6 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 
 
 logging.getLogger("requests").setLevel(logging.ERROR)
-
-
-def _update_config():
-    # temporary function to deal with:
-    # - renaming of the ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
-    # - commenting out transfer protocol
-    # - support for multiple services
-    multitple_services_1 = \
-        '# List of VOSpace services known to vos, one entry per line:'
-    multitple_services_2 = \
-        ('# resourceID = <resourceID> [<prefix>(default vos)]\n'
-         '# prefix is used to identify files and directories on that '
-         'service with\n'
-         '# the command line. e.g. vos:path/to/file is the path to a file '
-         'on the VOSpace\n'
-         '# service with the vos prefix. Prefixes in the config file must '
-         'be unique.\n')
-    if os.path.exists(_CONFIG_PATH):
-        try:
-            protocol_text = \
-                '# transfer protocol configuration is no longer supported'
-            changed = False
-            config_content = open(_CONFIG_PATH, 'r').read()
-            if 'ivo://cadc.nrc.ca/vospace' in config_content:
-                config_content = config_content.replace(
-                    'ivo://cadc.nrc.ca/vospace',
-                    'ivo://cadc.nrc.ca/vault')
-                changed = True
-            if protocol_text not in config_content and \
-                    'protocol' in config_content:
-                config_content = config_content.replace(
-                    'protocol',
-                    '{}\n# protocol'.format(protocol_text))
-                changed = True
-            if multitple_services_1 not in config_content:
-                config_content = config_content.replace(
-                    '[vos]', '[vos]\n{}\n{}'.format(multitple_services_1,
-                                                    multitple_services_2))
-                changed = True
-
-            if changed:
-                open(_CONFIG_PATH, 'w').write(config_content)
-        except Exception as e:
-            warnings.warn('Error trying to access {} config file: {}'.format(
-                _CONFIG_PATH, str(e)))
-            pass
-
-
-try:
-    _update_config()
-    vos_config = VosConfig(_CONFIG_PATH)
-except IOError:
-    # Assume this is the first invocation and the config file has not been
-    # created yet => create it
-    util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
-    # now read parse it again
-    vos_config = util.Config(_CONFIG_PATH)
 
 
 def is_remote_file(file_name):
@@ -1673,7 +1610,6 @@ class Client(object):
             if destination is None:
                 # Set the destination, initially, to the same directory as
                 # the source (strip the scheme)
-                #TODO check if correct
                 destination = os.path.dirname(urlparse(source).path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from

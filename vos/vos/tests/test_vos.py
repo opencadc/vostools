@@ -6,7 +6,7 @@ import pytest
 import requests
 from xml.etree import ElementTree
 from mock import Mock, patch, MagicMock, call
-from vos import Client, Connection, Node, VOFile
+from vos import Client, Connection, Node, VOFile, vosconfig
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
@@ -96,7 +96,7 @@ def test_update_config():
         new_config_mock = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_config_mock
-        vos._update_config()
+        vosconfig._update_config()
     assert new_config_mock.called_once_with(old_content)
 
     # test rewrite vospace resource in config file
@@ -108,7 +108,7 @@ def test_update_config():
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
-        vos._update_config()
+        vosconfig._update_config()
     assert new_config_mock.called_once_with(old_content.replace(
         'vospace', 'vault'))
 
@@ -123,7 +123,7 @@ def test_update_config():
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
-        vos._update_config()
+        vosconfig._update_config()
     assert new_config_mock.called_once_with(old_content.replace(
         'protocol', '{}#protocol'.format(protocol_text)))
 
@@ -131,6 +131,11 @@ def test_update_config():
 class TestClient(unittest.TestCase):
     """Test the vos Client class.
     """
+    @classmethod
+    def setUpClass(cls):
+        super(TestClient, cls).setUpClass()
+        # make sure we are using the default config file
+        os.environ['VOSPACE_CONFIG_FILE'] = vosconfig._DEFAULT_CONFIG_PATH
 
     def off_quota(self):
         """
@@ -181,7 +186,7 @@ class TestClient(unittest.TestCase):
     def test_open(self):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
-            client = Client()
+            client = Client(resource_id='ivo://cadc.nrc.ca/vault')
             client.open('vos://foo/bar', mode=-10000)
 
         with self.assertRaises(OSError):
@@ -189,7 +194,7 @@ class TestClient(unittest.TestCase):
             client.get_node_url = Mock(return_value=None)
             client.open(None, url=None)
 
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         mock_vofile = VOFile(['http://foo.com/bar'], conn, 'GET')
         client = Client()
         client.get_node_url = Mock(return_value=mock_vofile)
@@ -663,7 +668,7 @@ class TestClient(unittest.TestCase):
         mock_resp_403 = Mock(name="mock_resp_303")
         mock_resp_403.status_code = 403
 
-        conn = Connection()
+        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         conn.session.post = Mock(return_value=mock_resp_403)
         client = Client(conn=conn)
 
@@ -826,12 +831,17 @@ class TestNode(unittest.TestCase):
 class TestVOFile(unittest.TestCase):
     """Test the vos VOFile class.
     """
+    @classmethod
+    def setUpClass(cls):
+        super(TestVOFile, cls).setUpClass()
+        # make sure we are using the default config file
+        os.environ['VOSPACE_CONFIG_FILE'] = vosconfig._DEFAULT_CONFIG_PATH
 
     def test_seek(self):
         my_mock = MagicMock()
         with patch('vos.VOFile.open', my_mock):
             url_list = ['http://foo.com']
-            conn = Connection()
+            conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
             method = 'GET'
             vofile = VOFile(url_list, conn, method, size=25)
 

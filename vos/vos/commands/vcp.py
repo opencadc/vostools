@@ -20,7 +20,6 @@ import glob
 import time
 import warnings
 from cadcutils import exceptions
-import six
 
 __all__ = ['vcp']
 
