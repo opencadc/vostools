@@ -8,6 +8,9 @@ import vos
 import sys
 import urllib
 import re
+import logging
+import six.moves
+from six.moves.urllib.parse import urlparse
 from cadcutils import exceptions
 from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
@@ -17,8 +20,7 @@ from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from .CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from vos.logExceptions import logExceptions
-import logging
-import six.moves
+from vos import vosconfig
 
 logger = logging.getLogger('vofs')
 # logger.setLevel(logging.DEBUG)
@@ -254,6 +256,15 @@ class VOFS(Operations):
         # What is the 'root' of the VOSpace? (eg vos:MyVOSpace)
         self.root = root
 
+        service_prefix = None  # default service prefix
+        if root:
+            service_prefix = urlparse(root).scheme
+        try:
+            resource_id = vosconfig.vos_config.get_resource_id(service_prefix)
+        except Exception as e:
+            raise RuntimeError(
+                'Cannot identify vospace service: {}'.format(str(e)))
+
         # VOSpace is a bit slow so we do some caching.
         self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout,
                            maxFlushThreads=cache_max_flush_threads)
@@ -263,7 +274,8 @@ class VOFS(Operations):
         try:
             self.client = vos.Client(root_node=root, conn=conn,
                                      transfer_shortcut=True,
-                                     secure_get=secure_get)
+                                     secure_get=secure_get,
+                                     resource_id=resource_id)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root

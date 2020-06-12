@@ -53,7 +53,7 @@ class VosConfig(Config):
             else:
                 raise ValueError(
                     'Multiple resourceIDs in the config file. No default.')
-        return self.resource_id.get(prefix, None)
+        return self.resource_id[prefix]
 
 
 def _update_config():
@@ -130,7 +130,11 @@ def vos_config_main():
         if os.path.isfile(_CONFIG_PATH):
             print('Config file {} already exists.'.format(_CONFIG_PATH))
             sys.exit(-1)
-        Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
+        try:
+            Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
+        except Exception as e:
+            print('Failed to generate {}: {}'.format(_CONFIG_PATH, str(e)))
+            sys.exit(-1)
         print('\nvos config file {} generated to be customized. This\n'
               'configuration is going to be used by vos from now.\n'.
               format(_CONFIG_PATH))

@@ -64,8 +64,9 @@ foreach resource ($resources)
     else
         set VOROOT = "vos:"
         set HOME_BASE = "CADCRegtest1"
+    endif
 
-  set VOHOME = "vos:""$HOME_BASE"
+  set VOHOME = "$VOROOT$HOME_BASE"
   set BASE = "$VOHOME/atest"
 
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
