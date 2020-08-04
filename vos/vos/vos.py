@@ -1688,8 +1688,7 @@ class Client(object):
                         if os.path.isdir(destination):
                             destination = os.path.join(destination,
                                                        content_disposition)
-                    source_md5 = response.headers.get('Content-MD5',
-                                                      source_md5)
+                    source_md5 = response.headers.get('Content-MD5')
                     response.raise_for_status()
                     with open(destination, 'wb') as fout:
                         for chunk in response.iter_content(
@@ -1699,15 +1698,18 @@ class Client(object):
                                 fout.flush()
                     destination_size = os.stat(destination).st_size
                     if check_md5:
-                        destination_md5 = md5_cache.MD5Cache.compute_md5(
-                            destination)
-                        logger.debug(
-                            "{0} {1}".format(source_md5, destination_md5))
-                        if destination_md5 != source_md5:
-                            raise IOError(
-                                'Source and destination md5 do not match: '
-                                '{} vs. {}'.format(source_md5,
-                                                   destination_md5))
+                        if source_md5:
+                            destination_md5 = md5_cache.MD5Cache.compute_md5(
+                                destination)
+                            logger.debug(
+                                "{0} {1}".format(source_md5, destination_md5))
+                            if destination_md5 != source_md5:
+                                raise IOError(
+                                    'Source and destination md5 do not match: '
+                                    '{} vs. {}'.format(source_md5,
+                                                       destination_md5))
+                        else:
+                            logger.debug("Source md5 not available to check")
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
