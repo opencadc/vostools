@@ -40,8 +40,13 @@ HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 # Create an agent for URL communications.
 VOS_AGENT = 'vos/' + version
 
-# Standard ID
-STANDARD_ID = 'http://www.opencadc.org/std/storage#files-1.0'
+# Storage Inventory services
+FILES = 'files'
+LOCATE = 'locate'
+
+# Standard ID's
+FILES_STANDARD_ID = 'http://www.opencadc.org/std/storage#files-1.0'
+LOCATE_STANDARD_ID = 'http://www.opencadc.org/std/storage#locate-1.0'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
 FILENAME_PATTERN_MAGIC = re.compile(
@@ -57,9 +62,6 @@ FILENAME_PATTERN_MAGIC = re.compile(
     r')?$'
     )
 MAGIC_GLOB_CHECK = re.compile('[*?[]')
-
-RAVEN_URI = 'ivo://cadc.nrc.ca/raven'
-MINOC_URI = 'ivo://cadc.nrc.ca/minoc'
 
 
 class Client(object):
@@ -98,6 +100,28 @@ class Client(object):
                                    vospace_token=token,
                                    http_debug=True,
                                    resource_id=resource_id)
+
+        (self.service, self.standard_id) = self._get_service(self.resource_id)
+
+    def _get_service(self, resource_id):
+        """
+        Get the StandardID for the given resourceID.
+        A Resource ID ending with /minoc uses Standard ID:
+        http://www.opencadc.org/std/storage#files-1.0
+        A Resource ID ending with /raven uses the Standard ID: '
+        http://www.opencadc.org/std/storage#locate-1.0'
+
+        :param resource_id: The service Resource ID
+        :return: The service Standard ID
+        """
+        if not resource_id:
+            raise ValueError('resource_id is mandatory.')
+        if resource_id.endswith("/minoc"):
+            return FILES, FILES_STANDARD_ID
+        elif resource_id.endswith('/raven'):
+            return LOCATE, LOCATE_STANDARD_ID
+        else:
+            raise ValueError('uknown resource_id: {}'.format(resource_id))
 
     def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
@@ -176,13 +200,13 @@ class Client(object):
         """
         logger.debug("delete {0}".format(uri))
         url = '{}/{}'.format(
-            self._get_ws_client()._get_url((STANDARD_ID, None)), uri)
+            self._get_ws_client()._get_url((self.standard_id, None)), uri)
         response = self.conn.session.delete(url)
         response.raise_for_status()
 
     def transfer(self, uri, direction, view=None, cutout=None):
         transfer_url = '{}/{}'.format(
-            self._get_ws_client()._get_url((STANDARD_ID, None)), uri)
+            self._get_ws_client()._get_url((self.standard_id, None)), uri)
         trans = Transfer()
         return trans.transfer(transfer_url, uri, direction, self.conn,
                               self._get_protocol(), view, cutout)
@@ -200,14 +224,23 @@ class Client(object):
         :return: destination size in bytes
         :rtype long
         """
-        source_md5 = self.get_metadata(source).get('content_md5')
-        download_url = '{}/{}'.format(
-            self._get_ws_client()._get_url((STANDARD_ID, None)), source)
+        if self.service is LOCATE:
+            download_urls = self.transfer(source, Transfer.DIRECTION_PULL_FROM)
+            logger.debug('urls: {}'.format(download_urls))
+            stream = Stream(self.conn)
+            logger.debug('Downloading {}'.format(source))
+            return stream.download(
+                download_urls[0], source, None, destination, True, True)
+        elif self.service is FILES:
+            source_md5 = self.get_metadata(source).get('content_md5')
+            download_url = '{}/{}'.format(
+                self._get_ws_client()._get_url(
+                    (self.standard_id, None)), source)
 
-        stream = Stream(self.conn)
-        logger.debug('Downloading {}'.format(source))
-        return stream.download(download_url, source, source_md5, destination,
-                               True, True)
+            stream = Stream(self.conn)
+            logger.debug('Downloading {}'.format(source))
+            return stream.download(
+                download_url, source, source_md5, destination, True, True)
 
     def _put(self, source, destination):
         """
@@ -222,8 +255,8 @@ class Client(object):
         """
         source_md5 = md5_cache.MD5Cache.compute_md5(source)
 
-        upload_url = '{}/{}'.format(
-            self._get_ws_client()._get_url((STANDARD_ID, None)), destination)
+        upload_url = '{}/{}'.format(self._get_ws_client()._get_url(
+            (self.standard_id, None)), destination)
         stream = Stream(self.conn)
         logger.debug('Uploading {}'.format(source))
         return stream.upload(upload_url, destination, source, source_md5,
@@ -261,11 +294,13 @@ class Client(object):
         :rtype: {}
         """
         logger.debug('vcp::get_metadata')
+        if self.standard_id == LOCATE_STANDARD_ID:
+            return {}
         session_headers = {HEADER_DELEG_TOKEN: self.token}
         ws_client = self._get_ws_client()
         ws_client.session_headers = session_headers
 
-        response = ws_client.head(resource=(STANDARD_ID, uri))
+        response = ws_client.head(resource=(self.standard_id, uri))
         headers = response.headers
 
         return {

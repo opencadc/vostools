@@ -99,6 +99,9 @@ def vcp():
         help="copy only the headers of a file from vospace. Might return an "
              "error if the server does not support the operation on a given "
              "file type")
+    parser.add_argument(
+        "--secure", action="store_true", default=True,
+        help="transfer contents of files using SSL encryption")
 
     args = parser.parse_args()
 
@@ -120,9 +123,13 @@ def vcp():
     #
     # jenkinsd 2020.01.03
     #
+    is_storage_inventory = False
     if 'resource_id' in args and args.resource_id is not None:
+        is_storage_inventory = True
+    if is_storage_inventory:
         client = storage_inventory.Client(args.resource_id,
                                           certfile=args.certfile,
+                                          secure_get=args.secure,
                                           token=args.token)
     else:
         client = vos.Client(vospace_certfile=args.certfile,

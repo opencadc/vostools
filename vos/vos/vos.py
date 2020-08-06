@@ -2703,35 +2703,50 @@ class Transfer(object):
 
             logging.debug("{0}".format(resp))
             logging.debug("{0}".format(resp.text))
-            if resp.status_code != 303:
+            if resp.status_code == 200:
+                xml_string = resp.text
+                transfer_document = ElementTree.fromstring(xml_string)
+                transfer_url = transfer_document.findall(Node.ENDPOINT)
+                logging.debug(
+                    "XML version: {0}".format(
+                        ElementTree.tostring(transfer_document)))
+                all_protocols = transfer_document.findall(Node.PROTOCOL)
+                if all_protocols is None or not len(all_protocols) > 0:
+                    raise ValueError('No endpoints available.')
+            elif resp.status_code == 303:
+                transfer_url = resp.headers.get('Location', None)
+
+                if conn.session.auth is not None and "auth" not in transfer_url:
+                    transfer_url = transfer_url.replace('/vospace/',
+                                                        '/vospace/auth/')
+
+                logging.debug("Got back from transfer URL: %s" % transfer_url)
+
+                # For a move this is the end of the transaction.
+                if view == 'move':
+                    return not self.get_transfer_error(conn, transfer_url, uri)
+
+                # for get or put we need the protocol value
+                xfer_resp = conn.session.get(transfer_url,
+                                             allow_redirects=False)
+                xfer_url = xfer_resp.headers.get('Location', None)
+                if conn.session.auth is not None and "auth" not in xfer_url:
+                    xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
+                xml_string = conn.session.get(xfer_url).text
+                logging.debug("Transfer Document: %s" % xml_string)
+                transfer_document = ElementTree.fromstring(xml_string)
+                logging.debug(
+                    "XML version: {0}".format(
+                        ElementTree.tostring(transfer_document)))
+                all_protocols = transfer_document.findall(Node.PROTOCOL)
+                if all_protocols is None or not len(all_protocols) > 0:
+                    return self.get_transfer_error(conn, transfer_url, uri)
+            elif resp.status_code == 404:
+                raise OSError(resp.status_code,
+                              "File not found: {0}".format(uri))
+            else:
                 raise OSError(resp.status_code,
                               "Failed to get transfer service response.")
-            transfer_url = resp.headers.get('Location', None)
-
-            if conn.session.auth is not None and "auth" not in transfer_url:
-                transfer_url = transfer_url.replace('/vospace/',
-                                                    '/vospace/auth/')
-
-            logging.debug("Got back from transfer URL: %s" % transfer_url)
-
-            # For a move this is the end of the transaction.
-            if view == 'move':
-                return not self.get_transfer_error(conn, transfer_url, uri)
-
-            # for get or put we need the protocol value
-            xfer_resp = conn.session.get(transfer_url, allow_redirects=False)
-            xfer_url = xfer_resp.headers.get('Location', None)
-            if conn.session.auth is not None and "auth" not in xfer_url:
-                xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-            xml_string = conn.session.get(xfer_url).text
-            logging.debug("Transfer Document: %s" % xml_string)
-            transfer_document = ElementTree.fromstring(xml_string)
-            logging.debug(
-                "XML version: {0}".format(
-                    ElementTree.tostring(transfer_document)))
-            all_protocols = transfer_document.findall(Node.PROTOCOL)
-            if all_protocols is None or not len(all_protocols) > 0:
-                return self.get_transfer_error(conn, transfer_url, uri)
 
             result = []
             for protocol in all_protocols:
