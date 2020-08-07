@@ -10,7 +10,9 @@ from vos import Client, Connection, Node, VOFile, vosconfig
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
+from six import BytesIO
 import warnings
+import hashlib
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -40,7 +42,7 @@ class Object(object):
 
 
 def test_get_node_url():
-    client = Client()
+    client = Client(resource_id='ivo://cadc.nrc.ca/vault')
     with pytest.raises(TypeError):
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser', sort='Blah')
     with pytest.raises(ValueError):
@@ -147,7 +149,7 @@ class TestClient(unittest.TestCase):
             mockVOFile.open = Mock()
             mockVOFile.read = Mock()
             mockVOFile.write = Mock()
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.conn = Mock()
         client.transfer(uri='vos:test', direction="pushToVoSpace")
 
@@ -158,23 +160,27 @@ class TestClient(unittest.TestCase):
         open(certfile, 'w+')
         Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
-            client = Client(vospace_certfile=certfile)
+            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
+                            vospace_certfile=certfile)
         self.assertTrue(client.conn.subject.certificate)
         self.assertFalse(client.conn.vo_token)
 
         # Supplying an empty string for certfile implies anonymous / http
-        client = Client(vospace_certfile='')
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault',
+                        vospace_certfile='')
         self.assertTrue(client.conn.subject.anon)
         self.assertFalse(client.conn.vo_token)
 
         # Specifying a token implies authenticated / http
-        client = Client(vospace_token='a_token_string')
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault',
+                        vospace_token='a_token_string')
         self.assertTrue(client.conn.subject.anon)
         self.assertTrue(client.conn.vo_token)
 
         # Specifying both a certfile and token implies token (auth) / http
         with patch('os.access'):
-            client = Client(vospace_certfile=certfile,
+            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
+                            vospace_certfile=certfile,
                             vospace_token='a_token_string')
         self.assertTrue(client.conn.subject.anon)
         self.assertTrue(client.conn.vo_token)
@@ -190,16 +196,16 @@ class TestClient(unittest.TestCase):
             client.open('vos://foo/bar', mode=-10000)
 
         with self.assertRaises(OSError):
-            client = Client()
+            client = Client(resource_id='ivo://cadc.nrc.ca/vault')
             client.get_node_url = Mock(return_value=None)
             client.open(None, url=None)
 
         conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         mock_vofile = VOFile(['http://foo.com/bar'], conn, 'GET')
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node_url = Mock(return_value=mock_vofile)
         vofile = client.open(None, url=None)
-        self.assertEquals(vofile.url.URLs[0], 'http://foo.com/bar')
+        self.assertEqual(vofile.url.URLs[0], 'http://foo.com/bar')
 
     @patch('vos.vos.Node.get_info', Mock(return_value={'name': 'aa'}))
     def test_get_info_list(self):
@@ -210,22 +216,22 @@ class TestClient(unittest.TestCase):
         mock_node.get_info.return_value = {'name': 'aa'}
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
-        self.assertEquals([mock_node],
-                          client.get_children_info('vos:/somenode'))
+        self.assertEqual([mock_node],
+                         client.get_children_info('vos:/somenode'))
 
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
         mock_node.type = 'vos:ContainerNode'
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(return_value=mock_node)
-        self.assertEquals('vos:ContainerNode',
-                          client._node_type('vos:/somenode'))
+        self.assertEqual('vos:ContainerNode',
+                         client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
 
         mock_node.type = 'vos:DataNode'
-        self.assertEquals('vos:DataNode', client._node_type('vos:/somenode'))
+        self.assertEqual('vos:DataNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isfile('vos:/somenode'))
 
         # through a link
@@ -234,15 +240,15 @@ class TestClient(unittest.TestCase):
         mock_link_node.target = 'vos:/somefile'
         client.get_node = Mock(side_effect=[mock_link_node, mock_node,
                                             mock_link_node, mock_node])
-        self.assertEquals('vos:ContainerNode',
-                          client._node_type('vos:/somenode'))
+        self.assertEqual('vos:ContainerNode',
+                         client._node_type('vos:/somenode'))
         self.assertTrue(client.isdir('vos:/somenode'))
 
         # through an external link - not sure why the type is DataNode in
         # this case???
         mock_link_node.target = '/somefile'
         client.get_node = Mock(side_effect=[mock_link_node, mock_link_node])
-        self.assertEquals('vos:DataNode', client._node_type('vos:/somenode'))
+        self.assertEqual('vos:DataNode', client._node_type('vos:/somenode'))
         self.assertTrue(client.isfile('vos:/somenode'))
 
     patch('vos.EndPoints.nodes', Mock())
@@ -259,16 +265,16 @@ class TestClient(unittest.TestCase):
         # two other wasy to do it as seen below
         mock_node = MagicMock(type='vos:ContainerNode')
         mock_node.configure_mock(name='anode')
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(return_value=mock_node)
-        self.assertEquals(['vos:/anode/'], client.glob('vos:/anode/'))
+        self.assertEqual(['vos:/anode/'], client.glob('vos:/anode/'))
 
         # simple test for file listing of file
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.configure_mock(name='afile')
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(return_value=mock_node)
-        self.assertEquals(['vos:/afile'], client.glob('vos:/afile'))
+        self.assertEqual(['vos:/afile'], client.glob('vos:/afile'))
 
         # create a mock directory structure on the form
         # /anode/abc /anode/def - > anode/a* should return
@@ -287,11 +293,11 @@ class TestClient(unittest.TestCase):
         mock_base_node.node_list = [mock_node]
         mock_node.node_list = [mock_base_node, mock_child_node1,
                                mock_child_node2]
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(
             side_effect=[mock_node, mock_base_node, mock_node])
-        self.assertEquals(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
-        self.assertEquals(['vos:/anode/abc'], client.glob('vos:/*node/abc'))
+        self.assertEqual(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
+        self.assertEqual(['vos:/anode/abc'], client.glob('vos:/*node/abc'))
 
         # test nodes:
         # /anode/.test1 /bnode/sometests /bnode/blah
@@ -315,17 +321,21 @@ class TestClient(unittest.TestCase):
         mock_base_node = Mock(type='vos:DataNode')
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node1, mock_node2]
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(
             side_effect=[mock_base_node, mock_node1, mock_node2])
-        self.assertEquals(['vos:/bnode/sometests'],
-                          client.glob('vos:/[a,b]node/*test*'))
+        self.assertEqual(['vos:/bnode/sometests'],
+                         client.glob('vos:/[a,b]node/*test*'))
 
     @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
+        file_content = 'File content'.encode('utf-8')
+
         # the md5sum of the file being copied
-        md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
+        transfer_md5 = hashlib.md5()
+        transfer_md5.update(file_content)
+        md5sum = transfer_md5.hexdigest()
         # patch the compute_md5 function in vos to return the above value
         computed_md5_mock.return_value = md5sum
 
@@ -334,7 +344,7 @@ class TestClient(unittest.TestCase):
         props.get.return_value = md5sum
         # add props to the mocked node
         node = MagicMock(spec=Node)
-        node.props = props
+        node.props = {'MD5': md5sum, 'length': 12}
 
         # mock one by one the chain of connection.session.response.headers
         conn = MagicMock(spec=Connection)
@@ -345,8 +355,9 @@ class TestClient(unittest.TestCase):
         response.headers = headers
         session.get.return_value = response
         conn.session = session
+        response.iter_content.return_value = BytesIO(file_content)
 
-        test_client = Client()
+        test_client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         # use the mocked connection instead of the real one
         test_client.conn = conn
         get_node_url_mock = Mock(
@@ -369,7 +380,8 @@ class TestClient(unittest.TestCase):
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
-        computed_md5_mock.assert_called_once_with(osLocation)
+        assert not computed_md5_mock.called,\
+            'MD5 should be computed on the fly'
         assert get_node_mock.called
 
         # repeat - local file and vospace file are now the same -> only
@@ -384,9 +396,10 @@ class TestClient(unittest.TestCase):
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.return_value = 'd002233'
+        response.iter_content.return_value = BytesIO(file_content)
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
@@ -403,66 +416,101 @@ class TestClient(unittest.TestCase):
         mock_update.assert_called_once()
         assert not get_node_url_mock.called
 
-        # make md5 different
+        # make md5 different on destination
         get_node_url_mock.reset_mock()
         get_node_url_mock.return_value =\
             ['http://cadc.ca/test', 'http://cadc.ca/test']
         computed_md5_mock.reset_mock()
         mock_update.reset_mock()
-        props.get.side_effect = ['d00223344', md5sum]
+        computed_md5_mock.return_value = md5sum
+        to_update_node = MagicMock()
+        to_update_node.props = {'MD5': 'abcde', 'length': 12}
+        test_client.get_node = Mock(side_effect=[to_update_node, node])
         test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
-        get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT')
+        get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT',
+                                                  content_length=12,
+                                                  md5_checksum='abcde')
         computed_md5_mock.assert_called_once_with(osLocation)
 
-        # copy 0 size file -> delete and create on client but no bytes
+        # copy 0 size file -> delete and create node but no bytes
         # transferred
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
-        computed_md5_mock.return_value = vos.ZERO_MD5
-        props.get.side_effect = [md5sum]
+        test_client.get_node = Mock(return_value=node)
+        node.props['length'] = 0
         mock_delete = Mock()
         mock_create = Mock()
         test_client.delete = mock_delete
         test_client.create = mock_create
-        test_client.copy(osLocation, vospaceLocation)
+        with patch('vos.vos.os.stat', Mock()) as stat_mock:
+            stat_mock.return_value = Mock(st_size=0)
+            test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         mock_delete.assert_called_once_with(vospaceLocation)
         assert not get_node_url_mock.called
 
-        # copy new 0 size file -> reate on client but no bytes transferred
+        # copy new 0 size file -> create node but no bytes transferred
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         mock_delete.reset_mock()
         mock_create.reset_mock()
-        computed_md5_mock.return_value = vos.ZERO_MD5
-        props.get.side_effect = [None]
+        test_client.get_node = Mock(side_effect=[Exception(), node])
         mock_delete = Mock()
         mock_create = Mock()
         test_client.delete = mock_delete
         test_client.create = mock_create
-        test_client.copy(osLocation, vospaceLocation)
+        with patch('vos.vos.os.stat', Mock()) as stat_mock:
+            stat_mock.return_value = Mock(st_size=0)
+            test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         assert not mock_delete.called
         assert not get_node_url_mock.called
 
         # error tests - md5sum mismatch
-        props.get.side_effect = [md5sum]
+        node.props['length'] = 12
         computed_md5_mock.return_value = '000bad000'
+        test_client.get_node = Mock(return_value=node)
         with self.assertRaises(OSError):
             test_client.copy(vospaceLocation, osLocation)
 
+        # existing file
+        mock_delete.reset_mock()
         with self.assertRaises(OSError):
-            test_client.copy(osLocation, vospaceLocation)
+            with patch('vos.vos.os.stat', Mock()) as stat_mock:
+                stat_mock.return_value = Mock(st_size=12)
+                test_client.copy(osLocation, vospaceLocation)
+        assert not mock_delete.called  # server takes care of cleanup
 
-        # requests just the headers
+        # new file
+        mock_delete.reset_mock()
+        with self.assertRaises(OSError):
+            with patch('vos.vos.os.stat', Mock()) as stat_mock:
+                stat_mock.return_value = Mock(st_size=12)
+                node.props['MD5'] = None
+                test_client.copy(osLocation, vospaceLocation)
+        assert mock_delete.called  # cleanup required
+
+        # requests just the headers when md5 not provided in the header
         props.get.side_effect = [None]
         get_node_url_mock = Mock(
             return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
         test_client.get_node_url = get_node_url_mock
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
+        headers.get.return_value = None
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
+
+        # repeat headers request when md5 provided in the header
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
         test_client.copy(vospaceLocation, osLocation, head=True)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
@@ -482,7 +530,7 @@ class TestClient(unittest.TestCase):
         conn = Mock(spec=Connection)
         conn.session = session
 
-        test_client = Client()
+        test_client = Client(resource_id='ivo://cadc.nrc.ca/vault')
 
         # use the mocked connection instead of the real one
         test_client.conn = conn
@@ -501,7 +549,7 @@ class TestClient(unittest.TestCase):
             test_client.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
         # check arguments for session.get calls
-        self.assertEquals(
+        self.assertEqual(
             [call(vospace_url + '/phase', allow_redirects=False),
              call(vospace_url + '/phase', allow_redirects=False)],
             session.get.call_args_list)
@@ -514,10 +562,10 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(OSError):
             test_client.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
-        self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/error')],
-                          session.get.call_args_list)
+        self.assertEqual([call(vospace_url + '/phase', allow_redirects=False),
+                          call(vospace_url + '/phase', allow_redirects=False),
+                          call(vospace_url + '/error')],
+                         session.get.call_args_list)
 
         # job encountered an unsupported link error
         session.reset_mock()
@@ -527,12 +575,12 @@ class TestClient(unittest.TestCase):
                                    Mock(
                                        text="Unsupported link target: " +
                                             link_file)]
-        self.assertEquals(link_file, test_client.get_transfer_error(
+        self.assertEqual(link_file, test_client.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
-        self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/error')],
-                          session.get.call_args_list)
+        self.assertEqual([call(vospace_url + '/phase', allow_redirects=False),
+                          call(vospace_url + '/phase', allow_redirects=False),
+                          call(vospace_url + '/error')],
+                         session.get.call_args_list)
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))
@@ -543,7 +591,7 @@ class TestClient(unittest.TestCase):
         data = str(new_node)
         headers = {'size': str(len(data))}
 
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.get_node = Mock(return_value=old_node)
         client.get_node_url = Mock(return_value='http://foo.com/bar')
         client.conn = Mock()
@@ -558,14 +606,14 @@ class TestClient(unittest.TestCase):
            Mock(return_value='http://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_create(self):
         uri = 'vos://create.vospace.auth!vospace/bar'
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         node = Node(client.fix_uri(uri))
         node2 = Node(str(node))
-        self.assertEquals(node, node2)
+        self.assertEqual(node, node2)
         data = str(node)
         headers = {'size': str(len(data))}
 
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         # client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
         client.conn = Mock()
@@ -573,7 +621,7 @@ class TestClient(unittest.TestCase):
         session_mock.put.return_value = Mock(content=str(node))
 
         result = client.create(uri)
-        self.assertEquals(node, result)
+        self.assertEqual(node, result)
         session_mock.put.assert_called_with(
             'http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
             headers=headers, data=data)
@@ -644,7 +692,7 @@ class TestClient(unittest.TestCase):
                  '</vos:nodes>\n')
 
         mock_vofile = Mock()
-        client = Client()
+        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
         client.open = Mock(return_value=mock_vofile)
 
         mock_vofile.read = Mock(
@@ -684,7 +732,8 @@ class TestClient(unittest.TestCase):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
         with patch('os.access'):
-            client = Client(vospace_certfile=certfile)
+            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
+                            vospace_certfile=certfile)
         uri1 = 'vos://cadc.nrc.ca!vospace/nosuchfile1'
         url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1'
         client.conn.session.delete = Mock()
@@ -735,12 +784,12 @@ class TestNode(unittest.TestCase):
         node1 = Node(ElementTree.Element(Node.NODE))
         node2 = Node(ElementTree.Element(Node.NODE))
         self.assertNotEqual(node1, 'foo')
-        self.assertEquals(node1, node2)
+        self.assertEqual(node1, node2)
 
         node1.props = {'foo': 'bar'}
         self.assertNotEqual(node1, node2)
         node2.props = {'foo': 'bar'}
-        self.assertEquals(node1, node2)
+        self.assertEqual(node1, node2)
 
     def test_node_set_property(self):
         node = Node(ElementTree.fromstring(NODE_XML))
@@ -762,17 +811,17 @@ class TestNode(unittest.TestCase):
 
     def test_chwgrp(self):
         node = Node(ElementTree.fromstring(NODE_XML))
-        self.assertEquals('', node.groupwrite)
+        self.assertEqual('', node.groupwrite)
 
         node.chwgrp('foo')
-        self.assertEquals('foo', node.groupwrite)
+        self.assertEqual('foo', node.groupwrite)
 
     def test_chrgrp(self):
         node = Node(ElementTree.fromstring(NODE_XML))
-        self.assertEquals('', node.groupread)
+        self.assertEqual('', node.groupread)
 
         node.chrgrp('foo')
-        self.assertEquals('foo', node.groupread)
+        self.assertEqual('foo', node.groupread)
 
     def test_change_prop(self):
         # Add a new property
@@ -846,8 +895,8 @@ class TestVOFile(unittest.TestCase):
             vofile = VOFile(url_list, conn, method, size=25)
 
             vofile.seek(10, os.SEEK_CUR)
-            self.assertEquals(10, vofile._fpos)
+            self.assertEqual(10, vofile._fpos)
             vofile.seek(5, os.SEEK_SET)
-            self.assertEquals(5, vofile._fpos)
+            self.assertEqual(5, vofile._fpos)
             vofile.seek(10, os.SEEK_END)
-            self.assertEquals(15, vofile._fpos)
+            self.assertEqual(15, vofile._fpos)

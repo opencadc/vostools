@@ -13,6 +13,7 @@ import errno
 from datetime import datetime
 import fnmatch
 from enum import Enum
+import hashlib
 
 try:
     from cStringIO import StringIO
@@ -75,6 +76,8 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms?"
 
 VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
 VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
+VO_PROPERTY_LENGTH = 'ivo://ivoa.net/vospace/core#length'
+VO_PROPERTY_MD5 = 'ivo://ivoa.net/vospace/core#MD5'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
@@ -82,7 +85,7 @@ VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 # sorting-related uris
 class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
-    LENGTH = 'ivo://ivoa.net/vospace/core#length'
+    LENGTH = VO_PROPERTY_LENGTH
     DATE = 'ivo://ivoa.net/vospace/core#date'
 
 
@@ -1601,20 +1604,34 @@ class Client(object):
 
         success = False
         copy_failed_message = ""
-        destination_size = None
-        destination_md5 = None
-        source_md5 = None
+        dest_size = None
+        dest_md5 = None
+        src_size = None
+        src_md5 = None
+        check_md5 = True  # by default try to check all md5
+        must_delete = False  # delete node after failed transfer
+        # NOTE: file size and md5 are used to check the opportunity (files
+        # migth be the same) and correctness of the file transfer (interrupted
+        # or incomplete transfer). Although the most reliable of the 2,
+        # md5 checksum introduces higher local computational overheads,
+        # (especially for large files) and might not be available on the server
+        # side. Therefore, sometimes size is used instead.
+        # The algorithm tries to strike a balance between efficiency and
+        # reliability. Worst case scenario is updates to large files that
+        # have only the content updated (FITS headers for example). In that
+        # case both md5 checksum and file transfer are performed
+
         get_node_url_retried = False
         content_disposition = None
         if is_remote_file(source):
+            # GET
             if destination is None:
                 # Set the destination, initially, to the same directory as
                 # the source (strip the scheme)
                 destination = os.path.dirname(urlparse(source).path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
-                # content-disposition or
-                # from filename part of source.
+                # content-disposition or from filename part of source.
                 disposition = True
             check_md5 = False
             cutout_match = FILENAME_PATTERN_MAGIC.search(source)
@@ -1637,22 +1654,27 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_md5 = \
-                    self.get_node(source).props.get('MD5', ZERO_MD5)
+                source_props = self.get_node(source).props
+                src_md5 = source_props.get('MD5', None)
+                src_size = source_props.get('length', None)
+                if src_size:
+                    src_size = int(src_size)
                 if os.path.isfile(destination):
                     # check if the local file is up to date before doing the
-                    # transfer
-                    destination_md5 = \
-                        md5_cache.MD5Cache.compute_md5(destination)
-                    if source_md5 == destination_md5:
-                        logger.info(
-                            'copy: src and dest are already the same')
-                        destination_size = os.stat(destination).st_size
-                        if disposition:
-                            return None
-                        if send_md5:
-                            return destination_md5
-                        return destination_size
+                    # transfer. Use size for first comparison as it's faster
+                    dest_size = os.stat(destination).st_size
+                    if dest_size == src_size:
+                        # calculate the destination md5
+                        dest_md5 = \
+                            md5_cache.MD5Cache.compute_md5(destination)
+                        if src_md5 == dest_md5:
+                            logger.info(
+                                'copy: src and dest are already the same')
+                            if disposition:
+                                return None
+                            if send_md5:
+                                return dest_md5
+                            return dest_size
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
                                          view=view)
@@ -1673,6 +1695,7 @@ class Client(object):
                 try:
                     response = self.conn.session.get(get_url, timeout=(2, 5),
                                                      stream=True)
+                    response.raise_for_status()
                     if disposition:
                         # Build the destination location from the
                         # content-disposition value, or source name.
@@ -1688,28 +1711,36 @@ class Client(object):
                         if os.path.isdir(destination):
                             destination = os.path.join(destination,
                                                        content_disposition)
-                    source_md5 = response.headers.get('Content-MD5')
-                    response.raise_for_status()
+                    src_md5 = response.headers.get('Content-MD5', None)
+                    if src_md5:
+                        # server knows to do md5s even for cutouts or headers
+                        check_md5 = True
+                    transfer_md5 = hashlib.md5()
                     with open(destination, 'wb') as fout:
                         for chunk in response.iter_content(
                                 chunk_size=512 * 1024):
                             if chunk:
+                                transfer_md5.update(chunk)
                                 fout.write(chunk)
                                 fout.flush()
-                    destination_size = os.stat(destination).st_size
+                    dest_md5 = transfer_md5.hexdigest()
+                    dest_size = os.stat(destination).st_size
                     if check_md5:
-                        if source_md5:
-                            destination_md5 = md5_cache.MD5Cache.compute_md5(
-                                destination)
-                            logger.debug(
-                                "{0} {1}".format(source_md5, destination_md5))
-                            if destination_md5 != source_md5:
+                        if src_md5:
+                            if dest_md5 != src_md5:
                                 raise IOError(
-                                    'Source and destination md5 do not match: '
-                                    '{} vs. {}'.format(source_md5,
-                                                       destination_md5))
+                                    'Source and destination md5 do not  '
+                                    'match: {} vs. {}'.format(src_md5,
+                                                              dest_md5))
+                        elif src_size:
+                            if dest_size != src_size:
+                                raise IOError(
+                                    'Source and destination sizes do not '
+                                    'match: {} vs. {}'.format(src_size,
+                                                              dest_size))
                         else:
-                            logger.debug("Source md5 not available to check")
+                            logger.debug(
+                                "Source md5 or size not available to check")
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -1717,71 +1748,171 @@ class Client(object):
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
-            success = True
+            # PUT
+            success = False
+            dest_md5 = None
+            dest_size = None
+            destination_node = None
             try:
                 destination_node = self.get_node(destination)
-                destination_md5 = destination_node.props.get('MD5', ZERO_MD5)
+                dest_md5 = destination_node.props.get('MD5', None)
+                dest_size = destination_node.props.get('length', None)
+                if dest_size:
+                    dest_size = int(dest_size)
             except Exception:
-                destination_md5 = None
-            source_md5 = md5_cache.MD5Cache.compute_md5(source)
-            if source_md5 == destination_md5:
-                logger.info(
-                    'copy: src and dest are already the same -> '
-                    'update node metadata')
-                # post the node so that the modify time is updated
-                self.update(destination_node)
-                destination_size = os.stat(source).st_size
-            elif source_md5 == ZERO_MD5:
+                pass
+            src_size = os.stat(source).st_size
+            # check 2 cases where file sending not required:
+            #   1. source file is empty -> just re-create the node
+            #   2. source and destination are identical
+            if src_size == 0:
                 logger.info("destination: size is 0")
-                destination_size = 0
-                # TODO delete and recreate the node. Is there a better way
-                # to delete just the content of the node?
-                if destination_md5:
+                if destination_node:
+                    # TODO delete and recreate the node. Is there a better way
+                    # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
-            else:
-                # transfer the bytes
-                put_urls = self.get_node_url(destination, 'PUT')
-                success = False
-                while not success:
-                    if len(put_urls) == 0:
-                        if self.transfer_shortcut and not get_node_url_retried:
-                            put_urls = self.get_node_url(destination,
-                                                         method='PUT',
-                                                         full_negotiation=True)
-                            # remove the first one as we already tried
-                            # that one.
-                            put_urls.pop(0)
-                            get_node_url_retried = True
-                        else:
-                            break
-                    put_url = put_urls.pop(0)
-                    try:
-                        with open(source, str('rb')) as fin:
-                            self.conn.session.put(put_url, data=fin)
-                        node = self.get_node(destination, limit=0, force=True)
-                        destination_md5 = node.props.get('MD5', ZERO_MD5)
-                        if destination_md5 != source_md5:
-                            raise Exception(
-                               "Source md5 ({}) != destination md5 ({})".
-                               format(source_md5, destination_md5))
-                    except Exception as ex:
-                        copy_failed_message = str(ex)
-                        logging.debug("FAILED to PUT to {0}".format(put_url))
-                        logging.debug("Got error: {0}".format(ex))
-                        continue
-                    success = True
-                    break
+                destination_node = self.get_node(destination)
+                dest_md5 = destination_node.props.get('MD5', None)
+                dest_size = destination_node.props.get('length', None)
+                if dest_size:
+                    dest_size = int(dest_size)
+                if dest_size != src_size:
+                    raise IOError(
+                        "Source size ({}) != destination size ({})".
+                        format(src_size, dest_size))
+                success = True
+            elif src_size == dest_size:
+                if dest_md5 is not None:
+                    # compute the md5 of the source file. This serves 2
+                    # purposes:
+                    #   1. Check if source is identical to destination and
+                    #   avoid sending the bytes again.
+                    #   2. send info to the service so it can recover in case
+                    #   the bytes got corrupted on the way
+                    src_md5 = md5_cache.MD5Cache.compute_md5(source)
+                    if src_md5 == dest_md5:
+                        logger.info(
+                            'copy: src and dest are already the same -> '
+                            'update node metadata')
+                        # post the node so that the modify time is updated
+                        self.update(destination_node)
+                        success = True
+            if not success:
+                if dest_md5 is not None:
+                    if not src_md5:
+                        src_md5 = md5_cache.MD5Cache.compute_md5(source)
+                    # transfer the bytes with source md5 available
+                    put_urls = self.get_node_url(destination, 'PUT',
+                                                 content_length=src_size,
+                                                 md5_checksum=dest_md5)
+                    while not success:
+                        if len(put_urls) == 0:
+                            if self.transfer_shortcut and not \
+                                    get_node_url_retried:
+                                put_urls = self.get_node_url(
+                                    destination, method='PUT',
+                                    full_negotiation=True)
+                                # remove the first one as we already tried
+                                # that one.
+                                put_urls.pop(0)
+                                get_node_url_retried = True
+                            else:
+                                break
+                        put_url = put_urls.pop(0)
+                        try:
+                            with open(source, str('rb')) as fin:
+                                self.conn.session.put(put_url, data=fin)
+                            node = self.get_node(destination, limit=0,
+                                                 force=True)
+                            dest_md5 = node.props.get('MD5', None)
+                            if dest_md5 != src_md5:
+                                raise IOError(
+                                   "Source md5 ({}) != destination md5 ({})".
+                                   format(src_md5, dest_md5))
+                        except Exception as ex:
+                            copy_failed_message = str(ex)
+                            logger.debug(
+                                "FAILED to PUT to {0}".format(put_url))
+                            logger.debug("Got error: {0}".format(ex))
+                            continue
+                        success = True
+                        break
+                else:
+                    must_delete = True
+                    # transfer the bytes and compute md5 on-the-fly
+                    put_urls = self.get_node_url(destination, 'PUT')
+                    while not success:
+                        if len(put_urls) == 0:
+                            if self.transfer_shortcut and not \
+                                    get_node_url_retried:
+                                put_urls = self.get_node_url(
+                                    destination, method='PUT',
+                                    full_negotiation=True)
+                                # remove the first one as we already tried
+                                # that one.
+                                put_urls.pop(0)
+                                get_node_url_retried = True
+                            else:
+                                break
+                        put_url = put_urls.pop(0)
+                        try:
+                            class Md5FileReader(object):
+                                """ File handler that calculates md5 when
+                                reading content from disk
+                                """
+                                def __init__(self, orig):
+                                    self.orig_read = orig.read  # original read
+                                    self.md5_checksum = hashlib.md5()
+
+                                def read(self, size):
+                                    buffer = self.orig_read(size)
+                                    self.md5_checksum.update(buffer)
+                                    return buffer
+
+                            with open(source, str('rb')) as fin:
+                                reader = Md5FileReader(fin)
+                                fin.read = reader.read
+                                self.conn.session.put(put_url, data=fin)
+                            src_md5 = reader.md5_checksum.hexdigest()
+                            node = self.get_node(destination, limit=0,
+                                                 force=True)
+                            dest_md5 = node.props.get('MD5', None)
+                            if dest_md5 != src_md5:
+                                raise IOError(
+                                    "Source md5 ({}) != destination md5 ({})".
+                                    format(src_md5, dest_md5))
+                            success = True
+                        except Exception as ex:
+                            copy_failed_message = str(ex)
+                            logger.debug(
+                                "FAILED to PUT to {0}".format(put_url))
+                            logger.debug("Got error: {0}".format(ex))
+                            continue
+                        break
 
         if not success:
+            if must_delete:
+                # cleanup
+                self.delete(destination)
             raise OSError(errno.EFAULT,
                           "Failed copying {0} -> {1}\n{2}".
                           format(source, destination, copy_failed_message))
+        elif check_md5 and src_md5 and dest_md5 and src_md5 != dest_md5:
+            copy_failed_message = 'BUG: Mismatched md5 src ({}) != dest ({})'.\
+                format(src_md5, dest_md5)
+            raise OSError(errno.EFAULT,
+                          "Failed copying {0} -> {1}\n{2}".
+                          format(source, destination, copy_failed_message))
+        else:
+            logger.info(
+                'Transfer successful: source md5 ({}) == destination md5 ({})'.
+                format(src_md5, dest_md5))
         if disposition:
             return content_disposition
         if send_md5:
-            return destination_md5
-        return destination_size
+            return dest_md5
+        return dest_size
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't
@@ -1927,7 +2058,8 @@ class Client(object):
 
     def get_node_url(self, uri, method='GET', view=None, limit=None,
                      next_uri=None, cutout=None, sort=None, order=None,
-                     full_negotiation=None):
+                     full_negotiation=None, content_length=None,
+                     md5_checksum=None):
         """Split apart the node string into parts and return the correct URL
         for this node.
 
@@ -1957,6 +2089,10 @@ class Client(object):
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
+        :param content_length - size of the file to put
+        :type str
+        :param md5_checksum - checksum of the file content
+        :type str
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -2009,7 +2145,8 @@ class Client(object):
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method == 'PUT':
-            return self._put(uri)
+            return self._put(uri, content_length=content_length,
+                             md5_checksum=md5_checksum)
 
         if (view == "cutout" and cutout is None) or (
                 cutout is not None and view != "cutout"):
@@ -2156,11 +2293,14 @@ class Client(object):
         with self.nodeCache.volatile(uri):
             return self.transfer(uri, "pullFromVoSpace", view, cutout)
 
-    def _put(self, uri):
+    def _put(self, uri, content_length=None, md5_checksum=None):
         with self.nodeCache.volatile(uri):
-            return self.transfer(uri, "pushToVoSpace", view="defaultview")
+            return self.transfer(uri, "pushToVoSpace", view="defaultview",
+                                 content_length=content_length,
+                                 md5_checksum=md5_checksum)
 
-    def transfer(self, uri, direction, view=None, cutout=None):
+    def transfer(self, uri, direction, view=None, cutout=None,
+                 content_length=None, md5_checksum=None):
         """Build the transfer XML document
         :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
         :param uri: the uri to transfer from or to VOSpace.
@@ -2168,6 +2308,8 @@ class Client(object):
         being transferred
         :param cutout: a special parameter added to the 'cutout' view
         request. e.g. '[0][1:10,1:10]'
+        :param content_length: the size file to put
+        :param md5_checksum: the md5 checksum of the content of the file
 
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
@@ -2183,7 +2325,6 @@ class Client(object):
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
         ElementTree.SubElement(transfer_xml, "vos:target").text = uri
         ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
-
         if view == 'move':
             ElementTree.SubElement(transfer_xml,
                                    "vos:keepBytes").text = "false"
@@ -2204,6 +2345,15 @@ class Client(object):
                                                           "vos:protocol")
                 protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
                                                                   p)
+        if content_length:
+            el = ElementTree.SubElement(transfer_xml, "vos:param")
+            el.attrib['uri'] = VO_PROPERTY_LENGTH
+            el.text = str(content_length)
+
+        if md5_checksum:
+            el = ElementTree.SubElement(transfer_xml, "vos:param")
+            el.attrib['uri'] = VO_PROPERTY_MD5
+            el.text = str(md5_checksum)
 
         logging.debug(ElementTree.tostring(transfer_xml))
         logging.debug("Sending to : {}".format(endpoints.transfer))
