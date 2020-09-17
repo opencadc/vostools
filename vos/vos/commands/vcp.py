@@ -47,6 +47,11 @@ default service settings will be used.
 def vcp():
     # TODO split this into main and methods
 
+    class nonlocal:
+        # this is just a workaround the lack of nonlocal in Python 2.7
+        # should be refactored when 2.7 support is dropped
+        exit_code = 0
+
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
         "source", nargs="+",
@@ -97,8 +102,6 @@ def vcp():
 
     if not vos.is_remote_file(dest):
         dest = os.path.abspath(dest)
-
-    exit_code = 0
 
     cutout_pattern = re.compile(
         r'(.*?)(?P<cutout>(\[[\-+]?[\d*]+(:[\-+]?[\d*]+)?'
@@ -221,7 +224,6 @@ def vcp():
         :return:
         :raise e:
         """
-        nonlocal exit_code
         # determine if this is a directory we are copying so need to be
         # recursive
         try:
@@ -294,7 +296,8 @@ def vcp():
                             # 104 is connection reset by peer.
                             # Try again on this error
                             logging.warning(str(client_exception))
-                            exit_code = getattr(client_exception, 'errno', -1)
+                            nonlocal.exit_code += \
+                                getattr(client_exception, 'errno', -1)
                         elif getattr(client_exception, 'errno',
                                      -1) == errno.EIO:
                             # retry on IO errors
@@ -320,7 +323,7 @@ def vcp():
             if getattr(os_exception, 'errno', -1) == errno.EINVAL:
                 # not a valid uri, just skip those...
                 logging.warning("%s: Skipping" % str(os_exception))
-                exit_code = getattr(os_exception, 'errno', -1)
+                nonlocal.exit_code += getattr(os_exception, 'errno', -1)
             else:
                 raise os_exception
 
@@ -411,9 +414,9 @@ def vcp():
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
-        exit_code = getattr(ke, 'errno', -1)
+        nonlocal.exit_code = getattr(ke, 'errno', -1)
     except ParseError:
-        exit_code = errno.EREMOTE
+        nonlocal.exit_code = errno.EREMOTE
         msg = "Failure at server while copying {0} -> {1}\n".format(source,
                                                                     dest)
         exit_on_exception(msg)
@@ -428,8 +431,8 @@ def vcp():
             exit_on_exception(e, msg)
         else:
             exit_on_exception(e)
-    if exit_code:
-        sys.exit(exit_code)
+    if nonlocal.exit_code:
+        sys.exit(nonlocal.exit_code)
 
 
 vcp.__doc__ = DESCRIPTION
