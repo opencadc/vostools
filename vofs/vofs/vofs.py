@@ -10,7 +10,6 @@ import urllib
 import re
 import logging
 import six.moves
-from six.moves.urllib.parse import urlparse
 from cadcutils import exceptions
 from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
