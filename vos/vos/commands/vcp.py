@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 from .. import md5_cache
 from .. import vos
 from ..commonparser import CommonParser, set_logging_level_from_args,\
-    exit_on_exception, get_scheme
+    exit_on_exception
 
 try:
     from xml.etree.ElementTree import ParseError
@@ -327,7 +327,6 @@ def vcp():
     # in the try before source gets defined at least we know where we were
     # starting.
     source = args.source[0]
-    clients = {}  # one client for each service
     try:
         for source_pattern in args.source:
 
@@ -339,16 +338,9 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if vos.is_remote_file(source_pattern):
-                scheme = get_scheme(source_pattern)
-            else:
-                scheme = get_scheme(dest)
-            if scheme not in clients:
-                clients[scheme] = vos.Client(
-                    resource_id=vos.vos_config.get_resource_id(scheme),
-                    vospace_certfile=args.certfile, vospace_token=args.token,
-                    transfer_shortcut=args.quick)
-            client = clients[scheme]
+            client = vos.Client(
+                vospace_certfile=args.certfile, vospace_token=args.token,
+                transfer_shortcut=args.quick)
             if not vos.is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:

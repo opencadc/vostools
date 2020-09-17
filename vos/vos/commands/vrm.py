@@ -2,7 +2,7 @@
 """remove a vospace data node, fails if container node or node is locked."""
 import logging
 from ..commonparser import set_logging_level_from_args, exit_on_exception, \
-    CommonParser, get_scheme
+    CommonParser
 from .. import vos
 
 DESCRIPTION = """remove a vospace data node; fails if container node or node is locked.
@@ -20,18 +20,13 @@ def vrm():
     set_logging_level_from_args(args)
 
     try:
-        clients = {}  # one client for each service (scheme)
         for node in args.node:
             if not vos.is_remote_file(node):
                 raise Exception(
                     '{} is not a valid VOSpace handle'.format(node))
-            scheme = get_scheme(node)
-            if scheme not in clients:
-                clients[scheme] = vos.Client(
-                    resource_id=vos.vos_config.get_resource_id(scheme),
+            client = vos.Client(
                     vospace_certfile=args.certfile,
                     vospace_token=args.token)
-            client = clients[scheme]
             if not node.endswith('/'):
                 if client.get_node(node).islink():
                     logging.info('deleting link {}'.format(node))

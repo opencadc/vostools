@@ -4,7 +4,7 @@
 import os
 import logging
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception, get_scheme
+    exit_on_exception
 from .. import vos
 
 DESCRIPTION = """creates a new VOSpace ContainerNode (aka directory).
@@ -28,9 +28,7 @@ def vmkdir():
 
     try:
         this_dir = args.container_node
-        scheme = get_scheme(this_dir)
         client = vos.Client(
-            resource_id=vos.vos_config.get_resource_id(scheme),
             vospace_certfile=args.certfile,
             vospace_token=args.token)
 

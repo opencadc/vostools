@@ -7,7 +7,6 @@ import os
 import signal
 import sys
 import traceback
-import six
 from .version import version
 from .vosconfig import _CONFIG_PATH
 
@@ -114,7 +113,3 @@ class CommonParser(argparse.ArgumentParser):
         self.add_argument("-w", "--warning", action="store_true",
                           default=False,
                           help="print warning messages only")
-
-
-def get_scheme(node):
-    return six.moves.urllib.parse.urlparse(node).scheme

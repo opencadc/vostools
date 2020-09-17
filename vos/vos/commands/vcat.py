@@ -3,9 +3,9 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
 import logging
-from ..vos import Client, is_remote_file, vos_config
+from ..vos import Client, is_remote_file
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception, get_scheme
+    exit_on_exception
 
 
 def _cat(uri, cert_filename=None, head=None):
@@ -20,10 +20,8 @@ def _cat(uri, cert_filename=None, head=None):
     fh = None
     try:
         if is_remote_file(uri):
-            scheme = get_scheme(uri)
             view = head and 'header' or 'data'
-            fh = Client(resource_id=vos_config.get_resource_id(scheme),
-                        vospace_certfile=cert_filename).open(uri, view=view)
+            fh = Client(vospace_certfile=cert_filename).open(uri, view=view)
             sys.stdout.write(fh.read(return_response=True).text)
             sys.stdout.write('\n\n')
         else:

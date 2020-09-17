@@ -95,7 +95,6 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to target container"
-  echo $LNCMD $CERT $CONTAINER/target $CONTAINER/clink
   $LNCMD $CERT $CONTAINER/target $CONTAINER/clink >& /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -104,7 +103,6 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "Follow the link without read permission and fail"
-  echo $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp
   $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -130,7 +128,7 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to unknown scheme in URI"
-  $LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink > /dev/null && echo " [FAIL]" && exit -1
+  $LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "Follow the invalid link and fail"

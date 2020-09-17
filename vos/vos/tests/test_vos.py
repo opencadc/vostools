@@ -42,7 +42,7 @@ class Object(object):
 
 
 def test_get_node_url():
-    client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+    client = Client()
     with pytest.raises(TypeError):
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser', sort='Blah')
     with pytest.raises(ValueError):
@@ -50,7 +50,11 @@ def test_get_node_url():
 
     response = Mock(spec=requests.Response)
     response.status_code = 303
-    client.conn.session.get = Mock(return_value=response)
+    resource_id = 'ivo://cadc.nrc.ca/vospace'
+    session_mock = Mock(spec=requests.Session, get=Mock(return_value=response))
+    session_mock.headers = Mock()
+    client._endpoints[resource_id] = vos.EndPoints(resource_id_uri=resource_id)
+    client._endpoints[resource_id].conn.ws_client._session = session_mock
     equery = urlparse(client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                       sort=vos.SortNodeProperty.DATE)).query
     assert(urllib.parse.unquote(equery) ==
@@ -69,14 +73,15 @@ def test_get_node_url():
 
     # test header view
     transfer_url = 'https://some.location/some/headers'
-    client.conn.session.get = Mock(return_value=response)
     response.headers = {'Location': transfer_url}
+    client._endpoints[resource_id].conn.ws_client._session.get = \
+        Mock(return_value=response)
     assert transfer_url == \
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                             view='header')[0]
     # get the argument lists for client.conn.session.get
-    call = client.conn.session.get.call_args_list[0]
-    args, kwargs = call
+    args, kwargs = client._endpoints[
+        resource_id].conn.ws_client._session.get.call_args_list[0]
     # check head is amongst the other parameters
     assert kwargs['params']['view'] == 'header'
 
@@ -160,30 +165,42 @@ class TestClient(unittest.TestCase):
         open(certfile, 'w+')
         Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
-            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
-                            vospace_certfile=certfile)
-        self.assertTrue(client.conn.subject.certificate)
-        self.assertFalse(client.conn.vo_token)
+            client = Client(vospace_certfile=certfile)
+        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
+        self.assertTrue(conn.subject.certificate)
+        self.assertFalse(conn.vo_token)
 
         # Supplying an empty string for certfile implies anonymous / http
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault',
-                        vospace_certfile='')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertFalse(client.conn.vo_token)
+        client = Client(vospace_certfile='')
+        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
+        self.assertTrue(conn.subject.anon)
+        self.assertFalse(conn.vo_token)
 
         # Specifying a token implies authenticated / http
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault',
-                        vospace_token='a_token_string')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertTrue(client.conn.vo_token)
+        client = Client(vospace_token='a_token_string')
+        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
+        self.assertTrue(conn.subject.anon)
+        self.assertTrue(conn.vo_token)
 
         # Specifying both a certfile and token implies token (auth) / http
         with patch('os.access'):
-            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
-                            vospace_certfile=certfile,
+            client = Client(vospace_certfile=certfile,
                             vospace_token='a_token_string')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertTrue(client.conn.vo_token)
+        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
+        self.assertTrue(conn.subject.anon)
+        self.assertTrue(conn.vo_token)
+
+        # update auth for specific service
+        with patch('os.access'):
+            client.set_auth(uri='ivo://cadc.nrc.ca/vault',
+                            vospace_certfile=certfile)
+        conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
+        self.assertTrue(conn.subject.certificate)
+        self.assertFalse(conn.vo_token)
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
            Mock(return_value='http://foo.com/vospace'))
@@ -192,18 +209,20 @@ class TestClient(unittest.TestCase):
     def test_open(self):
         # Invalid mode raises OSError
         with self.assertRaises(OSError):
-            client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+            client = Client()
             client.open('vos://foo/bar', mode=-10000)
 
         with self.assertRaises(OSError):
-            client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+            client = Client()
             client.get_node_url = Mock(return_value=None)
             client.open(None, url=None)
 
         conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         mock_vofile = VOFile(['http://foo.com/bar'], conn, 'GET')
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node_url = Mock(return_value=mock_vofile)
+        endpoints_mock = Mock(conn=conn)
+        client.get_endpoints = Mock(return_value=endpoints_mock)
         vofile = client.open(None, url=None)
         self.assertEqual(vofile.url.URLs[0], 'http://foo.com/bar')
 
@@ -216,7 +235,7 @@ class TestClient(unittest.TestCase):
         mock_node.get_info.return_value = {'name': 'aa'}
         mock_link_node = Mock(type='vos:LinkNode')
         mock_link_node.target = 'vos:/somefile'
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = MagicMock(side_effect=[mock_link_node, mock_node])
         self.assertEqual([mock_node],
                          client.get_children_info('vos:/somenode'))
@@ -224,7 +243,7 @@ class TestClient(unittest.TestCase):
     def test_nodetype(self):
         mock_node = MagicMock(id=333)
         mock_node.type = 'vos:ContainerNode'
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(return_value=mock_node)
         self.assertEqual('vos:ContainerNode',
                          client._node_type('vos:/somenode'))
@@ -265,14 +284,14 @@ class TestClient(unittest.TestCase):
         # two other wasy to do it as seen below
         mock_node = MagicMock(type='vos:ContainerNode')
         mock_node.configure_mock(name='anode')
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(return_value=mock_node)
         self.assertEqual(['vos:/anode/'], client.glob('vos:/anode/'))
 
         # simple test for file listing of file
         mock_node = MagicMock(type='vos:DataNode')
         mock_node.configure_mock(name='afile')
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(return_value=mock_node)
         self.assertEqual(['vos:/afile'], client.glob('vos:/afile'))
 
@@ -293,7 +312,7 @@ class TestClient(unittest.TestCase):
         mock_base_node.node_list = [mock_node]
         mock_node.node_list = [mock_base_node, mock_child_node1,
                                mock_child_node2]
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(
             side_effect=[mock_node, mock_base_node, mock_node])
         self.assertEqual(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
@@ -321,7 +340,7 @@ class TestClient(unittest.TestCase):
         mock_base_node = Mock(type='vos:DataNode')
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node1, mock_node2]
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(
             side_effect=[mock_base_node, mock_node1, mock_node2])
         self.assertEqual(['vos:/bnode/sometests'],
@@ -347,19 +366,17 @@ class TestClient(unittest.TestCase):
         node.props = {'MD5': md5sum, 'length': 12}
 
         # mock one by one the chain of connection.session.response.headers
-        conn = MagicMock(spec=Connection)
         session = MagicMock()
         response = MagicMock()
         headers = MagicMock()
         headers.get.return_value = md5sum
         response.headers = headers
         session.get.return_value = response
-        conn.session = session
         response.iter_content.return_value = BytesIO(file_content)
 
-        test_client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        test_client = Client()
+        test_client.get_session = Mock(return_value=session)
         # use the mocked connection instead of the real one
-        test_client.conn = conn
         get_node_url_mock = Mock(
             return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
         test_client.get_node_url = get_node_url_mock
@@ -527,13 +544,11 @@ class TestClient(unittest.TestCase):
         session = Mock()
         session.get.side_effect = [Mock(text='COMPLETED'),
                                    Mock(text='COMPLETED')]
-        conn = Mock(spec=Connection)
-        conn.session = session
 
-        test_client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        test_client = Client()
 
         # use the mocked connection instead of the real one
-        test_client.conn = conn
+        test_client.get_session = Mock(return_value=session)
 
         # job successfully completed
         self.assertFalse(test_client.get_transfer_error(
@@ -584,6 +599,7 @@ class TestClient(unittest.TestCase):
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))
+        old_node.uri = 'vos:sometest'
         new_node = Node(ElementTree.fromstring(NODE_XML))
         new_node.props['quota'] = '1000'
         new_node.create = Mock(return_value=new_node.node)
@@ -591,33 +607,33 @@ class TestClient(unittest.TestCase):
         data = str(new_node)
         headers = {'size': str(len(data))}
 
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.get_node = Mock(return_value=old_node)
         client.get_node_url = Mock(return_value='http://foo.com/bar')
-        client.conn = Mock()
+        mock_session = Mock()
+        client.get_session = Mock(return_value=mock_session)
 
-        with patch('vos.Client', client) as mock:
-            mock.add_props(new_node)
-            mock.conn.session.post.assert_called_with('http://foo.com/bar',
-                                                      headers=headers,
-                                                      data=data)
+        client.add_props(new_node)
+        client.get_session.assert_called_with('vos://foo.com!vospace/bar')
+        mock_session.post.assert_called_with('http://foo.com/bar',
+                                             headers=headers,
+                                             data=data)
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
            Mock(return_value='http://www.canfar.phys.uvic.ca/vospace/nodes'))
     def test_create(self):
         uri = 'vos://create.vospace.auth!vospace/bar'
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         node = Node(client.fix_uri(uri))
         node2 = Node(str(node))
         self.assertEqual(node, node2)
         data = str(node)
         headers = {'size': str(len(data))}
 
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         # client.get_node_url = Mock(return_value='http://foo.com/bar')
         session_mock = MagicMock()
-        client.conn = Mock()
-        client.conn.session = session_mock
+        client.get_session = Mock(return_value=session_mock)
         session_mock.put.return_value = Mock(content=str(node))
 
         result = client.create(uri)
@@ -633,9 +649,10 @@ class TestClient(unittest.TestCase):
         resp.headers.get = Mock(
             return_value="https://www.canfar.phys.uvic.ca/vospace")
 
-        conn = Mock(spec=vos.Connection)
-        conn.session.post = Mock(return_value=resp)
-        client = Client(conn=conn)
+        session = Mock(spec=vos.Connection)
+        session.post = Mock(return_value=resp)
+        client = Client()
+        client.get_session = Mock(return_value=session)
         client.get_node_url = Mock(
             return_value='https://www.canfar.phys.uvic.ca/vospace')
         client.get_transfer_error = Mock()
@@ -648,7 +665,7 @@ class TestClient(unittest.TestCase):
         client.get_endpoints = Mock(return_value=endpoints_mock)
         result = client.update(node, False)
         self.assertEqual(result, 0)
-        client.conn.session.post.assert_called_with(
+        session.post.assert_called_with(
             'https://www.canfar.phys.uvic.ca/vospace',
             data=data, allow_redirects=False)
 
@@ -660,11 +677,10 @@ class TestClient(unittest.TestCase):
                          'Content-type': 'application/x-www-form-urlencoded'})
         calls = [call1, call2]
 
-        client.conn = Mock(spec=vos.Connection)
-        client.conn.session.post = Mock(return_value=resp)
+        session.post = Mock(return_value=resp)
         result = client.update(node, True)
         self.assertEqual(result, 0)
-        client.conn.session.post.assert_has_calls(calls)
+        session.post.assert_has_calls(calls)
 
     def test_getNode(self):
         """
@@ -692,7 +708,7 @@ class TestClient(unittest.TestCase):
                  '</vos:nodes>\n')
 
         mock_vofile = Mock()
-        client = Client(resource_id='ivo://cadc.nrc.ca/vault')
+        client = Client()
         client.open = Mock(return_value=mock_vofile)
 
         mock_vofile.read = Mock(
@@ -732,13 +748,13 @@ class TestClient(unittest.TestCase):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
         with patch('os.access'):
-            client = Client(resource_id='ivo://cadc.nrc.ca/vault',
-                            vospace_certfile=certfile)
+            client = Client(vospace_certfile=certfile)
         uri1 = 'vos://cadc.nrc.ca!vospace/nosuchfile1'
         url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1'
-        client.conn.session.delete = Mock()
+        mock_session = Mock()
+        client.get_session = Mock(return_value=mock_session)
         client.delete(uri1)
-        client.conn.session.delete.assert_called_once_with(url)
+        mock_session.delete.assert_called_once_with(url)
 
 
 class TestNode(unittest.TestCase):

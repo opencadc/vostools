@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception, get_scheme
+    exit_on_exception
 from .. import vos
 from argparse import ArgumentError
 
@@ -40,9 +40,7 @@ def vln():
             raise ArgumentError(
                 None,
                 "source must be vos node or http url, target must be vos node")
-        scheme = get_scheme(opt.target)
         client = vos.Client(
-            resource_id=vos.vos_config.get_resource_id(scheme),
             vospace_certfile=opt.certfile,
             vospace_token=opt.token)
         client.link(opt.source, opt.target)

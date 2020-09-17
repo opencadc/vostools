@@ -5,7 +5,6 @@ import os
 import sys
 from multiprocessing import Process, JoinableQueue
 from vos.commonparser import CommonParser, set_logging_level_from_args
-from vos.commonparser import get_scheme
 import logging
 import time
 import signal
@@ -89,9 +88,7 @@ def vsync():
         parser.error("Only allows sync FROM local copy TO VOSpace")
     # Currently we don't create nodes in sync and we don't sync onto files
     logging.info("Connecting to VOSpace")
-    scheme = get_scheme(destination)
     client = vos.Client(
-        resource_id=vos.vos_config.get_resource_id(scheme),
         vospace_certfile=opt.certfile, vospace_token=opt.token)
     logging.info("Confirming Destination is a directory")
     dest_is_dir = client.isdir(destination)
@@ -128,10 +125,9 @@ def vsync():
         return md5
 
     class ThreadCopy(Process):
-        def __init__(self, this_queue, scheme):
+        def __init__(self, this_queue):
             super(ThreadCopy, self).__init__()
             self.client = vos.Client(
-                resource_id=vos.vos_config.get_resource_id(scheme),
                 vospace_certfile=opt.certfile,
                 vospace_token=opt.token)
             self.queue = this_queue
@@ -291,11 +287,11 @@ def vsync():
             return
         queue.put((current_source, current_destination), timeout=3600)
 
-    def start_streams(no_streams, scheme):
+    def start_streams(no_streams):
         list_of_streams = []
         for i in range(no_streams):
             logging.info("Launching VOSpace connection stream %d" % i)
-            t = ThreadCopy(queue, scheme)
+            t = ThreadCopy(queue)
             t.daemon = True
             t.start()
             list_of_streams.append(t)
@@ -354,7 +350,7 @@ def vsync():
                 return
         return
 
-    streams = start_streams(opt.nstreams, scheme=scheme)
+    streams = start_streams(opt.nstreams)
 
     # build a complete file list given all the things on the command line
     for filename in opt.files:

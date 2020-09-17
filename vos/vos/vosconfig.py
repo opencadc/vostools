@@ -52,8 +52,13 @@ class VosConfig(Config):
                 return list(self.resource_id.values())[0]
             else:
                 raise ValueError(
-                    'Multiple resourceIDs in the config file. No default.')
-        return self.resource_id[prefix]
+                    'Multiple resourceIDs in the config file. Use a prefix '
+                    'to refer to one of them.')
+        try:
+            return self.resource_id[prefix]
+        except KeyError:
+            raise ValueError('{} prefix not found in the vos config file'.
+                             format(prefix))
 
 
 def _update_config():

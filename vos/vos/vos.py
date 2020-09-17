@@ -51,6 +51,7 @@ except ImportError:
     splittag = six.moves.urllib.parse.splittag
 
 urlparse = six.moves.urllib.parse.urlparse
+parse_qs = six.moves.urllib.parse.parse_qs
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -144,36 +145,6 @@ def convert_vospace_time_to_seconds(str_date):
     right = str_date.rfind(":") + 3
     mtime = time.mktime(time.strptime(str_date[0:right], '%Y-%m-%dT%H:%M:%S'))
     return mtime - round((datetime.utcnow() - datetime.now()).total_seconds())
-
-
-class URLParser(object):
-    """ Parse out the structure of a URL.
-
-    There is a difference between the 2.5 and 2.7 version of the
-    urlparse.urlparse command, so here I roll my own...
-    """
-
-    # TODO - ad: since 2.5 is no longer supported maybe it's time to get
-    # rid of this
-    def __init__(self, url):
-        self.scheme = None
-        self.netloc = None
-        self.args = None
-        self.path = None
-        m = re.match(
-            r"(^(?P<scheme>[a-zA-Z]*):)?"
-            r"(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
-            r"(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
-        self.scheme = m.group('scheme')
-        self.netloc = m.group('netloc')
-        self.server = m.group('server')
-        self.service = m.group('service')
-        self.path = (m.group('path') is not None and m.group('path')) or ''
-        self.args = (m.group('args') is not None and m.group('args')) or ''
-
-    def __str__(self):
-        return "[scheme: %s, netloc: %s, path: %s]" % (self.scheme,
-                                                       self.netloc, self.path)
 
 
 class Connection(object):
@@ -545,7 +516,7 @@ class Node(object):
             url = Node.IVOAURL
             prop = url + "#" + tag
 
-        parts = URLParser(url)
+        parts = urlparse(url)
         if parts.path is None or tag is None:
             raise ValueError("Invalid VOSpace property uri: {0}".format(prop))
 
@@ -1309,20 +1280,26 @@ class EndPoints(object):
 
     subject = net.Subject()  # default subject is for anonymous access
 
-    def __init__(self, resource_id_uri):
+    def __init__(self, resource_id_uri, vospace_certfile=None,
+                 vospace_token=None):
         """
         Determines the end points of a vospace service
         :param resource_id_uri: the resource id uri
         :type resource_id_uri: unicode
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
         """
         self.resource_id = resource_id_uri
-        self.service = net.BaseWsClient(self.resource_id, EndPoints.subject,
-                                        'vos/' + version,
-                                        host=self.VOSPACE_WEBSERVICE)
+        self.conn = Connection(vospace_certfile=vospace_certfile,
+                               vospace_token=vospace_token,
+                               resource_id=self.resource_id)
 
     @property
     def properties(self):
-        return self.service._get_url((EndPoints.VO_PROPERTIES, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1345,14 +1322,32 @@ class EndPoints(object):
         :return: service location of the transfer service.
         :rtype: unicode
         """
-        return self.service._get_url((EndPoints.VO_TRANSFER, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
         :return: The Node service endpoint.
         """
-        return self.service._get_url((EndPoints.VO_NODES, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_NODES, None))
+
+    @property
+    def session(self):
+        # TODO can we use just the ws_client instead?
+        return self.conn.ws_client._get_session()
+
+    def set_auth(self, vospace_certfile=None, vospace_token=None):
+        """
+        Resets the authentication to be used with this service
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
+        """
+        self.conn = Connection(vospace_certfile=vospace_certfile,
+                               vospace_token=vospace_token,
+                               resource_id=self.resource_id)
 
 
 class Client(object):
@@ -1379,14 +1374,11 @@ class Client(object):
                 VOSPACE_CERTFILE = certfilepath
             break
 
-    def __init__(self, resource_id=None, vospace_certfile=None,
+    def __init__(self, vospace_certfile=None,
                  root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
                  secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
-        :param resourceID: resource ID of the service to work with.
-        Recommended to be used. When None, it uses the resourceID from the
-        vos config file (only if a single one defined)
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
@@ -1394,8 +1386,7 @@ class Client(object):
         :type vospace_token: unicode
         :param root_node: the base of the VOSpace for uri references.
         :type root_node: unicode
-        :param conn: a connection pool object for this Client
-        :type conn: Session
+        :param conn: DEPRECATED
         :param transfer_shortcut: if True then just assumed data web service
         urls
         :type transfer_shortcut: bool
@@ -1412,19 +1403,6 @@ class Client(object):
                   format(os.getenv('VOSPACE_WEBSERVICE', None))
             logging.getLogger().warning(msg)
 
-        if not isinstance(conn, Connection):
-            vospace_certfile = vospace_certfile is None and\
-                Client.VOSPACE_CERTFILE or vospace_certfile
-            if not resource_id:
-                try:
-                    resource_id = vos_config.get_resource_id()
-                except ValueError:
-                    raise ValueError(
-                        'resourceID of the service must be specified in ctor')
-            conn = Connection(vospace_certfile=vospace_certfile,
-                              vospace_token=vospace_token,
-                              http_debug=http_debug, resource_id=resource_id)
-
         protocol = vos_config.get('transfer', 'protocol')
         if protocol is not None:
             warn_msg = "Protocol is no longer supported and should be " \
@@ -1432,13 +1410,13 @@ class Client(object):
             warnings.warn(warn_msg, UserWarning)
 
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
-        self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
         self._endpoints = {}
-
+        self.vospace_certfile = vospace_certfile
+        self.vospace_token = vospace_token
         return
 
     def glob(self, pathname):
@@ -1537,6 +1515,34 @@ class Client(object):
                     os.path.join(dirname, basename)))
         return []
 
+    def set_auth(self, uri, vospace_certfile=None, vospace_token=None):
+        """
+        Sets a certificate to be used with a specific service.
+        :param uri - the uri of the service (scheme ivo) or an uri to a
+        resource on that service (scheme vos or configured prefix)
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
+        """
+        self.get_endpoints(uri).set_auth(vospace_certfile=vospace_certfile,
+                                         vospace_token=vospace_token)
+
+    def get_resource_id(self, uri):
+        uri_parts = urlparse(self.fix_uri(uri))
+        if uri_parts.scheme.startswith('vos'):
+            if uri_parts.netloc is None:
+                resource_id = vos_config.get('vos', 'resourceID')
+            else:
+                resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace(
+                    "!", "/").replace("~", "/")
+        elif uri_parts.scheme.startswith('ivo'):
+            resource_id = uri
+        else:
+            raise OSError('Unsupported scheme in {}'.format(uri))
+        return resource_id
+
     def get_endpoints(self, uri):
         """
         Returns the end points or a vospace service corresponding to an uri
@@ -1549,25 +1555,21 @@ class Client(object):
         :return: corresponding EndPoint object
         """
 
-        uri_parts = URLParser(uri)
+        uri_parts = urlparse(self.fix_uri(uri))
         if uri_parts.scheme is not None:
-            if uri_parts.scheme.startswith('vos'):
-                if uri_parts.netloc is None:
-                    resource_id = vos_config.get('vos', 'resourceID')
-                else:
-                    resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace(
-                        "!", "/").replace("~", "/")
-            elif uri_parts.scheme.startswith('ivo'):
-                resource_id = uri
-            else:
-                raise OSError('Unsupported scheme in {}'.format(uri))
+            resource_id = self.get_resource_id(uri)
         else:
             raise OSError('No scheme in {}'.format(uri))
 
         if resource_id not in self._endpoints:
-            self._endpoints[resource_id] = EndPoints(resource_id)
+            self._endpoints[resource_id] = EndPoints(
+                resource_id, vospace_certfile=self.vospace_certfile,
+                vospace_token=self.vospace_token)
 
         return self._endpoints[resource_id]
+
+    def get_session(self, uri):
+        return self.get_endpoints(uri).session
 
     @staticmethod
     def has_magic(s):
@@ -1693,8 +1695,8 @@ class Client(object):
                         break
                 get_url = get_urls.pop(0)
                 try:
-                    response = self.conn.session.get(get_url, timeout=(2, 5),
-                                                     stream=True)
+                    response = self.get_session(source).get(
+                        get_url, timeout=(2, 5), stream=True)
                     response.raise_for_status()
                     if disposition:
                         # Build the destination location from the
@@ -1822,7 +1824,8 @@ class Client(object):
                         put_url = put_urls.pop(0)
                         try:
                             with open(source, str('rb')) as fin:
-                                self.conn.session.put(put_url, data=fin)
+                                self.get_session(destination).put(
+                                    put_url, data=fin)
                             node = self.get_node(destination, limit=0,
                                                  force=True)
                             dest_md5 = node.props.get('MD5', None)
@@ -1873,7 +1876,8 @@ class Client(object):
                             with open(source, str('rb')) as fin:
                                 reader = Md5FileReader(fin)
                                 fin.read = reader.read
-                                self.conn.session.put(put_url, data=fin)
+                                self.get_session(destination).put(
+                                    put_url, data=fin)
                             src_md5 = reader.md5_checksum.hexdigest()
                             node = self.get_node(destination, limit=0,
                                                  force=True)
@@ -1896,7 +1900,8 @@ class Client(object):
                 # cleanup
                 self.delete(destination)
             raise OSError(errno.EFAULT,
-                          "Failed copying {0} -> {1}\n{2}".
+                          "Failed copying {0} -> {1} and also failed"
+                          "cleaning up after.\nReason for failure: {2}".
                           format(source, destination, copy_failed_message))
         elif check_md5 and src_md5 and dest_md5 and src_md5 != dest_md5:
             copy_failed_message = 'BUG: Mismatched md5 src ({}) != dest ({})'.\
@@ -1925,7 +1930,7 @@ class Client(object):
         if '://' in uri:
             # no much to do
             return uri
-        parts = URLParser(uri)
+        parts = urlparse(uri)
         # TODO
         # implement support for local files (parts.scheme=None
         # and self.rootNode=None
@@ -1935,21 +1940,20 @@ class Client(object):
                 uri = self.rootNode + uri
             else:
                 return uri
-        parts = URLParser(uri)
+        parts = urlparse(uri)
 
         # Check that path name compiles with the standard
-        logger.debug("Got value of args: {0}".format(parts.args))
-        if parts.args is not None and parts.args != "":
-            uri = \
-                urlparse.parse_qs(
-                    urlparse.urlparse(parts.args).query).get('link', None)[0]
-            logger.debug("Got uri: {0}".format(uri))
-            if uri is not None:
-                return self.fix_uri(uri)
+        logger.debug("Got value of query: {0}".format(parts.query))
+        linkuri = parse_qs(parts.query).get('link', None)
+        if linkuri:
+            logger.debug("Got uri: {0}".format(linkuri[0]))
+            if linkuri[0] is not None:
+                # TODO This does not work with invalid links. Should it?
+                return self.fix_uri(linkuri[0])
         if not vos_config.get_resource_id(parts.scheme):
             # Just past this back, I don't know how to fix...
             raise ValueError(
-                'Prefix {} is not configured. Please updat the vos config '
+                'Prefix {} is not configured. Please update the vos config '
                 'file (~/.config/vos/vos-config) to associate it to a '
                 'resourceID'.format(parts.scheme))
 
@@ -1974,7 +1978,8 @@ class Client(object):
         # Therefore, remove the '.' character in this case
         if path == '.':
             path = ''
-        uri = "vos://{0}/{1}{2}".format(host, path, parts.args)
+        uri = "vos://{0}/{1}{2}".format(
+            host, path, "?{}".format(parts.query) if parts.query else "")
         logger.debug("Returning URI: {0}".format(uri))
         return uri
 
@@ -2025,7 +2030,7 @@ class Client(object):
                                 '%a, %d %b %Y %H:%M:%S GMT')),
                         'groupwrite': None,
                         'groupread': None,
-                        'ispublic': URLParser(
+                        'ispublic': urlparse(
                             uri).scheme == 'https' and 'true' or 'false',
                         'length': header.resp.headers.get('Content-Length', 0)}
                     node = Node(node=uri, node_type=Node.DATA_NODE,
@@ -2110,7 +2115,7 @@ class Client(object):
                 logger.debug("%s is a link to %s" % (node.uri, target))
                 if target is None:
                     raise OSError(errno.ENOENT, "No target for link")
-                parts = URLParser(target)
+                parts = urlparse(target)
                 if parts.scheme != "vos":
                     # This is not a link to another VOSpace node so lets just
                     # return the target as the url
@@ -2128,7 +2133,7 @@ class Client(object):
 
         logger.debug("Getting URL for: " + str(uri))
 
-        parts = URLParser(uri)
+        parts = urlparse(uri)
         if parts.scheme.startswith('http'):
             return [uri]
 
@@ -2210,9 +2215,9 @@ class Client(object):
         headers = {"Content-type": "application/x-www-form-urlencoded",
                    "Accept": "text/plain"}
 
-        response = self.conn.session.get(endpoints.transfer, params=args,
-                                         headers=headers,
-                                         allow_redirects=False)
+        response = self.get_session(uri).get(
+            endpoints.transfer, params=args, headers=headers,
+            allow_redirects=False)
         logging.debug("Transfer Server said: {0}".format(response.content))
 
         if response.status_code == 303:
@@ -2270,7 +2275,8 @@ class Client(object):
 
         url = self.get_node_url(link_uri)
         logger.debug("Got linkNode URL: {0}".format(url))
-        self.conn.session.put(url, data=data, headers={'size': str(size)})
+        self.get_session(link_uri).put(
+            url, data=data, headers={'size': str(size)})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a
@@ -2359,10 +2365,9 @@ class Client(object):
         logging.debug("Sending to : {}".format(endpoints.transfer))
 
         data = ElementTree.tostring(transfer_xml)
-        resp = self.conn.session.post(endpoints.transfer,
-                                      data=data,
-                                      allow_redirects=False,
-                                      headers={'Content-Type': 'text/xml'})
+        resp = self.get_session(uri).post(endpoints.transfer,
+                                          data=data, allow_redirects=False,
+                                          headers={'Content-Type': 'text/xml'})
 
         logging.debug("{0}".format(resp))
         logging.debug("{0}".format(resp.text))
@@ -2371,7 +2376,8 @@ class Client(object):
                           "Failed to get transfer service response.")
         transfer_url = resp.headers.get('Location', None)
 
-        if self.conn.session.auth is not None and "auth" not in transfer_url:
+        if self.get_session(uri).auth is not None and \
+                "auth" not in transfer_url:
             transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
 
         logging.debug("Got back from transfer URL: %s" % transfer_url)
@@ -2381,11 +2387,12 @@ class Client(object):
             return not self.get_transfer_error(transfer_url, uri)
 
         # for get or put we need the protocol value
-        xfer_resp = self.conn.session.get(transfer_url, allow_redirects=False)
+        xfer_resp = self.get_session(uri).get(transfer_url,
+                                              allow_redirects=False)
         xfer_url = xfer_resp.headers.get('Location', None)
-        if self.conn.session.auth is not None and "auth" not in xfer_url:
+        if self.get_session(uri).auth is not None and "auth" not in xfer_url:
             xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = self.conn.session.get(xfer_url).text
+        xml_string = self.get_session(uri).get(xfer_url).text
         logging.debug("Transfer Document: %s" % xml_string)
         transfer_document = ElementTree.fromstring(xml_string)
         logging.debug(
@@ -2431,8 +2438,8 @@ class Client(object):
             phase_url = job_url + "/phase"
             sleep_time = 1
             roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = self.conn.session.get(phase_url,
-                                          allow_redirects=False).text
+            phase = self.get_session(uri).get(phase_url,
+                                              allow_redirects=False).text
             # do not remove the line below. It is used for testing
             logging.debug("Job URL: " + job_url + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
@@ -2454,19 +2461,20 @@ class Client(object):
                     sys.stdout.write("\r                    \n")
                 else:
                     time.sleep(sleep_time)
-                phase = self.conn.session.get(phase_url,
-                                              allow_redirects=False).text
+                phase = self.get_session(uri).get(phase_url,
+                                                  allow_redirects=False).text
                 logging.debug(
                     "Async transfer Phase for url %s: %s " % (url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
-            self.conn.session.post(job_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=ABORT",
-                                   headers={"Content-type": 'text/text'})
+            self.get_session(uri).post(job_url + "/phase",
+                                       allow_redirects=False,
+                                       data="PHASE=ABORT",
+                                       headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
-        status = self.conn.session.get(phase_url, allow_redirects=False).text
+        status = self.get_session(uri).get(
+            phase_url, allow_redirects=False).text
 
         logger.debug("Phase:  {0}".format(status))
         if status in ['COMPLETED']:
@@ -2475,7 +2483,7 @@ class Client(object):
             # re-queue the job and continue to monitor for completion.
             raise OSError("UWS status: {0}".format(status), errno.EFAULT)
         error_url = job_url + "/error"
-        error_message = self.conn.session.get(error_url).text
+        error_message = self.get_session(uri).get(error_url).text
         logger.debug(
             "Got transfer error {0} on URI {1}".format(error_message, uri))
         # Check if the error was that the link type is unsupported and try and
@@ -2565,7 +2573,7 @@ class Client(object):
                     if target is None:
                         raise OSError(errno.ENOENT, "No target for link")
                     else:
-                        parts = URLParser(target)
+                        parts = urlparse(target)
                         if parts.scheme == 'vos':
                             # This is a link to another VOSpace node so lets
                             # open that instead.
@@ -2581,7 +2589,7 @@ class Client(object):
                                                                  cutout)
                             return VOFile(
                                 [target],
-                                self.conn,
+                                self.get_session(uri),
                                 method=method,
                                 size=size,
                                 byte_range=byte_range,
@@ -2600,8 +2608,8 @@ class Client(object):
             if url is None:
                 raise OSError(errno.EREMOTE)
 
-        return VOFile(url, self.conn, method=method, size=size,
-                      byte_range=byte_range,
+        return VOFile(url, self.get_endpoints(uri).conn, method=method,
+                      size=size, byte_range=byte_range,
                       possible_partial_read=possible_partial_read)
 
     def add_props(self, node):
@@ -2630,7 +2638,8 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url, headers={'size': str(size)}, data=data)
+        self.get_session(node.uri).post(url, headers={'size': str(size)},
+                                        data=data)
 
     def create(self, uri):
         """
@@ -2645,12 +2654,12 @@ class Client(object):
         """
         fixed_uri = self.fix_uri(uri)
         node = Node(fixed_uri)
-        path = URLParser(fixed_uri).path
+        path = urlparse(fixed_uri).path
         url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
-        return Node(self.conn.session.put(url, data=data,
-                                          headers={'size': str(size)}).content)
+        return Node(self.get_session(uri).put(
+            url, data=data, headers={'size': str(size)}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2678,11 +2687,9 @@ class Client(object):
 
             logger.debug("prop URL: {0}".format(property_url))
             try:
-                resp = self.conn.session.post(property_url,
-                                              allow_redirects=False,
-                                              data=str(node),
-                                              headers={
-                                                  'Content-type': 'text/xml'})
+                resp = self.get_session(node.uri).post(
+                    property_url, allow_redirects=False, data=str(node),
+                    headers={'Content-type': 'text/xml'})
             except Exception as ex:
                 logger.error(str(ex))
                 raise ex
@@ -2694,16 +2701,16 @@ class Client(object):
             # logger.debug(
             # "Got back %s from $Client.VOPropertiesEndPoint " % (con))
             # Start the job
-            self.conn.session.post(
+            self.get_session(node.uri).post(
                 transfer_url + "/phase",
                 allow_redirects=False,
                 data="PHASE=RUN",
                 headers={'Content-type': "application/x-www-form-urlencoded"})
             self.get_transfer_error(transfer_url, node.uri)
         else:
-            resp = self.conn.session.post(url,
-                                          data=str(node),
-                                          allow_redirects=False)
+            resp = self.get_session(node.uri).post(url,
+                                                   data=str(node),
+                                                   allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))
         return 0
 
@@ -2723,7 +2730,7 @@ class Client(object):
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         try:
-            response = self.conn.session.put(url, data=str(node))
+            response = self.get_session(uri).put(url, data=str(node))
             response.raise_for_status()
         except HTTPError as http_error:
             if http_error.response.status_code != 409:
@@ -2744,7 +2751,7 @@ class Client(object):
         logger.debug("delete {0}".format(uri))
         with self.nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
-            response = self.conn.session.delete(url)
+            response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
     def get_children_info(self, uri, sort=None, order=None, force=False):
@@ -2902,10 +2909,10 @@ class Client(object):
         self.get_node(uri)
         return True
 
-    def get_job_status(self, url):
-        """ Returns the status of a job
-        :param url: the URL of the UWS job to get status of.
-        :rtype: unicode
-        """
-        return VOFile(url, self.conn, method="GET",
-                      follow_redirect=False).read()
+    # def get_job_status(self, url):
+    #     """ Returns the status of a job
+    #     :param url: the URL of the UWS job to get status of.
+    #     :rtype: unicode
+    #     """
+    #     return VOFile(url, self.conn, method="GET",
+    #                   follow_redirect=False).read()
