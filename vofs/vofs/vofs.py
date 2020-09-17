@@ -20,7 +20,6 @@ from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from .CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from vos.logExceptions import logExceptions
-from vos import vosconfig
 
 logger = logging.getLogger('vofs')
 # logger.setLevel(logging.DEBUG)
@@ -255,10 +254,6 @@ class VOFS(Operations):
 
         # What is the 'root' of the VOSpace? (eg vos:MyVOSpace)
         self.root = root
-
-        service_prefix = None  # default service prefix
-        if root:
-            service_prefix = urlparse(root).scheme
 
         # VOSpace is a bit slow so we do some caching.
         self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout,
