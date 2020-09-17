@@ -80,8 +80,9 @@ def vcp():
         help="ignore errors and continue with recursive copy")
     parser.add_argument(
         "--head", action="store_true",
-        help="copy only the headers of a file from vospace. Might return an "
-             "error if the server does not support the operation on a given "
+        help="copy only the headers of a file from vospace. Format of the "
+             "returned files is text (and not FITS). Might return an error if "
+             "the server does not support the operation on a given "
              "file type")
 
     args = parser.parse_args()
