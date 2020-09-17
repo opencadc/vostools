@@ -259,11 +259,6 @@ class VOFS(Operations):
         service_prefix = None  # default service prefix
         if root:
             service_prefix = urlparse(root).scheme
-        try:
-            resource_id = vosconfig.vos_config.get_resource_id(service_prefix)
-        except Exception as e:
-            raise RuntimeError(
-                'Cannot identify vospace service: {}'.format(str(e)))
 
         # VOSpace is a bit slow so we do some caching.
         self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout,
