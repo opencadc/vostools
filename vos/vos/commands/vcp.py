@@ -220,7 +220,7 @@ def vcp():
         :return:
         :raise e:
         """
-        global exit_code
+        nonlocal exit_code
         # determine if this is a directory we are copying so need to be
         # recursive
         try:
@@ -319,6 +319,7 @@ def vcp():
             if getattr(os_exception, 'errno', -1) == errno.EINVAL:
                 # not a valid uri, just skip those...
                 logging.warning("%s: Skipping" % str(os_exception))
+                exit_code = getattr(os_exception, 'errno', -1)
             else:
                 raise os_exception
 
@@ -426,7 +427,6 @@ def vcp():
             exit_on_exception(e, msg)
         else:
             exit_on_exception(e)
-
     if exit_code:
         sys.exit(exit_code)
 
