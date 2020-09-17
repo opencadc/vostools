@@ -1125,8 +1125,7 @@ class VOFile(object):
                     # return instead and try the next url
                     self.connector.session.retry = False
                 self.resp = self.connector.session.send(self.request,
-                                                        stream=True,
-                                                        verify=False)
+                                                        stream=True)
             except exceptions.HttpException as http_exception:
                 # this is the path for all status_codes between 400 and 600
                 if http_exception.orig_exception is not None:
