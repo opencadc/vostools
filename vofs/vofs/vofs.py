@@ -274,8 +274,7 @@ class VOFS(Operations):
         try:
             self.client = vos.Client(root_node=root, conn=conn,
                                      transfer_shortcut=True,
-                                     secure_get=secure_get,
-                                     resource_id=resource_id)
+                                     secure_get=secure_get)
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
