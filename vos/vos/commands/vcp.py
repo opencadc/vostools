@@ -47,7 +47,7 @@ default service settings will be used.
 def vcp():
     # TODO split this into main and methods
 
-    class nonlocal:
+    class Nonlocal():
         # this is just a workaround the lack of nonlocal in Python 2.7
         # should be refactored when 2.7 support is dropped
         exit_code = 0
@@ -296,7 +296,7 @@ def vcp():
                             # 104 is connection reset by peer.
                             # Try again on this error
                             logging.warning(str(client_exception))
-                            nonlocal.exit_code += \
+                            Nonlocal.exit_code += \
                                 getattr(client_exception, 'errno', -1)
                         elif getattr(client_exception, 'errno',
                                      -1) == errno.EIO:
@@ -323,7 +323,7 @@ def vcp():
             if getattr(os_exception, 'errno', -1) == errno.EINVAL:
                 # not a valid uri, just skip those...
                 logging.warning("%s: Skipping" % str(os_exception))
-                nonlocal.exit_code += getattr(os_exception, 'errno', -1)
+                Nonlocal.exit_code += getattr(os_exception, 'errno', -1)
             else:
                 raise os_exception
 
@@ -414,9 +414,9 @@ def vcp():
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
-        nonlocal.exit_code = getattr(ke, 'errno', -1)
+        Nonlocal.exit_code = getattr(ke, 'errno', -1)
     except ParseError:
-        nonlocal.exit_code = errno.EREMOTE
+        Nonlocal.exit_code = errno.EREMOTE
         msg = "Failure at server while copying {0} -> {1}\n".format(source,
                                                                     dest)
         exit_on_exception(msg)
@@ -431,8 +431,8 @@ def vcp():
             exit_on_exception(e, msg)
         else:
             exit_on_exception(e)
-    if nonlocal.exit_code:
-        sys.exit(nonlocal.exit_code)
+    if Nonlocal.exit_code:
+        sys.exit(Nonlocal.exit_code)
 
 
 vcp.__doc__ = DESCRIPTION
