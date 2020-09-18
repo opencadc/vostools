@@ -411,7 +411,7 @@ class TestClient(unittest.TestCase):
         test_client.copy(vospaceLocation, osLocation)
         assert not get_node_url_mock.called
         computed_md5_mock.assert_called_once_with(osLocation)
-        get_node_mock.assert_called_once_with(vospaceLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation, force=True)
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
@@ -424,7 +424,7 @@ class TestClient(unittest.TestCase):
                                                   method='GET',
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_with(osLocation)
-        get_node_mock.assert_called_once_with(vospaceLocation)
+        get_node_mock.assert_called_once_with(vospaceLocation, force=True)
 
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()

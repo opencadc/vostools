@@ -78,6 +78,7 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms?"
 VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
 VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
 VO_PROPERTY_LENGTH = 'ivo://ivoa.net/vospace/core#length'
+VO_PROPERTY_DATE = 'ivo://ivoa.net/vospace/core#date'
 VO_PROPERTY_MD5 = 'ivo://ivoa.net/vospace/core#MD5'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
@@ -87,7 +88,7 @@ VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
     LENGTH = VO_PROPERTY_LENGTH
-    DATE = 'ivo://ivoa.net/vospace/core#date'
+    DATE = VO_PROPERTY_DATE
 
 
 CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
@@ -119,7 +120,7 @@ logging.getLogger("requests").setLevel(logging.ERROR)
 
 
 def is_remote_file(file_name):
-    if file_name.startswith(('vos://', 'http://', 'https://')):
+    if file_name.startswith(('http://', 'https://')):
         # assume full uri
         return True
     file_scheme = urlparse(file_name).scheme
@@ -1378,10 +1379,15 @@ class Client(object):
                  transfer_shortcut=False, http_debug=False,
                  secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
-        :param vospace_certfile: x509 proxy certificate file location.
-        Overrides certfile in conn.
+        :param vospace_certfile: x509 proxy certificate file location. The
+        certificate will be used with all the services that the Client
+        communicates to. To set auth for individual services use `set_auth`
+        method.
         :type vospace_certfile: unicode
         :param vospace_token: token string (alternative to vospace_certfile)
+        The token will be used with all the services that the Client
+        communicates to. To set auth for individual services use `set_auth`
+        method.
         :type vospace_token: unicode
         :param root_node: the base of the VOSpace for uri references.
         :type root_node: unicode
@@ -1406,6 +1412,10 @@ class Client(object):
         if protocol is not None:
             warn_msg = "Protocol is no longer supported and should be " \
                        "removed from the config file."
+            warnings.warn(warn_msg, UserWarning)
+
+        if conn is not None:
+            warn_msg = "conn argument no longer used in vos.Client ctor."
             warnings.warn(warn_msg, UserWarning)
 
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
@@ -1655,7 +1665,7 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_props = self.get_node(source).props
+                source_props = self.get_node(source, force=True).props
                 src_md5 = source_props.get('MD5', None)
                 src_size = source_props.get('length', None)
                 if src_size:
@@ -1755,7 +1765,7 @@ class Client(object):
             dest_size = None
             destination_node = None
             try:
-                destination_node = self.get_node(destination)
+                destination_node = self.get_node(destination, force=True)
                 dest_md5 = destination_node.props.get('MD5', None)
                 dest_size = destination_node.props.get('length', None)
                 if dest_size:
@@ -1773,7 +1783,7 @@ class Client(object):
                     # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
-                destination_node = self.get_node(destination)
+                destination_node = self.get_node(destination, force=True)
                 dest_md5 = destination_node.props.get('MD5', None)
                 dest_size = destination_node.props.get('length', None)
                 if dest_size:
@@ -1825,8 +1835,7 @@ class Client(object):
                             with open(source, str('rb')) as fin:
                                 self.get_session(destination).put(
                                     put_url, data=fin)
-                            node = self.get_node(destination, limit=0,
-                                                 force=True)
+                            node = self.get_node(destination, force=True)
                             dest_md5 = node.props.get('MD5', None)
                             if dest_md5 != src_md5:
                                 raise IOError(
@@ -1859,27 +1868,11 @@ class Client(object):
                                 break
                         put_url = put_urls.pop(0)
                         try:
-                            class Md5FileReader(object):
-                                """ File handler that calculates md5 when
-                                reading content from disk
-                                """
-                                def __init__(self, orig):
-                                    self.orig_read = orig.read  # original read
-                                    self.md5_checksum = hashlib.md5()
-
-                                def read(self, size):
-                                    buffer = self.orig_read(size)
-                                    self.md5_checksum.update(buffer)
-                                    return buffer
-
-                            with open(source, str('rb')) as fin:
-                                reader = Md5FileReader(fin)
-                                fin.read = reader.read
+                            with Md5File(source, 'rb') as reader:
                                 self.get_session(destination).put(
-                                    put_url, data=fin)
+                                    put_url, data=reader)
                             src_md5 = reader.md5_checksum.hexdigest()
-                            node = self.get_node(destination, limit=0,
-                                                 force=True)
+                            node = self.get_node(destination, force=True)
                             dest_md5 = node.props.get('MD5', None)
                             if dest_md5 != src_md5:
                                 raise IOError(
@@ -1899,7 +1892,7 @@ class Client(object):
                 # cleanup
                 self.delete(destination)
             raise OSError(errno.EFAULT,
-                          "Failed copying {0} -> {1} and also failed"
+                          "Failed copying {0} -> {1} and also failed "
                           "cleaning up after.\nReason for failure: {2}".
                           format(source, destination, copy_failed_message))
         elif check_md5 and src_md5 and dest_md5 and src_md5 != dest_md5:
@@ -2915,3 +2908,45 @@ class Client(object):
     #     """
     #     return VOFile(url, self.conn, method="GET",
     #                   follow_redirect=False).read()
+
+
+class Md5File(object):
+    """
+    A wrapper to a file object that calculates the MD5 sum of the bytes
+    that are being read.
+    """
+
+    def __init__(self, f, mode):
+        if isinstance(f, str):
+            self.file = open(f, mode)
+        else:
+            self.file = f
+        self.close_file = (self.file is not f)
+        self.md5_checksum = hashlib.md5()
+
+    def __enter__(self):
+        return self
+
+    def read(self, size):
+        buffer = self.file.read(size)
+        self.md5_checksum.update(buffer)
+        return buffer
+
+    def __exit__(self, *args, **kwargs):
+        if (not self.close_file):
+            return  # do nothing
+        # clean up
+        exit = getattr(self.file, '__exit__', None)
+        if exit is not None:
+            return exit(*args, **kwargs)
+        else:
+            exit = getattr(self.file, 'close',
+                           None)
+            if exit is not None:
+                exit()
+
+    def __getattr__(self, attr):
+        return getattr(self.file, attr)
+
+    def __iter__(self):
+        return iter(self.file)
