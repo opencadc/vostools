@@ -20,12 +20,13 @@ def vrm():
     set_logging_level_from_args(args)
 
     try:
-        client = vos.Client(vospace_certfile=args.certfile,
-                            vospace_token=args.token)
         for node in args.node:
-            if not node.startswith('vos:'):
+            if not vos.is_remote_file(node):
                 raise Exception(
                     '{} is not a valid VOSpace handle'.format(node))
+            client = vos.Client(
+                    vospace_certfile=args.certfile,
+                    vospace_token=args.token)
             if not node.endswith('/'):
                 if client.get_node(node).islink():
                     logging.info('deleting link {}'.format(node))

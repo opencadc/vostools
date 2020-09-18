@@ -47,6 +47,11 @@ default service settings will be used.
 def vcp():
     # TODO split this into main and methods
 
+    class Nonlocal():
+        # this is just a workaround the lack of nonlocal in Python 2.7
+        # should be refactored when 2.7 support is dropped
+        exit_code = 0
+
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
         "source", nargs="+",
@@ -80,8 +85,9 @@ def vcp():
         help="ignore errors and continue with recursive copy")
     parser.add_argument(
         "--head", action="store_true",
-        help="copy only the headers of a file from vospace. Might return an "
-             "error if the server does not support the operation on a given "
+        help="copy only the headers of a file from vospace. Format of the "
+             "returned files is text (and not FITS). Might return an error if "
+             "the server does not support the operation on a given "
              "file type")
 
     args = parser.parse_args()
@@ -94,14 +100,8 @@ def vcp():
     if args.overwrite:
         warnings.warn("the --overwrite option is no longer supported")
 
-    if dest[0:4] != 'vos:':
+    if not vos.is_remote_file(dest):
         dest = os.path.abspath(dest)
-
-    client = vos.Client(vospace_certfile=args.certfile,
-                        vospace_token=args.token,
-                        transfer_shortcut=args.quick)
-
-    exit_code = 0
 
     cutout_pattern = re.compile(
         r'(.*?)(?P<cutout>(\[[\-+]?[\d*]+(:[\-+]?[\d*]+)?'
@@ -136,14 +136,14 @@ def vcp():
 
     def isdir(filename):
         logging.debug("Doing an isdir on %s" % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             return client.isdir(filename)
         else:
             return os.path.isdir(filename)
 
     def islink(filename):
         logging.debug("Doing an islink on %s" % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             try:
                 return get_node(filename).islink()
             except exceptions.NotFoundException:
@@ -159,7 +159,7 @@ def vcp():
         @return: True/False
         """
         logging.debug("checking for access %s " % filename)
-        if filename[0:4] == "vos:":
+        if vos.is_remote_file(filename):
             try:
                 node = get_node(filename, limit=0)
                 return node is not None
@@ -174,27 +174,27 @@ def vcp():
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a dirlist %s " % dirname)
 
-        if dirname[0:4] == "vos:":
+        if vos.is_remote_file(dirname):
             return client.listdir(dirname, force=True)
         else:
             return os.listdir(dirname)
 
     def mkdir(filename):
         logging.debug("Making directory %s " % filename)
-        if filename[0:4] == 'vos:':
+        if vos.is_remote_file(filename):
             return client.mkdir(filename)
         else:
             return os.mkdir(filename)
 
     def get_md5(filename):
         logging.debug("getting the MD5 for %s" % filename)
-        if filename[0:4] == 'vos:':
+        if vos.is_remote_file(filename):
             return get_node(filename).props.get('MD5', vos.ZERO_MD5)
         else:
             return md5_cache.MD5Cache.compute_md5(filename)
 
     def lglob(pathname):
-        if pathname[0:4] == "vos:":
+        if vos.is_remote_file(pathname):
             return client.glob(pathname)
         else:
             return glob.glob(pathname)
@@ -224,7 +224,6 @@ def vcp():
         :return:
         :raise e:
         """
-        global exit_code
         # determine if this is a directory we are copying so need to be
         # recursive
         try:
@@ -297,7 +296,8 @@ def vcp():
                             # 104 is connection reset by peer.
                             # Try again on this error
                             logging.warning(str(client_exception))
-                            exit_code = getattr(client_exception, 'errno', -1)
+                            Nonlocal.exit_code += \
+                                getattr(client_exception, 'errno', -1)
                         elif getattr(client_exception, 'errno',
                                      -1) == errno.EIO:
                             # retry on IO errors
@@ -323,6 +323,7 @@ def vcp():
             if getattr(os_exception, 'errno', -1) == errno.EINVAL:
                 # not a valid uri, just skip those...
                 logging.warning("%s: Skipping" % str(os_exception))
+                Nonlocal.exit_code += getattr(os_exception, 'errno', -1)
             else:
                 raise os_exception
 
@@ -334,7 +335,7 @@ def vcp():
     try:
         for source_pattern in args.source:
 
-            if args.head and not source_pattern.startswith('vos:'):
+            if args.head and not vos.is_remote_file(source_pattern):
                 logging.error("head only works for source files in vospace")
                 continue
 
@@ -342,7 +343,10 @@ def vcp():
             # strings off the end of the pattern before matching.  This allows
             # cutouts on the vos service. The shell does pattern matching for
             # local files, so don't run glob on local files.
-            if source_pattern[0:4] != "vos:":
+            client = vos.Client(
+                vospace_certfile=args.certfile, vospace_token=args.token,
+                transfer_shortcut=args.quick)
+            if not vos.is_remote_file(source_pattern):
                 sources = [source_pattern]
             else:
                 cutout_match = cutout_pattern.search(source_pattern)
@@ -360,7 +364,7 @@ def vcp():
                     # stick back on the cutout pattern if there was one.
                     sources = [s + cutout for s in sources]
             for source in sources:
-                if source[0:4] != "vos:":
+                if not vos.is_remote_file(source):
                     source = os.path.abspath(source)
                 # the source must exist, of course...
                 if not access(source, os.R_OK):
@@ -371,7 +375,7 @@ def vcp():
                     continue
 
                 # copying inside VOSpace not yet implemented
-                if source[0:4] == 'vos:' and dest[0:4] == 'vos:':
+                if vos.is_remote_file(source) and vos.is_remote_file(dest):
                     raise Exception(
                         "Can not (yet) copy from VOSpace to VOSpace.")
 
@@ -410,9 +414,9 @@ def vcp():
 
     except KeyboardInterrupt as ke:
         logging.info("Received keyboard interrupt. Execution aborted...\n")
-        exit_code = getattr(ke, 'errno', -1)
+        Nonlocal.exit_code = getattr(ke, 'errno', -1)
     except ParseError:
-        exit_code = errno.EREMOTE
+        Nonlocal.exit_code = errno.EREMOTE
         msg = "Failure at server while copying {0} -> {1}\n".format(source,
                                                                     dest)
         exit_on_exception(msg)
@@ -427,9 +431,8 @@ def vcp():
             exit_on_exception(e, msg)
         else:
             exit_on_exception(e)
-
-    if exit_code:
-        sys.exit(exit_code)
+    if Nonlocal.exit_code:
+        sys.exit(Nonlocal.exit_code)
 
 
 vcp.__doc__ = DESCRIPTION

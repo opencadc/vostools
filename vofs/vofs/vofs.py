@@ -8,6 +8,8 @@ import vos
 import sys
 import urllib
 import re
+import logging
+import six.moves
 from cadcutils import exceptions
 from fuse import FUSE, Operations, FuseOSError
 from threading import Lock
@@ -17,8 +19,6 @@ from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 from .CadcCache import Cache, CacheCondition, CacheRetry, CacheAborted, \
     IOProxy, FlushNodeQueue, CacheError
 from vos.logExceptions import logExceptions
-import logging
-import six.moves
 
 logger = logging.getLogger('vofs')
 # logger.setLevel(logging.DEBUG)

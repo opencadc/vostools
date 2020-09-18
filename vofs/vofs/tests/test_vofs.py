@@ -57,7 +57,7 @@ class MyFileHandle2(FileHandle):
 
 
 class TestVOFS(unittest.TestCase):
-    testMountPoint = "/tmp/testfs"
+    testMountPoint = "vos:tmp/testfs"
     testCacheDir = "/tmp/testCache"
 
     def __init__(self, *args, **kwargs):
@@ -298,17 +298,17 @@ class TestVOFS(unittest.TestCase):
         parentNode.groupread = True
         parentNode.groupwrite = True
         testfs.client.open = Mock()
-        testfs.getNode = Mock(side_effect=SideEffect({
+        testfs.client.get_node = Mock(side_effect=SideEffect({
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError):
-                testfs.create(file, os.O_RDWR)
+        testfs.client.create = Mock(return_value=node)
+        with self.assertRaises(OSError):
+            testfs.create(file, os.O_RDWR)
 
         testfs.getNode = Mock(side_effect=FuseOSError(errno=5))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError):
-                testfs.create(file, os.O_RDWR)
+        testfs.client.create = Mock(return_value=node)
+        with self.assertRaises(FuseOSError):
+            testfs.create(file, os.O_RDWR)
 
         node.props.get = Mock(return_value=False)
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -317,8 +317,8 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(side_effect=SideEffect({
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            testfs.create(file, os.O_RDWR)
+        testfs.client.create = Mock(return_value=node)
+        testfs.create(file, os.O_RDWR)
         testfs.open.assert_called_once_with(file, os.O_WRONLY)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -1080,7 +1080,7 @@ class TestMyIOProxy(unittest.TestCase):
         conn = MagicMock()
         mock_libfuse.fuse_main_real.return_value = False
         fuseops = fuse_operations()
-        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+        MyFuse(VOFS("vos:", "/tmp/vos_", None, conn=conn,
                     cache_limit=100,
                     cache_max_flush_threads=3),
                "/tmp/vospace",
@@ -1094,7 +1094,7 @@ class TestMyIOProxy(unittest.TestCase):
                                                        ctypes.sizeof(fuseops),
                                                        None)
 
-        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+        MyFuse(VOFS("vos:", "/tmp/vos_", None, conn=conn,
                     cache_limit=100,
                     cache_max_flush_threads=3),
                "/tmp/vospace",

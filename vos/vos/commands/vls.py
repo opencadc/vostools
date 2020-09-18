@@ -110,10 +110,6 @@ def vls():
             columns.extend(
                 ['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-        # create a client to send VOSpace command
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
-
         files = []
         dirs = []
 
@@ -133,10 +129,13 @@ def vls():
             order = 'desc' if sort else 'asc'
 
         for node in opt.node:
-            if not node.startswith('vos:'):
+            if not vos.is_remote_file(file_name=node):
                 raise ArgumentError(opt.node,
                                     "Invalid node name: {}".format(node))
             logging.debug("getting listing of: %s" % str(node))
+            client = vos.Client(
+                vospace_certfile=opt.certfile,
+                vospace_token=opt.token)
             targets = client.glob(node)
 
             # segregate files from directories
