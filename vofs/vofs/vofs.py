@@ -289,7 +289,6 @@ class VOFS(Operations):
             uri = '{}/{}'.format(self.root, path)
         else:
             uri = self.root
-        logger.debug('********* {}'.format(uri))
         return uri
 
     def __call__(self, op, *args):
