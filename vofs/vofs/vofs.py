@@ -67,7 +67,8 @@ class MyIOProxy(IOProxy):
         logger.debug(
             "opening a new vo file for {0}".format(self.cacheFile.path))
         dest_uri = self.vofs.get_node(self.cacheFile.path).uri
-        foo = self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri,
+        foo = self.vofs.client.copy(self.cacheFile.cacheDataFile,
+                                    dest_uri,
                                     send_md5=True)
         return foo
         # return self.vofs.client.copy(self.cacheFile.cacheDataFile, dest_uri,
@@ -94,11 +95,10 @@ class MyIOProxy(IOProxy):
         if self.lastVOFile is None:
             logger.debug(
                 "Opening a new vo file on {0}".format(self.cacheFile.path))
-            self.lastVOFile = self.vofs.client.open(self.cacheFile.path,
-                                                    mode=os.O_RDONLY,
-                                                    view="data", size=size,
-                                                    byte_range=byte_range,
-                                                    possible_partial_read=True)
+            self.lastVOFile = self.vofs.client.open(
+                self.vofs.get_uri(self.cacheFile.path), mode=os.O_RDONLY,
+                view="data", size=size, byte_range=byte_range,
+                possible_partial_read=True)
         else:
             logger.debug("Opening a existing vo file on {0}".format(
                 self.lastVOFile.URLs[self.lastVOFile.urlIndex]))
@@ -118,7 +118,8 @@ class MyIOProxy(IOProxy):
                 # list. If it still fails let the error propagate
                 # to client
                 self.lastVOFile = self.vofs.client.open(
-                    self.cacheFile.path, mode=os.O_RDONLY, view="data",
+                    self.vofs.get_uri(self.cacheFile.path),
+                    mode=os.O_RDONLY, view="data",
                     size=size, byte_range=byte_range, full_negotiation=True,
                     possible_partial_read=True)
                 resp = self.lastVOFile.read(return_response=True)
@@ -232,7 +233,8 @@ class VOFS(Operations):
                 options,
                 position))
 
-    def __init__(self, root, cache_dir, options, conn=None,
+    def __init__(self, root, cache_dir, options,
+                 vospace_certfile=None, vospace_token=None,
                  cache_limit=1024, cache_nodes=False,
                  cache_max_flush_threads=10, secure_get=False):
         """Initialize the VOFS.
@@ -252,7 +254,7 @@ class VOFS(Operations):
         self.opt = options
 
         # What is the 'root' of the VOSpace? (eg vos:MyVOSpace)
-        self.root = root
+        self.root = root.strip('/')
 
         # VOSpace is a bit slow so we do some caching.
         self.cache = Cache(cache_dir, cache_limit, False, VOFS.cacheTimeout,
@@ -261,9 +263,11 @@ class VOFS(Operations):
         # All communication with the VOSpace goes through this client
         # connection.
         try:
-            self.client = vos.Client(root_node=root, conn=conn,
-                                     transfer_shortcut=True,
+            self.client = vos.Client(transfer_shortcut=True,
+                                     vospace_certfile=vospace_certfile,
+                                     vospace_token=vospace_token,
                                      secure_get=secure_get)
+            self.root = root
         except Exception as e:
             e = FuseOSError(getattr(e, 'errno', EIO))
             e.filename = root
@@ -272,6 +276,21 @@ class VOFS(Operations):
 
         # Create a condition variable to get rid of those nasty sleeps
         self.condition = CacheCondition(lock=None, timeout=VOFS.cacheTimeout)
+
+    def get_uri(self, path):
+        """
+        Return the URI corresponding to a path. This is to be used in
+        interactions with the self.client which only works with full URIs now
+        :param path:
+        :return:
+        """
+        path = path.lstrip('/')
+        if path:
+            uri = '{}/{}'.format(self.root, path)
+        else:
+            uri = self.root
+        logger.debug('********* {}'.format(uri))
+        return uri
 
     def __call__(self, op, *args):
         logger.debug('-> {0} {1}'.format(op, repr(args)))
@@ -368,7 +387,7 @@ class VOFS(Operations):
         # Create is handle by the client.
         # This should fail if the base path doesn't exist
 
-        node = self.client.create(path)
+        node = self.client.create(self.get_uri(path))
         parent = self.getNode(os.path.dirname(path))
         # Force inheritance of group settings.
         node.groupread = parent.groupread
@@ -425,7 +444,8 @@ class VOFS(Operations):
         # Pull the node meta data from VOSpace.
         logger.debug(
             "requesting node {0} from VOSpace. Force: {1}".format(path, force))
-        node = self.client.get_node(path, force=force, limit=limit)
+        node = self.client.get_node(self.get_uri(path),
+                                    force=force, limit=limit)
         logger.debug("Got node {0}".format(node.name))
         return node
 
@@ -457,7 +477,7 @@ class VOFS(Operations):
 
         set the mode after creation. """
         try:
-            self.client.mkdir(path)
+            self.client.mkdir(self.get_uri(path))
         except OSError as os_error:
             if "read-only mode" in str(os_error):
                 raise FuseOSError(EPERM)
@@ -668,7 +688,7 @@ class VOFS(Operations):
         fh.cache_file_handle.release()
         if fh.cache_file_handle.fileModified:
             # This makes the node disappear from the nodeCache.
-            with self.client.nodeCache.volatile(path):
+            with self.client.nodeCache.volatile(self.get_uri(path)):
                 pass
         return fh.release()
 
@@ -692,7 +712,7 @@ class VOFS(Operations):
 
         try:
             logger.debug("Moving %s to %s" % (src, dest))
-            result = self.client.move(src, dest)
+            result = self.client.move(self.get_uri(src), self.get_uri(dest))
             logger.debug(str(result))
             if result:
                 self.cache.renameFile(src, dest)
@@ -711,7 +731,7 @@ class VOFS(Operations):
         if node and node.props.get('islocked', False):
             logger.debug("%s is locked." % path)
             raise FuseOSError(EPERM)
-        self.client.delete(path)
+        self.client.delete(self.get_uri(path))
 
     @logExceptions()
     def statfs(self, path):
@@ -770,7 +790,7 @@ class VOFS(Operations):
             raise FuseOSError(EPERM)
         self.cache.unlinkFile(path)
         if node:
-            self.client.delete(path)
+            self.client.delete(self.get_uri(path))
 
     @logExceptions()
     def write(self, path, data, size, offset, file_id=None):
