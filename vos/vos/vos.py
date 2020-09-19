@@ -1871,7 +1871,7 @@ class Client(object):
                             with Md5File(source, 'rb') as reader:
                                 self.get_session(destination).put(
                                     put_url, data=reader)
-                            src_md5 = reader.md5_checksum.hexdigest()
+                            src_md5 = reader.md5_checksum
                             node = self.get_node(destination, force=True)
                             dest_md5 = node.props.get('MD5', None)
                             if dest_md5 != src_md5:
@@ -1880,6 +1880,8 @@ class Client(object):
                                     format(src_md5, dest_md5))
                             success = True
                         except Exception as ex:
+                            import traceback
+                            traceback.print_exc()
                             copy_failed_message = str(ex)
                             logger.debug(
                                 "FAILED to PUT to {0}".format(put_url))
@@ -2917,24 +2919,20 @@ class Md5File(object):
     """
 
     def __init__(self, f, mode):
-        if isinstance(f, str):
-            self.file = open(f, mode)
-        else:
-            self.file = f
-        self.close_file = (self.file is not f)
-        self.md5_checksum = hashlib.md5()
+        self.file = open(f, mode)
+        self._md5_checksum = hashlib.md5()
 
     def __enter__(self):
         return self
 
     def read(self, size):
         buffer = self.file.read(size)
-        self.md5_checksum.update(buffer)
+        self._md5_checksum.update(buffer)
         return buffer
 
     def __exit__(self, *args, **kwargs):
-        if (not self.close_file):
-            return  # do nothing
+        if not self.file.closed:
+            self.file.close()
         # clean up
         exit = getattr(self.file, '__exit__', None)
         if exit is not None:
@@ -2950,3 +2948,7 @@ class Md5File(object):
 
     def __iter__(self):
         return iter(self.file)
+
+    @property
+    def md5_checksum(self):
+        return self._md5_checksum.hexdigest()

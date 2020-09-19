@@ -13,6 +13,7 @@ from six.moves import urllib
 from six import BytesIO
 import warnings
 import hashlib
+import tempfile
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -918,3 +919,21 @@ class TestVOFile(unittest.TestCase):
             self.assertEqual(5, vofile._fpos)
             vofile.seek(10, os.SEEK_END)
             self.assertEqual(15, vofile._fpos)
+
+
+class Md5File(unittest.TestCase):
+    """Test the vos Md5File class.
+    """
+    def test_operations(self):
+        tmpfile = tempfile.NamedTemporaryFile()
+        txt = 'This is a test of the Md5File class'
+        with open(tmpfile.name, 'w') as f:
+            f.write(txt)
+
+        binary_content = open(tmpfile.name, 'rb').read()
+        with vos.Md5File(tmpfile.name, 'rb') as f:
+            assert binary_content == f.read(10000)
+        assert f.file.closed
+        hash = hashlib.md5()
+        hash.update(binary_content)
+        assert f.md5_checksum == hash.hexdigest()

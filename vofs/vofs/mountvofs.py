@@ -27,7 +27,7 @@ def mountvofs():
                            "service) but other VOSpaces can be used and "
                            "referred to through their configured prefix (see "
                            "vos-config command)",
-                      default="vos:")
+                      default="vos:/")
     parser.add_option("--mountpoint",
                       help="the mountpoint on the local filesystem",
                       default="/tmp/vospace")
@@ -131,7 +131,8 @@ def mountvofs():
         os.makedirs(mount)
     try:
         if platform == "darwin":
-            MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
+            MyFuse(VOFS(root, opt.cache_dir, opt,
+                        vospace_certfile=certfile, vospace_token=opt.token,
                         cache_limit=opt.cache_limit,
                         cache_nodes=opt.cache_nodes,
                         cache_max_flush_threads=opt.max_flush_threads,
@@ -149,7 +150,8 @@ def mountvofs():
                    debug=opt.foreground,
                    foreground=opt.foreground)
         else:
-            MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
+            MyFuse(VOFS(root, opt.cache_dir, opt,
+                        vospace_certfile=certfile, vospace_token=opt.token,
                         cache_limit=opt.cache_limit,
                         cache_nodes=opt.cache_nodes,
                         cache_max_flush_threads=opt.max_flush_threads,
