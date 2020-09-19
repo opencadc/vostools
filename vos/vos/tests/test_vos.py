@@ -925,14 +925,13 @@ class Md5File(unittest.TestCase):
     """Test the vos Md5File class.
     """
     def test_operations(self):
-        tmpdir = tempfile.TemporaryDirectory()
-        tmpfile = os.path.join(tmpdir.name, 'testfile.txt')
+        tmpfile = tempfile.NamedTemporaryFile()
         txt = 'This is a test of the Md5File class'
-        with open(tmpfile, 'w') as f:
+        with open(tmpfile.name, 'w') as f:
             f.write(txt)
 
-        binary_content = open(tmpfile, 'rb').read()
-        with vos.Md5File(tmpfile, 'rb') as f:
+        binary_content = open(tmpfile.name, 'rb').read()
+        with vos.Md5File(tmpfile.name, 'rb') as f:
             assert binary_content == f.read(10000)
         assert f.file.closed
         hash = hashlib.md5()
