@@ -27,12 +27,12 @@ def vmkdir():
         "Creating ContainerNode (directory) {}".format(args.container_node))
 
     try:
-
-        client = vos.Client(vospace_certfile=args.certfile,
-                            vospace_token=args.token)
+        this_dir = args.container_node
+        client = vos.Client(
+            vospace_certfile=args.certfile,
+            vospace_token=args.token)
 
         dir_names = []
-        this_dir = args.container_node
         if args.p:
             while not client.access(this_dir):
                 dir_names.append(os.path.basename(this_dir))

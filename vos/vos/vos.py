@@ -13,6 +13,7 @@ import errno
 from datetime import datetime
 import fnmatch
 from enum import Enum
+import hashlib
 
 try:
     from cStringIO import StringIO
@@ -33,12 +34,13 @@ import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .node_cache import NodeCache
+from .vosconfig import vos_config
 
 try:
     from .version import version
 except ImportError:
     version = "unknown"
-from cadcutils import net, exceptions, util
+from cadcutils import net, exceptions
 from . import md5_cache
 
 try:
@@ -49,6 +51,7 @@ except ImportError:
     splittag = six.moves.urllib.parse.splittag
 
 urlparse = six.moves.urllib.parse.urlparse
+parse_qs = six.moves.urllib.parse.parse_qs
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -74,6 +77,9 @@ CADC_GMS_PREFIX = "ivo://cadc.nrc.ca/gms?"
 
 VO_PROPERTY_URI_ISLOCKED = 'ivo://cadc.nrc.ca/vospace/core#islocked'
 VO_VIEW_DEFAULT = 'ivo://ivoa.net/vospace/core#defaultview'
+VO_PROPERTY_LENGTH = 'ivo://ivoa.net/vospace/core#length'
+VO_PROPERTY_DATE = 'ivo://ivoa.net/vospace/core#date'
+VO_PROPERTY_MD5 = 'ivo://ivoa.net/vospace/core#MD5'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
@@ -81,8 +87,8 @@ VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 # sorting-related uris
 class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
-    LENGTH = 'ivo://ivoa.net/vospace/core#length'
-    DATE = 'ivo://ivoa.net/vospace/core#date'
+    LENGTH = VO_PROPERTY_LENGTH
+    DATE = VO_PROPERTY_DATE
 
 
 CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
@@ -93,9 +99,6 @@ CADC_VO_VIEWS = {'data': '{}#data'.format(VO_CADC_VIEW_URI),
 # md5sum of a size zero file
 ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
 
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-_DEFAULT_CONFIG_PATH = os.path.join(_ROOT, 'data', 'default-vos-config')
-_CONFIG_PATH = os.path.expanduser("~") + '/.config/vos/vos-config'
 
 # Pattern matching in filenames to extract out the RA/DEC/RADIUS part
 FILENAME_PATTERN_MAGIC = re.compile(
@@ -116,45 +119,19 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
-def _update_config():
-    # temporary function to deal with:
-    # - renaming of the ivo://cadc.nrc.ca/vospace to ivo://cadc.nrc.ca/vault
-    # - commenting out transfer protocol
-    if os.path.exists(_CONFIG_PATH):
-        try:
-            protocol_text = \
-                '# transfer protocol configuration is no longer supported'
-            changed = False
-            config_content = open(_CONFIG_PATH, 'r').read()
-            if 'ivo://cadc.nrc.ca/vospace' in config_content:
-                config_content = config_content.replace(
-                    'ivo://cadc.nrc.ca/vospace',
-                    'ivo://cadc.nrc.ca/vault')
-                changed = True
-            if protocol_text not in config_content and \
-                    'protocol' in config_content:
-                config_content = config_content.replace(
-                    'protocol',
-                    '{}\n# protocol'.format(protocol_text))
-                changed = True
-
-            if changed:
-                open(_CONFIG_PATH, 'w').write(config_content)
-        except Exception as e:
-            warnings.warn('Error trying to access {} config file: {}'.format(
-                _CONFIG_PATH, str(e)))
-            pass
-
-
-try:
-    _update_config()
-    vos_config = util.Config(_CONFIG_PATH)
-except IOError:
-    # Assume this is the first invocation and the config file has not been
-    # created yet => create it
-    util.Config.write_config(_CONFIG_PATH, _DEFAULT_CONFIG_PATH)
-    # now read parse it again
-    vos_config = util.Config(_CONFIG_PATH)
+def is_remote_file(file_name):
+    if file_name.startswith(('http://', 'https://')):
+        # assume full uri
+        return True
+    file_scheme = urlparse(file_name).scheme
+    if file_scheme:
+        if vos_config.get_resource_id(prefix=file_scheme) is not None:
+            return True
+        else:
+            raise ValueError(
+                'Unsupported prefix {}. Check the config file at '
+                '~/.config/vos/vos-config'.format(file_scheme))
+    return False
 
 
 def convert_vospace_time_to_seconds(str_date):
@@ -171,42 +148,12 @@ def convert_vospace_time_to_seconds(str_date):
     return mtime - round((datetime.utcnow() - datetime.now()).total_seconds())
 
 
-class URLParser(object):
-    """ Parse out the structure of a URL.
-
-    There is a difference between the 2.5 and 2.7 version of the
-    urlparse.urlparse command, so here I roll my own...
-    """
-
-    # TODO - ad: since 2.5 is no longer supported maybe it's time to get
-    # rid of this
-    def __init__(self, url):
-        self.scheme = None
-        self.netloc = None
-        self.args = None
-        self.path = None
-        m = re.match(
-            r"(^(?P<scheme>[a-zA-Z]*):)?"
-            r"(//(?P<netloc>(?P<server>[^!~]*)[!~](?P<service>[^/]*)))?"
-            r"(?P<path>/?[^?]*)?(?P<args>\?.*)?", url)
-        self.scheme = m.group('scheme')
-        self.netloc = m.group('netloc')
-        self.server = m.group('server')
-        self.service = m.group('service')
-        self.path = (m.group('path') is not None and m.group('path')) or ''
-        self.args = (m.group('args') is not None and m.group('args')) or ''
-
-    def __str__(self):
-        return "[scheme: %s, netloc: %s, path: %s]" % (self.scheme,
-                                                       self.netloc, self.path)
-
-
 class Connection(object):
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self, vospace_certfile=None, vospace_token=None,
                  http_debug=False,
-                 resource_id=vos_config.get('vos', 'resourceID')):
+                 resource_id=None):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -570,7 +517,7 @@ class Node(object):
             url = Node.IVOAURL
             prop = url + "#" + tag
 
-        parts = URLParser(url)
+        parts = urlparse(url)
         if parts.path is None or tag is None:
             raise ValueError("Invalid VOSpace property uri: {0}".format(prop))
 
@@ -1179,8 +1126,7 @@ class VOFile(object):
                     # return instead and try the next url
                     self.connector.session.retry = False
                 self.resp = self.connector.session.send(self.request,
-                                                        stream=True,
-                                                        verify=False)
+                                                        stream=True)
             except exceptions.HttpException as http_exception:
                 # this is the path for all status_codes between 400 and 600
                 if http_exception.orig_exception is not None:
@@ -1334,20 +1280,26 @@ class EndPoints(object):
 
     subject = net.Subject()  # default subject is for anonymous access
 
-    def __init__(self, resource_id_uri):
+    def __init__(self, resource_id_uri, vospace_certfile=None,
+                 vospace_token=None):
         """
         Determines the end points of a vospace service
         :param resource_id_uri: the resource id uri
         :type resource_id_uri: unicode
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
         """
         self.resource_id = resource_id_uri
-        self.service = net.BaseWsClient(self.resource_id, EndPoints.subject,
-                                        'vos/' + version,
-                                        host=self.VOSPACE_WEBSERVICE)
+        self.conn = Connection(vospace_certfile=vospace_certfile,
+                               vospace_token=vospace_token,
+                               resource_id=self.resource_id)
 
     @property
     def properties(self):
-        return self.service._get_url((EndPoints.VO_PROPERTIES, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1370,14 +1322,32 @@ class EndPoints(object):
         :return: service location of the transfer service.
         :rtype: unicode
         """
-        return self.service._get_url((EndPoints.VO_TRANSFER, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
         :return: The Node service endpoint.
         """
-        return self.service._get_url((EndPoints.VO_NODES, None))
+        return self.conn.ws_client._get_url((EndPoints.VO_NODES, None))
+
+    @property
+    def session(self):
+        # TODO can we use just the ws_client instead?
+        return self.conn.ws_client._get_session()
+
+    def set_auth(self, vospace_certfile=None, vospace_token=None):
+        """
+        Resets the authentication to be used with this service
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
+        """
+        self.conn = Connection(vospace_certfile=vospace_certfile,
+                               vospace_token=vospace_token,
+                               resource_id=self.resource_id)
 
 
 class Client(object):
@@ -1404,20 +1374,24 @@ class Client(object):
                 VOSPACE_CERTFILE = certfilepath
             break
 
-    def __init__(self, vospace_certfile=None, root_node=None, conn=None,
+    def __init__(self, vospace_certfile=None,
+                 root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
                  secure_get=True, vospace_token=None):
         """This could/should be expanded to set various defaults
-
-        :param vospace_certfile: x509 proxy certificate file location.
-        Overrides certfile in conn.
+        :param vospace_certfile: x509 proxy certificate file location. The
+        certificate will be used with all the services that the Client
+        communicates to. To set auth for individual services use `set_auth`
+        method.
         :type vospace_certfile: unicode
         :param vospace_token: token string (alternative to vospace_certfile)
+        The token will be used with all the services that the Client
+        communicates to. To set auth for individual services use `set_auth`
+        method.
         :type vospace_token: unicode
         :param root_node: the base of the VOSpace for uri references.
         :type root_node: unicode
-        :param conn: a connection pool object for this Client
-        :type conn: Session
+        :param conn: DEPRECATED
         :param transfer_shortcut: if True then just assumed data web service
         urls
         :type transfer_shortcut: bool
@@ -1434,27 +1408,24 @@ class Client(object):
                   format(os.getenv('VOSPACE_WEBSERVICE', None))
             logging.getLogger().warning(msg)
 
-        if not isinstance(conn, Connection):
-            vospace_certfile = vospace_certfile is None and\
-                Client.VOSPACE_CERTFILE or vospace_certfile
-            conn = Connection(vospace_certfile=vospace_certfile,
-                              vospace_token=vospace_token,
-                              http_debug=http_debug)
-
         protocol = vos_config.get('transfer', 'protocol')
         if protocol is not None:
             warn_msg = "Protocol is no longer supported and should be " \
                        "removed from the config file."
             warnings.warn(warn_msg, UserWarning)
 
+        if conn is not None:
+            warn_msg = "conn argument no longer used in vos.Client ctor."
+            warnings.warn(warn_msg, UserWarning)
+
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
-        self.conn = conn
         self.rootNode = root_node
         self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
         self._endpoints = {}
-
+        self.vospace_certfile = vospace_certfile
+        self.vospace_token = vospace_token
         return
 
     def glob(self, pathname):
@@ -1553,6 +1524,34 @@ class Client(object):
                     os.path.join(dirname, basename)))
         return []
 
+    def set_auth(self, uri, vospace_certfile=None, vospace_token=None):
+        """
+        Sets a certificate to be used with a specific service.
+        :param uri - the uri of the service (scheme ivo) or an uri to a
+        resource on that service (scheme vos or configured prefix)
+        :param vospace_certfile: x509 proxy certificate file location.
+        Overrides certfile in conn.
+        :type vospace_certfile: unicode
+        :param vospace_token: token string (alternative to vospace_certfile)
+        :type vospace_token: unicode
+        """
+        self.get_endpoints(uri).set_auth(vospace_certfile=vospace_certfile,
+                                         vospace_token=vospace_token)
+
+    def get_resource_id(self, uri):
+        uri_parts = urlparse(self.fix_uri(uri))
+        if uri_parts.scheme.startswith('vos'):
+            if uri_parts.netloc is None:
+                resource_id = vos_config.get('vos', 'resourceID')
+            else:
+                resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace(
+                    "!", "/").replace("~", "/")
+        elif uri_parts.scheme.startswith('ivo'):
+            resource_id = uri
+        else:
+            raise OSError('Unsupported scheme in {}'.format(uri))
+        return resource_id
+
     def get_endpoints(self, uri):
         """
         Returns the end points or a vospace service corresponding to an uri
@@ -1565,25 +1564,21 @@ class Client(object):
         :return: corresponding EndPoint object
         """
 
-        uri_parts = URLParser(uri)
+        uri_parts = urlparse(self.fix_uri(uri))
         if uri_parts.scheme is not None:
-            if uri_parts.scheme.startswith('vos'):
-                if uri_parts.netloc is None:
-                    resource_id = vos_config.get('vos', 'resourceID')
-                else:
-                    resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace(
-                        "!", "/").replace("~", "/")
-            elif uri_parts.scheme.startswith('ivo'):
-                resource_id = uri
-            else:
-                raise OSError('Unsupported scheme in {}'.format(uri))
+            resource_id = self.get_resource_id(uri)
         else:
             raise OSError('No scheme in {}'.format(uri))
 
         if resource_id not in self._endpoints:
-            self._endpoints[resource_id] = EndPoints(resource_id)
+            self._endpoints[resource_id] = EndPoints(
+                resource_id, vospace_certfile=self.vospace_certfile,
+                vospace_token=self.vospace_token)
 
         return self._endpoints[resource_id]
+
+    def get_session(self, uri):
+        return self.get_endpoints(uri).session
 
     @staticmethod
     def has_magic(s):
@@ -1620,20 +1615,34 @@ class Client(object):
 
         success = False
         copy_failed_message = ""
-        destination_size = None
-        destination_md5 = None
-        source_md5 = None
+        dest_size = None
+        dest_md5 = None
+        src_size = None
+        src_md5 = None
+        check_md5 = True  # by default try to check all md5
+        must_delete = False  # delete node after failed transfer
+        # NOTE: file size and md5 are used to check the opportunity (files
+        # migth be the same) and correctness of the file transfer (interrupted
+        # or incomplete transfer). Although the most reliable of the 2,
+        # md5 checksum introduces higher local computational overheads,
+        # (especially for large files) and might not be available on the server
+        # side. Therefore, sometimes size is used instead.
+        # The algorithm tries to strike a balance between efficiency and
+        # reliability. Worst case scenario is updates to large files that
+        # have only the content updated (FITS headers for example). In that
+        # case both md5 checksum and file transfer are performed
+
         get_node_url_retried = False
         content_disposition = None
-        if source[0:4] == "vos:":
+        if is_remote_file(source):
+            # GET
             if destination is None:
                 # Set the destination, initially, to the same directory as
-                # the source (strip the vos:)
-                destination = os.path.dirname(source)[4:]
+                # the source (strip the scheme)
+                destination = os.path.dirname(urlparse(source).path)
             if os.path.isdir(destination):
                 # We can't write to a directory so take file name from
-                # content-disposition or
-                # from filename part of source.
+                # content-disposition or from filename part of source.
                 disposition = True
             check_md5 = False
             cutout_match = FILENAME_PATTERN_MAGIC.search(source)
@@ -1656,22 +1665,27 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_md5 = \
-                    self.get_node(source).props.get('MD5', ZERO_MD5)
+                source_props = self.get_node(source, force=True).props
+                src_md5 = source_props.get('MD5', None)
+                src_size = source_props.get('length', None)
+                if src_size:
+                    src_size = int(src_size)
                 if os.path.isfile(destination):
                     # check if the local file is up to date before doing the
-                    # transfer
-                    destination_md5 = \
-                        md5_cache.MD5Cache.compute_md5(destination)
-                    if source_md5 == destination_md5:
-                        logger.info(
-                            'copy: src and dest are already the same')
-                        destination_size = os.stat(destination).st_size
-                        if disposition:
-                            return None
-                        if send_md5:
-                            return destination_md5
-                        return destination_size
+                    # transfer. Use size for first comparison as it's faster
+                    dest_size = os.stat(destination).st_size
+                    if dest_size == src_size:
+                        # calculate the destination md5
+                        dest_md5 = \
+                            md5_cache.MD5Cache.compute_md5(destination)
+                        if src_md5 == dest_md5:
+                            logger.info(
+                                'copy: src and dest are already the same')
+                            if disposition:
+                                return None
+                            if send_md5:
+                                return dest_md5
+                            return dest_size
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
                                          view=view)
@@ -1690,8 +1704,9 @@ class Client(object):
                         break
                 get_url = get_urls.pop(0)
                 try:
-                    response = self.conn.session.get(get_url, timeout=(2, 5),
-                                                     stream=True)
+                    response = self.get_session(source).get(
+                        get_url, timeout=(2, 5), stream=True)
+                    response.raise_for_status()
                     if disposition:
                         # Build the destination location from the
                         # content-disposition value, or source name.
@@ -1707,26 +1722,36 @@ class Client(object):
                         if os.path.isdir(destination):
                             destination = os.path.join(destination,
                                                        content_disposition)
-                    source_md5 = response.headers.get('Content-MD5',
-                                                      source_md5)
-                    response.raise_for_status()
+                    src_md5 = response.headers.get('Content-MD5', None)
+                    if src_md5:
+                        # server knows to do md5s even for cutouts or headers
+                        check_md5 = True
+                    transfer_md5 = hashlib.md5()
                     with open(destination, 'wb') as fout:
                         for chunk in response.iter_content(
                                 chunk_size=512 * 1024):
                             if chunk:
+                                transfer_md5.update(chunk)
                                 fout.write(chunk)
                                 fout.flush()
-                    destination_size = os.stat(destination).st_size
+                    dest_md5 = transfer_md5.hexdigest()
+                    dest_size = os.stat(destination).st_size
                     if check_md5:
-                        destination_md5 = md5_cache.MD5Cache.compute_md5(
-                            destination)
-                        logger.debug(
-                            "{0} {1}".format(source_md5, destination_md5))
-                        if destination_md5 != source_md5:
-                            raise IOError(
-                                'Source and destination md5 do not match: '
-                                '{} vs. {}'.format(source_md5,
-                                                   destination_md5))
+                        if src_md5:
+                            if dest_md5 != src_md5:
+                                raise IOError(
+                                    'Source and destination md5 do not  '
+                                    'match: {} vs. {}'.format(src_md5,
+                                                              dest_md5))
+                        elif src_size:
+                            if dest_size != src_size:
+                                raise IOError(
+                                    'Source and destination sizes do not '
+                                    'match: {} vs. {}'.format(src_size,
+                                                              dest_size))
+                        else:
+                            logger.debug(
+                                "Source md5 or size not available to check")
                     success = True
                 except Exception as ex:
                     copy_failed_message = str(ex)
@@ -1734,71 +1759,159 @@ class Client(object):
                     logging.debug("Got error {0}".format(ex))
                     continue
         else:
-            success = True
+            # PUT
+            success = False
+            dest_md5 = None
+            dest_size = None
+            destination_node = None
             try:
-                destination_node = self.get_node(destination)
-                destination_md5 = destination_node.props.get('MD5', ZERO_MD5)
+                destination_node = self.get_node(destination, force=True)
+                dest_md5 = destination_node.props.get('MD5', None)
+                dest_size = destination_node.props.get('length', None)
+                if dest_size:
+                    dest_size = int(dest_size)
             except Exception:
-                destination_md5 = None
-            source_md5 = md5_cache.MD5Cache.compute_md5(source)
-            if source_md5 == destination_md5:
-                logger.info(
-                    'copy: src and dest are already the same -> '
-                    'update node metadata')
-                # post the node so that the modify time is updated
-                self.update(destination_node)
-                destination_size = os.stat(source).st_size
-            elif source_md5 == ZERO_MD5:
+                pass
+            src_size = os.stat(source).st_size
+            # check 2 cases where file sending not required:
+            #   1. source file is empty -> just re-create the node
+            #   2. source and destination are identical
+            if src_size == 0:
                 logger.info("destination: size is 0")
-                destination_size = 0
-                # TODO delete and recreate the node. Is there a better way
-                # to delete just the content of the node?
-                if destination_md5:
+                if destination_node:
+                    # TODO delete and recreate the node. Is there a better way
+                    # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
-            else:
-                # transfer the bytes
-                put_urls = self.get_node_url(destination, 'PUT')
-                success = False
-                while not success:
-                    if len(put_urls) == 0:
-                        if self.transfer_shortcut and not get_node_url_retried:
-                            put_urls = self.get_node_url(destination,
-                                                         method='PUT',
-                                                         full_negotiation=True)
-                            # remove the first one as we already tried
-                            # that one.
-                            put_urls.pop(0)
-                            get_node_url_retried = True
-                        else:
-                            break
-                    put_url = put_urls.pop(0)
-                    try:
-                        with open(source, str('rb')) as fin:
-                            self.conn.session.put(put_url, data=fin)
-                        node = self.get_node(destination, limit=0, force=True)
-                        destination_md5 = node.props.get('MD5', ZERO_MD5)
-                        if destination_md5 != source_md5:
-                            raise Exception(
-                               "Source md5 ({}) != destination md5 ({})".
-                               format(source_md5, destination_md5))
-                    except Exception as ex:
-                        copy_failed_message = str(ex)
-                        logging.debug("FAILED to PUT to {0}".format(put_url))
-                        logging.debug("Got error: {0}".format(ex))
-                        continue
-                    success = True
-                    break
+                destination_node = self.get_node(destination, force=True)
+                dest_md5 = destination_node.props.get('MD5', None)
+                dest_size = destination_node.props.get('length', None)
+                if dest_size:
+                    dest_size = int(dest_size)
+                if dest_size != src_size:
+                    raise IOError(
+                        "Source size ({}) != destination size ({})".
+                        format(src_size, dest_size))
+                success = True
+            elif src_size == dest_size:
+                if dest_md5 is not None:
+                    # compute the md5 of the source file. This serves 2
+                    # purposes:
+                    #   1. Check if source is identical to destination and
+                    #   avoid sending the bytes again.
+                    #   2. send info to the service so it can recover in case
+                    #   the bytes got corrupted on the way
+                    src_md5 = md5_cache.MD5Cache.compute_md5(source)
+                    if src_md5 == dest_md5:
+                        logger.info(
+                            'copy: src and dest are already the same -> '
+                            'update node metadata')
+                        # post the node so that the modify time is updated
+                        self.update(destination_node)
+                        success = True
+            if not success:
+                if dest_md5 is not None:
+                    if not src_md5:
+                        src_md5 = md5_cache.MD5Cache.compute_md5(source)
+                    # transfer the bytes with source md5 available
+                    put_urls = self.get_node_url(destination, 'PUT',
+                                                 content_length=src_size,
+                                                 md5_checksum=dest_md5)
+                    while not success:
+                        if len(put_urls) == 0:
+                            if self.transfer_shortcut and not \
+                                    get_node_url_retried:
+                                put_urls = self.get_node_url(
+                                    destination, method='PUT',
+                                    full_negotiation=True)
+                                # remove the first one as we already tried
+                                # that one.
+                                put_urls.pop(0)
+                                get_node_url_retried = True
+                            else:
+                                break
+                        put_url = put_urls.pop(0)
+                        try:
+                            with open(source, str('rb')) as fin:
+                                self.get_session(destination).put(
+                                    put_url, data=fin)
+                            node = self.get_node(destination, force=True)
+                            dest_md5 = node.props.get('MD5', None)
+                            if dest_md5 != src_md5:
+                                raise IOError(
+                                   "Source md5 ({}) != destination md5 ({})".
+                                   format(src_md5, dest_md5))
+                        except Exception as ex:
+                            copy_failed_message = str(ex)
+                            logger.debug(
+                                "FAILED to PUT to {0}".format(put_url))
+                            logger.debug("Got error: {0}".format(ex))
+                            continue
+                        success = True
+                        break
+                else:
+                    must_delete = True
+                    # transfer the bytes and compute md5 on-the-fly
+                    put_urls = self.get_node_url(destination, 'PUT')
+                    while not success:
+                        if len(put_urls) == 0:
+                            if self.transfer_shortcut and not \
+                                    get_node_url_retried:
+                                put_urls = self.get_node_url(
+                                    destination, method='PUT',
+                                    full_negotiation=True)
+                                # remove the first one as we already tried
+                                # that one.
+                                put_urls.pop(0)
+                                get_node_url_retried = True
+                            else:
+                                break
+                        put_url = put_urls.pop(0)
+                        try:
+                            with Md5File(source, 'rb') as reader:
+                                self.get_session(destination).put(
+                                    put_url, data=reader)
+                            src_md5 = reader.md5_checksum
+                            node = self.get_node(destination, force=True)
+                            dest_md5 = node.props.get('MD5', None)
+                            if dest_md5 != src_md5:
+                                raise IOError(
+                                    "Source md5 ({}) != destination md5 ({})".
+                                    format(src_md5, dest_md5))
+                            success = True
+                        except Exception as ex:
+                            import traceback
+                            traceback.print_exc()
+                            copy_failed_message = str(ex)
+                            logger.debug(
+                                "FAILED to PUT to {0}".format(put_url))
+                            logger.debug("Got error: {0}".format(ex))
+                            continue
+                        break
 
         if not success:
+            if must_delete:
+                # cleanup
+                self.delete(destination)
+            raise OSError(errno.EFAULT,
+                          "Failed copying {0} -> {1} and also failed "
+                          "cleaning up after.\nReason for failure: {2}".
+                          format(source, destination, copy_failed_message))
+        elif check_md5 and src_md5 and dest_md5 and src_md5 != dest_md5:
+            copy_failed_message = 'BUG: Mismatched md5 src ({}) != dest ({})'.\
+                format(src_md5, dest_md5)
             raise OSError(errno.EFAULT,
                           "Failed copying {0} -> {1}\n{2}".
                           format(source, destination, copy_failed_message))
+        else:
+            logger.info(
+                'Transfer successful: source md5 ({}) == destination md5 ({})'.
+                format(src_md5, dest_md5))
         if disposition:
             return content_disposition
         if send_md5:
-            return destination_md5
-        return destination_size
+            return dest_md5
+        return dest_size
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't
@@ -1808,7 +1921,10 @@ class Client(object):
         possible.
 
         """
-        parts = URLParser(uri)
+        if '://' in uri:
+            # no much to do
+            return uri
+        parts = urlparse(uri)
         # TODO
         # implement support for local files (parts.scheme=None
         # and self.rootNode=None
@@ -1818,19 +1934,22 @@ class Client(object):
                 uri = self.rootNode + uri
             else:
                 return uri
-        parts = URLParser(uri)
-        if parts.scheme != "vos":
-            # Just past this back, I don't know how to fix...
-            return uri
+        parts = urlparse(uri)
+
         # Check that path name compiles with the standard
-        logger.debug("Got value of args: {0}".format(parts.args))
-        if parts.args is not None and parts.args != "":
-            uri = \
-                urlparse.parse_qs(
-                    urlparse.urlparse(parts.args).query).get('link', None)[0]
-            logger.debug("Got uri: {0}".format(uri))
-            if uri is not None:
-                return self.fix_uri(uri)
+        logger.debug("Got value of query: {0}".format(parts.query))
+        linkuri = parse_qs(parts.query).get('link', None)
+        if linkuri:
+            logger.debug("Got uri: {0}".format(linkuri[0]))
+            if linkuri[0] is not None:
+                # TODO This does not work with invalid links. Should it?
+                return self.fix_uri(linkuri[0])
+        if not vos_config.get_resource_id(parts.scheme):
+            # Just past this back, I don't know how to fix...
+            raise ValueError(
+                'Prefix {} is not configured. Please update the vos config '
+                'file (~/.config/vos/vos-config) to associate it to a '
+                'resourceID'.format(parts.scheme))
 
         # Check for filename values.
         path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
@@ -1845,15 +1964,16 @@ class Client(object):
         host = parts.netloc
         if not host or host == '':
             # default host corresponds to the resource ID of the client
-            host = self.conn.resource_id.replace('ivo://', '').replace('/',
-                                                                       '!')
+            host = vos_config.get_resource_id(parts.scheme).\
+                replace('ivo://', '').replace('/', '!')
 
         path = os.path.normpath(filename).strip('/')
         # accessing root results in path='.' wich is not a valid root path.
         # Therefore, remove the '.' character in this case
         if path == '.':
             path = ''
-        uri = "{0}://{1}/{2}{3}".format(parts.scheme, host, path, parts.args)
+        uri = "vos://{0}/{1}{2}".format(
+            host, path, "?{}".format(parts.query) if parts.query else "")
         logger.debug("Returning URI: {0}".format(uri))
         return uri
 
@@ -1881,7 +2001,8 @@ class Client(object):
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
-                if uri.startswith('vos:') or uri.startswith('ad:'):
+                # TODO removed ad. Not sure it was used
+                if is_remote_file(uri):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read().decode('UTF-8')
                     xml_file = StringIO(vo_xml_string)
@@ -1903,7 +2024,7 @@ class Client(object):
                                 '%a, %d %b %Y %H:%M:%S GMT')),
                         'groupwrite': None,
                         'groupread': None,
-                        'ispublic': URLParser(
+                        'ispublic': urlparse(
                             uri).scheme == 'https' and 'true' or 'false',
                         'length': header.resp.headers.get('Content-Length', 0)}
                     node = Node(node=uri, node_type=Node.DATA_NODE,
@@ -1936,7 +2057,8 @@ class Client(object):
 
     def get_node_url(self, uri, method='GET', view=None, limit=None,
                      next_uri=None, cutout=None, sort=None, order=None,
-                     full_negotiation=None):
+                     full_negotiation=None, content_length=None,
+                     md5_checksum=None):
         """Split apart the node string into parts and return the correct URL
         for this node.
 
@@ -1966,6 +2088,10 @@ class Client(object):
         :param full_negotiation: Should we use the transfer UWS or do a GET
         and follow the redirect.
         :type full_negotiation: bool
+        :param content_length - size of the file to put
+        :type str
+        :param md5_checksum - checksum of the file content
+        :type str
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
         cadcutils.exceptions module
@@ -1983,7 +2109,7 @@ class Client(object):
                 logger.debug("%s is a link to %s" % (node.uri, target))
                 if target is None:
                     raise OSError(errno.ENOENT, "No target for link")
-                parts = URLParser(target)
+                parts = urlparse(target)
                 if parts.scheme != "vos":
                     # This is not a link to another VOSpace node so lets just
                     # return the target as the url
@@ -2001,7 +2127,7 @@ class Client(object):
 
         logger.debug("Getting URL for: " + str(uri))
 
-        parts = URLParser(uri)
+        parts = urlparse(uri)
         if parts.scheme.startswith('http'):
             return [uri]
 
@@ -2018,7 +2144,8 @@ class Client(object):
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method == 'PUT':
-            return self._put(uri)
+            return self._put(uri, content_length=content_length,
+                             md5_checksum=md5_checksum)
 
         if (view == "cutout" and cutout is None) or (
                 cutout is not None and view != "cutout"):
@@ -2082,9 +2209,9 @@ class Client(object):
         headers = {"Content-type": "application/x-www-form-urlencoded",
                    "Accept": "text/plain"}
 
-        response = self.conn.session.get(endpoints.transfer, params=args,
-                                         headers=headers,
-                                         allow_redirects=False)
+        response = self.get_session(uri).get(
+            endpoints.transfer, params=args, headers=headers,
+            allow_redirects=False)
         logging.debug("Transfer Server said: {0}".format(response.content))
 
         if response.status_code == 303:
@@ -2142,7 +2269,8 @@ class Client(object):
 
         url = self.get_node_url(link_uri)
         logger.debug("Got linkNode URL: {0}".format(url))
-        self.conn.session.put(url, data=data, headers={'size': str(size)})
+        self.get_session(link_uri).put(
+            url, data=data, headers={'size': str(size)})
 
     def move(self, src_uri, destination_uri):
         """Move src_uri to destination_uri.  If destination_uri is a
@@ -2165,11 +2293,14 @@ class Client(object):
         with self.nodeCache.volatile(uri):
             return self.transfer(uri, "pullFromVoSpace", view, cutout)
 
-    def _put(self, uri):
+    def _put(self, uri, content_length=None, md5_checksum=None):
         with self.nodeCache.volatile(uri):
-            return self.transfer(uri, "pushToVoSpace", view="defaultview")
+            return self.transfer(uri, "pushToVoSpace", view="defaultview",
+                                 content_length=content_length,
+                                 md5_checksum=md5_checksum)
 
-    def transfer(self, uri, direction, view=None, cutout=None):
+    def transfer(self, uri, direction, view=None, cutout=None,
+                 content_length=None, md5_checksum=None):
         """Build the transfer XML document
         :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
         :param uri: the uri to transfer from or to VOSpace.
@@ -2177,6 +2308,8 @@ class Client(object):
         being transferred
         :param cutout: a special parameter added to the 'cutout' view
         request. e.g. '[0][1:10,1:10]'
+        :param content_length: the size file to put
+        :param md5_checksum: the md5 checksum of the content of the file
 
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
@@ -2192,7 +2325,6 @@ class Client(object):
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
         ElementTree.SubElement(transfer_xml, "vos:target").text = uri
         ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
-
         if view == 'move':
             ElementTree.SubElement(transfer_xml,
                                    "vos:keepBytes").text = "false"
@@ -2213,15 +2345,23 @@ class Client(object):
                                                           "vos:protocol")
                 protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
                                                                   p)
+        if content_length:
+            el = ElementTree.SubElement(transfer_xml, "vos:param")
+            el.attrib['uri'] = VO_PROPERTY_LENGTH
+            el.text = str(content_length)
+
+        if md5_checksum:
+            el = ElementTree.SubElement(transfer_xml, "vos:param")
+            el.attrib['uri'] = VO_PROPERTY_MD5
+            el.text = str(md5_checksum)
 
         logging.debug(ElementTree.tostring(transfer_xml))
         logging.debug("Sending to : {}".format(endpoints.transfer))
 
         data = ElementTree.tostring(transfer_xml)
-        resp = self.conn.session.post(endpoints.transfer,
-                                      data=data,
-                                      allow_redirects=False,
-                                      headers={'Content-Type': 'text/xml'})
+        resp = self.get_session(uri).post(endpoints.transfer,
+                                          data=data, allow_redirects=False,
+                                          headers={'Content-Type': 'text/xml'})
 
         logging.debug("{0}".format(resp))
         logging.debug("{0}".format(resp.text))
@@ -2230,7 +2370,8 @@ class Client(object):
                           "Failed to get transfer service response.")
         transfer_url = resp.headers.get('Location', None)
 
-        if self.conn.session.auth is not None and "auth" not in transfer_url:
+        if self.get_session(uri).auth is not None and \
+                "auth" not in transfer_url:
             transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
 
         logging.debug("Got back from transfer URL: %s" % transfer_url)
@@ -2240,11 +2381,12 @@ class Client(object):
             return not self.get_transfer_error(transfer_url, uri)
 
         # for get or put we need the protocol value
-        xfer_resp = self.conn.session.get(transfer_url, allow_redirects=False)
+        xfer_resp = self.get_session(uri).get(transfer_url,
+                                              allow_redirects=False)
         xfer_url = xfer_resp.headers.get('Location', None)
-        if self.conn.session.auth is not None and "auth" not in xfer_url:
+        if self.get_session(uri).auth is not None and "auth" not in xfer_url:
             xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = self.conn.session.get(xfer_url).text
+        xml_string = self.get_session(uri).get(xfer_url).text
         logging.debug("Transfer Document: %s" % xml_string)
         transfer_document = ElementTree.fromstring(xml_string)
         logging.debug(
@@ -2290,8 +2432,8 @@ class Client(object):
             phase_url = job_url + "/phase"
             sleep_time = 1
             roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = self.conn.session.get(phase_url,
-                                          allow_redirects=False).text
+            phase = self.get_session(uri).get(phase_url,
+                                              allow_redirects=False).text
             # do not remove the line below. It is used for testing
             logging.debug("Job URL: " + job_url + "/phase")
             while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
@@ -2313,19 +2455,20 @@ class Client(object):
                     sys.stdout.write("\r                    \n")
                 else:
                     time.sleep(sleep_time)
-                phase = self.conn.session.get(phase_url,
-                                              allow_redirects=False).text
+                phase = self.get_session(uri).get(phase_url,
+                                                  allow_redirects=False).text
                 logging.debug(
                     "Async transfer Phase for url %s: %s " % (url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
-            self.conn.session.post(job_url + "/phase",
-                                   allow_redirects=False,
-                                   data="PHASE=ABORT",
-                                   headers={"Content-type": 'text/text'})
+            self.get_session(uri).post(job_url + "/phase",
+                                       allow_redirects=False,
+                                       data="PHASE=ABORT",
+                                       headers={"Content-type": 'text/text'})
             raise KeyboardInterrupt
-        status = self.conn.session.get(phase_url, allow_redirects=False).text
+        status = self.get_session(uri).get(
+            phase_url, allow_redirects=False).text
 
         logger.debug("Phase:  {0}".format(status))
         if status in ['COMPLETED']:
@@ -2334,7 +2477,7 @@ class Client(object):
             # re-queue the job and continue to monitor for completion.
             raise OSError("UWS status: {0}".format(status), errno.EFAULT)
         error_url = job_url + "/error"
-        error_message = self.conn.session.get(error_url).text
+        error_message = self.get_session(uri).get(error_url).text
         logger.debug(
             "Got transfer error {0} on URI {1}".format(error_message, uri))
         # Check if the error was that the link type is unsupported and try and
@@ -2424,7 +2567,7 @@ class Client(object):
                     if target is None:
                         raise OSError(errno.ENOENT, "No target for link")
                     else:
-                        parts = URLParser(target)
+                        parts = urlparse(target)
                         if parts.scheme == 'vos':
                             # This is a link to another VOSpace node so lets
                             # open that instead.
@@ -2440,7 +2583,7 @@ class Client(object):
                                                                  cutout)
                             return VOFile(
                                 [target],
-                                self.conn,
+                                self.get_session(uri),
                                 method=method,
                                 size=size,
                                 byte_range=byte_range,
@@ -2459,8 +2602,8 @@ class Client(object):
             if url is None:
                 raise OSError(errno.EREMOTE)
 
-        return VOFile(url, self.conn, method=method, size=size,
-                      byte_range=byte_range,
+        return VOFile(url, self.get_endpoints(uri).conn, method=method,
+                      size=size, byte_range=byte_range,
                       possible_partial_read=possible_partial_read)
 
     def add_props(self, node):
@@ -2489,7 +2632,8 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.conn.session.post(url, headers={'size': str(size)}, data=data)
+        self.get_session(node.uri).post(url, headers={'size': str(size)},
+                                        data=data)
 
     def create(self, uri):
         """
@@ -2504,12 +2648,12 @@ class Client(object):
         """
         fixed_uri = self.fix_uri(uri)
         node = Node(fixed_uri)
-        path = URLParser(fixed_uri).path
+        path = urlparse(fixed_uri).path
         url = '{}{}'.format(self.get_endpoints(fixed_uri).nodes, path)
         data = str(node)
         size = len(data)
-        return Node(self.conn.session.put(url, data=data,
-                                          headers={'size': str(size)}).content)
+        return Node(self.get_session(uri).put(
+            url, data=data, headers={'size': str(size)}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2537,11 +2681,9 @@ class Client(object):
 
             logger.debug("prop URL: {0}".format(property_url))
             try:
-                resp = self.conn.session.post(property_url,
-                                              allow_redirects=False,
-                                              data=str(node),
-                                              headers={
-                                                  'Content-type': 'text/xml'})
+                resp = self.get_session(node.uri).post(
+                    property_url, allow_redirects=False, data=str(node),
+                    headers={'Content-type': 'text/xml'})
             except Exception as ex:
                 logger.error(str(ex))
                 raise ex
@@ -2553,16 +2695,16 @@ class Client(object):
             # logger.debug(
             # "Got back %s from $Client.VOPropertiesEndPoint " % (con))
             # Start the job
-            self.conn.session.post(
+            self.get_session(node.uri).post(
                 transfer_url + "/phase",
                 allow_redirects=False,
                 data="PHASE=RUN",
                 headers={'Content-type': "application/x-www-form-urlencoded"})
             self.get_transfer_error(transfer_url, node.uri)
         else:
-            resp = self.conn.session.post(url,
-                                          data=str(node),
-                                          allow_redirects=False)
+            resp = self.get_session(node.uri).post(url,
+                                                   data=str(node),
+                                                   allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))
         return 0
 
@@ -2582,7 +2724,7 @@ class Client(object):
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         try:
-            response = self.conn.session.put(url, data=str(node))
+            response = self.get_session(uri).put(url, data=str(node))
             response.raise_for_status()
         except HTTPError as http_error:
             if http_error.response.status_code != 409:
@@ -2603,7 +2745,7 @@ class Client(object):
         logger.debug("delete {0}".format(uri))
         with self.nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
-            response = self.conn.session.delete(url)
+            response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
     def get_children_info(self, uri, sort=None, order=None, force=False):
@@ -2686,7 +2828,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if uri[0:4] == "vos:":
+            if is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return "vos:DataNode"
@@ -2696,7 +2838,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if uri[0:4] == "vos:":
+            if is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return int(requests.head(uri).headers.get('Content-Length', 0))
@@ -2761,10 +2903,52 @@ class Client(object):
         self.get_node(uri)
         return True
 
-    def get_job_status(self, url):
-        """ Returns the status of a job
-        :param url: the URL of the UWS job to get status of.
-        :rtype: unicode
-        """
-        return VOFile(url, self.conn, method="GET",
-                      follow_redirect=False).read()
+    # def get_job_status(self, url):
+    #     """ Returns the status of a job
+    #     :param url: the URL of the UWS job to get status of.
+    #     :rtype: unicode
+    #     """
+    #     return VOFile(url, self.conn, method="GET",
+    #                   follow_redirect=False).read()
+
+
+class Md5File(object):
+    """
+    A wrapper to a file object that calculates the MD5 sum of the bytes
+    that are being read.
+    """
+
+    def __init__(self, f, mode):
+        self.file = open(f, mode)
+        self._md5_checksum = hashlib.md5()
+
+    def __enter__(self):
+        return self
+
+    def read(self, size):
+        buffer = self.file.read(size)
+        self._md5_checksum.update(buffer)
+        return buffer
+
+    def __exit__(self, *args, **kwargs):
+        if not self.file.closed:
+            self.file.close()
+        # clean up
+        exit = getattr(self.file, '__exit__', None)
+        if exit is not None:
+            return exit(*args, **kwargs)
+        else:
+            exit = getattr(self.file, 'close',
+                           None)
+            if exit is not None:
+                exit()
+
+    def __getattr__(self, attr):
+        return getattr(self.file, attr)
+
+    def __iter__(self):
+        return iter(self.file)
+
+    @property
+    def md5_checksum(self):
+        return self._md5_checksum.hexdigest()

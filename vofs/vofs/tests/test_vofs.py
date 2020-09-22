@@ -57,7 +57,7 @@ class MyFileHandle2(FileHandle):
 
 
 class TestVOFS(unittest.TestCase):
-    testMountPoint = "/tmp/testfs"
+    testMountPoint = "vos:tmp/testfs"
     testCacheDir = "/tmp/testCache"
 
     def __init__(self, *args, **kwargs):
@@ -298,17 +298,18 @@ class TestVOFS(unittest.TestCase):
         parentNode.groupread = True
         parentNode.groupwrite = True
         testfs.client.open = Mock()
-        testfs.getNode = Mock(side_effect=SideEffect({
-            ('/dir1/dir2/file',): node,
-            ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError):
-                testfs.create(file, os.O_RDWR)
+        testfs.client.get_node = Mock(side_effect=SideEffect({
+            (self.testMountPoint+'/dir1/dir2/file',): node,
+            (self.testMountPoint+'/dir1/dir2',): parentNode},
+            name="testfs.getNode"))
+        testfs.client.create = Mock(return_value=node)
+        with self.assertRaises(OSError):
+            testfs.create(file, os.O_RDWR)
 
         testfs.getNode = Mock(side_effect=FuseOSError(errno=5))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            with self.assertRaises(FuseOSError):
-                testfs.create(file, os.O_RDWR)
+        testfs.client.create = Mock(return_value=node)
+        with self.assertRaises(FuseOSError):
+            testfs.create(file, os.O_RDWR)
 
         node.props.get = Mock(return_value=False)
         testfs = vofs.VOFS(self.testMountPoint, self.testCacheDir, opt)
@@ -317,8 +318,8 @@ class TestVOFS(unittest.TestCase):
         testfs.getNode = Mock(side_effect=SideEffect({
             ('/dir1/dir2/file',): node,
             ('/dir1/dir2',): parentNode}, name="testfs.getNode"))
-        with patch('vos.vos.Client.create', Mock(return_value=node)):
-            testfs.create(file, os.O_RDWR)
+        testfs.client.create = Mock(return_value=node)
+        testfs.create(file, os.O_RDWR)
         testfs.open.assert_called_once_with(file, os.O_WRONLY)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -406,7 +407,7 @@ class TestVOFS(unittest.TestCase):
         testfs.unlink(path)
         testfs.getNode.assert_called_once_with(path, force=False, limit=1)
         testfs.cache.unlinkFile.assert_called_once_with(path)
-        testfs.client.delete.assert_called_once_with(path)
+        testfs.client.delete.assert_called_once_with(self.testMountPoint+path)
 
         for mock in mocks:
             mock.reset_mock()
@@ -430,7 +431,8 @@ class TestVOFS(unittest.TestCase):
         testfs.client.mkdir = Mock()
         testfs.client.update = Mock()
         testfs.mkdir(path, stat.S_IRUSR)
-        testfs.client.mkdir.assert_called_once_with(path)
+        testfs.client.mkdir.assert_called_once_with('{}{}'.format(
+            self.testMountPoint, path))
 
         # Try to make a directory in a locked parent.
         testfs.client.mkdir.reset_mock()
@@ -456,7 +458,7 @@ class TestVOFS(unittest.TestCase):
         node.name = "testNode"
         testfs.client.get_node = Mock(return_value=node)
         testfs.rmdir(path)
-        testfs.client.delete.assert_called_once_with(path)
+        testfs.client.delete.assert_called_once_with(self.testMountPoint+path)
 
         # Try deleting a node which is locked.
         node.props.get = Mock(side_effect=SideEffect({
@@ -676,7 +678,8 @@ class TestVOFS(unittest.TestCase):
         testfs.get_node = Mock(side_effect=exceptions.NotFoundException())
         with self.assertRaises(Exception):
             self.assertEqual(testfs.rename(src, dest), -1)
-        testfs.client.move.assert_called_once_with(src, dest)
+        testfs.client.move.assert_called_once_with(self.testMountPoint+src,
+                                                   self.testMountPoint+dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
 
         # Rename throws an exception because the node is locked.
@@ -686,7 +689,8 @@ class TestVOFS(unittest.TestCase):
             "the node is NodeLocked so won't work")
         with self.assertRaises(OSError):
             self.assertEqual(testfs.rename(src, dest), -1)
-        testfs.client.move.assert_called_once_with(src, dest)
+        testfs.client.move.assert_called_once_with(self.testMountPoint+src,
+                                                   self.testMountPoint+dest)
         self.assertEqual(testfs.cache.renameFile.call_count, 0)
 
     @unittest.skipIf(skipTests, "Individual tests")
@@ -842,7 +846,7 @@ class TestVOFS(unittest.TestCase):
         testfs.client.get_node = Mock(return_value=node)
         node = testfs.getNode(file, force=True, limit=10)
         testfs.client.get_node.assert_called_once_with(
-            file, force=True, limit=10)
+            self.testMountPoint+file, force=True, limit=10)
 
         err = OSError()
         err.errno = 1
@@ -1077,10 +1081,9 @@ class TestMyIOProxy(unittest.TestCase):
     def test_MyFuse(self, mock_libfuse):
         # Tests the ctor to make sure the arguments are passed
         # correctly to the os
-        conn = MagicMock()
         mock_libfuse.fuse_main_real.return_value = False
         fuseops = fuse_operations()
-        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+        MyFuse(VOFS("vos:", "/tmp/vos_", None,
                     cache_limit=100,
                     cache_max_flush_threads=3),
                "/tmp/vospace",
@@ -1094,7 +1097,7 @@ class TestMyIOProxy(unittest.TestCase):
                                                        ctypes.sizeof(fuseops),
                                                        None)
 
-        MyFuse(VOFS(":vos", "/tmp/vos_", None, conn=conn,
+        MyFuse(VOFS("vos:", "/tmp/vos_", None,
                     cache_limit=100,
                     cache_max_flush_threads=3),
                "/tmp/vospace",
@@ -1112,9 +1115,8 @@ class TestMyIOProxy(unittest.TestCase):
     @patch("vofs.vofs.FUSE.__init__")
     def test_readMyFuse(self, mock_fuse):
         mock_fuse.return_value = None
-        conn = MagicMock()
         buf = ctypes.create_string_buffer(4)
-        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
+        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None,
                            cache_limit=100,
                            cache_max_flush_threads=3),
                       "/tmp/vospace",
@@ -1136,9 +1138,8 @@ class TestMyIOProxy(unittest.TestCase):
     @patch("vofs.vofs.FUSE.__init__")
     def test_writeMyFuse(self, mock_fuse):
         mock_fuse.return_value = None
-        conn = MagicMock()
         buf = ctypes.create_string_buffer(4)
-        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None, conn=conn,
+        fuse = MyFuse(VOFS("vos:/anode", "/tmp/vos_", None,
                            cache_limit=100,
                            cache_max_flush_threads=3),
                       "/tmp/vospace",
