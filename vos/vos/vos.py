@@ -125,11 +125,11 @@ def is_remote_file(file_name):
         return True
     file_scheme = urlparse(file_name).scheme
     if file_scheme:
-        if vos_config.get_resource_id(prefix=file_scheme) is not None:
+        if vos_config.get_resource_id(resource_name=file_scheme) is not None:
             return True
         else:
             raise ValueError(
-                'Unsupported prefix {}. Check the config file at '
+                'Unsupported resource name {}. Check the config file at '
                 '~/.config/vos/vos-config'.format(file_scheme))
     return False
 
@@ -1528,7 +1528,7 @@ class Client(object):
         """
         Sets a certificate to be used with a specific service.
         :param uri - the uri of the service (scheme ivo) or an uri to a
-        resource on that service (scheme vos or configured prefix)
+        resource on that service (scheme vos or configured resource name)
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
@@ -1947,7 +1947,7 @@ class Client(object):
         if not vos_config.get_resource_id(parts.scheme):
             # Just past this back, I don't know how to fix...
             raise ValueError(
-                'Prefix {} is not configured. Please update the vos config '
+                'resource name {} is not configured. Update the vos config '
                 'file (~/.config/vos/vos-config) to associate it to a '
                 'resourceID'.format(parts.scheme))
 

@@ -6,7 +6,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args
+from ..commonparser import CommonParser, set_logging_level_from_args,\
+    URI_DESCRIPTION
 from ..commonparser import exit_on_exception
 import logging
 import sys
@@ -29,6 +30,9 @@ def __mode__(mode):
 
 
 DESCRIPTION = """Set the read and write permission on VOSpace nodes.
+
+{}
+
 Permission string specifies the mode change to make.
 
 Changes to 'o' set the public permission, so only o+r and o-r are allowed.
@@ -44,7 +48,7 @@ Set read access to groups Group1 and Group2 (upto 4 groups can be specified).
 
 Permission setting is recursive, if a GroupB is part of GroupA then permissions
 given to members of GroupA are also provided to members of GroupB.
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vchmod():
