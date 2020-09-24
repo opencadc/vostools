@@ -5,12 +5,12 @@
 
  The vos package includes a set of library classes that are useful for
  interacting with a VOSpace web service:
- (http://ivoa.net/documents/VOSpace/).  The libraries have been developed
- against the CADC (http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/vospace)
- VOSpace implementation as used by the CANFAR (http://www.canfar.net) project.
+ (http://ivoa.net/documents/VOSpace/).
 
- The Client class is the most useful for the majority of interacations with
- the VOSpace service
+ The vos.Client class is used to programmatically interact with VOSpace
+ services to list directories and files, copy files, delete files and
+ directories etc. The packages also installs a number of unix-like file
+ commands prefix with letter 'v': vls, vmkdir, vrm, etc.
 
 
 """

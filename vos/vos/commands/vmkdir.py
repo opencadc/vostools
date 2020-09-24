@@ -4,12 +4,14 @@
 import os
 import logging
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 from .. import vos
 
 DESCRIPTION = """creates a new VOSpace ContainerNode (aka directory).
 
-eg vmkdir vos:RootNode/NewContainer"""
+{}
+
+eg vmkdir vos:RootNode/NewContainer""".format(URI_DESCRIPTION)
 
 
 def vmkdir():

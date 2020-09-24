@@ -4,15 +4,17 @@ from __future__ import (absolute_import, division, print_function,
 from .. import vos
 import logging
 from ..commonparser import CommonParser, exit_on_exception, \
-    set_logging_level_from_args
+    set_logging_level_from_args, URI_DESCRIPTION
 from six.moves.urllib.parse import urlparse
 
 DESCRIPTION = """
 move node to newNode, if newNode is a container  then move node into newNode.
 
+{}
+
 e.g. vmv vos:/root/node vos:/root/newNode   --
 
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vmv():

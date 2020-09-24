@@ -4,7 +4,8 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import sys
 from multiprocessing import Process, JoinableQueue
-from vos.commonparser import CommonParser, set_logging_level_from_args
+from vos.commonparser import CommonParser, set_logging_level_from_args, \
+    URI_DESCRIPTION
 import logging
 import time
 import signal
@@ -14,6 +15,8 @@ from .. import md5_cache
 
 DESCRIPTION = """A script for sending files to VOSpace via multiple connection
 streams.
+
+{}
 
 The list of files is given on the command line have their MD5s generated and
 then compared to  the contents of VOSpace.  Files that do not exist in the
@@ -29,8 +32,8 @@ eg:
   vsync --cache_nodes --recursive --verbose ./local_dir vos:VOSPACE/remote_dir
 
 Using cache_nodes option will greatly improve the speed of repeated calls but
-does result in a  cache database file: ${HOME}/.config/vos/node_cache.db
-"""
+does result in a  cache database file: $HOME/.config/vos/node_cache.db
+""".format(URI_DESCRIPTION)
 
 HOME = os.getenv("HOME", "./")
 

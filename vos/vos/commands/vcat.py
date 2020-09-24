@@ -5,7 +5,7 @@ import sys
 import logging
 from ..vos import Client, is_remote_file
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 
 
 def _cat(uri, cert_filename=None, head=None):
@@ -34,7 +34,10 @@ def _cat(uri, cert_filename=None, head=None):
 
 DESCRIPTION = """Write the content of source (eg. vos:Node/filename) to stdout.
 
-Accepts cutout syntax for FITS files; see vcp --help for syntax details"""
+{}
+
+Accepts cutout syntax for FITS files; see vcp --help for syntax details
+""".format(URI_DESCRIPTION)
 
 
 def vcat():
