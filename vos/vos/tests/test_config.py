@@ -83,8 +83,8 @@ def test_get_resource_id():
 
     # default 1 resource - vault - should pass
     config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vault'
-    temp_dir = tempfile.TemporaryDirectory()
-    config_file = os.path.join(temp_dir.name, 'vos-config')
+    temp_dir = tempfile.mkdtemp()
+    config_file = os.path.join(temp_dir, 'vos-config')
     open(config_file, 'w').write(config_content)
     vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
