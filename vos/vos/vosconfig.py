@@ -72,7 +72,7 @@ class VosConfig(Config):
         except KeyError:
             raise ValueError(
                 '{} resource name not found in the vos config file'.
-                    format(resource_name))
+                format(resource_name))
 
 
 def _update_config():

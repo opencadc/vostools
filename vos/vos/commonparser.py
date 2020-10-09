@@ -114,6 +114,7 @@ class CommonParser(argparse.ArgumentParser):
                           default=False,
                           help="print warning messages only")
 
+
 URI_DESCRIPTION = \
     'Remote resources are identified either by their full ' \
     'URIs (ivo://cadc.nrc.ca/vault) or by a user configured name in the ' \
