@@ -1299,7 +1299,7 @@ class EndPoints(object):
 
     @property
     def properties(self):
-        return self.conn.ws_client._get_url((EndPoints.VO_PROPERTIES, None))
+        return self.conn.ws_client._get_url((self.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1322,14 +1322,14 @@ class EndPoints(object):
         :return: service location of the transfer service.
         :rtype: unicode
         """
-        return self.conn.ws_client._get_url((EndPoints.VO_TRANSFER, None))
+        return self.conn.ws_client._get_url((self.VO_TRANSFER, None))
 
     @property
     def nodes(self):
         """
         :return: The Node service endpoint.
         """
-        return self.conn.ws_client._get_url((EndPoints.VO_NODES, None))
+        return self.conn.ws_client._get_url((self.VO_NODES, None))
 
     @property
     def session(self):
