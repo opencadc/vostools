@@ -82,7 +82,7 @@ def test_get_resource_id():
            'nonexistent resource name not found in the vos config file'
 
     # default 1 resource - vault - should pass
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vault'
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vault'
     temp_dir = tempfile.mkdtemp()
     config_file = os.path.join(temp_dir, 'vos-config')
     open(config_file, 'w').write(config_content)
@@ -91,17 +91,17 @@ def test_get_resource_id():
     assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
 
     # default 1 resource without name should fail
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vv'
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vv\n'
     open(config_file, 'w').write(config_content)
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(Exception) as e:
         vosconfig.VosConfig(config_file)
     assert str(e.value) == \
            "Error parsing config file - resource without name: " \
            "['ivo://cadc.nrc.ca/vv']"
 
     # default config defined and renamed in config file
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vault vos\n' \
-                     '    ivo://cadc.nrc.ca/vault cadcvos'
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vault vos\n' \
+                     '  ivo://cadc.nrc.ca/vault cadcvos'
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
@@ -109,7 +109,7 @@ def test_get_resource_id():
     assert conf.get_resource_id('cadcvos') == 'ivo://cadc.nrc.ca/vault'
 
     # extra resource to the config file with proper name
-    config_content = '[vos]\n resourceID = ivo://some.provider/vo spvo\n' \
+    config_content = '[vos]\nresourceID = ivo://some.provider/vo spvo\n' \
                      '    ivo://some.other.provider/vo sopvo'
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
@@ -119,7 +119,7 @@ def test_get_resource_id():
     assert conf.get_resource_id('sopvo') == 'ivo://some.other.provider/vo'
 
     # second name for vault in config file
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vault vault'
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vault vault'
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
@@ -127,7 +127,7 @@ def test_get_resource_id():
     assert conf.get_resource_id('vault') == 'ivo://cadc.nrc.ca/vault'
 
     # attempt to assign a reserved name (vos or arc)
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vv vos'
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vv vos'
     open(config_file, 'w').write(config_content)
     with pytest.raises(ValueError) as e:
         vosconfig.VosConfig(config_file)
@@ -136,7 +136,7 @@ def test_get_resource_id():
         "service ivo://cadc.nrc.ca/vault"
 
     # attempt to assign duplicate name
-    config_content = '[vos]\n resourceID = ivo://cadc.nrc.ca/vv vv\n' \
+    config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vv vv\n' \
                      '    ivo://cadc.nrc.ca/vv1 vv'
     open(config_file, 'w').write(config_content)
     with pytest.raises(ValueError) as e:
