@@ -7,11 +7,13 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import pprint
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 from .. import vos
 
 DESCRIPTION = """provides set/read/(list) functions for property(ies) of a
 node.
+
+{}
 
 Properties are attributes on the node.  There can be users attributes or
 system attributes.
@@ -27,7 +29,7 @@ delete a property: vtag vos:RootNode/MyImage.fits quality=
                    vtag vos:RootNode/MyImage.fits quality --remove
 list all property values:  vtag vos:RootNode/MyImage.fits
 
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vtag():

@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 from .. import md5_cache
 from .. import vos
 from ..commonparser import CommonParser, set_logging_level_from_args,\
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 
 try:
     from xml.etree.ElementTree import ParseError
@@ -27,6 +27,8 @@ DESCRIPTION = """Copy files to and from VOSpace. Always recursive.
 VOSpace service associated to the requested container is discovered via
 registry search.
 
+{}
+
 vcp can be used to cutout particular parts of a FITS file if the VOSpace
 server supports the action.
 
@@ -41,7 +43,7 @@ vcp vos:VOSPACE/foo/*.txt .
 
 If no X509 certificate given on commnad line then location specified by
 default service settings will be used.
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vcp():

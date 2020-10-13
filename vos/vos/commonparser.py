@@ -113,3 +113,14 @@ class CommonParser(argparse.ArgumentParser):
         self.add_argument("-w", "--warning", action="store_true",
                           default=False,
                           help="print warning messages only")
+
+
+URI_DESCRIPTION = \
+    'Remote resources are identified either by their full ' \
+    'URIs (ivo://cadc.nrc.ca/vault) or by a user configured name in the ' \
+    'config file.\n' \
+    'Some names are reserved:\n' \
+    '     vos for ivo:/cadc.nrc.ca/vault and\n' \
+    '     arc for ivo:cadc.nc.ca/arbutus-cavern.\n' \
+    'Thus, arc:somepath is a shorter version of the full URI ' \
+    'vos://cadc.nrc.ca~arbutus-cavern/somepath'

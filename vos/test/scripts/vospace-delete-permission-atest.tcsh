@@ -75,7 +75,6 @@ foreach resource ($resources)
     set CONTAINER = $BASE/$TIMESTAMP
 
     echo -n "** checking base URI"
-    echo "$LSCMD $CERT $BASE"
     $LSCMD $CERT $BASE > /dev/null
     if ( $status == 0) then
         echo " [OK]"
