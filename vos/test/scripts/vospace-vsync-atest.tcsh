@@ -76,9 +76,7 @@ foreach resource ($resources)
   endif
 
   echo -n "** setting home and base to public"
-  echo "$CHMODCMD $CERT o+r $VOHOME"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
-  echo "$CHMODCMD $CERT o+r $BASE"
   $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
   echo " [OK]"
   echo

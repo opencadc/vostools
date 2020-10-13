@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 from .. import vos
 from argparse import ArgumentError
 
@@ -14,6 +14,8 @@ link ''points'' to the original copy.
 
 Only symbolic links are supported.
 
+{}
+
 vln vos:VOSpaceSource vos:VOSpaceTarget
 
 
@@ -23,7 +25,7 @@ examples:
     vln vos:vospace/directory vos:vospace/linkToDirectory
     vln http://external.data.source vos:vospace/linkToExternalDataSource
 
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vln():

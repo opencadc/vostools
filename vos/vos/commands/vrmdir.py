@@ -1,14 +1,16 @@
 """Delete a VOSpace ContainerNode (aka directory)"""
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 import logging
 from vos import vos
 
 DESCRIPTION = """deletes a VOSpace container node (aka directory)
 
+{}
+
 e.g.   vrmdir vos:Root/MyContainer
 
-CAUTION:  The container need not be empty."""
+CAUTION:  The container need not be empty.""".format(URI_DESCRIPTION)
 
 
 def vrmdir():

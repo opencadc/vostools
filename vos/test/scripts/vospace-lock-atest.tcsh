@@ -127,8 +127,6 @@ foreach resource ($resources)
       $LOCKCMD $CERT $CONTAINER $VLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
       echo -n "check container is locked $CONTAINER"
-      $TAGCMD $CERT $CONTAINER $LIST_ARGS
-      echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS "
       $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q true || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif

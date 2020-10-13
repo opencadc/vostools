@@ -2,12 +2,14 @@
 """remove a vospace data node, fails if container node or node is locked."""
 import logging
 from ..commonparser import set_logging_level_from_args, exit_on_exception, \
-    CommonParser
+    CommonParser, URI_DESCRIPTION
 from .. import vos
 
 DESCRIPTION = """remove a vospace data node; fails if container node or node is locked.
 
-eg. vrm vos:/root/node   -- deletes a data node"""
+{}
+
+eg. vrm vos:/root/node   -- deletes a data node""".format(URI_DESCRIPTION)
 
 
 def vrm():

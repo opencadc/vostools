@@ -11,7 +11,6 @@ from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
 from six import BytesIO
-import warnings
 import hashlib
 import tempfile
 
@@ -85,57 +84,6 @@ def test_get_node_url():
         resource_id].conn.ws_client._session.get.call_args_list[0]
     # check head is amongst the other parameters
     assert kwargs['params']['view'] == 'header'
-
-
-@patch('vos.vos.os.path.exists', Mock())
-def test_update_config():
-    # TODO - for some reason in Python 2.7 the warnings context is not working
-    # although the warning is raised in the code.
-    # test rename vospace resource
-    # with warnings.catch_warnings(record=True) as w:
-    #     vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
-    #     assert len(w) == 1
-    #     assert issubclass(w[-1].category, UserWarning)
-    #     assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
-    #            'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
-
-    # Cause all warnings to always be triggered.
-    warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
-        old_content = 'blah'
-        new_config_mock = Mock()
-        open_mock.return_value.read.return_value = old_content
-        open_mock.return_value.write = new_config_mock
-        vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content)
-
-    # test rewrite vospace resource in config file
-    new_config_mock.reset_mock()
-    # Cause all warnings to always be triggered.
-    warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
-        old_content = 'blah\nresourceID=ivo://cadc.nrc.ca/vospace\nfoo'
-        new_content = Mock()
-        open_mock.return_value.read.return_value = old_content
-        open_mock.return_value.write = new_content
-        vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content.replace(
-        'vospace', 'vault'))
-
-    # test rewrite transfer protocol in config file
-    new_config_mock.reset_mock()
-    protocol_text = \
-        "# transfer protocol configuration is no longer supported\n"
-    # Cause all warnings to always be triggered.
-    warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
-        old_content = 'blah\nprotocol=http\nfoo'
-        new_content = Mock()
-        open_mock.return_value.read.return_value = old_content
-        open_mock.return_value.write = new_content
-        vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content.replace(
-        'protocol', '{}#protocol'.format(protocol_text)))
 
 
 class TestClient(unittest.TestCase):

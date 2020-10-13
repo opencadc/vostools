@@ -9,10 +9,14 @@ import logging
 import sys
 from .. import vos
 from ..commonparser import CommonParser, exit_on_exception, \
-    set_logging_level_from_args
+    set_logging_level_from_args, URI_DESCRIPTION
 
 DESCRIPTION = """Places/Removes a write lock on a VOSpace Node or reports lock
-status if no action requested."""
+status if no action requested.
+
+{}
+
+""".format(URI_DESCRIPTION)
 
 
 def vlock():
