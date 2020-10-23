@@ -357,6 +357,8 @@ class TestClient(unittest.TestCase):
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         get_node_mock.reset_mock()
+        props.reset_mock()
+        props.get.return_value = md5sum
         test_client.copy(vospaceLocation, osLocation)
         assert not get_node_url_mock.called
         computed_md5_mock.assert_called_once_with(osLocation)
@@ -365,6 +367,7 @@ class TestClient(unittest.TestCase):
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
         get_node_mock.reset_mock()
+
         computed_md5_mock.reset_mock()
         computed_md5_mock.return_value = 'd002233'
         response.iter_content.return_value = BytesIO(file_content)
@@ -374,6 +377,22 @@ class TestClient(unittest.TestCase):
                                                   cutout=None, view='data')
         computed_md5_mock.assert_called_with(osLocation)
         get_node_mock.assert_called_once_with(vospaceLocation, force=True)
+
+        # change the content of local files to trigger a new copy
+        get_node_url_mock.reset_mock()
+        get_node_url_mock.return_value = \
+            ['https://mysite.com/node/node123/cutout']
+        computed_md5_mock.reset_mock()
+        computed_md5_mock.return_value = 'd002233'
+        # computed_md5_mock.side_effect = ['d002233', md5sum]
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        session.get.return_value = response
+        test_client.get_session = Mock(return_value=session)
+        test_client.copy('{}{}'.format(vospaceLocation,
+                                       '[1][10:60]'), osLocation)
+        get_node_url_mock.assert_called_once_with(
+            vospaceLocation, method='GET', cutout='[1][10:60]', view='cutout')
 
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
@@ -486,38 +505,35 @@ class TestClient(unittest.TestCase):
 
     # patch sleep to stop the test from sleeping and slowing down execution
     @patch('vos.vos.time.sleep', MagicMock(), create=True)
-    @patch('vos.vos.VOFile')
-    def test_transfer_error(self, mock_vofile):
-        vofile = MagicMock()
-        mock_vofile.return_value = vofile
+    def test_transfer_error(self):
+        session = Mock()
+        conn_mock = MagicMock(spec=Connection)
+        conn_mock.session.return_value = session
+        end_point_mock = Mock(session=session)
 
         vospace_url = 'https://somevospace.server/vospace'
-        session = Mock()
+
         session.get.side_effect = [Mock(text='COMPLETED'),
                                    Mock(text='COMPLETED')]
-
-        test_client = Client()
-
-        # use the mocked connection instead of the real one
-        test_client.get_session = Mock(return_value=session)
+        test_transfer = vos.Transfer(end_point_mock)
 
         # job successfully completed
-        self.assertFalse(test_client.get_transfer_error(
+        self.assertFalse(test_transfer.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
         session.get.assert_called_with(vospace_url + '/phase',
-                                       allow_redirects=False)
+                                       allow_redirects=True)
 
         # job suspended
         session.reset_mock()
         session.get.side_effect = [Mock(text='COMPLETED'),
                                    Mock(text='ABORTED')]
         with self.assertRaises(OSError):
-            test_client.get_transfer_error(
+            test_transfer.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
         # check arguments for session.get calls
         self.assertEqual(
-            [call(vospace_url + '/phase', allow_redirects=False),
-             call(vospace_url + '/phase', allow_redirects=False)],
+            [call(vospace_url + '/phase', allow_redirects=True),
+             call(vospace_url + '/phase', allow_redirects=True)],
             session.get.call_args_list)
 
         # job encountered an internal error
@@ -526,10 +542,10 @@ class TestClient(unittest.TestCase):
                                    Mock(text='ERROR'),
                                    Mock(text='InternalFault')]
         with self.assertRaises(OSError):
-            test_client.get_transfer_error(
+            test_transfer.get_transfer_error(
                 vospace_url + '/results/transferDetails', 'vos://vospace')
-        self.assertEqual([call(vospace_url + '/phase', allow_redirects=False),
-                          call(vospace_url + '/phase', allow_redirects=False),
+        self.assertEqual([call(vospace_url + '/phase', allow_redirects=True),
+                          call(vospace_url + '/phase', allow_redirects=True),
                           call(vospace_url + '/error')],
                          session.get.call_args_list)
 
@@ -541,10 +557,10 @@ class TestClient(unittest.TestCase):
                                    Mock(
                                        text="Unsupported link target: " +
                                             link_file)]
-        self.assertEqual(link_file, test_client.get_transfer_error(
+        self.assertEqual(link_file, test_transfer.get_transfer_error(
             vospace_url + '/results/transferDetails', 'vos://vospace'))
-        self.assertEqual([call(vospace_url + '/phase', allow_redirects=False),
-                          call(vospace_url + '/phase', allow_redirects=False),
+        self.assertEqual([call(vospace_url + '/phase', allow_redirects=True),
+                          call(vospace_url + '/phase', allow_redirects=True),
                           call(vospace_url + '/error')],
                          session.get.call_args_list)
 

@@ -83,6 +83,11 @@ VO_PROPERTY_MD5 = 'ivo://ivoa.net/vospace/core#MD5'
 # CADC specific views
 VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
+SSO_SECURITY_METHODS = {
+    'tls-with-certificate': 'ivo://ivoa.net/sso#tls-with-certificate',
+    'cookie': 'ivo://ivoa.net/sso#cookie'
+}
+
 
 # sorting-related uris
 class SortNodeProperty(Enum):
@@ -119,12 +124,15 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger("requests").setLevel(logging.ERROR)
 
 
-def is_remote_file(file_name):
+def is_remote_file(file_name, resource_id=None):
     if file_name.startswith(('http://', 'https://')):
         # assume full uri
         return True
     file_scheme = urlparse(file_name).scheme
     if file_scheme:
+        if resource_id:
+            # resource id already known
+            return True
         if vos_config.get_resource_id(resource_name=file_scheme) is not None:
             return True
         else:
@@ -238,6 +246,7 @@ class Node(object):
 
     IVOAURL = "ivo://ivoa.net/vospace/core"
     VOSNS = "http://www.ivoa.net/xml/VOSpace/v2.0"
+    VOSVERSION = "2.1"
     XSINS = "http://www.w3.org/2001/XMLSchema-instance"
     TYPE = '{%s}type' % XSINS
     NODES = '{%s}nodes' % VOSNS
@@ -1977,6 +1986,33 @@ class Client(object):
         logger.debug("Returning URI: {0}".format(uri))
         return uri
 
+    def get_metadata(self, uri):
+        """
+        Obtain the general metadata for the artifact/node identified by the
+        given uri.
+
+        :param uri: A VOSpace node URI in the format vos:/VOSpaceName/nodeName
+        :type uri: unicode
+        :return: A dict with the following keys:
+                - content_disposition: unicode filename disposition
+                - content_encoding: unicode encoding value (i.e. gzip)
+                - content_length: long value; count of bytes
+                - content_md5: unicode hash value
+                - content_type: unicode content type string
+                                (i.e. application/fits)
+        :rtype: {}
+        """
+        vospace_node = self.get_node(uri, limit=0, force=True)
+        logging.debug('Getting metadata for {}'.format(uri))
+
+        return {
+            'content_disposition': os.path.split(uri)[-1],
+            'content_encoding': None,
+            'content_length': vospace_node.props.get('length'),
+            'content_md5': vospace_node.props.get('MD5'),
+            'content_type': vospace_node.props.get('type')
+        }
+
     def get_node(self, uri, limit=0, force=False):
         """connect to VOSpace and download the definition of VOSpace node
 
@@ -2315,90 +2351,10 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        get_protocol_list = ['{0}get'.format(p) for p in self.protocols]
-        put_protocol_list = ['{0}put'.format(p) for p in self.protocols]
         endpoints = self.get_endpoints(uri)
-        protocol = {"pullFromVoSpace": get_protocol_list,
-                    "pushToVoSpace": put_protocol_list}
 
-        transfer_xml = ElementTree.Element("vos:transfer")
-        transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
-        ElementTree.SubElement(transfer_xml, "vos:target").text = uri
-        ElementTree.SubElement(transfer_xml, "vos:direction").text = direction
-        if view == 'move':
-            ElementTree.SubElement(transfer_xml,
-                                   "vos:keepBytes").text = "false"
-        else:
-            if view == 'defaultview':
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
-                    'uri'] = VO_VIEW_DEFAULT
-            elif view is not None:
-                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
-                if cutout is not None and view == 'cutout':
-                    param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = CADC_VO_VIEWS[view]
-                    param.text = cutout
-
-            for p in protocol[direction]:
-                protocol_element = ElementTree.SubElement(transfer_xml,
-                                                          "vos:protocol")
-                protocol_element.attrib['uri'] = "{0}#{1}".format(Node.IVOAURL,
-                                                                  p)
-        if content_length:
-            el = ElementTree.SubElement(transfer_xml, "vos:param")
-            el.attrib['uri'] = VO_PROPERTY_LENGTH
-            el.text = str(content_length)
-
-        if md5_checksum:
-            el = ElementTree.SubElement(transfer_xml, "vos:param")
-            el.attrib['uri'] = VO_PROPERTY_MD5
-            el.text = str(md5_checksum)
-
-        logging.debug(ElementTree.tostring(transfer_xml))
-        logging.debug("Sending to : {}".format(endpoints.transfer))
-
-        data = ElementTree.tostring(transfer_xml)
-        resp = self.get_session(uri).post(endpoints.transfer,
-                                          data=data, allow_redirects=False,
-                                          headers={'Content-Type': 'text/xml'})
-
-        logging.debug("{0}".format(resp))
-        logging.debug("{0}".format(resp.text))
-        if resp.status_code != 303:
-            raise OSError(resp.status_code,
-                          "Failed to get transfer service response.")
-        transfer_url = resp.headers.get('Location', None)
-
-        if self.get_session(uri).auth is not None and \
-                "auth" not in transfer_url:
-            transfer_url = transfer_url.replace('/vospace/', '/vospace/auth/')
-
-        logging.debug("Got back from transfer URL: %s" % transfer_url)
-
-        # For a move this is the end of the transaction.
-        if view == 'move':
-            return not self.get_transfer_error(transfer_url, uri)
-
-        # for get or put we need the protocol value
-        xfer_resp = self.get_session(uri).get(transfer_url,
-                                              allow_redirects=False)
-        xfer_url = xfer_resp.headers.get('Location', None)
-        if self.get_session(uri).auth is not None and "auth" not in xfer_url:
-            xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-        xml_string = self.get_session(uri).get(xfer_url).text
-        logging.debug("Transfer Document: %s" % xml_string)
-        transfer_document = ElementTree.fromstring(xml_string)
-        logging.debug(
-            "XML version: {0}".format(ElementTree.tostring(transfer_document)))
-        all_protocols = transfer_document.findall(Node.PROTOCOL)
-        if all_protocols is None or not len(all_protocols) > 0:
-            return self.get_transfer_error(transfer_url, uri)
-
-        result = []
-        for protocol in all_protocols:
-            for node in protocol.findall(Node.ENDPOINT):
-                result.append(node.text)
+        trans = Transfer(self.get_endpoints(uri))
+        result = trans.transfer(uri, direction, view, cutout)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
         if urlparse(endpoints.nodes).netloc.startswith('rc'):
@@ -2414,80 +2370,9 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        error_codes = {'NodeNotFound': errno.ENOENT,
-                       'RequestEntityTooLarge': errno.E2BIG,
-                       'PermissionDenied': errno.EACCES,
-                       'OperationNotSupported': errno.EOPNOTSUPP,
-                       'InternalFault': errno.EFAULT,
-                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
-                       'ViewNotSupported': errno.ENOSYS,
-                       'InvalidArgument': errno.EINVAL,
-                       'InvalidURI': errno.EFAULT,
-                       'TransferFailed': errno.EIO,
-                       'DuplicateNode.': errno.EEXIST,
-                       'NodeLocked': errno.EPERM}
-        job_url = str.replace(url, "/results/transferDetails", "")
 
-        try:
-            phase_url = job_url + "/phase"
-            sleep_time = 1
-            roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = self.get_session(uri).get(phase_url,
-                                              allow_redirects=False).text
-            # do not remove the line below. It is used for testing
-            logging.debug("Job URL: " + job_url + "/phase")
-            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
-                # poll the job. Sleeping time in between polls is doubling
-                # each time until it gets to 32sec
-                total_time_slept = 0
-                if sleep_time <= 32:
-                    sleep_time *= 2
-                slept = 0
-                if logger.getEffectiveLevel() == logging.INFO:
-                    while slept < sleep_time:
-                        sys.stdout.write(
-                            "\r%s %s" % (phase, roller[total_time_slept %
-                                                       len(roller)]))
-                        sys.stdout.flush()
-                        slept += 1
-                        total_time_slept += 1
-                        time.sleep(1)
-                    sys.stdout.write("\r                    \n")
-                else:
-                    time.sleep(sleep_time)
-                phase = self.get_session(uri).get(phase_url,
-                                                  allow_redirects=False).text
-                logging.debug(
-                    "Async transfer Phase for url %s: %s " % (url, phase))
-        except KeyboardInterrupt:
-            # abort the job when receiving a Ctrl-C/Interrupt from the client
-            logging.error("Received keyboard interrupt")
-            self.get_session(uri).post(job_url + "/phase",
-                                       allow_redirects=False,
-                                       data="PHASE=ABORT",
-                                       headers={"Content-type": 'text/text'})
-            raise KeyboardInterrupt
-        status = self.get_session(uri).get(
-            phase_url, allow_redirects=False).text
-
-        logger.debug("Phase:  {0}".format(status))
-        if status in ['COMPLETED']:
-            return False
-        if status in ['HELD', 'SUSPENDED', 'ABORTED']:
-            # re-queue the job and continue to monitor for completion.
-            raise OSError("UWS status: {0}".format(status), errno.EFAULT)
-        error_url = job_url + "/error"
-        error_message = self.get_session(uri).get(error_url).text
-        logger.debug(
-            "Got transfer error {0} on URI {1}".format(error_message, uri))
-        # Check if the error was that the link type is unsupported and try and
-        # follow that link.
-        target = re.search("Unsupported link target:(?P<target> .*)$",
-                           error_message)
-        if target is not None:
-            return target.group('target').strip()
-        raise OSError(error_codes.get(error_message, errno.EFAULT),
-                      "{0}: {1}".format(uri, error_message))
+        trans = Transfer(self.get_endpoints(uri))
+        return trans.get_transfer_error(url, uri)
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
              limit=None, next_uri=None, size=None, cutout=None,
@@ -2915,7 +2800,7 @@ class Client(object):
 class Md5File(object):
     """
     A wrapper to a file object that calculates the MD5 sum of the bytes
-    that are being read.
+    that are being read or written.
     """
 
     def __init__(self, f, mode):
@@ -2929,6 +2814,11 @@ class Md5File(object):
         buffer = self.file.read(size)
         self._md5_checksum.update(buffer)
         return buffer
+
+    def write(self, buffer):
+        self._md5_checksum.update(buffer)
+        self.file.write(buffer)
+        self.file.flush()
 
     def __exit__(self, *args, **kwargs):
         if not self.file.closed:
@@ -2952,3 +2842,221 @@ class Md5File(object):
     @property
     def md5_checksum(self):
         return self._md5_checksum.hexdigest()
+
+
+class Transfer(object):
+    DIRECTION_PULL_FROM = "pullFromVoSpace"
+    DIRECTION_PUSH_TO = "pushToVoSpace"
+
+    def __init__(self, endpoints):
+        """
+        Handle transfer related business.  This is here to be reused as needed.
+        :param endpoints: endpoints for this service
+        """
+        self.endpoints = endpoints
+
+    def transfer(self, uri, direction, view=None, cutout=None,
+                 security_method=None):
+        """Build the transfer XML document
+        :param uri: the uri to transfer from or to VOSpace.
+        :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
+        :param view: which view of the node (data/default/cutout/etc.) is
+        being transferred
+        :param cutout: a special parameter added to the 'cutout' view
+        request. e.g. '[0][1:10,1:10]'
+        :param security_method: the IVOA SSO security method (see
+        vos.SSO_SECURITY_METHODS) that the client
+        intends to use. The service is supposed to return appropriate URLs
+        for the security_method. When the security method is not present,
+        the service returns pre-authorized URLs that only work for the
+        intended purpose, e.g. a pre-authorized PUT URL cannot be used for
+        a read (GET or HEAD)
+
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        protocol = {
+            Transfer.DIRECTION_PULL_FROM: "httpsget",
+            Transfer.DIRECTION_PUSH_TO: "httpsput"}
+
+        transfer_xml = ElementTree.Element("vos:transfer")
+        transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
+        # TODO transfer_xml.attrib['version'] = Node.VOSVERSION
+        ElementTree.SubElement(transfer_xml, "vos:target").text = uri
+        ElementTree.SubElement(transfer_xml, "vos:direction").text = \
+            direction
+
+        if view == 'move':
+            ElementTree.SubElement(transfer_xml,
+                                   "vos:keepBytes").text = "false"
+        else:
+            if view == 'defaultview':
+                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
+                    'uri'] = VO_VIEW_DEFAULT
+            elif view is not None:
+                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
+                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
+                if cutout is not None and view == 'cutout':
+                    param = ElementTree.SubElement(vos_view, "vos:param")
+                    param.attrib['uri'] = CADC_VO_VIEWS[view]
+                    param.text = cutout
+            protocol_element = ElementTree.SubElement(transfer_xml,
+                                                      "vos:protocol")
+            protocol_element.attrib['uri'] = "{0}#{1}".format(
+                Node.IVOAURL, protocol[direction])
+            if security_method:
+                if security_method not in SSO_SECURITY_METHODS.values():
+                    raise AttributeError(
+                        'Invalid security method {}. Supported values: {}'.
+                        format(security_method, SSO_SECURITY_METHODS.values))
+                security_element = ElementTree.SubElement(
+                    protocol_element, "vos:securityMethod")
+                security_element.attrib['uri'] = security_method
+
+        logging.debug(ElementTree.tostring(transfer_xml))
+        logging.debug("Sending to : {}".format(self.endpoints.transfer))
+
+        data = ElementTree.tostring(transfer_xml)
+        resp = self.endpoints.session.post(
+            self.endpoints.transfer, data=data, allow_redirects=False,
+            headers={'Content-Type': 'text/xml'})
+
+        logging.debug("{0}".format(resp))
+        logging.debug("{0}".format(resp.text))
+        if resp.status_code == 200:
+            xml_string = resp.text
+            transfer_document = ElementTree.fromstring(xml_string)
+            logging.debug(
+                "XML version: {0}".format(
+                    ElementTree.tostring(transfer_document)))
+            all_protocols = transfer_document.findall(Node.PROTOCOL)
+            if all_protocols is None or not len(all_protocols) > 0:
+                raise ValueError('No endpoints available.')
+        elif resp.status_code == 303:
+            transfer_url = resp.headers.get('Location', None)
+
+            if self.endpoints.session.auth is not None and \
+                    "auth" not in transfer_url:
+                transfer_url = transfer_url.replace('/vospace/',
+                                                    '/vospace/auth/')
+
+            logging.debug("Got back from transfer URL: %s" % transfer_url)
+
+            # For a move this is the end of the transaction.
+            if view == 'move':
+                return not self.get_transfer_error(transfer_url, uri)
+
+            # for get or put we need the protocol value
+            xfer_resp = self.endpoints.session.get(transfer_url,
+                                                   allow_redirects=False)
+            xfer_url = xfer_resp.headers.get('Location', None)
+            if self.endpoints.session.auth is not None and \
+                    "auth" not in xfer_url:
+                xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
+            xml_string = self.endpoints.session.get(xfer_url).text
+            logging.debug("Transfer Document: %s" % xml_string)
+            transfer_document = ElementTree.fromstring(xml_string)
+            logging.debug(
+                "XML version: {0}".format(
+                    ElementTree.tostring(transfer_document)))
+            all_protocols = transfer_document.findall(Node.PROTOCOL)
+            if all_protocols is None or not len(all_protocols) > 0:
+                return self.get_transfer_error(transfer_url, uri)
+        elif resp.status_code == 404:
+            raise OSError(resp.status_code,
+                          "File not found: {0}".format(uri))
+        else:
+            raise OSError(resp.status_code,
+                          "Failed to get transfer service response.")
+
+        result = []
+        for protocol in all_protocols:
+            for node in protocol.findall(Node.ENDPOINT):
+                result.append(node.text)
+        return result
+
+    def _get_phase(self, phase_url):
+        response = self.endpoints.session.get(phase_url,
+                                              allow_redirects=True)
+        response.raise_for_status()
+        return response.text
+
+    def get_transfer_error(self, url, uri):
+        """Follow a transfer URL to the Error message
+        :param url: The URL of the transfer request that had the error.
+        :param uri: The uri that we were trying to transfer (get or put).
+
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        error_codes = {'NodeNotFound': errno.ENOENT,
+                       'RequestEntityTooLarge': errno.E2BIG,
+                       'PermissionDenied': errno.EACCES,
+                       'OperationNotSupported': errno.EOPNOTSUPP,
+                       'InternalFault': errno.EFAULT,
+                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
+                       'ViewNotSupported': errno.ENOSYS,
+                       'InvalidArgument': errno.EINVAL,
+                       'InvalidURI': errno.EFAULT,
+                       'TransferFailed': errno.EIO,
+                       'DuplicateNode.': errno.EEXIST,
+                       'NodeLocked': errno.EPERM}
+        job_url = str.replace(url, "/results/transferDetails", "")
+
+        try:
+            phase_url = job_url + "/phase"
+            sleep_time = 1
+            roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
+            phase = self._get_phase(phase_url)
+            # do not remove the line below. It is used for testing
+            logging.debug("Job URL: " + job_url + "/phase")
+            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
+                # poll the job. Sleeping time in between polls is doubling
+                # each time until it gets to 32sec
+                total_time_slept = 0
+                if sleep_time <= 32:
+                    sleep_time *= 2
+                slept = 0
+                if logger.getEffectiveLevel() == logging.INFO:
+                    while slept < sleep_time:
+                        sys.stdout.write(
+                            "\r%s %s" % (phase, roller[total_time_slept %
+                                                       len(roller)]))
+                        sys.stdout.flush()
+                        slept += 1
+                        total_time_slept += 1
+                        time.sleep(1)
+                    sys.stdout.write("\r                    \n")
+                else:
+                    time.sleep(sleep_time)
+                phase = self._get_phase(phase_url)
+                logging.debug(
+                    "Async transfer Phase for url %s: %s " % (url, phase))
+        except KeyboardInterrupt:
+            # abort the job when receiving a Ctrl-C/Interrupt from the client
+            logging.error("Received keyboard interrupt")
+            self.endpoints.session.post(
+                job_url + "/phase", allow_redirects=False, data="PHASE=ABORT",
+                headers={"Content-type": 'text/text'})
+            raise KeyboardInterrupt
+        phase = self._get_phase(phase_url)
+        logger.debug("Phase:  {0}".format(phase))
+        if phase in ['COMPLETED']:
+            return False
+        if phase in ['HELD', 'SUSPENDED', 'ABORTED']:
+            # re-queue the job and continue to monitor for completion.
+            raise OSError("UWS status: {0}".format(phase), errno.EFAULT)
+        error_url = job_url + "/error"
+        error_message = self.endpoints.session.get(error_url).text
+        logger.debug(
+            "Got transfer error {0} on URI {1}".format(error_message, uri))
+        # Check if the error was that the link type is unsupported and try and
+        # follow that link.
+        target = re.search('Unsupported link target:(?P<target> .*)$',
+                           error_message)
+        if target is not None:
+            return target.group('target').strip()
+        raise OSError(error_codes.get(error_message, errno.EFAULT),
+                      '{0}: {1}'.format(uri, error_message))
