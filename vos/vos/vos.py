@@ -1986,33 +1986,6 @@ class Client(object):
         logger.debug("Returning URI: {0}".format(uri))
         return uri
 
-    def get_metadata(self, uri):
-        """
-        Obtain the general metadata for the artifact/node identified by the
-        given uri.
-
-        :param uri: A VOSpace node URI in the format vos:/VOSpaceName/nodeName
-        :type uri: unicode
-        :return: A dict with the following keys:
-                - content_disposition: unicode filename disposition
-                - content_encoding: unicode encoding value (i.e. gzip)
-                - content_length: long value; count of bytes
-                - content_md5: unicode hash value
-                - content_type: unicode content type string
-                                (i.e. application/fits)
-        :rtype: {}
-        """
-        vospace_node = self.get_node(uri, limit=0, force=True)
-        logging.debug('Getting metadata for {}'.format(uri))
-
-        return {
-            'content_disposition': os.path.split(uri)[-1],
-            'content_encoding': None,
-            'content_length': vospace_node.props.get('length'),
-            'content_md5': vospace_node.props.get('MD5'),
-            'content_type': vospace_node.props.get('type')
-        }
-
     def get_node(self, uri, limit=0, force=False):
         """connect to VOSpace and download the definition of VOSpace node
 
