@@ -30,8 +30,10 @@ echo "vospace-node-properties.tcsh"
 $THIS_DIR/vospace-node-properties.tcsh $args || echo "FAIL vospace-node-properties.tcsh" && exit -1
 echo "vospace-lock-atest.tcsh"
 $THIS_DIR/vospace-lock-atest.tcsh $args || echo "FAIL vospace-lock-atest.tcsh" && exit -1
-echo "vospace-cookie-atest.tcsh"
-$THIS_DIR/vospace-token-atest.tcsh $args || echo "FAIL vospace-cookie-atest.tcsh" && exit -1
+echo "vospace-token-atest.tcsh"
+$THIS_DIR/vospace-token-atest.tcsh $args || echo "FAIL vospace-token-atest.tcsh" && exit -1
+# echo "vospace-storage-inventory-client-atest.tcsh (In development)"
+# $THIS_DIR/vospace-storage-inventory-client-atest.tcsh || echo "FAIL vospace-storage-inventory-client-atest.tcsh"
 
 echo
 echo "*** all test sequences passed ***"
