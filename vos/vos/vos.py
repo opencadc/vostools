@@ -85,7 +85,8 @@ VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
 SSO_SECURITY_METHODS = {
     'tls-with-certificate': 'ivo://ivoa.net/sso#tls-with-certificate',
-    'cookie': 'ivo://ivoa.net/sso#cookie'
+    'cookie': 'ivo://ivoa.net/sso#cookie',
+    'token': 'vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0'
 }
 
 
@@ -1286,6 +1287,7 @@ class EndPoints(object):
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
+    VO_ASYNC_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#transfers'
 
     subject = net.Subject()  # default subject is for anonymous access
 
@@ -1327,11 +1329,20 @@ class EndPoints(object):
     @property
     def transfer(self):
         """
-        The transfer service endpoint.
+        The sync transfer service endpoint.
         :return: service location of the transfer service.
         :rtype: unicode
         """
         return self.conn.ws_client._get_url((self.VO_TRANSFER, None))
+
+    @property
+    def async_transfer(self):
+        """
+        The async transfer service endpoint
+        :retur: servie location of the async transfer service
+        :return:
+        """
+        return self.conn.ws_client._get_url((self.VO_ASYNC_TRANSFER, None))
 
     @property
     def nodes(self):
@@ -2296,21 +2307,32 @@ class Client(object):
         destination_uri = self.fix_uri(destination_uri)
         with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(
                 destination_uri):
-            return self.transfer(src_uri, destination_uri, view='move')
+            job_url = self.transfer(self.get_endpoints(src_uri).async_transfer,
+                                    src_uri, destination_uri, view='move')
+            # start the job
+            self.get_session(src_uri).post(
+                job_url + "/phase",
+                allow_redirects=False,
+                data="PHASE=RUN",
+                headers={'Content-type': "application/x-www-form-urlencoded"})
+            return self.get_transfer_error(job_url, src_uri)
 
     def _get(self, uri, view="defaultview", cutout=None):
         with self.nodeCache.volatile(uri):
-            return self.transfer(uri, "pullFromVoSpace", view, cutout)
+            return self.transfer(self.get_endpoints(uri).transfer,
+                                 uri, "pullFromVoSpace", view, cutout)
 
     def _put(self, uri, content_length=None, md5_checksum=None):
         with self.nodeCache.volatile(uri):
-            return self.transfer(uri, "pushToVoSpace", view="defaultview",
+            return self.transfer(self.get_endpoints(uri).transfer,
+                                 uri, "pushToVoSpace", view="defaultview",
                                  content_length=content_length,
                                  md5_checksum=md5_checksum)
 
-    def transfer(self, uri, direction, view=None, cutout=None,
+    def transfer(self, endpoint_url, uri, direction, view=None, cutout=None,
                  content_length=None, md5_checksum=None):
         """Build the transfer XML document
+        :param endpoint_url: the URL of the endpoint to POST to
         :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
         :param uri: the uri to transfer from or to VOSpace.
         :param view: which view of the node (data/default/cutout/etc.) is
@@ -2327,7 +2349,17 @@ class Client(object):
         endpoints = self.get_endpoints(uri)
 
         trans = Transfer(self.get_endpoints(uri))
-        result = trans.transfer(uri, direction, view, cutout)
+        security_methods = []
+        if endpoints.conn.subject.certificate:
+            security_methods.append(
+                SSO_SECURITY_METHODS['tls-with-certificate'])
+        if endpoints.conn.subject.cookies:
+            security_methods.append(SSO_SECURITY_METHODS['cookie'])
+        if endpoints.conn.vo_token:
+            security_methods.append(SSO_SECURITY_METHODS['token'])
+
+        result = trans.transfer(endpoint_url, uri, direction, view, cutout,
+                                security_methods=security_methods)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
         if urlparse(endpoints.nodes).netloc.startswith('rc'):
@@ -2828,16 +2860,17 @@ class Transfer(object):
         """
         self.endpoints = endpoints
 
-    def transfer(self, uri, direction, view=None, cutout=None,
-                 security_method=None):
+    def transfer(self, endpoint_url, uri, direction, view=None, cutout=None,
+                 security_methods=None):
         """Build the transfer XML document
+        :param endpoint_url: URL of the endpoint to POST to
         :param uri: the uri to transfer from or to VOSpace.
         :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
         :param view: which view of the node (data/default/cutout/etc.) is
         being transferred
         :param cutout: a special parameter added to the 'cutout' view
         request. e.g. '[0][1:10,1:10]'
-        :param security_method: the IVOA SSO security method (see
+        :param security_methods: the IVOA SSO security methods (see
         vos.SSO_SECURITY_METHODS) that the client
         intends to use. The service is supposed to return appropriate URLs
         for the security_method. When the security method is not present,
@@ -2855,7 +2888,7 @@ class Transfer(object):
 
         transfer_xml = ElementTree.Element("vos:transfer")
         transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
-        # TODO transfer_xml.attrib['version'] = Node.VOSVERSION
+        transfer_xml.attrib['version'] = Node.VOSVERSION
         ElementTree.SubElement(transfer_xml, "vos:target").text = uri
         ElementTree.SubElement(transfer_xml, "vos:direction").text = \
             direction
@@ -2878,35 +2911,28 @@ class Transfer(object):
                                                       "vos:protocol")
             protocol_element.attrib['uri'] = "{0}#{1}".format(
                 Node.IVOAURL, protocol[direction])
-            if security_method:
-                if security_method not in SSO_SECURITY_METHODS.values():
-                    raise AttributeError(
-                        'Invalid security method {}. Supported values: {}'.
-                        format(security_method, SSO_SECURITY_METHODS.values))
+            if security_methods:
+                for sm in security_methods:
+                    if sm not in SSO_SECURITY_METHODS.values():
+                        raise AttributeError(
+                            'Invalid security method {}. Supported values: {}'.
+                            format(sm, SSO_SECURITY_METHODS.values))
                 security_element = ElementTree.SubElement(
                     protocol_element, "vos:securityMethod")
-                security_element.attrib['uri'] = security_method
+                security_element.attrib['uri'] = sm
 
         logging.debug(ElementTree.tostring(transfer_xml))
-        logging.debug("Sending to : {}".format(self.endpoints.transfer))
+        logging.debug("Sending to : {}".format(endpoint_url))
 
         data = ElementTree.tostring(transfer_xml)
         resp = self.endpoints.session.post(
-            self.endpoints.transfer, data=data, allow_redirects=False,
+            endpoint_url, data=data, allow_redirects=False,
             headers={'Content-Type': 'text/xml'})
 
         logging.debug("{0}".format(resp))
         logging.debug("{0}".format(resp.text))
-        if resp.status_code == 200:
-            xml_string = resp.text
-            transfer_document = ElementTree.fromstring(xml_string)
-            logging.debug(
-                "XML version: {0}".format(
-                    ElementTree.tostring(transfer_document)))
-            all_protocols = transfer_document.findall(Node.PROTOCOL)
-            if all_protocols is None or not len(all_protocols) > 0:
-                raise ValueError('No endpoints available.')
-        elif resp.status_code == 303:
+        transfer_url = None
+        while resp.status_code == 303:
             transfer_url = resp.headers.get('Location', None)
 
             if self.endpoints.session.auth is not None and \
@@ -2915,19 +2941,17 @@ class Transfer(object):
                                                     '/vospace/auth/')
 
             logging.debug("Got back from transfer URL: %s" % transfer_url)
-
-            # For a move this is the end of the transaction.
-            if view == 'move':
-                return not self.get_transfer_error(transfer_url, uri)
-
             # for get or put we need the protocol value
-            xfer_resp = self.endpoints.session.get(transfer_url,
-                                                   allow_redirects=False)
-            xfer_url = xfer_resp.headers.get('Location', None)
-            if self.endpoints.session.auth is not None and \
-                    "auth" not in xfer_url:
-                xfer_url = xfer_url.replace('/vospace/', '/vospace/auth/')
-            xml_string = self.endpoints.session.get(xfer_url).text
+            resp = self.endpoints.session.get(transfer_url,
+                                              allow_redirects=False)
+        if resp.status_code == 200:
+            if not transfer_url:
+                raise RuntimeError(
+                    'Transfer {} did not return the Location of job'.format(
+                        endpoint_url))
+            if view == 'move':
+                return transfer_url
+            xml_string = resp.text
             logging.debug("Transfer Document: %s" % xml_string)
             transfer_document = ElementTree.fromstring(xml_string)
             logging.debug(
@@ -2935,7 +2959,9 @@ class Transfer(object):
                     ElementTree.tostring(transfer_document)))
             all_protocols = transfer_document.findall(Node.PROTOCOL)
             if all_protocols is None or not len(all_protocols) > 0:
-                return self.get_transfer_error(transfer_url, uri)
+                raise RuntimeError(
+                    "BUG: No protocol/endpoint returned for transfer URL {}".
+                    format(transfer_url))
         elif resp.status_code == 404:
             raise OSError(resp.status_code,
                           "File not found: {0}".format(uri))
