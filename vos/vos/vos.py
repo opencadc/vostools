@@ -122,7 +122,7 @@ FILENAME_PATTERN_MAGIC = re.compile(
 MAGIC_GLOB_CHECK = re.compile('[*?[]')
 
 
-logging.getLogger("requests").setLevel(logging.ERROR)
+logging.getLogger('requests').setLevel(logging.ERROR)
 
 
 def is_remote_file(file_name, resource_id=None):
@@ -245,23 +245,23 @@ class Connection(object):
 class Node(object):
     """A VOSpace node"""
 
-    IVOAURL = "ivo://ivoa.net/vospace/core"
-    VOSNS = "http://www.ivoa.net/xml/VOSpace/v2.0"
-    VOSVERSION = "2.1"
-    XSINS = "http://www.w3.org/2001/XMLSchema-instance"
-    TYPE = '{%s}type' % XSINS
-    NODES = '{%s}nodes' % VOSNS
-    NODE = '{%s}node' % VOSNS
-    PROTOCOL = '{%s}protocol' % VOSNS
-    PROPERTIES = '{%s}properties' % VOSNS
-    PROPERTY = '{%s}property' % VOSNS
-    ACCEPTS = '{%s}accepts' % VOSNS
-    PROVIDES = '{%s}provides' % VOSNS
-    ENDPOINT = '{%s}endpoint' % VOSNS
-    TARGET = '{%s}target' % VOSNS
-    DATA_NODE = "vos:DataNode"
-    LINK_NODE = "vos:LinkNode"
-    CONTAINER_NODE = "vos:ContainerNode"
+    IVOAURL = 'ivo://ivoa.net/vospace/core'
+    VOSNS = 'http://www.ivoa.net/xml/VOSpace/v2.0'
+    VOSVERSION = '2.1'
+    XSINS = 'http://www.w3.org/2001/XMLSchema-instance'
+    TYPE = '{{{}}}type'.format(XSINS)
+    NODES = '{{{}}}nodes'.format(VOSNS)
+    NODE = '{{{}}}node'.format(VOSNS)
+    PROTOCOL = '{{{}}}protocol'.format(VOSNS)
+    PROPERTIES = '{{{}}}properties'.format(VOSNS)
+    PROPERTY = '{{{}}}property'.format(VOSNS)
+    ACCEPTS = '{{{}}}accepts'.format(VOSNS)
+    PROVIDES = '{{{}}}provides'.format(VOSNS)
+    ENDPOINT = '{{{}}}endpoint'.format(VOSNS)
+    TARGET = '{{{}}}target'.format(VOSNS)
+    DATA_NODE = 'vos:DataNode'
+    LINK_NODE = 'vos:LinkNode'
+    CONTAINER_NODE = 'vos:ContainerNode'
 
     def __init__(self, node, node_type=None, properties=None, subnodes=None):
         """Create a Node object based on the DOM passed to the init method
@@ -346,7 +346,7 @@ class Node(object):
         :param value: the property value
         """
         properties = self.node.find(Node.PROPERTIES)
-        uri = "%s#%s" % (Node.IVOAURL, key)
+        uri = '{}#{}'.format(Node.IVOAURL, key)
         ElementTree.SubElement(properties, Node.PROPERTY,
                                attrib={'uri': uri,
                                        'readOnly': 'false'}).text = value
@@ -606,8 +606,6 @@ class Node(object):
             changed += self.chwgrp(self.groupwrite)
         else:
             changed += self.chwgrp('')
-
-        # logger.debug("%d -> %s" % (changed, changed>0))
         return changed > 0
 
     def create(self, uri, node_type="vos:DataNode", properties=None,
@@ -1006,7 +1004,7 @@ class VOFile(object):
                 423: "Locked",
                 408: "Connection Timeout"}
         logger.debug(
-            "status %d for URL %s" % (self.resp.status_code, self.url))
+            'status {} for URL {}'.format(self.resp.status_code, self.url))
         if self.resp.status_code not in codes:
             logger.debug("Got status code: %s for %s" %
                          (self.resp.status_code, self.url))
@@ -1065,7 +1063,7 @@ class VOFile(object):
         tells the server that isn't an error.
         :type possible_partial_read: bool
         """
-        logger.debug("Opening %s (%s)" % (url, method))
+        logger.debug('Opening {} ({})'.format(url, method))
         self.url = url
         self.method = method
 
@@ -1138,6 +1136,9 @@ class VOFile(object):
                 self.resp = self.connector.session.send(self.request,
                                                         stream=True)
             except exceptions.HttpException as http_exception:
+                if 'SSLV3_ALERT_CERTIFICATE_EXPIRED' in str(http_exception):
+                    raise RuntimeError(
+                        'Expired cert. Update by running cadc-get-cert')
                 # this is the path for all status_codes between 400 and 600
                 if http_exception.orig_exception is not None:
                     self.resp = http_exception.orig_exception.response
@@ -1222,11 +1223,8 @@ class VOFile(object):
                 # TODO seperate out making the transfer reqest and reading
                 # the response content.
                 self.open(url, "GET")
-                # logger.debug("Following redirected URL:  %s" % (URL))
                 return self.read(size)
             else:
-                # logger.debug("Got url:%s from redirect but not following" %
-                # (self.url))
                 return self.url
 
         # start from top of URLs with a delay
@@ -1339,7 +1337,7 @@ class EndPoints(object):
     def async_transfer(self):
         """
         The async transfer service endpoint
-        :retur: servie location of the async transfer service
+        :return: location of the async transfer service
         :return:
         """
         return self.conn.ws_client._get_url((self.VO_ASYNC_TRANSFER, None))
@@ -1945,15 +1943,13 @@ class Client(object):
             # no much to do
             return uri
         parts = urlparse(uri)
-        # TODO
-        # implement support for local files (parts.scheme=None
-        # and self.rootNode=None
 
-        if parts.scheme is None:
+        if not is_remote_file(uri):
             if self.rootNode is not None:
                 uri = self.rootNode + uri
             else:
-                return uri
+                raise AttributeError(
+                    'Invalid URI to the remote resource: {}'.format(uri))
         parts = urlparse(uri)
 
         # Check that path name compiles with the standard
@@ -2126,7 +2122,7 @@ class Client(object):
             node = self.get_node(uri, limit=0)
             if node.islink():
                 target = node.node.findtext(Node.TARGET)
-                logger.debug("%s is a link to %s" % (node.uri, target))
+                logger.debug('{} is a link to {}'.format(node.uri, target))
                 if target is None:
                     raise OSError(errno.ENOENT, "No target for link")
                 parts = urlparse(target)
@@ -2311,10 +2307,9 @@ class Client(object):
                                     src_uri, destination_uri, view='move')
             # start the job
             self.get_session(src_uri).post(
-                job_url + "/phase",
+                job_url + '/phase',
                 allow_redirects=False,
-                data="PHASE=RUN",
-                headers={'Content-type': "application/x-www-form-urlencoded"})
+                data='PHASE=RUN')
             return self.get_transfer_error(job_url, src_uri)
 
     def _get(self, uri, view="defaultview", cutout=None):
@@ -2453,7 +2448,7 @@ class Client(object):
                 node = self.get_node(uri)
                 if node.type == "vos:LinkNode":
                     target = node.node.findtext(Node.TARGET)
-                    logger.debug("%s is a link to %s" % (node.uri, target))
+                    logger.debug('{} is a link to {}'.format(node.uri, target))
                     if target is None:
                         raise OSError(errno.ENOENT, "No target for link")
                     else:
@@ -2582,8 +2577,6 @@ class Client(object):
             logger.debug("Got prop-update response: {0}".format(resp.content))
             transfer_url = resp.headers.get('Location', None)
             logger.debug("Got job status redirect: {0}".format(transfer_url))
-            # logger.debug(
-            # "Got back %s from $Client.VOPropertiesEndPoint " % (con))
             # Start the job
             self.get_session(node.uri).post(
                 transfer_url + "/phase",
@@ -2696,7 +2689,6 @@ class Client(object):
         :param uri: The ContainerNode to get a listing of.
         :rtype [unicode]
         """
-        # logger.debug("getting a listing of %s " % (uri))
         names = []
         logger.debug(str(uri))
         node = self.get_node(uri, limit=None, force=force)
@@ -2940,7 +2932,8 @@ class Transfer(object):
                 transfer_url = transfer_url.replace('/vospace/',
                                                     '/vospace/auth/')
 
-            logging.debug("Got back from transfer URL: %s" % transfer_url)
+            logging.debug(
+                'Got back from transfer URL: {}'.format(transfer_url))
             # for get or put we need the protocol value
             resp = self.endpoints.session.get(transfer_url,
                                               allow_redirects=False)
@@ -2952,7 +2945,7 @@ class Transfer(object):
             if view == 'move':
                 return transfer_url
             xml_string = resp.text
-            logging.debug("Transfer Document: %s" % xml_string)
+            logging.debug('Transfer Document:{}'.format(xml_string))
             transfer_document = ElementTree.fromstring(xml_string)
             logging.debug(
                 "XML version: {0}".format(
@@ -3021,8 +3014,8 @@ class Transfer(object):
                 if logger.getEffectiveLevel() == logging.INFO:
                     while slept < sleep_time:
                         sys.stdout.write(
-                            "\r%s %s" % (phase, roller[total_time_slept %
-                                                       len(roller)]))
+                            '\r{} {}'.format(phase, roller[total_time_slept %
+                                                           len(roller)]))
                         sys.stdout.flush()
                         slept += 1
                         total_time_slept += 1
@@ -3032,7 +3025,7 @@ class Transfer(object):
                     time.sleep(sleep_time)
                 phase = self._get_phase(phase_url)
                 logging.debug(
-                    "Async transfer Phase for url %s: %s " % (url, phase))
+                    'Async transfer Phase for url {}: {}'.format(url, phase))
         except KeyboardInterrupt:
             # abort the job when receiving a Ctrl-C/Interrupt from the client
             logging.error("Received keyboard interrupt")
