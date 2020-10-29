@@ -27,14 +27,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
-        for i in $(ls -d */); do
+        for i in vos vofs; do
           cd $i
           pip install -r dev_requirements.txt;
           cd ..
         done
     - name: Lint with flake8
       run: |
-        for i in $(ls -d */); do
+        for i in vos vofs; do
           cd $i
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -44,7 +44,7 @@ jobs:
         done
     - name: Test with pytest
       run: |
-        for i in $(ls -d */); do
+        for i in vos vofs; do
           cd $i;
           pytest
           cd ..
