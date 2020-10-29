@@ -234,8 +234,8 @@ class Client(object):
             except Exception as e:
                 logger.debug('Failed to get {} from URL {} - {}'.
                              format(source, url, str(e)))
-        raise IOError(
-            'Failed to get file {} from any location'.format(source))
+        raise OSError(
+            'Failed to get file {}'.format(source))
 
     def _put(self, source, destination):
         """
@@ -264,23 +264,22 @@ class Client(object):
                 return meta
         # TODO check the md5 here?
         put_urls = self._get_urls(destination, Transfer.DIRECTION_PUSH_TO)
+        if not put_urls:
+            raise OSError(errno.EFAULT,
+                          'BUG: Failed to copy {0} -> {1} - No PUT URLs '
+                          'negotiated'.format(source, destination))
         logger.debug('PUT urls: {}'.format(put_urls))
         stream = Stream(self.get_session())
         logger.debug('Uploading {}'.format(source))
-        success = False
         for put_url in put_urls:
             try:
                 success = stream.upload(put_url, destination, source,
                                         self.get_metadata)
-                break
+                return success
             except Exception as e:
                 logger.debug('Error uploading URI {} to location {} - {}'.
                              format(source, put_url, str(e)))
-        if not success:
-            raise OSError(errno.EFAULT,
-                          "Failed copying {0} -> {1}".
-                          format(source, destination))
-        return success
+        raise OSError('Failed to copy {0} -> {1}'.format(source, destination))
 
     def _is_remote(self, uri):
         _uri = urlparse(uri)
@@ -396,17 +395,24 @@ class Stream(object):
                     fout.flush()
         dest_size = os.stat(destination).st_size
         src_size = response.headers.get('Content-Length', None)
-        if src_size and int(src_size) != dest_size:
-            os.remove(destination)  # TODO keep original when override?
-            raise IOError('Source and destination sizes for {} do not match: '
-                          '{} vs. {}'.format(source, src_size, dest_size))
-        if source_md5 and source_md5 != fout.md5_checksum:
-            os.remove(destination)  # TODO keep original when override?
-            raise IOError(
-                'Source and destination md5 for {} do not match: '
-                '{} vs. {}'.format(source, source_md5, fout.md5_checksum))
-
-        return response
+        if source_md5:
+            if source_md5 != fout.md5_checksum:
+                os.remove(destination)  # TODO keep original when override?
+                raise OSError(
+                    'Source and destination md5 for {} do not match: '
+                    '{} vs. {}'.format(source, source_md5, fout.md5_checksum))
+            else:
+                return response
+        if src_size is not None:
+            if int(src_size) != dest_size:
+                os.remove(destination)  # TODO keep original when override?
+                raise OSError('Source and destination sizes for {} do not '
+                              'match: {} vs. {}'.format(source, src_size,
+                                                        dest_size))
+            else:
+                return response
+        raise OSError('BUG: No size or MD5 sum sent by remote server for {}'.
+                      format(source))
 
     def upload(self, put_url, artifact_uri, source,
                get_metadata_fn):
@@ -433,8 +439,21 @@ class Stream(object):
 
         metadata = get_metadata_fn(artifact_uri, put_url)
         destination_md5 = metadata.get('content_md5', None)
-        if destination_md5 and destination_md5 != fin.md5_checksum:
-            raise IOError(
-                "Source md5 ({}) != destination md5 ({})".
-                format(fin.md5_checksum, destination_md5))
-        return metadata
+        dest_size = metadata.get('content_length', None)
+        if destination_md5:
+            if destination_md5 != fin.md5_checksum:
+                raise OSError(
+                    "Source md5 ({}) != destination md5 ({})".
+                    format(fin.md5_checksum, destination_md5))
+            else:
+                return metadata
+        if dest_size is not None:
+            src_size = os.stat(source).st_size
+            if int(dest_size) != src_size:
+                raise OSError('Source and destination sizes for {} do not '
+                              'match: {} vs. {}'.format(source, src_size,
+                                                        dest_size))
+            else:
+                return metadata
+        raise OSError('BUG: No size or MD5 sum sent by remote server for {}'.
+                      format(artifact_uri))

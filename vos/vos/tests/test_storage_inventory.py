@@ -215,21 +215,22 @@ def test_copy_from(endpoints_mock):
     # cleanup
     os.remove(os_location)
 
-    # FAILURES
-    # mistmatch MD5
+    # FAILURE
     ep_mock.session.head.reset_mock()
-    ep_mock.session.get.reset_mock()
-    headers['Content-MD5'] = 'abc'
-    with pytest.raises(IOError) as e:
-        test_client.copy(storage_location, dest_dir)
-        assert 'Source and destination md5 for' in str(e)
-    assert not os.path.isfile(os_location)
-
-    # mistmatch sizes
-    with pytest.raises(IOError) as e:
-        test_client.copy(storage_location, dest_dir)
-        assert 'Source and destination sizes for' in str(e)
-    assert not os.path.isfile(os_location)
+    headers['Content-Length'] = 555
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head_resp]
+    with pytest.raises(OSError) as e:
+        with patch('vos.storage_inventory.Stream') as sm:
+            with patch('vos.storage_inventory.Transfer') as tm:
+                stream_mock = Mock()
+                # none of the PUT URLs is successfull
+                stream_mock.download.side_effect = [OSError(), OSError()]
+                sm.return_value = stream_mock
+                transfer_mock = Mock()
+                transfer_mock.transfer.return_value = locations
+                tm.return_value = transfer_mock
+                test_client.copy(storage_location, os_location)
+    assert 'Failed to get file {}'.format(storage_location) == str(e.value)
 
 
 @patch('vos.storage_inventory.StorageEndPoints')
@@ -409,93 +410,20 @@ def test_copy_to(endpoints_mock):
     assert ep_mock.session.put.url is None
     assert ep_mock.session.put.data is None
 
-    # FAILURES
-    # mistmatch MD5
+    # FAILURE
     ep_mock.session.head.reset_mock()
-    headers2['Content-MD5'] = 'abc'
-    ep_mock.session.put.url = None
-    ep_mock.session.put.data = None
-    with pytest.raises(IOError) as e:
-        test_client.copy(os_location, storage_location)
-        assert 'Source and destination md5 for' in str(e)
-    assert ep_mock.session.put.url is None
-    assert ep_mock.session.put.data is None
-
-    # mistmatch sizes
-    ep_mock.session.head.reset_mock()
-    headers2['Content-MD5'] = test_file2_md5
-    headers2['Content-Length'] = 112233
-    ep_mock.session.put.url = None
-    ep_mock.session.put.data = None
-    with pytest.raises(IOError) as e:
-        test_client.copy(os_location, storage_location)
-        assert 'Source and destination sizes for' in str(e)
-    assert ep_mock.session.put.url is None
-    assert ep_mock.session.put.data is None
-
-    # cleanup
-    os.remove(os_location)
-
-
-# # patch sleep to stop the test from sleeping and slowing down execution
-# @patch('vos.vos.time.sleep', MagicMock(), create=True)
-# @patch('vos.vos.VOFile')
-# def test_transfer_error(self, mock_vofile):
-#     vofile = MagicMock()
-#     mock_vofile.return_value = vofile
-#
-#     vospace_url = 'https://somevospace.server/vospace'
-#     session = Mock()
-#     session.get.side_effect = [Mock(content='COMPLETED')]
-#     conn = Mock(spec=Connection)
-#     conn.session = session
-#
-#     test_client = Client(TEST_SERVICE_RESOURCE_ID, conn=conn)
-#
-#     # use the mocked connection instead of the real one
-#     # test_client.conn = conn
-#
-#     # job successfully completed
-#     vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
-#     self.assertFalse(test_client.get_transfer_error(
-#         vospace_url + '/results/transferDetails', 'vos://vospace'))
-#     session.get.assert_called_once_with(vospace_url + '/phase',
-#                                         allow_redirects=False)
-#
-#     # job suspended
-#     session.reset_mock()
-#     session.get.side_effect = [Mock(content=b'COMPLETED')]
-#     vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
-#     with self.assertRaises(OSError):
-#         test_client.get_transfer_error(
-#             vospace_url + '/results/transferDetails', 'vos://vospace')
-#     # check arguments for session.get calls
-#     self.assertEquals(
-#         [call(vospace_url + '/phase', allow_redirects=False)],
-#         session.get.call_args_list)
-#
-#     # job encountered an internal error
-#     session.reset_mock()
-#     vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-#     session.get.side_effect = [Mock(content=b'COMPLETED'),
-#                                Mock(text='InternalFault')]
-#     with self.assertRaises(OSError):
-#         test_client.get_transfer_error(
-#             vospace_url + '/results/transferDetails', 'vos://vospace')
-#     self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-#                        call(vospace_url + '/error')],
-#                       session.get.call_args_list)
-#
-#     # job encountered an unsupported link error
-#     session.reset_mock()
-#     link_file = 'testlink.fits'
-#     vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-#     session.get.side_effect = [Mock(content=b'COMPLETED'),
-#                                Mock(
-#                                    text="Unsupported link target: " +
-#                                         link_file)]
-#     self.assertEquals(link_file, test_client.get_transfer_error(
-#         vospace_url + '/results/transferDetails', 'vos://vospace'))
-#     self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-#                        call(vospace_url + '/error')],
-#                       session.get.call_args_list)
+    headers2['Content-Length'] = 555
+    ep_mock.session.head.side_effect = [mock_head2_resp, mock_head2_resp]
+    with pytest.raises(OSError) as e:
+        with patch('vos.storage_inventory.Stream') as sm:
+            with patch('vos.storage_inventory.Transfer') as tm:
+                stream_mock = Mock()
+                # none of the PUT URLs is successfull
+                stream_mock.upload.side_effect = [OSError, OSError]
+                sm.return_value = stream_mock
+                transfer_mock = Mock()
+                transfer_mock.transfer.return_value = locations
+                tm.return_value = transfer_mock
+                test_client.copy(os_location, storage_location)
+    assert 'Failed to copy {} -> {}'.format(
+        os_location, storage_location) == str(e.value)
