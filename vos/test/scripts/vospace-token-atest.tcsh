@@ -17,7 +17,6 @@ if (! ${?VOSPACE_CONFIG_FILE} ) then
 else
     echo "Using VOSPACE_CONFIG_FILE: $VOSPACE_CONFIG_FILE"
 endif
-<<<<<<< HEAD
 
 if($#argv == 0) then
     set resources = "vault cavern"
@@ -25,35 +24,6 @@ if($#argv == 0) then
 else
     set resources = ($argv)
     echo "Testing against resources: $resources"
-=======
-echo " [OK]"
-
-echo -n "copy a file to scoped tree"
-$CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "check that the file got there"
-$LSCMD --token="$TOKEN" $CONTAINER/B | grep -q 'something.png' || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "create sub container with file in it"
-$MKDIRCMD --token="$TOKEN" $CONTAINER/B/test > /dev/null || echo " [FAIL]" && exit -1
-$CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/test/ || echo " [FAIL]" && exit -1
-$LSCMD --token="$TOKEN" $CONTAINER/B/test | grep -q 'something.png' || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "remove the file in the sub container"
-$RMCMD --token="$TOKEN" $CONTAINER/B/test/something.png || echo " [FAIL]" && exit -1
-echo " [OK]"
-
-echo -n "remove the sub container"
-$RMDIRCMD --token="$TOKEN" $CONTAINER/B/test || echo " [FAIL]" && exit -1
-
-echo -n "checking the remove was successful"
-set check_test = "`${LSCMD} --token='${TOKEN}' ${CONTAINER}/B | grep -q test`"
-if ( "${check_test}" != "" ) then
-    echo " [FAIL]" && exit -1
->>>>>>> newstorage
 endif
 
 set ACCESS_PAGE=https://ws-cadc.canfar.net/ac/login
