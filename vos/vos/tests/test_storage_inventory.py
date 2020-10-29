@@ -1,13 +1,14 @@
 # Test the vos Client class
 
 import os
-import unittest
 import requests
+import hashlib
+from datetime import datetime, timedelta
 
-from cadcutils import net
 from mock import Mock, patch, MagicMock, call
-from vos import Connection, Node
 from vos.storage_inventory import Client
+from cadcutils.exceptions import NotFoundException
+import pytest
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -28,268 +29,473 @@ TRANSFER_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
   <vos:keepBytes>true</vos:keepBytes>\
 </vos:transfer>"
 
+TEST_SERVICE_RESOURCE_ID = 'ivo://cadc.nrc.ca/mystorage'
+
 
 class Object(object):
     pass
 
 
-class TestClient(unittest.TestCase):
-    """Test the vos Client class.
-    """
+@patch('vos.vos.net.BaseWsClient', Mock())
+def test_init_client():
+    # No parameters uses cert in ~/.ssl giving authenticated / https
+    # create a fake pem file
+    certfile = '/tmp/some-cert-file.pem'
+    open(certfile, 'w+')
+    Client.VOSPACE_CERTFILE = "some-cert-file.pem"
+    with patch('os.access'):
+        client = Client(TEST_SERVICE_RESOURCE_ID,
+                        certfile=certfile)
+    assert client.get_endpoints().conn.subject.certificate
+    assert not client.get_endpoints().conn.vo_token
 
-    TEST_SERVICE_RESOURCE_ID = 'ivo://cadc.nrc.ca/vault'
+    # Supplying an empty string for certfile implies anonymous / http
+    client = Client(TEST_SERVICE_RESOURCE_ID, certfile='')
+    assert client.get_endpoints().conn.subject.anon
+    assert not client.get_endpoints().conn.vo_token
 
-    def test_init_client(self):
-        # No parameters uses cert in ~/.ssl giving authenticated / https
-        # create a fake pem file
-        certfile = '/tmp/some-cert-file.pem'
-        open(certfile, 'w+')
-        Client.VOSPACE_CERTFILE = "some-cert-file.pem"
-        with patch('os.access'):
-            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
-                            certfile=certfile)
-        self.assertTrue(client.conn.subject.certificate)
-        self.assertFalse(client.conn.vo_token)
+    # Specifying a token implies authenticated / http
+    client = Client(TEST_SERVICE_RESOURCE_ID,
+                    token='a_token_string')
+    assert client.get_endpoints().conn.subject.anon
+    assert client.get_endpoints().conn.vo_token
 
-        # Supplying an empty string for certfile implies anonymous / http
-        client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, certfile='')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertFalse(client.conn.vo_token)
+    # Specifying both a certfile and token implies token (auth) / http
+    with patch('os.access'):
+        client = Client(TEST_SERVICE_RESOURCE_ID,
+                        certfile=certfile, token='a_token_string')
+    assert client.get_endpoints().conn.subject.anon
+    assert client.get_endpoints().conn.vo_token
 
-        # Specifying a token implies authenticated / http
-        client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
-                        token='a_token_string')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertTrue(client.conn.vo_token)
 
-        # Specifying both a certfile and token implies token (auth) / http
-        with patch('os.access'):
-            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
-                            certfile=certfile, token='a_token_string')
-        self.assertTrue(client.conn.subject.anon)
-        self.assertTrue(client.conn.vo_token)
+@patch('vos.storage_inventory.StorageEndPoints')
+def test_copy_from(endpoints_mock):
+    ep_mock = Mock()
 
-    patch('vos.EndPoints.nodes', Mock())
+    # -------------- LOCAL ----------------
+    # local copy from
+    ep_mock.transfer = None
+    ep_mock.files = 'https://url1/files'
 
-    @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
-    @patch('__main__.open', MagicMock(), create=True)
-    def test_copy(self, computed_md5_mock):
-        # the md5sum of the file being c/testopied
-        md5sum = 'd41d8cd98f00b204e9800998ecf84eee'
-        test_file_content_1 = "test file 123".encode()
-        test_file_content_2 = "some other test content 123".encode()
-        expected_test_file_size_1 = len(test_file_content_1)
-        expected_test_file_size_2 = len(test_file_content_2)
-        # patch the compute_md5 function in vos to return the above value
-        computed_md5_mock.return_value = md5sum
+    # mock the head response
+    test_file_content_1 = 'test file 123'.encode()
+    tmp_md5 = hashlib.md5()
+    tmp_md5.update(test_file_content_1)
+    test_file1_md5 = tmp_md5.hexdigest()
+    mock_head_resp = MagicMock(spec=requests.Response)
+    headers = {
+        'Location': 'https://gohere.com',
+        'content-disposition': 'attachment; filename="mytestfiledownload.txt"',
+        'Content-Length': len(test_file_content_1),
+        'Content-MD5': test_file1_md5,
+        'Date': 'Thu, 22 Oct 2020 02:07:31 GMT'
+    }
+    mock_head_resp.headers = headers
+    mock_head_resp.status_code = 200
+    ep_mock.session = Mock()
+    ep_mock.session.head.return_value = mock_head_resp
+    endpoints_mock.return_value = ep_mock
 
-        # mock the props of the corresponding node
-        props = MagicMock()
-        props.get.return_value = md5sum
-        # add props to the mocked node
-        node = MagicMock(spec=Node)
-        node.props = props
+    # mock the get response
+    mock_get_resp = MagicMock(spec=requests.Response)
+    mock_get_resp.headers = headers
+    mock_get_resp.status_code = 200
 
-        # mock one by one the chain of connection.session.response.headers
-        conn = MagicMock(spec=Connection)
-        session = MagicMock()
-        response = MagicMock()
-        mock_post_response = MagicMock(spec=requests.Response)
-        headers = {
-            'Location': 'https://gohere.com',
-            'content-disposition': 'mytestfiledownload.txt',
-            'Content-MD5': md5sum
-        }
-        response.headers = headers
-        session.get.return_value = response
-        response.status_code = 200
-        response.text = TRANSFER_XML
-        response.iter_content.return_value = [test_file_content_1]
+    mock_get_resp.iter_content.return_value = [test_file_content_1]
+    ep_mock.session.get.return_value = mock_get_resp
 
-        mock_post_response.status_code = 303
-        mock_post_response.headers = headers
-        session.post.return_value = mock_post_response
+    # time to test...
+    storage_location = 'cadc:TEST/foo'
+    os_location = '/tmp/foo'
+    if os.path.isfile(os_location):
+        os.remove(os_location)
+    assert not os.path.exists(os_location)
+    test_client = Client(TEST_SERVICE_RESOURCE_ID)
+    response = test_client.copy(storage_location, os_location)
+    assert os.path.isfile(os_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        '{}/{}'.format(ep_mock.files, storage_location),
+        stream=True, timeout=(2, 5))
 
-        conn.session = session
+    # no gets for subsequent calls since the local file is current
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    response = test_client.copy(storage_location, os_location)
+    assert os.path.isfile(os_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_not_called()
 
-        test_client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, conn=conn)
+    # gets for when file is not current (no date in the header)
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    del headers['Date']
+    response = test_client.copy(storage_location, os_location)
+    assert os.path.isfile(os_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        '{}/{}'.format(ep_mock.files, storage_location),
+        stream=True, timeout=(2, 5))
 
-        # Mock out the endpoints to avoid a true Registry service call.
-        nodes_url = 'https://ws-cadc.canfar.net/minoc/nodes'
-        endpoints_mock = Mock()
-        endpoints_mock.nodes = nodes_url
-        test_client.get_endpoints = Mock(return_value=endpoints_mock)
+    # gets for when file is not current (more recent Date in the header)
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    now = datetime.utcnow()
+    headers['Date'] = now.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    response = test_client.copy(storage_location, os_location)
+    assert os.path.isfile(os_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        '{}/{}'.format(ep_mock.files, storage_location),
+        stream=True, timeout=(2, 5))
 
-        content_length = 88
-        mock_metadata_response = MagicMock()
-        mock_metadata_response.headers = {
-            'Content-Length': content_length,
-            'Content-Type': 'application/fits',
-            'Content-MD5': 'd41d8cd98f00b204e9800998ecf8427e'
-        }
+    # local file is newer but remote content different -> update local
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    test_file_content_2 = 'This is the new test content'.encode()
+    mock_get_resp.iter_content.return_value = [test_file_content_2]
+    headers['Date'] = 'Thu, 22 Oct 2020 02:07:31 GMT'
+    headers['Content-Length'] = len(test_file_content_2)
+    tmp_md5 = hashlib.md5()
+    tmp_md5.update(test_file_content_2)
+    test_file2_md5 = tmp_md5.hexdigest()
+    headers['Content-MD5'] = test_file2_md5
+    response = test_client.copy(storage_location, os_location)
+    assert os.path.isfile(os_location)
+    assert os.stat(os_location).st_size == len(test_file_content_2)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        '{}/{}'.format(ep_mock.files, storage_location),
+        stream=True, timeout=(2, 5))
 
-        mock_ws_client = Mock(spec=net.BaseWsClient)
-        test_client._get_ws_client = Mock(return_value=mock_ws_client)
-        mock_ws_client.head.return_value = mock_metadata_response
+    # -------------- GLOBAL ----------------
+    # check it uses content disposition for the name of the file when not
+    # specified
+    ep_mock.files = None
+    ep_mock.transfer = 'https://global.transfer'
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    headers['content-disposition'] = \
+        'attachment; filename="mytestfiledownload.txt"'
+    dest_dir = '/tmp'
+    expected_file = os.path.join(dest_dir, 'mytestfiledownload.txt')
+    if os.path.isfile(expected_file):
+        os.remove(expected_file)
+    locations = ['https://location1', 'https://location2']
+    with patch('vos.storage_inventory.Transfer') as tm:
+        transfer_mock = Mock()
+        transfer_mock.transfer.return_value = locations
+        tm.return_value = transfer_mock
+        response = test_client.copy(storage_location, dest_dir)
+    assert os.path.isfile(expected_file)
+    assert os.stat(expected_file).st_size == len(test_file_content_2)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        locations[0], stream=True, timeout=(2, 5))
+    os.remove(expected_file)
 
-        # time to test...
-        storageLocation = 'cadc:TEST/foo'
-        osLocation = '/tmp/foo'
-        if os.path.isfile(osLocation):
-            os.remove(osLocation)
-        self.assertFalse(os.path.exists(osLocation))
-        # test get: copy from Storage Inventory, returns file size
-        actual_file_size = test_client.copy(storageLocation, osLocation)
-        self.assertTrue(os.path.isfile(osLocation))
-        self.assertEqual(expected_test_file_size_1, actual_file_size,
-                         'get incorrect file size')
-        computed_md5_mock.assert_called_once_with(osLocation)
+    # check it uses the path of the URI when destination is directory and
+    # not content-disposition found
+    if os.path.isfile(os_location):
+        os.remove(os_location)
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    del headers['content-disposition']
+    with patch('vos.storage_inventory.Transfer') as tm:
+        transfer_mock = Mock()
+        transfer_mock.transfer.return_value = locations
+        tm.return_value = transfer_mock
+        response = test_client.copy(storage_location, dest_dir)
+    assert os.path.isfile(os_location)  # /tmp/foo is expected file
+    assert os.stat(os_location).st_size == len(test_file_content_2)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    ep_mock.session.get.assert_called_with(
+        locations[0], stream=True, timeout=(2, 5))
 
-        # test get: - local file and storage inventory file are the same
-        computed_md5_mock.reset_mock()
-        props.reset_mock()
-        props.get.return_value = md5sum
-        actual_file_size = test_client.copy(storageLocation, osLocation)
-        self.assertEqual(expected_test_file_size_1, actual_file_size,
-                         'get incorrect file size')
-        computed_md5_mock.assert_called_once_with(osLocation)
+    # cleanup
+    os.remove(os_location)
 
-        # test get: change the content of local files to trigger a new copy
-        # computed_md5_mock.reset_mock()
-        response.iter_content.return_value = [test_file_content_2]
-        computed_md5_mock.side_effect = [md5sum]
-        actual_file_size = test_client.copy(storageLocation, osLocation)
-        computed_md5_mock.assert_called_with(osLocation)
-        self.assertTrue(os.path.isfile(osLocation))
-        self.assertEqual(expected_test_file_size_2, actual_file_size,
-                         'get incorrect file size')
+    # FAILURES
+    # mistmatch MD5
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.get.reset_mock()
+    headers['Content-MD5'] = 'abc'
+    with pytest.raises(IOError) as e:
+        test_client.copy(storage_location, dest_dir)
+        assert 'Source and destination md5 for' in str(e)
+    assert not os.path.isfile(os_location)
 
-        # test put: copy to vospace when md5 sums are the same ->
-        # only update occurs
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
-                                         md5sum]
-        computed_md5_mock.return_value = md5sum
-        test_client.copy(osLocation, storageLocation)
+    # mistmatch sizes
+    with pytest.raises(IOError) as e:
+        test_client.copy(storage_location, dest_dir)
+        assert 'Source and destination sizes for' in str(e)
+    assert not os.path.isfile(os_location)
 
-        # test put: make md5 different
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
-                                         md5sum]
-        props.reset_mock()
-        props.get.side_effect = ['d00223344', 88, md5sum, 'text/plain']
-        test_client.copy(osLocation, storageLocation)
-        computed_md5_mock.assert_called_once_with(osLocation)
 
-        # test put: copy 0 size file -> delete and create on client but
-        # no bytes transferred
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
-                                         md5sum]
-        props.get.side_effect = [md5sum]
-        test_client.copy(osLocation, storageLocation)
+@patch('vos.storage_inventory.StorageEndPoints')
+def test_copy_to(endpoints_mock):
+    ep_mock = Mock()
 
-        # copy new 0 size file -> reate on client but no bytes transferred
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = ['d41d8cd98f00b204e9800998ecf8427e',
-                                         md5sum]
-        props.get.side_effect = [None]
-        test_client.copy(osLocation, storageLocation)
+    def mock_put(url, data):
+        """
+        Mock function to put data without transferring the bytes
+        :param url:
+        :param data:
+        :return:
+        """
+        mock_put.url = url
+        hash = hashlib.md5()
+        mock_put.data = data.read(64000)  # This only handles small files
+        hash.update(mock_put.data)
+        # mock the get response
+        mock_put_resp = MagicMock(spec=requests.Response)
+        mock_put_resp.status_code = 200
+        return mock_put_resp
+    # static function variables
+    mock_put.data = None
+    mock_put.url = None
 
-        # error tests - md5sum mismatch
-        headers['Content-MD5'] = '0000bad0000'
-        with self.assertRaises(IOError):
-            test_client.copy(storageLocation, osLocation)
+    # -------------- LOCAL ----------------
+    # local copy to with new file
+    ep_mock.transfer = None
+    ep_mock.files = 'https://url1/files'
 
-        headers['Content-MD5'] = md5sum
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.side_effect = None
-        computed_md5_mock.return_value = '0000bad0000'
-        with self.assertRaises(IOError):
-            test_client.copy(osLocation, storageLocation)
+    source = '/tmp/mystoragetest.txt'
+    if os.path.isfile(source):
+        os.remove(source)
+    test_file_content_1 = 'test file 123'.encode()
+    tmp_md5 = hashlib.md5()
+    tmp_md5.update(test_file_content_1)
+    test_file1_md5 = tmp_md5.hexdigest()
+    open(source, 'wb').write(test_file_content_1)
 
-        # requests just the headers
-        props.get.side_effect = [None]
-        computed_md5_mock.reset_mock()
-        computed_md5_mock.return_value = md5sum
-        test_client.copy(storageLocation, osLocation, head=True)
+    mock_head_resp = MagicMock(spec=requests.Response)
+    headers = {
+        'Location': 'https://gohere.com',
+        'content-disposition': 'attachment; filename="mytestfiledownload.txt"',
+        'Content-Length': len(test_file_content_1),
+        'Content-MD5': test_file1_md5,
+        'Date': 'Thu, 22 Oct 2020 02:07:31 GMT'
+    }
+    mock_head_resp.headers = headers
+    mock_head_resp.status_code = 200
+    ep_mock.session = Mock()
+    ep_mock.session.head.side_effect = [NotFoundException(), mock_head_resp]
+    endpoints_mock.return_value = ep_mock
 
-    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/'
-                             'minoc/files'))
-    def test_delete(self):
-        conn = MagicMock(spec=Connection)
-        certfile = '/tmp/SomeCert.pem'
-        open(certfile, 'w+')
-        with patch('os.access'):
-            client = Client(TestClient.TEST_SERVICE_RESOURCE_ID,
-                            certfile=certfile, conn=conn)
-        uri1 = 'iris:nosuchfile1'
-        url = 'https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/minoc/files/' \
-              'iris:nosuchfile1'
-        client.conn.session.delete = Mock()
-        client.delete(uri1)
-        client.conn.session.delete.assert_called_once_with(url)
+    ep_mock.session.put = mock_put
 
-    # patch sleep to stop the test from sleeping and slowing down execution
-    @patch('vos.vos.time.sleep', MagicMock(), create=True)
-    @patch('vos.vos.VOFile')
-    def test_transfer_error(self, mock_vofile):
-        vofile = MagicMock()
-        mock_vofile.return_value = vofile
+    # time to test...
+    storage_location = 'cadc:TEST/foo'
+    os_location = source
+    assert os.path.isfile(os_location)
+    test_client = Client(TEST_SERVICE_RESOURCE_ID)
+    response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    assert '{}/{}'.format(ep_mock.files, storage_location) == \
+           ep_mock.session.put.url
+    assert test_file_content_1 == ep_mock.session.put.data
 
-        vospace_url = 'https://somevospace.server/vospace'
-        session = Mock()
-        session.get.side_effect = [Mock(content='COMPLETED')]
-        conn = Mock(spec=Connection)
-        conn.session = session
+    # no puts for subsequent calls since the local file is current
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.head.side_effect = [mock_head_resp]
+    mock_put.data = None
+    mock_put.url = None
+    response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    assert mock_put.data is None
+    assert mock_put.url is None
 
-        test_client = Client(TestClient.TEST_SERVICE_RESOURCE_ID, conn=conn)
+    # puts for when file is not current (no date in the header)
+    ep_mock.session.head.reset_mock()
+    del headers['Date']
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head_resp]
+    mock_put.data = None
+    mock_put.url = None
+    response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    assert '{}/{}'.format(ep_mock.files, storage_location) == \
+           ep_mock.session.put.url
+    assert test_file_content_1 == ep_mock.session.put.data
 
-        # use the mocked connection instead of the real one
-        # test_client.conn = conn
+    # gets for when file is not current (more recent Date in the header)
+    ep_mock.session.head.reset_mock()
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head_resp]
+    now = datetime.utcnow()
+    headers['Date'] = now.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    response = test_client.copy(os_location, storage_location)
+    assert os.path.isfile(os_location)
+    assert len(test_file_content_1) == response, 'Got incorrect file size'
+    assert '{}/{}'.format(ep_mock.files, storage_location) == \
+           ep_mock.session.put.url
+    assert test_file_content_1 == ep_mock.session.put.data
 
-        # job successfully completed
-        vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
-        self.assertFalse(test_client.get_transfer_error(
-            vospace_url + '/results/transferDetails', 'vos://vospace'))
-        session.get.assert_called_once_with(vospace_url + '/phase',
-                                            allow_redirects=False)
+    # local file is different
+    ep_mock.session.head.reset_mock()
+    headers['Date'] = 'Thu, 22 Oct 2020 02:07:31 GMT'
+    test_file_content_2 = 'This is the new test content'.encode()
+    tmp_md5 = hashlib.md5()
+    tmp_md5.update(test_file_content_2)
+    test_file2_md5 = tmp_md5.hexdigest()
+    open(source, 'wb').write(test_file_content_2)
+    # create the second head response after update
+    headers2 = {
+        'Location': 'https://gohere.com',
+        'content-disposition': 'attachment; filename="mytestfiledownload.txt"',
+        'Content-Length': len(test_file_content_2),
+        'Content-MD5': test_file2_md5,
+        'Date': 'Thu, 22 Oct 2020 02:07:31 GMT'
+    }
+    mock_head2_resp = MagicMock(spec=requests.Response)
+    mock_head2_resp.headers = headers2
+    mock_head_resp.status_code = 200
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head2_resp]
+    response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    assert '{}/{}'.format(ep_mock.files, storage_location) == \
+           ep_mock.session.put.url
+    assert test_file_content_2 == ep_mock.session.put.data
 
-        # job suspended
-        session.reset_mock()
-        session.get.side_effect = [Mock(content=b'COMPLETED')]
-        vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
-        with self.assertRaises(OSError):
-            test_client.get_transfer_error(
-                vospace_url + '/results/transferDetails', 'vos://vospace')
-        # check arguments for session.get calls
-        self.assertEquals(
-            [call(vospace_url + '/phase', allow_redirects=False)],
-            session.get.call_args_list)
+    # -------------- GLOBAL ----------------
+    ep_mock.files = None
+    ep_mock.transfer = 'https://global.transfer'
+    ep_mock.session.head.reset_mock()
+    locations = ['https://location1', 'https://location2']
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head2_resp]
+    with patch('vos.storage_inventory.Transfer') as tm:
+        transfer_mock = Mock()
+        transfer_mock.transfer.return_value = locations
+        tm.return_value = transfer_mock
+        response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    assert locations[0] == ep_mock.session.put.url
+    assert test_file_content_2 == ep_mock.session.put.data
 
-        # job encountered an internal error
-        session.reset_mock()
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'),
-                                   Mock(text='InternalFault')]
-        with self.assertRaises(OSError):
-            test_client.get_transfer_error(
-                vospace_url + '/results/transferDetails', 'vos://vospace')
-        self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/error')],
-                          session.get.call_args_list)
+    # repeat the test. Even if sizes are the same, because the remote
+    # is older bytes are transferred again
+    ep_mock.files = None
+    ep_mock.session.put.url = None
+    ep_mock.session.put.data = None
+    ep_mock.transfer = 'https://global.transfer'
+    ep_mock.session.head.reset_mock()
+    locations = ['https://location1', 'https://location2']
+    ep_mock.session.head.side_effect = [mock_head_resp, mock_head2_resp]
+    with patch('vos.storage_inventory.Transfer') as tm:
+        transfer_mock = Mock()
+        transfer_mock.transfer.return_value = locations
+        tm.return_value = transfer_mock
+        response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    assert locations[0] == ep_mock.session.put.url
+    assert test_file_content_2 == ep_mock.session.put.data
 
-        # job encountered an unsupported link error
-        session.reset_mock()
-        link_file = 'testlink.fits'
-        vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
-        session.get.side_effect = [Mock(content=b'COMPLETED'),
-                                   Mock(
-                                       text="Unsupported link target: " +
-                                            link_file)]
-        self.assertEquals(link_file, test_client.get_transfer_error(
-            vospace_url + '/results/transferDetails', 'vos://vospace'))
-        self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
-                           call(vospace_url + '/error')],
-                          session.get.call_args_list)
+    # repeat the test. Make size the same but remote copy more recent
+    # so no bytes are being transferred
+    ep_mock.files = None
+    ep_mock.session.put.url = None
+    ep_mock.session.put.data = None
+    ep_mock.transfer = 'https://global.transfer'
+    ep_mock.session.head.reset_mock()
+    locations = ['https://location1', 'https://location2']
+    future = datetime.utcnow() + timedelta(days=3)
+    headers2['Date'] = future.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    ep_mock.session.head.side_effect = [mock_head2_resp]
+    with patch('vos.storage_inventory.Transfer') as tm:
+        transfer_mock = Mock()
+        transfer_mock.transfer.return_value = locations
+        tm.return_value = transfer_mock
+        response = test_client.copy(os_location, storage_location)
+    assert len(test_file_content_2) == response, 'Got incorrect file size'
+    assert ep_mock.session.put.url is None
+    assert ep_mock.session.put.data is None
+
+    # FAILURES
+    # mistmatch MD5
+    ep_mock.session.head.reset_mock()
+    headers2['Content-MD5'] = 'abc'
+    ep_mock.session.put.url = None
+    ep_mock.session.put.data = None
+    with pytest.raises(IOError) as e:
+        test_client.copy(os_location, storage_location)
+        assert 'Source and destination md5 for' in str(e)
+    assert ep_mock.session.put.url is None
+    assert ep_mock.session.put.data is None
+
+    # mistmatch sizes
+    ep_mock.session.head.reset_mock()
+    headers2['Content-MD5'] = test_file2_md5
+    headers2['Content-Length'] = 112233
+    ep_mock.session.put.url = None
+    ep_mock.session.put.data = None
+    with pytest.raises(IOError) as e:
+        test_client.copy(os_location, storage_location)
+        assert 'Source and destination sizes for' in str(e)
+    assert ep_mock.session.put.url is None
+    assert ep_mock.session.put.data is None
+
+    # cleanup
+    os.remove(os_location)
+
+
+# # patch sleep to stop the test from sleeping and slowing down execution
+# @patch('vos.vos.time.sleep', MagicMock(), create=True)
+# @patch('vos.vos.VOFile')
+# def test_transfer_error(self, mock_vofile):
+#     vofile = MagicMock()
+#     mock_vofile.return_value = vofile
+#
+#     vospace_url = 'https://somevospace.server/vospace'
+#     session = Mock()
+#     session.get.side_effect = [Mock(content='COMPLETED')]
+#     conn = Mock(spec=Connection)
+#     conn.session = session
+#
+#     test_client = Client(TEST_SERVICE_RESOURCE_ID, conn=conn)
+#
+#     # use the mocked connection instead of the real one
+#     # test_client.conn = conn
+#
+#     # job successfully completed
+#     vofile.read.side_effect = [b'QUEUED', b'COMPLETED']
+#     self.assertFalse(test_client.get_transfer_error(
+#         vospace_url + '/results/transferDetails', 'vos://vospace'))
+#     session.get.assert_called_once_with(vospace_url + '/phase',
+#                                         allow_redirects=False)
+#
+#     # job suspended
+#     session.reset_mock()
+#     session.get.side_effect = [Mock(content=b'COMPLETED')]
+#     vofile.read.side_effect = [b'QUEUED', b'SUSPENDED']
+#     with self.assertRaises(OSError):
+#         test_client.get_transfer_error(
+#             vospace_url + '/results/transferDetails', 'vos://vospace')
+#     # check arguments for session.get calls
+#     self.assertEquals(
+#         [call(vospace_url + '/phase', allow_redirects=False)],
+#         session.get.call_args_list)
+#
+#     # job encountered an internal error
+#     session.reset_mock()
+#     vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
+#     session.get.side_effect = [Mock(content=b'COMPLETED'),
+#                                Mock(text='InternalFault')]
+#     with self.assertRaises(OSError):
+#         test_client.get_transfer_error(
+#             vospace_url + '/results/transferDetails', 'vos://vospace')
+#     self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
+#                        call(vospace_url + '/error')],
+#                       session.get.call_args_list)
+#
+#     # job encountered an unsupported link error
+#     session.reset_mock()
+#     link_file = 'testlink.fits'
+#     vofile.read.side_effect = Mock(side_effect=[b'QUEUED', b'ERROR'])
+#     session.get.side_effect = [Mock(content=b'COMPLETED'),
+#                                Mock(
+#                                    text="Unsupported link target: " +
+#                                         link_file)]
+#     self.assertEquals(link_file, test_client.get_transfer_error(
+#         vospace_url + '/results/transferDetails', 'vos://vospace'))
+#     self.assertEquals([call(vospace_url + '/phase', allow_redirects=False),
+#                        call(vospace_url + '/error')],
+#                       session.get.call_args_list)

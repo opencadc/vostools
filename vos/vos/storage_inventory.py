@@ -11,25 +11,19 @@ import errno
 import os
 import logging
 import re
+from email.utils import parsedate_tz, mktime_tz
+from datetime import datetime
+from cadcutils.exceptions import NotFoundException
 
-from cadcutils import net, exceptions
-from six.moves.urllib import parse
+from six.moves.urllib.parse import urlparse
 
 try:
     from .version import version
 except ImportError:
     version = 'unknown'
 
-from .vos import Connection, Transfer, Stream
-from . import md5_cache
+from .vos import Transfer, EndPoints, Md5File, SSO_SECURITY_METHODS
 
-urlparse = parse.urlparse
-
-# This is an encoder.  It will URL encode any URI component.
-# It is used in creating the DELETE URL by appending the
-# encoded URI to the end of the path.
-#
-quote_plus = parse.quote_plus
 
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
@@ -37,91 +31,76 @@ logger.setLevel(logging.ERROR)
 # Header for token access
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
 
-# Create an agent for URL communications.
-VOS_AGENT = 'vos/' + version
-
 # Storage Inventory services
 FILES = 'files'
 LOCATE = 'locate'
+CLOCK_TOLERANCE = 5 * 60  # seconds
 
-# Standard ID's
-FILES_STANDARD_ID = 'http://www.opencadc.org/std/storage#files-1.0'
-LOCATE_STANDARD_ID = 'http://www.opencadc.org/std/storage#locate-1.0'
 
-# Pattern matching in filenames to extract out the RA/DEC/RADIUS part
-FILENAME_PATTERN_MAGIC = re.compile(
-    r'^(?P<filename>[/_\-=+!,;:@&*$.\w~]*)'  # legal filename string
-    r'(?P<cutout>'  # Look for a cutout part
-    r'(?P<pix>(\[\d*:?\d*\])?'
-    r'(\[[+-]?\*?\d*:?[+-]?\d*,?[+-]?\*?\d*:?[+-]?\d*\]))'  # pixel
-    r'|'  # OR
-    r'(?P<wcs>'  # possible wcs cutout
-    r'\((?P<ra>[+]?\d*(\.\d*)?),'  # ra part
-    r'(?P<dec>[\-+]?\d*(\.\d*)?),'  # dec part
-    r'(?P<rad>\d*(\.\d*)?)\))'  # radius of cutout
-    r')?$'
-    )
-MAGIC_GLOB_CHECK = re.compile('[*?[]')
+def parsedate_to_datetime(data):
+    dtuple = parsedate_tz(data)
+    return datetime.fromtimestamp(mktime_tz(dtuple))
+
+
+class StorageEndPoints(EndPoints):
+    # Storage specific end points.
+    FILES_STANDARD_ID = 'http://www.opencadc.org/std/storage#files-1.0'
+    LOCATE_STANDARD_ID = 'http://www.opencadc.org/std/storage#locate-1.0'
+
+    @property
+    def transfer(self):
+        """
+        Denotes a global service capable of transfer negotiation
+        :return:
+        """
+        try:
+            return \
+                self.conn.ws_client._get_url((self.LOCATE_STANDARD_ID, None))
+        except KeyError:
+            return None
+
+    @property
+    def files(self):
+        """
+        Denotes a local service where files are directly accessible
+        :return:
+        """
+        try:
+            return \
+                self.conn.ws_client._get_url((self.FILES_STANDARD_ID, None))
+        except KeyError:
+            return None
 
 
 class Client(object):
     """
-      The storage_inventory.Client to interact with the Storage Inventory
+      The storage_inventory.Client to interact with a Storage Inventory
       system.
     """
 
-    def __init__(self, resource_id, certfile=None, conn=None,
-                 secure_get=False, token=None):
+    def __init__(self, resource_id, certfile=None, token=None):
         """
-        :param resource_id:     The service Resource ID to use.  Defaults to
-        the Global Raven Site.
+        :param resource_id:     The service Resource ID to use.
         :param certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type certfile: unicode
         :param token: token string (alternative to certfile)
         :type token: unicode
-        :param conn: a connection pool object for this Client
-        :type conn: Session
-        :param http_debug: turn on http debugging.
-        :type http_debug: bool
-        :param secure_get: Use HTTPS: ie. transfer contents of files using
-        SSL encryption.
-        :type secure_get: bool
         """
 
         self.resource_id = resource_id
-        self.secure_get = secure_get
         self.token = token
+        # unlike VOSpace client a storage client can only talk to one storage
+        # service (identified by the resource_id) at the time
+        self._endpoints = StorageEndPoints(
+                resource_id, vospace_certfile=certfile,
+                vospace_token=token)
 
-        if conn:
-            self.conn = conn
-        else:
-            self.conn = Connection(vospace_certfile=certfile,
-                                   vospace_token=token,
-                                   http_debug=True,
-                                   resource_id=resource_id)
+    def get_endpoints(self):
+        return self._endpoints
 
-        (self.service, self.standard_id) = self._get_service(self.resource_id)
-
-    def _get_service(self, resource_id):
-        """
-        Get the StandardID for the given resourceID.
-        A Resource ID ending with /minoc uses Standard ID:
-        http://www.opencadc.org/std/storage#files-1.0
-        A Resource ID ending with /raven uses the Standard ID: '
-        http://www.opencadc.org/std/storage#locate-1.0'
-
-        :param resource_id: The service Resource ID
-        :return: The service Standard ID
-        """
-        if not resource_id:
-            raise ValueError('resource_id is mandatory.')
-        if resource_id.endswith("/minoc"):
-            return FILES, FILES_STANDARD_ID
-        elif resource_id.endswith('/raven'):
-            return LOCATE, LOCATE_STANDARD_ID
-        else:
-            raise ValueError('uknown resource_id: {}'.format(resource_id))
+    def get_session(self):
+        return self.get_endpoints().session
 
     def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
@@ -165,30 +144,23 @@ class Client(object):
             logging.debug(
                 'Source is remote.  Downloading from {} to {}'.format(
                     source, destination))
-            destination_size = self._get(source, destination)
-            if send_md5:
-                return md5_cache.MD5Cache.compute_md5(destination)
-            elif disposition:
-                # TODO: Should this return the name of the destination instead?
-                # TODO: jenkinsd 2020.02.05
-                #
-                return None
-            else:
-                return destination_size
+            metadata = self._get(source, destination)
         elif is_destination_remote:
             logging.debug(
                 'Destination is remote.  Uploading from {} to {}'.format(
                     source, destination))
+            if not os.path.isfile(source):
+                raise AttributeError('{} not found'.format(source))
             metadata = self._put(source, destination)
-            if send_md5:
-                return metadata.get('content_md5')
-            elif disposition:
-                return metadata.get('content_disposition')
-            else:
-                return metadata.get('content_length')
         else:
             raise ValueError('Unable to process copying {} to {}'.format(
                                 source, destination))
+        if send_md5:
+            return metadata.get('content_md5')
+        elif disposition:
+            return metadata.get('content_disposition')
+        else:
+            return metadata.get('content_length')
 
     def delete(self, uri):
         """Delete the Artifact
@@ -205,15 +177,28 @@ class Client(object):
         response.raise_for_status()
 
     def transfer(self, uri, direction, view=None, cutout=None):
-        transfer_url = '{}/{}'.format(
-            self._get_ws_client()._get_url((self.standard_id, None)), uri)
-        trans = Transfer()
-        return trans.transfer(transfer_url, uri, direction, self.conn,
-                              self._get_protocol(), view, cutout)
+        trans = Transfer(self.get_endpoints())
+        return trans.transfer(
+            self.get_endpoints().transfer, uri, direction, view, cutout,
+            security_methods=[SSO_SECURITY_METHODS['tls-with-certificate']])
 
-    def get_transfer_error(self, url, uri):
-        trans = Transfer()
-        return trans.get_transfer_error(self.conn, url, uri)
+    def _get_urls(self, uri, direction):
+        """
+        Returns a list of URLs corresponding to the URI, transfer direction
+        and type of service (global with transfer negotiation or local)
+        :param uri:
+        :param direction:
+        :return:
+        """
+        if self.get_endpoints().transfer:
+            urls = self.transfer(uri, direction)
+        elif self.get_endpoints().files:
+            urls = ['{}/{}'.format(self.get_endpoints().files, uri)]
+        else:
+            raise AttributeError(
+                'Resource ID {} does not support transfer or files '
+                'services'.format(self.get_endpoints().resource_id))
+        return urls
 
     def _get(self, source, destination):
         """
@@ -224,23 +209,33 @@ class Client(object):
         :return: destination size in bytes
         :rtype long
         """
-        if self.service is LOCATE:
-            download_urls = self.transfer(source, Transfer.DIRECTION_PULL_FROM)
-            logger.debug('urls: {}'.format(download_urls))
-            stream = Stream(self.conn)
-            logger.debug('Downloading {}'.format(source))
-            return stream.download(
-                download_urls[0], source, None, destination, True, True)
-        elif self.service is FILES:
-            source_md5 = self.get_metadata(source).get('content_md5')
-            download_url = '{}/{}'.format(
-                self._get_ws_client()._get_url(
-                    (self.standard_id, None)), source)
-
-            stream = Stream(self.conn)
-            logger.debug('Downloading {}'.format(source))
-            return stream.download(
-                download_url, source, source_md5, destination, True, True)
+        meta = self.get_metadata(source)
+        rsize = meta['content_length']
+        rdate = meta['content_date']
+        if os.path.isfile(destination):
+            lsize = os.stat(destination).st_size
+            ldate = datetime.fromtimestamp(os.stat(destination).st_mtime)
+            if rdate and (ldate - rdate).seconds > CLOCK_TOLERANCE and \
+                    rsize and rsize == lsize:
+                # consider source and destination as identical
+                logger.debug(
+                    'GET: Skip - source {} and destination {} identical '
+                    '(same size and local date is more recent'.format(
+                        source, destination))
+                return meta
+        # TODO check the md5 here?
+        download_urls = self._get_urls(source, Transfer.DIRECTION_PULL_FROM)
+        stream = Stream(self.get_session())
+        logger.debug('Downloading {} from {}'.format(source, download_urls))
+        for url in download_urls:
+            try:
+                result = stream.download(url, source, None, destination, True)
+                return self._extract_metadata(source, result)
+            except Exception as e:
+                logger.debug('Failed to get {} from URL {} - {}'.
+                             format(source, url, str(e)))
+        raise IOError(
+            'Failed to get file {} from any location'.format(source))
 
     def _put(self, source, destination):
         """
@@ -253,31 +248,45 @@ class Client(object):
         :return: metadata dict for the artifact.
         :rtype {}
         """
-        source_md5 = md5_cache.MD5Cache.compute_md5(source)
-
-        upload_url = '{}/{}'.format(self._get_ws_client()._get_url(
-            (self.standard_id, None)), destination)
-        stream = Stream(self.conn)
+        meta = self.get_metadata(destination)
+        if meta:
+            rsize = meta['content_length']
+            rdate = meta['content_date']
+            lsize = os.stat(source).st_size
+            ldate = datetime.fromtimestamp(os.stat(source).st_mtime)
+            if rdate and (rdate - ldate).seconds > CLOCK_TOLERANCE and rsize \
+                    and rsize == lsize:
+                # consider source and destination as identical
+                logger.debug(
+                    'PUT: Skip - source {} and destination {} identical '
+                    '(same size and remote date is more recent'.format(
+                        source, destination))
+                return meta
+        # TODO check the md5 here?
+        put_urls = self._get_urls(destination, Transfer.DIRECTION_PUSH_TO)
+        logger.debug('PUT urls: {}'.format(put_urls))
+        stream = Stream(self.get_session())
         logger.debug('Uploading {}'.format(source))
-        return stream.upload(upload_url, destination, source, source_md5,
-                             self.get_metadata)
-
-    def _get_protocol(self):
-        if self.secure_get:
-            return 'https'
-        else:
-            return 'http'
+        success = False
+        for put_url in put_urls:
+            try:
+                success = stream.upload(put_url, destination, source,
+                                        self.get_metadata)
+                break
+            except Exception as e:
+                logger.debug('Error uploading URI {} to location {} - {}'.
+                             format(source, put_url, str(e)))
+        if not success:
+            raise OSError(errno.EFAULT,
+                          "Failed copying {0} -> {1}".
+                          format(source, destination))
+        return success
 
     def _is_remote(self, uri):
         _uri = urlparse(uri)
         return len(_uri.scheme) > 0 and _uri.scheme != 'file'
 
-    def _get_ws_client(self, session_headers=None):
-        return net.BaseWsClient(self.resource_id, net.Subject(), VOS_AGENT,
-                                host=os.getenv('VOSPACE_WEBSERVICE', None),
-                                session_headers=session_headers)
-
-    def get_metadata(self, uri):
+    def get_metadata(self, uri, get_url=None):
         """
         Obtain the general metadata for the artifact/node identified by the
         given uri.
@@ -294,58 +303,138 @@ class Client(object):
         :rtype: {}
         """
         logger.debug('vcp::get_metadata')
-        if self.standard_id == LOCATE_STANDARD_ID:
-            return {}
-        session_headers = {HEADER_DELEG_TOKEN: self.token}
-        ws_client = self._get_ws_client()
-        ws_client.session_headers = session_headers
+        if get_url:
+            get_urls = [get_url]
+        else:
+            get_urls = self._get_urls(uri, Transfer.DIRECTION_PULL_FROM)
+        logger.debug('HEAD urls: {}'.format(get_urls))
+        response = None
+        for get_url in get_urls:
+            try:
+                response = self.get_endpoints().session.head(get_url)
+                break
+            except NotFoundException:
+                return None
+            except Exception as e:
+                logger.debug('Error calling HEAD on location {} - {}'.
+                             format(get_url, str(e)))
+        if not response:
+            raise OSError(errno.EFAULT,
+                          "Failed to get metadata for {0}".
+                          format(uri))
+        response.raise_for_status()
+        return self._extract_metadata(uri, response)
 
-        response = ws_client.head(resource=(self.standard_id, uri))
+    def _extract_metadata(self, uri, response):
         headers = response.headers
-
+        date = headers.get('Date', None)
+        if date:
+            date = parsedate_to_datetime(date)
+        length = headers.get('Content-Length', None)
+        length = int(length) if length else None
         return {
             'content_disposition': os.path.split(uri)[-1],
-            'content_encoding': headers.get('Content-Encoding'),
-            'content_length': headers.get('Content-Length'),
-            'content_md5': headers.get('Content-MD5'),
-            'content_type': headers.get('Content-Type')
+            'content_encoding': headers.get('Content-Encoding', None),
+            'content_length': length,
+            'content_md5': headers.get('Content-MD5', None),
+            'content_type': headers.get('Content-Type', None),
+            'content_date': date
         }
 
-    def isdir(self, uri):
-        """
-        Check to see if the given uri is or is a link to a containerNode.
 
-        :param uri: a URI string to test.
-        :rtype: bool
-        """
-        try:
-            _uri = urlparse(uri)
-            path = _uri.path
+class Stream(object):
+    # 512 Kilobyte default chunk size.
+    DEFAULT_CHUNK_SIZE = 512 * 1024
 
-            if not _uri.scheme or _uri.scheme == 'file':
-                return os.path.isdir(path) or path.endswith('/')
+    # md5sum of a size zero file
+    ZERO_MD5 = 'd41d8cd98f00b204e9800998ecf8427e'
+
+    def __init__(self, session, chunk_size=DEFAULT_CHUNK_SIZE):
+        """
+        Handle transfer related business.  This is here to be reused as needed.
+        """
+        self.session = session
+        self.chunk_size = chunk_size
+
+    def download(self, get_url, source, source_md5, destination, disposition):
+        """
+        Stream bytes from the provided URL and write them to the given
+        destination.
+
+        :param get_url: The URL to GET from.
+        :type get_url: unicode
+        :param source: The source URI/file
+        :type soruce: unicode
+        :param source_md5: The MD5 hash value
+        :type source_md5: unicode
+        :param destination: The destination path to write to.
+        :type destination: unicode
+        :param disposition: Flag whether to honour the Content-Disposition
+        header
+        :type disposition: bool
+        """
+        response = self.session.get(get_url, timeout=(2, 5), stream=True)
+        if disposition:
+            # Build the destination location from the
+            # content-disposition value, or source name.
+            content_disposition = response.headers.get(
+                'content-disposition', destination)
+            content_disposition = re.search(r'.*filename="(\S*)".*',
+                                            content_disposition)
+            if content_disposition is not None:
+                content_disposition = content_disposition.group(1).strip()
             else:
-                return path.endswith('/')
-        except exceptions.NotFoundException:
-            return False
+                content_disposition = os.path.split(source)[-1]
+            if os.path.isdir(destination):
+                destination = os.path.join(destination, content_disposition)
+        source_md5 = response.headers.get('Content-MD5', source_md5)
+        response.raise_for_status()
+        with Md5File(destination, 'wb') as fout:
+            for chunk in response.iter_content(chunk_size=self.chunk_size):
+                if chunk:
+                    fout.write(chunk)
+                    fout.flush()
+        dest_size = os.stat(destination).st_size
+        src_size = response.headers.get('Content-Length', None)
+        if src_size and int(src_size) != dest_size:
+            os.remove(destination)  # TODO keep original when override?
+            raise IOError('Source and destination sizes for {} do not match: '
+                          '{} vs. {}'.format(source, src_size, dest_size))
+        if source_md5 and source_md5 != fout.md5_checksum:
+            os.remove(destination)  # TODO keep original when override?
+            raise IOError(
+                'Source and destination md5 for {} do not match: '
+                '{} vs. {}'.format(source, source_md5, fout.md5_checksum))
 
-    def isfile(self, uri):
+        return response
+
+    def upload(self, put_url, artifact_uri, source,
+               get_metadata_fn):
         """
-        Check if the given uri is or is a link to a DataNode
+        Upload the source data to the put_url.
 
-        :param uri: the VOSpace Node URI to test.
-        :rtype: bool
+        :param put_url: The Service URL accepting PUTs.
+        :type put_url: unicode
+        :param artifact_uri: The URI of the destination.
+        :type artifact_uri: unicode
+        :param source: The source data (file)
+        :type source: unicode
+        :param source_md5: The MD5 hash value
+        :type source_md5: unicode
+        :param get_metadata_fn:  Function to obtain metadata information
+        :type get_metadata_fn: function
+        :return: Metadata dict for the uploaded Artifact.
+        :rtype {}
         """
-        try:
-            _uri = urlparse(uri)
-            path = _uri.path
 
-            if not _uri.scheme or _uri.scheme == 'file':
-                return os.path.isfile(path) or not path.endswith('/') or \
-                       not os.path.isdir(path)
-            else:
-                return not path.endswith('/') and len(path.split('/')) > 1
-        except OSError as ex:
-            if ex.errno == errno.ENOENT:
-                return False
-            raise ex
+        with Md5File(source, str('rb')) as fin:
+            response = self.session.put(put_url, data=fin)
+        response.raise_for_status()
+
+        metadata = get_metadata_fn(artifact_uri, put_url)
+        destination_md5 = metadata.get('content_md5', None)
+        if destination_md5 and destination_md5 != fin.md5_checksum:
+            raise IOError(
+                "Source md5 ({}) != destination md5 ({})".
+                format(fin.md5_checksum, destination_md5))
+        return metadata
