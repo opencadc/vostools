@@ -564,6 +564,53 @@ class TestClient(unittest.TestCase):
                           call(vospace_url + '/error')],
                          session.get.call_args_list)
 
+    def test_transfer(self):
+        session = Mock()
+        redirect_response = Mock()
+        redirect_response.status_code = 303
+        redirect_response.headers = \
+            {'Location': 'https://transfer.host/transfer'}
+        response = Mock()
+        response.status_code = 200
+        response.text = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" '
+            'version="2.1">'
+            '<vos:target>vos://some.host~vault/abc</vos:target>'
+            '<vos:direction>pullFromVoSpace</vos:direction>'
+            '<vos:protocol uri="ivo://ivoa.net/vospace/core#httpsget">'
+            '<vos:endpoint>https://transfer.host/transfer/abc</vos:endpoint>'
+            '<vos:securityMethod '
+            'uri="ivo://ivoa.net/sso#tls-with-certificate" />'
+            '</vos:protocol>'
+            '<vos:keepBytes>true</vos:keepBytes>'
+            '</vos:transfer>')
+        session.post.return_value = redirect_response
+        session.get.return_value = response
+        conn_mock = MagicMock(spec=Connection)
+        conn_mock.session.return_value = session
+        end_point_mock = Mock(session=session)
+        test_transfer = vos.Transfer(end_point_mock)
+        protocols = test_transfer.transfer(
+            'https://some.host/service', 'vos://abc', 'pullFromVoSpace')
+        assert protocols == ['https://transfer.host/transfer/abc']
+
+        session.reset_mock()
+        session.post.return_value = Mock(status_code=404)
+        with self.assertRaises(OSError) as e:
+            test_transfer.transfer(
+                'https://some.host/service', 'vos://abc',
+                'pullFromVoSpace')
+            assert 'File not found: vos://abc' == str(e)
+
+        session.reset_mock()
+        session.post.return_value = Mock(status_code=500)
+        with self.assertRaises(OSError) as e:
+            test_transfer.transfer(
+                'https://some.host/service', 'vos://abc',
+                'pullFromVoSpace')
+            assert 'Failed to get transfer service response.' == str(e)
+
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))
         old_node.uri = 'vos:sometest'
