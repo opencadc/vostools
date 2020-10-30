@@ -8,6 +8,8 @@ on: [push, pull_request, create]
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      REPOS: $(ls -d */)
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -16,7 +18,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRAVIS_TAG: ${GITHUB_REF/refs\/tags\//}
       run: |
-        ls ./
+        echo $REPOS
+        ls -l $REPOS
         exit -1
   build:
     needs: publish
@@ -36,14 +39,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest coveralls
-        for i in vos vofs; do
+        for i in (ls -d vos */); do
           cd $i
           pip install -r dev_requirements.txt;
           cd ..
         done 
     - name: Test with pytest
       run: |
-        for i in vos vofs; do
+        for i in $(ls -d */); do
           cd $i;
           pytest $i || exit -1
           cd ..
