@@ -17,7 +17,7 @@ TESTDATA_DIR = os.path.join(THIS_DIR, 'data')
 class MyExitError(Exception):
 
     def __init__(self):
-        self.message = "MyExitError"
+        self.message = 'MyExitError'
 
 
 # to capture the output of executing a command, sys.exit is patched to
@@ -45,8 +45,8 @@ class TestVRM(unittest.TestCase):
         sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -64,8 +64,8 @@ class TestVRM(unittest.TestCase):
         sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -78,8 +78,8 @@ class TestVRM(unittest.TestCase):
         sys.argv = ['vrm', 'ad://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -95,8 +95,8 @@ class TestVRM(unittest.TestCase):
         sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -111,8 +111,8 @@ class TestVRM(unittest.TestCase):
         sys.argv = ['vrm', 'vos://cadc.nrc.ca/TEST/']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -135,8 +135,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -151,8 +151,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', 'vos:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -168,8 +168,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -186,8 +186,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -204,8 +204,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', 'ad:TEST/*.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
@@ -222,8 +222,8 @@ class TestVRM(unittest.TestCase):
                     'ivo:/cadc.nrc.ca/tbd/minoc', './TEST/test.txt']
         parser = CommonParser()
         parser.add_argument(
-            "--resource-id", default=None,
-            help="resource ID of the Storage Inventory service to be used")
+            '--resource-id', default=None,
+            help='resource ID of the Storage Inventory service to be used')
         parser.add_argument(
             'source',
             help='file, dataNode or linkNode to delete from VOSpace',
