@@ -71,7 +71,7 @@ Tutorial
          arguments]
       -  ``vmkdir``, ``vrm``, ``vrmdir``, ``vsync`` ``vcat``, ``vchmod``
          and ``vln``
-      -  More details about the commands can be found in `vos/commands`.
+      -  More details about the commands can be found in `vos/commands` subpackage <vos/commands/>`_.
       -  The complete list of ``vos`` commmand line tools can be found using ``pydoc vos.commands``
 
    2. In a Python script (the example below provides a listing of a
