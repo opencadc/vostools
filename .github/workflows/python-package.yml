@@ -12,8 +12,9 @@ jobs:
     - name: Echo
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRAVIS_TAG: ${GITHUB_REF/refs\/tags\//}
       run: |
-        echo ${GITHUB_REF}
+        publish.sh
   build:
     needs: publish
     runs-on: ubuntu-latest
