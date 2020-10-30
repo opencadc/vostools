@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Publish
+      working-directory: .
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRAVIS_TAG: ${GITHUB_REF/refs\/tags\//}
       run: |
-        ../../publish.sh
+        ./publish.sh
   build:
     needs: publish
     runs-on: ubuntu-latest
