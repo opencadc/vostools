@@ -3,14 +3,19 @@
 
 name: Python package
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request, create]
 
 jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Echo
+      env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo ${GITHUB_REF}
   build:
+    needs: publish
     runs-on: ubuntu-latest
     strategy:
       matrix:
