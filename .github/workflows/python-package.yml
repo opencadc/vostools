@@ -15,7 +15,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRAVIS_TAG: ${GITHUB_REF/refs\/tags\//}
       run: |
-        ls ..;
+        ls .
         exit -1
   build:
     needs: publish
