@@ -40,7 +40,7 @@ jobs:
           cd ..
         done
     
-  coverage:
+  build (3.7), style and coverage:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -76,10 +76,6 @@ jobs:
             cd ..
           done
           coverage combine $(ls -d */.coverage) || exit 1;
-      - name: npm install, make test-coverage
-        run: |
-          npm install
-          make test-coverage
       - name: Consolidate coverage
         uses: coverallsapp/github-action@master
         with:
