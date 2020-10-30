@@ -40,7 +40,7 @@ jobs:
           cd ..
         done
     
-  3.7build&coverage:
+  coverage:
     needs: build
     runs-on: ubuntu-latest
     steps:
