@@ -77,6 +77,7 @@ jobs:
           done
           coverage combine $(ls -d */.coverage) || exit 1;
       - name: Consolidate coverage
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          coveralls
