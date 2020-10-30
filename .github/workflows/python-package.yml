@@ -40,7 +40,7 @@ jobs:
           cd ..
         done
     
-  build 37 style and coverage:
+  build_3.7_style_and_coverage:
     needs: build
     runs-on: ubuntu-latest
     steps:
