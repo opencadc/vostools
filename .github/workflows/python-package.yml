@@ -75,7 +75,11 @@ jobs:
             pytest --cov $i || exit -1
             cd ..
           done
-          coverage combine $(ls -d */.coverage) || exit 1;  
+          coverage combine $(ls -d */.coverage) || exit 1;
+      - name: npm install, make test-coverage
+        run: |
+          npm install
+          make test-coverage
       - name: Consolidate coverage
         uses: coverallsapp/github-action@master
         with:
