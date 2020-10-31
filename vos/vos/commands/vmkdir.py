@@ -4,12 +4,14 @@
 import os
 import logging
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 from .. import vos
 
 DESCRIPTION = """creates a new VOSpace ContainerNode (aka directory).
 
-eg vmkdir vos:RootNode/NewContainer"""
+{}
+
+eg vmkdir vos:RootNode/NewContainer""".format(URI_DESCRIPTION)
 
 
 def vmkdir():
@@ -27,12 +29,12 @@ def vmkdir():
         "Creating ContainerNode (directory) {}".format(args.container_node))
 
     try:
-
-        client = vos.Client(vospace_certfile=args.certfile,
-                            vospace_token=args.token)
+        this_dir = args.container_node
+        client = vos.Client(
+            vospace_certfile=args.certfile,
+            vospace_token=args.token)
 
         dir_names = []
-        this_dir = args.container_node
         if args.p:
             while not client.access(this_dir):
                 dir_names.append(os.path.basename(this_dir))

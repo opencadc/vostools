@@ -4,7 +4,8 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import sys
 from multiprocessing import Process, JoinableQueue
-from vos.commonparser import CommonParser, set_logging_level_from_args
+from vos.commonparser import CommonParser, set_logging_level_from_args, \
+    URI_DESCRIPTION
 import logging
 import time
 import signal
@@ -14,6 +15,8 @@ from .. import md5_cache
 
 DESCRIPTION = """A script for sending files to VOSpace via multiple connection
 streams.
+
+{}
 
 The list of files is given on the command line have their MD5s generated and
 then compared to  the contents of VOSpace.  Files that do not exist in the
@@ -29,8 +32,8 @@ eg:
   vsync --cache_nodes --recursive --verbose ./local_dir vos:VOSPACE/remote_dir
 
 Using cache_nodes option will greatly improve the speed of repeated calls but
-does result in a  cache database file: ${HOME}/.config/vos/node_cache.db
-"""
+does result in a  cache database file: $HOME/.config/vos/node_cache.db
+""".format(URI_DESCRIPTION)
 
 HOME = os.getenv("HOME", "./")
 
@@ -84,11 +87,12 @@ def vsync():
         global_md5_cache = md5_cache.MD5Cache(cache_db=opt.cache_filename)
 
     destination = opt.destination
-    if destination[0:4] != "vos:":
+    if not vos.is_remote_file(destination):
         parser.error("Only allows sync FROM local copy TO VOSpace")
     # Currently we don't create nodes in sync and we don't sync onto files
     logging.info("Connecting to VOSpace")
-    client = vos.Client(vospace_certfile=opt.certfile, vospace_token=opt.token)
+    client = vos.Client(
+        vospace_certfile=opt.certfile, vospace_token=opt.token)
     logging.info("Confirming Destination is a directory")
     dest_is_dir = client.isdir(destination)
 
@@ -126,8 +130,9 @@ def vsync():
     class ThreadCopy(Process):
         def __init__(self, this_queue):
             super(ThreadCopy, self).__init__()
-            self.client = vos.Client(vospace_certfile=opt.certfile,
-                                     vospace_token=opt.token)
+            self.client = vos.Client(
+                vospace_certfile=opt.certfile,
+                vospace_token=opt.token)
             self.queue = this_queue
             self.filesSent = 0
             self.filesSkipped = 0
@@ -285,7 +290,7 @@ def vsync():
             return
         queue.put((current_source, current_destination), timeout=3600)
 
-    def start_streams(no_streams, vospace_client):
+    def start_streams(no_streams):
         list_of_streams = []
         for i in range(no_streams):
             logging.info("Launching VOSpace connection stream %d" % i)
@@ -348,7 +353,7 @@ def vsync():
                 return
         return
 
-    streams = start_streams(opt.nstreams, vospace_client=client)
+    streams = start_streams(opt.nstreams)
 
     # build a complete file list given all the things on the command line
     for filename in opt.files:

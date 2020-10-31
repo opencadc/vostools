@@ -6,12 +6,14 @@ from sys import platform
 import os
 import logging
 import getpass
+from six.moves.urllib.parse import urlparse
 
 from vos import vos
 from .version import version
 from .vofs import VOFS
 from .vofs import MyFuse
 from vos.commonparser import CommonParser, set_logging_level_from_args
+from vos import vosconfig
 
 DAEMON_TIMEOUT = 60
 
@@ -20,7 +22,12 @@ def mountvofs():
     parser = CommonParser(description='mount vospace as a filesystem.')
 
     # mountvofs specific options
-    parser.add_option("--vospace", help="the VOSpace to mount", default="vos:")
+    parser.add_option("--vospace",
+                      help="the VOSpace to mount. Default is vos (CADC vault "
+                           "service) but other VOSpaces can be used and "
+                           "referred to through their configured prefix (see "
+                           "vos-config command)",
+                      default="vos:/")
     parser.add_option("--mountpoint",
                       help="the mountpoint on the local filesystem",
                       default="/tmp/vospace")
@@ -95,7 +102,16 @@ def mountvofs():
     else:
         certfile = os.path.abspath(opt.certfile)
 
-    conn = vos.Connection(vospace_certfile=certfile, vospace_token=opt.token)
+    service_prefix = None  # default service prefix
+    if opt.vospace:
+        service_prefix = urlparse(opt.vospace).scheme
+    try:
+        resource_id = vosconfig.vos_config.get_resource_id(service_prefix)
+    except Exception as e:
+        raise RuntimeError(
+            'Cannot identify vospace service: {}'.format(str(e)))
+    conn = vos.Connection(resource_id=resource_id,
+                          vospace_certfile=certfile, vospace_token=opt.token)
     if opt.token:
         readonly = opt.readonly
         logger.debug("Got a token, connections should work")
@@ -115,7 +131,8 @@ def mountvofs():
         os.makedirs(mount)
     try:
         if platform == "darwin":
-            MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
+            MyFuse(VOFS(root, opt.cache_dir, opt,
+                        vospace_certfile=certfile, vospace_token=opt.token,
                         cache_limit=opt.cache_limit,
                         cache_nodes=opt.cache_nodes,
                         cache_max_flush_threads=opt.max_flush_threads,
@@ -133,7 +150,8 @@ def mountvofs():
                    debug=opt.foreground,
                    foreground=opt.foreground)
         else:
-            MyFuse(VOFS(root, opt.cache_dir, opt, conn=conn,
+            MyFuse(VOFS(root, opt.cache_dir, opt,
+                        vospace_certfile=certfile, vospace_token=opt.token,
                         cache_limit=opt.cache_limit,
                         cache_nodes=opt.cache_nodes,
                         cache_max_flush_threads=opt.max_flush_threads,

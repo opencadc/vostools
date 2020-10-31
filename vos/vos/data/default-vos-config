@@ -1,5 +1,8 @@
 [vos]
-resourceID = ivo://cadc.nrc.ca/vault
+# List of VOSpace services known to vos, one entry per line:
+# resourceID = <resourceID> [<prefix>(default vos)]
+# prefix is used to identify files and directories on that service with
+# the command line. e.g. vos:path/to/file is the path to a file on the VOSpace
+# service with the vos prefix. Prefixes in the config file must be unique.
+resourceID = ivo://cadc.nrc.ca/vault vos
 
-[transfer]
-protocol = http

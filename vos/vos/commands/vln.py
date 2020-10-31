@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 from .. import vos
 from argparse import ArgumentError
 
@@ -14,6 +14,8 @@ link ''points'' to the original copy.
 
 Only symbolic links are supported.
 
+{}
+
 vln vos:VOSpaceSource vos:VOSpaceTarget
 
 
@@ -23,7 +25,7 @@ examples:
     vln vos:vospace/directory vos:vospace/linkToDirectory
     vln http://external.data.source vos:vospace/linkToExternalDataSource
 
-"""
+""".format(URI_DESCRIPTION)
 
 
 def vln():
@@ -35,14 +37,14 @@ def vln():
         opt = parser.parse_args()
         set_logging_level_from_args(opt)
 
-        if not (opt.source.startswith('vos:') or opt.source.startswith(
-                'http:')) or not opt.target.startswith('vos:'):
+        if not vos.is_remote_file(opt.source) or \
+                not vos.is_remote_file(opt.target):
             raise ArgumentError(
                 None,
                 "source must be vos node or http url, target must be vos node")
-
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
+        client = vos.Client(
+            vospace_certfile=opt.certfile,
+            vospace_token=opt.token)
         client.link(opt.source, opt.target)
     except ArgumentError as ex:
         parser.print_usage()

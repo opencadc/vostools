@@ -8,6 +8,7 @@ import signal
 import sys
 import traceback
 from .version import version
+from .vosconfig import _CONFIG_PATH
 
 
 def signal_handler(signum, frame):
@@ -78,10 +79,14 @@ class CommonParser(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         # call the parent constructor
+        if os.path.isfile(_CONFIG_PATH):
+            epilog = 'Default service settings in {}.'.format(_CONFIG_PATH)
+        else:
+            epilog = ''
         super(CommonParser, self).__init__(
             *args,
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            epilog="Default service settings in ~/.config/vos/vos-config.",
+            epilog=epilog,
             **kwargs)
         # inherit the VOS client version
         self.version = version
@@ -108,3 +113,14 @@ class CommonParser(argparse.ArgumentParser):
         self.add_argument("-w", "--warning", action="store_true",
                           default=False,
                           help="print warning messages only")
+
+
+URI_DESCRIPTION = \
+    'Remote resources are identified either by their full ' \
+    'URIs (ivo://cadc.nrc.ca/vault) or by a user configured name in the ' \
+    'config file.\n' \
+    'Some names are reserved:\n' \
+    '     vos for ivo:/cadc.nrc.ca/vault and\n' \
+    '     arc for ivo:cadc.nc.ca/arbutus-cavern.\n' \
+    'Thus, arc:somepath is a shorter version of the full URI ' \
+    'vos://cadc.nrc.ca~arbutus-cavern/somepath'

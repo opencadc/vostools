@@ -5,13 +5,15 @@ python:
     - 3.4
     - 3.5
     - 3.6
+    - 3.7
+    - 3.8
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
 
 install:
     - pip install -U pip
-    - pip install twine
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then pip install twine; fi
     - for i in $(ls -d */); do cd $i; pip install -r dev_requirements.txt; cd ..; done
     - pip install coveralls
 
@@ -19,7 +21,7 @@ script:
     - for i in $(ls -d */); do
          cd $i;
          pytest --cov $i || exit 1;
-         if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then
+         if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then
          flake8 -v $i || exit -1;
          fi;
          cd ..;
@@ -30,15 +32,15 @@ after_success:
     # below and replace "packagename" with the name of your package.
     # The coveragerc file may be customized as needed for your package.
     # Run coverage for all Python versions but submit only once - 3.5
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then coverage combine $(ls -d */.coverage) || exit 1; coveralls; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then coverage combine $(ls -d */.coverage) || exit 1; coveralls; fi
 
 jobs:
   include:
       #- stage: intTest
-      #python: 3.5
+      #python: 3.7
       #script: ./.intTest
     - stage: publish
-      python: 3.4
+      python: 3.7
       deploy:
          provider: script
          script: ./.publish.sh

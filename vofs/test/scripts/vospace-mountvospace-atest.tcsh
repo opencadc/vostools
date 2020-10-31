@@ -108,6 +108,7 @@ rm -fR $VOS_CACHE #clean the cache
 # For the anonymous mount test we use a separate temporary log
 echo -n "mount vospace anonymously"
 rm $ANONLOGFILE >& /dev/null
+echo "$MOUNTCMD --certfile=anonymous --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$ANONLOGFILE -d"
 $MOUNTCMD --certfile=anonymous --mountpoint=$MOUNTPOINT --cache_dir=$VOS_CACHE --log=$ANONLOGFILE -d >& /dev/null || echo " [FAIL]" && exit -1
 sleep 3
 ls $MOUNTPOINT >& /dev/null || echo " [FAIL]" && exit -1

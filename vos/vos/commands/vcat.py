@@ -3,9 +3,9 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
 import logging
-from ..vos import Client
+from ..vos import Client, is_remote_file
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 
 
 def _cat(uri, cert_filename=None, head=None):
@@ -19,7 +19,7 @@ def _cat(uri, cert_filename=None, head=None):
 
     fh = None
     try:
-        if uri[0:4] == "vos:":
+        if is_remote_file(uri):
             view = head and 'header' or 'data'
             fh = Client(vospace_certfile=cert_filename).open(uri, view=view)
             sys.stdout.write(fh.read(return_response=True).text)
@@ -34,7 +34,10 @@ def _cat(uri, cert_filename=None, head=None):
 
 DESCRIPTION = """Write the content of source (eg. vos:Node/filename) to stdout.
 
-Accepts cutout syntax for FITS files; see vcp --help for syntax details"""
+{}
+
+Accepts cutout syntax for FITS files; see vcp --help for syntax details
+""".format(URI_DESCRIPTION)
 
 
 def vcat():

@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import logging
 import math
 from ..commonparser import CommonParser, set_logging_level_from_args, \
-    exit_on_exception
+    exit_on_exception, URI_DESCRIPTION
 import sys
 import time
 from .. import vos
@@ -56,16 +56,18 @@ __LIST_FORMATS__ = {'permissions': lambda value: "{:<11}".format(value),
                         value.replace(vos.CADC_GMS_PREFIX, "")),
                     'writeGroup': lambda value: " {:<15}".format(
                         value.replace(vos.CADC_GMS_PREFIX, "")),
-                    'isLocked': lambda value: " {:<8}".format("", "LOCKED")[
-                        value == "true"],
+                    'isLocked': lambda value: " {:<8}".format(["", "LOCKED"][
+                        value == "true"]),
                     'size': size_format,
                     'date': date_format}
 
 DESCRIPTION = """lists the contents of a VOSpace Node.
 
+{}
+
 Long listing provides the file size, ownership and read/write status of Node.
 
-"""
+""".format(URI_DESCRIPTION)
 
 
 def _get_sort_key(node, sort):
@@ -79,7 +81,7 @@ def _get_sort_key(node, sort):
 
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
-    parser.add_argument('node', nargs="+", help="VOSpace Node to list.")
+    parser.add_argument('node', nargs="+", help="URI of VOSpace Node to list.")
     parser.add_option("--help", action="help", default='==SUPPRESS==',
                       help='show this help message and exit')
     parser.add_option("-l", "--long", action="store_true",
@@ -110,10 +112,6 @@ def vls():
             columns.extend(
                 ['readGroup', 'writeGroup', 'isLocked', 'size', 'date'])
 
-        # create a client to send VOSpace command
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
-
         files = []
         dirs = []
 
@@ -125,16 +123,21 @@ def vls():
         else:
             sort = None
 
-        if opt.reverse:
+        if sort is None and opt.reverse is False:
+            order = None
+        elif opt.reverse:
             order = 'asc' if sort else 'desc'
         else:
             order = 'desc' if sort else 'asc'
 
         for node in opt.node:
-            if not node.startswith('vos:'):
+            if not vos.is_remote_file(file_name=node):
                 raise ArgumentError(opt.node,
                                     "Invalid node name: {}".format(node))
             logging.debug("getting listing of: %s" % str(node))
+            client = vos.Client(
+                vospace_certfile=opt.certfile,
+                vospace_token=opt.token)
             targets = client.glob(node)
 
             # segregate files from directories

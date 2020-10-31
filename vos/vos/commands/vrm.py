@@ -3,7 +3,7 @@
 import logging
 import six.moves.urllib.parse as urllibparse
 from ..commonparser import set_logging_level_from_args, exit_on_exception, \
-    CommonParser
+    CommonParser, URI_DESCRIPTION
 from .. import vos, storage_inventory
 
 urlparse = urllibparse.urlparse
@@ -11,7 +11,9 @@ urlparse = urllibparse.urlparse
 DESCRIPTION = """remove a file or a vospace data node; fails if container
 node or node is locked.
 
-eg. vrm vos:/root/node   -- deletes a data node"""
+{}
+
+eg. vrm vos:/root/node   -- deletes a data node""".format(URI_DESCRIPTION)
 
 
 def delete_nodes(args):
@@ -73,7 +75,6 @@ def vrm():
             delete_nodes(args)
         else:
             delete_files(args)
-
     except Exception as ex:
         exit_on_exception(ex)
 

@@ -9,10 +9,14 @@ import logging
 import sys
 from .. import vos
 from ..commonparser import CommonParser, exit_on_exception, \
-    set_logging_level_from_args
+    set_logging_level_from_args, URI_DESCRIPTION
 
 DESCRIPTION = """Places/Removes a write lock on a VOSpace Node or reports lock
-status if no action requested."""
+status if no action requested.
+
+{}
+
+""".format(URI_DESCRIPTION)
 
 
 def vlock():
@@ -28,9 +32,9 @@ def vlock():
     try:
         opt = parser.parse_args()
         set_logging_level_from_args(opt)
-
-        client = vos.Client(vospace_certfile=opt.certfile,
-                            vospace_token=opt.token)
+        client = vos.Client(
+            vospace_certfile=opt.certfile,
+            vospace_token=opt.token)
         node = client.get_node(opt.node)
         if opt.lock or opt.unlock:
             lock = not opt.unlock and opt.lock
