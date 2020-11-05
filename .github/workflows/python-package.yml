@@ -15,9 +15,9 @@ jobs:
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo $GITHUB_REF
-        echo $GITHUB_REF >> $MYENV
-        echo "***** $MYENV"
+        # set the TRAVIS_TAG env variable
+        echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+        echo "***** $TRAVIS_TAG"
         ./.publish.sh
         exit -1
   build:
