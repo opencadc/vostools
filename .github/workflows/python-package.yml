@@ -11,12 +11,13 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+      run: |
+        # set the TRAVIS_TAG env variable for next steps
+        echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
     - name: Publish
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # set the TRAVIS_TAG env variable
-        echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+      run: |     
         echo "***** $TRAVIS_TAG"
         ./.publish.sh
         exit -1
