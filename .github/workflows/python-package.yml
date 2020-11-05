@@ -14,9 +14,9 @@ jobs:
     - name: Publish
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TRAVIS_TAG: ${GITHUB_REF/refs\/tags\//}
       run: |
-        echo "TRAVIS_TAG: $TRAVIS_TAG, $GITHUB_REF, " + ${GITHUB_REF/refs\/tags\//}
+        echo ${GITHUB_REF/refs\/tags\//} >> $TRAVIS_TAG
+        echo "***** $TRAVIS_TAG"
         ./.publish.sh
         exit -1
   build:
