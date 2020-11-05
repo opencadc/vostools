@@ -16,8 +16,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo $GITHUB_REF
-        echo $GITHUB_REF >> $TRAVIS_TAG
-        echo "***** $TRAVIS_TAG"
+        echo $GITHUB_REF >> $MYENV
+        echo "***** $MYENV"
         ./.publish.sh
         exit -1
   build:
