@@ -11,6 +11,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+    - name: Prepare
       run: |
         # set the TRAVIS_TAG env variable for next steps
         echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
