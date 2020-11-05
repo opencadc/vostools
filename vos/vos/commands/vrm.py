@@ -20,9 +20,9 @@ def delete_nodes(args):
     client = vos.Client(vospace_certfile=args.certfile,
                         vospace_token=args.token)
     for node in args.source:
-        if not node.startswith('vos:'):
+        if not vos.is_remote_file(node):
             raise Exception(
-                '{} is not a valid VOSpace handle'.format(node))
+                '{} is not a valid VOSpace resource'.format(node))
         if not node.endswith('/'):
             if client.get_node(node).islink():
                 logging.info('deleting link {}'.format(node))
@@ -41,20 +41,14 @@ def delete_files(args):
                                       certfile=args.certfile,
                                       token=args.token)
     for file in args.source:
-        if file.startswith('vos:'):
-            raise Exception(
-                '{} is not a valid storage handle'.format(file))
         if file.endswith('/'):
-            raise Exception(
-                '{} is not a valid storage file handle'.format(file))
-        elif client.isdir(file):
             raise Exception('{} is a directory'.format(file))
-        elif vos.is_remote_file(str(file)):
+        elif vos.is_remote_file(file, client.resource_id):
             logging.info('deleting {}'.format(file))
             client.delete(file)
         else:
             raise Exception(
-                '{} is not a valid storage file handle'.format(file))
+                '{} is not a valid storage file URI'.format(file))
 
 
 def vrm():
