@@ -18,8 +18,7 @@ jobs:
     - name: Publish
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |     
-        echo "***** $TRAVIS_TAG"
+      run: |
         ./.publish.sh
         exit -1
   build:
