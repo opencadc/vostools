@@ -20,7 +20,13 @@ jobs:
       env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |     
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine
+        for i in (ls -d */); do
+          cd $i
+          pip install -r dev_requirements.txt;
+          cd ..
         ./.publish.sh
         exit -1
   build:
@@ -41,7 +47,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest coveralls
-        for i in (ls -d vos */); do
+        for i in (ls -d */); do
           cd $i
           pip install -r dev_requirements.txt;
           cd ..
