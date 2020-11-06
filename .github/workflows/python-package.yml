@@ -27,6 +27,7 @@ jobs:
           cd $i
           pip install -r dev_requirements.txt;
           cd ..
+        done
         ./.publish.sh
         exit -1
   build:
