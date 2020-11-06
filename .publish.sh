@@ -23,15 +23,8 @@ sed 's/ //g' setup.cfg | grep "^version=$version" || { \
 # build
 python setup.py clean sdist || { echo "Errors building $product"; exit -1; }
 # upload to pypi
-# generate the .pypirc file first
-#echo "[pypi]" > .pypirc
-#chmod 600 .pypirc
-#echo "repository = https://test.pypi.org/legacy/"
-#echo "username = Canadian.Astronomy.Data.Centre" >> .pypirc
-#echo "password = ${PYPI_PASSWORD}" >> .pypirc
-
 echo "Publish on pypi"
-twine upload --repository-url https://test.pypi.org/legacy/ -u Canadian.Astronomy.Data.Centre dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
+twine upload -u Canadian.Astronomy.Data.Centre dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
 
 # check version available
 pip uninstall -y $product
