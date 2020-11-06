@@ -31,7 +31,7 @@ python setup.py clean sdist || { echo "Errors building $product"; exit -1; }
 #echo "password = ${PYPI_PASSWORD}" >> .pypirc
 
 echo "Publish on pypi"
-twine upload -r https://test.pypi.org/legacy/ -u Canadian.Astronomy.Data.Centre dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
+twine upload --repository-url https://test.pypi.org/legacy/ -u Canadian.Astronomy.Data.Centre dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
 
 # check version available
 pip uninstall -y $product
