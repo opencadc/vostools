@@ -77,36 +77,36 @@ jobs:
             cd ..
           done
           coverage combine $(ls -d */.coverage) || exit 1;
-      - name: Consolidate coverage
-        env: 
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          CI_BRANCH: ${GITHUB_REF#"ref/heads"}
-        run: |
-           coveralls
-  publish:
-    needs: coverage
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Prepare
-      run: |
-        # set the TRAVIS_TAG env variable for next steps
-        echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
-    - name: Publish
-      env: 
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TWINE_USERNAME: ${{ secrets.PYPI_PUBLISH_USER }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_PWORD }}
-      run: |
-        python -m pip install --upgrade pip
-        # need sudo to have the command in the PATH
-        sudo pip install twine
-        for i in $(ls -d */); do
-          cd $i
-          pip install -r dev_requirements.txt;
-          cd ..
-        done
-        ./.publish.sh || exit 1
+#       - name: Consolidate coverage
+#         env: 
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+#           CI_BRANCH: ${GITHUB_REF#"ref/heads"}
+#         run: |
+#            coveralls
+#   publish:
+#     needs: coverage
+#     runs-on: ubuntu-latest
+#     if: startsWith(github.ref, 'refs/tags/')
+#     steps:
+#     - name: Checkout
+#       uses: actions/checkout@v2
+#     - name: Prepare
+#       run: |
+#         # set the TRAVIS_TAG env variable for next steps
+#         echo "TRAVIS_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+#     - name: Publish
+#       env: 
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           TWINE_USERNAME: ${{ secrets.PYPI_PUBLISH_USER }}
+#           TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_PWORD }}
+#       run: |
+#         python -m pip install --upgrade pip
+#         # need sudo to have the command in the PATH
+#         sudo pip install twine
+#         for i in $(ls -d */); do
+#           cd $i
+#           pip install -r dev_requirements.txt;
+#           cd ..
+#         done
+#         ./.publish.sh || exit 1
