@@ -26,6 +26,7 @@ python setup.py clean sdist || { echo "Errors building $product"; exit -1; }
 echo "Publish on pypi"
 twine upload dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
 
+
 # check version available
 pip uninstall -y $product
 pip install --upgrade --pre $product==$version || { echo "$TRAVIS_TAG not installed on pypi" ; exit -1; } 
