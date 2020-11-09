@@ -3,7 +3,12 @@
 
 name: Python package
 
-on: [push, pull_request, create, pull_request_target]
+on:
+  push:
+    pull request:
+      types: [opened, synchronize, reopened]
+    release:
+      types: [created]
 
 jobs:
   build:
