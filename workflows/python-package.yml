@@ -3,11 +3,15 @@
 
 name: Python package
 
-on: [push, pull_request, create]
+on:
+  push:
+    pull request:
+      types: [opened, synchronize, reopened]
+    release:
+      types: [created]
 
 jobs:
   build:
-    needs: publish
     runs-on: ubuntu-latest
     strategy:
       matrix:
