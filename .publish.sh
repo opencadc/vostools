@@ -24,7 +24,8 @@ sed 's/ //g' setup.cfg | grep "^version=$version" || { \
 python setup.py clean sdist || { echo "Errors building $product"; exit -1; }
 # upload to pypi
 echo "Publish on pypi"
-twine upload -u Canadian.Astronomy.Data.Centre dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
+twine upload dist/* || { echo "Errors publishing $TRAVIS_TAG"; exit -1; }
+
 
 # check version available
 pip uninstall -y $product
