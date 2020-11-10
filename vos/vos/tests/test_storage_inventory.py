@@ -451,7 +451,7 @@ def test_vrm(endpoints_mock):
         [NotFoundException('Not found')]
     with pytest.raises(NotFoundException) as e:
         test_client.delete(storage_location)
-    assert 'Not found' == str(e.value)
+    assert 'Not found' in str(e.value)
 
     # -------------- GLOBAL ----------------
     ep_mock.transfer = ['https://url1/files', 'https://url2/files']
