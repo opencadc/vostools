@@ -80,12 +80,12 @@ jobs:
           done
           coverage combine $(ls -d */.coverage) || exit 1;
       - name: Consolidate coverage
-          env: 
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-            CI_BRANCH: ${GITHUB_REF#"ref/heads"}
-          run: |
-             coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          CI_BRANCH: ${GITHUB_REF#"ref/heads"}
+        run: |
+           coveralls
   publish:
     needs: coverage
     runs-on: ubuntu-latest
