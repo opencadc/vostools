@@ -44,9 +44,6 @@ or
 RA/DEC regions accessed vcp vos:Node/filename.fits(RA, DEC, RAD)
 where RA, DEC and RAD are all given in degrees
 
-For inventory storage, wildcards in fielname work:
-vcp *.fits cadc:TEST/
-
 For VOSpace, wildcards in the path or filename work also:
 vcp vos:VOSPACE/foo/*.txt .
 
@@ -66,8 +63,7 @@ def vcp():
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
         "--resource-id", default=None,
-        help="resource URI to use to lookup the storage inventory service "
-             "(Minoc)")
+        help="resource URI to use to lookup the storage inventory service")
     parser.add_argument(
         "source", nargs="+",
         help="file/directory/dataNode/containerNode to copy from.")
