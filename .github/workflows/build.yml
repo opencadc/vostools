@@ -1,14 +1,16 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Python package
+name: CIbuild
 
 on:
   push:
-    pull request:
-      types: [opened, synchronize, reopened]
-    release:
-      types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  #pull_request_target:
+  #  types: [opened, synchronize, reopened]
+  release:
+    types: [created]
 
 jobs:
   build:
