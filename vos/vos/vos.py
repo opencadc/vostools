@@ -2309,7 +2309,8 @@ class Client(object):
             self.get_session(src_uri).post(
                 job_url + '/phase',
                 allow_redirects=False,
-                data='PHASE=RUN')
+                data='PHASE=RUN',
+                headers={'Content-type': 'application/x-www-form-urlencoded'})
             return self.get_transfer_error(job_url, src_uri)
 
     def _get(self, uri, view="defaultview", cutout=None):
@@ -2357,7 +2358,8 @@ class Client(object):
                                 security_methods=security_methods)
         # if this is a connection to the 'rc' server then we reverse the
         # urllist to test the fail-over process
-        if urlparse(endpoints.nodes).netloc.startswith('rc'):
+        if urlparse(endpoints.nodes).netloc.startswith('rc') and \
+                isinstance(result, list):
             result.reverse()
         return result
 
@@ -2923,25 +2925,20 @@ class Transfer(object):
 
         logging.debug("{0}".format(resp))
         logging.debug("{0}".format(resp.text))
-        transfer_url = None
         while resp.status_code == 303:
-            transfer_url = resp.headers.get('Location', None)
+            goto_url = resp.headers.get('Location', None)
 
             if self.endpoints.session.auth is not None and \
-                    "auth" not in transfer_url:
-                transfer_url = transfer_url.replace('/vospace/',
-                                                    '/vospace/auth/')
+                    "auth" not in goto_url:
+                goto_url = goto_url.replace('/vospace/', '/vospace/auth/')
 
             logging.debug(
-                'Got back from transfer URL: {}'.format(transfer_url))
+                'Got back from transfer URL: {}'.format(goto_url))
             # for get or put we need the protocol value
-            resp = self.endpoints.session.get(transfer_url,
+            resp = self.endpoints.session.get(goto_url,
                                               allow_redirects=False)
         if resp.status_code == 200:
-            if not transfer_url:
-                raise RuntimeError(
-                    'Transfer {} did not return the Location of job'.format(
-                        endpoint_url))
+            transfer_url = resp.url
             if view == 'move':
                 return transfer_url
             xml_string = resp.text
@@ -3031,7 +3028,7 @@ class Transfer(object):
             logging.error("Received keyboard interrupt")
             self.endpoints.session.post(
                 job_url + "/phase", allow_redirects=False, data="PHASE=ABORT",
-                headers={"Content-type": 'text/text'})
+                headers={'Content-type': 'application/x-www-form-urlencoded'})
             raise KeyboardInterrupt
         phase = self._get_phase(phase_url)
         logger.debug("Phase:  {0}".format(phase))
