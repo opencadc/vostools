@@ -94,7 +94,7 @@ foreach resource ($resources)
       endif
       echo " [OK]"
 
-      echo -n "copy a file to scoped tree"
+      echo -n "copy a file to scoped tree - Fails because service does not return the proper securityMethod (AD Nov 17 2020. Also see https://github.com/opencadc/vos/issues/88)"
       $CPCMD --token="$TOKEN" $THIS_DIR/something.png $CONTAINER/B/ || echo " [FAIL]" && exit -1
       echo " [OK]"
 
