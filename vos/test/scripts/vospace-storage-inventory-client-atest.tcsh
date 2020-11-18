@@ -15,7 +15,7 @@ if (! ${?CADC_TESTCERT_PATH} ) then
 	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
     exit -1
 else
-    set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
+    set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 	echo "cert file:  (CADC_TESTCERT_PATH env variable): $CERTFILE"
 endif
 
@@ -33,34 +33,20 @@ else
         echo "Using ${TMPDIR} for temporary files"
 endif
 
-set SITE_1_RESOURCE_ID = "ivo://cadc.nrc.ca/minoc"
+set SITE_1_RESOURCE_ID = "ivo://cadc.nrc.ca/alpha-site-ceph/minoc"
 set SET_SITE_1_RESOURCE_ID = " --resource-id ${SITE_1_RESOURCE_ID}"
 
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-# Username / password for getting tokens
-echo "Enter credentials for a VOSpace account in which we will perform tests."
-echo -n "CADC Username: "
-set username = $<
-echo -n "Password: "
-stty -echo
-set password = $<
-echo
-stty echo
-
-set DIFFCMD = "diff -q"
-
 set RMCMD = "vrm ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
 set CPCMD = "vcp ${DEBUG_FLAG} ${SET_SITE_1_RESOURCE_ID}"
-set RMDIRCMD = "vrmdir ${DEBUG_FLAG}"
 
 set CERT = " --cert=$CERTFILE"
-set TOKEN = "--token ${TOKEN}"
 
 # using a test dir makes it easier to cleanup a bunch of old/failed tests
-set ROOT = "cadc:"
-set HOME = "${ROOT}CADCRegtest1"
+set ROOT = "cadc:TEST/"
+set HOME = "${ROOT}CADCAuthtest1"
 set BASE = "${HOME}/atest"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
@@ -76,39 +62,25 @@ echo
 echo "** test resource: ${SITE_1_RESOURCE_ID}"
 echo
 
+echo "LOCAL TESTS"
 echo "-----------"
-echo -n "Copy file to existing container and non-existent data node "
-$CPCMD ${TOKEN} $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
+echo -n "Copy file to existing container and non-existent URI"
+$CPCMD $CERT $THIS_DIR/something.png ${CONTAINER}/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
-# echo "-----------"
-# echo -n "Copy existing file from existing container "
-# $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-# cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-# echo " [OK]"
+ echo "-----------"
+ echo -n "Copy existing file from existing URI"
+ $CPCMD $CERT $CONTAINER/something.png /tmp/something.png || echo " [FAIL]" && exit -1
+ cmp $THIS_DIR/something.png /tmp/something.png || echo " [FAIL]" && exit -1
+ \rm -f /tmp/something.png
+ echo " [OK]"
 
-# echo "-----------"
-# echo -n "Copy/overwrite existing data node "
-# $CPCMD $CERT $THIS_DIR/something.png.2 $CONTAINER/something.png || echo " [FAIL]" && exit -1
-# echo " [OK]"
+ echo "-----------"
+ echo -n "Remove existing URI"
+ $RMCMD $CERT $CONTAINER/something.png || echo " [FAIL]" && exit -1
+ $CPCMD $CERT $CONTAINER/something.png /tmp/something.png.2 && echo " [FAIL]" && exit
+ echo " [OK]"
 
-# echo -n "Upload check quick copy "
-# $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
-# echo " [OK]"
-
-# echo -n "Download check quick copy "
-# $CPCMD $CERT $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
-# echo " [OK]"
-
-# echo -n "Compare check quick copy "
-# cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
-# \rm -f $THIS_DIR/something.png.3
-# echo " [OK]"
-
-# echo -n "Check pattern matched copy"
-# $CPCMD $CERT "$CONTAINER/something*" $TMPDIR || echo " [FAIL]" && exit -1
-# $CPCMD $CERT $THIS_DIR/something* $CONTAINER/pattern_dest || echo " [FAIL]" && exit -1
-# echo " [OK]"
 
 # Cutouts not supported yet.
 # jenkinsd 2020.02.11
