@@ -170,11 +170,25 @@ class Client(object):
         HttpException exceptions declared in the
         cadcutils.exceptions module
         """
-        logger.debug("delete {0}".format(uri))
-        url = '{}/{}'.format(
-            self._get_ws_client()._get_url((self.standard_id, None)), uri)
-        response = self.conn.session.delete(url)
-        response.raise_for_status()
+        logger.debug('delete {0}'.format(uri))
+        if self.get_endpoints().transfer:
+            raise NotImplementedError(
+                'Deletes through global are not yet implemented')
+        del_urls = self._get_urls(uri, Transfer.DIRECTION_PULL_FROM)
+        if not del_urls:
+            raise AttributeError('DELETE: URI {} not found on service {}'.
+                                 format(uri, self.resource_id))
+        exception = None
+        for url in del_urls:
+            try:
+                self.get_endpoints().conn.ws_client.delete(url)
+                return
+            except Exception as e:
+                exception = e
+                continue
+        logger.debug('ERROR deleting {} from {}: {}'.format(
+                     uri, self.resource_id, str(exception)))
+        raise exception
 
     def transfer(self, uri, direction, view=None, cutout=None):
         trans = Transfer(self.get_endpoints())
@@ -210,6 +224,9 @@ class Client(object):
         :rtype long
         """
         meta = self.get_metadata(source)
+        if not meta:
+            raise NotFoundException('{} not found on {}'.format(
+                source, self.resource_id))
         rsize = meta['content_length']
         rdate = meta['content_date']
         if os.path.isfile(destination):
@@ -277,6 +294,7 @@ class Client(object):
                                         self.get_metadata)
                 return success
             except Exception as e:
+                print("***********")
                 logger.debug('Error uploading URI {} to location {} - {}'.
                              format(source, put_url, str(e)))
         raise OSError('Failed to copy {0} -> {1}'.format(source, destination))

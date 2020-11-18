@@ -427,3 +427,36 @@ def test_copy_to(endpoints_mock):
                 test_client.copy(os_location, storage_location)
     assert 'Failed to copy {} -> {}'.format(
         os_location, storage_location) == str(e.value)
+
+
+@patch('vos.storage_inventory.StorageEndPoints')
+def test_vrm(endpoints_mock):
+    ep_mock = Mock()
+
+    # -------------- LOCAL ----------------
+    ep_mock.transfer = None
+    ep_mock.files = 'https://url1/files'
+    endpoints_mock.return_value = ep_mock
+
+    storage_location = 'cadc:TEST/foo'
+    test_client = Client(TEST_SERVICE_RESOURCE_ID)
+    test_client.delete(storage_location)
+    ep_mock.conn.ws_client.delete.assert_called_with(
+        '{}/{}'.format(ep_mock.files, storage_location))
+
+    # test not found
+    mock_delete_resp = MagicMock(spec=requests.Response)
+    mock_delete_resp.status_code = 404
+    ep_mock.conn.ws_client.delete.side_effect = \
+        [NotFoundException('Not found')]
+    with pytest.raises(NotFoundException) as e:
+        test_client.delete(storage_location)
+    assert 'Not found' in str(e.value)
+
+    # -------------- GLOBAL ----------------
+    ep_mock.transfer = ['https://url1/files', 'https://url2/files']
+    ep_mock.files = None
+
+    # TODO temporary
+    with pytest.raises(NotImplementedError):
+        test_client.delete(storage_location)

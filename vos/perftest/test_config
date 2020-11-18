@@ -1,0 +1,20 @@
+[GENERAL]
+REG=mach275.cadc.dao.nrc.ca
+CERT_FILE=./cert/cadcproxy.pem
+# number of calls/user/sec
+CALL_FREQ=120
+#ANON_TESTS_ONLY=True
+#AUTH_TESTS_ONLY=True
+
+
+[GLOBAL]
+RESOURCE_ID=ivo://cadc.nrc.ca/alpha-global/raven
+# luskan sync url
+LUSKAN_URL=https://proc5-27.cadc.dao.nrc.ca/luskan/sync
+
+ARGUS_URL=https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus/sync
+# number of public/private uris to randomly access in order to avoid the effect of caching on test results.
+NUM_URIS = 1000
+
+[LOCAL]
+RESOURCE_ID=ivo://cadc.nrc.ca/alpha-global/raven
