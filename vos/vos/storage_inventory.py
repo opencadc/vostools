@@ -244,15 +244,17 @@ class Client(object):
         download_urls = self._get_urls(source, Transfer.DIRECTION_PULL_FROM)
         stream = Stream(self.get_session())
         logger.debug('Downloading {} from {}'.format(source, download_urls))
+        last_exception = None
         for url in download_urls:
             try:
                 result = stream.download(url, source, None, destination, True)
                 return self._extract_metadata(source, result)
             except Exception as e:
+                last_exception = e
                 logger.debug('Failed to get {} from URL {} - {}'.
                              format(source, url, str(e)))
-        raise OSError(
-            'Failed to get file {}'.format(source))
+        raise OSError('Failed to copy {0} -> {1}: {2}'.format(
+            source, destination, str(last_exception)))
 
     def _put(self, source, destination):
         """
@@ -288,16 +290,18 @@ class Client(object):
         logger.debug('PUT urls: {}'.format(put_urls))
         stream = Stream(self.get_session())
         logger.debug('Uploading {}'.format(source))
+        last_exception = None
         for put_url in put_urls:
             try:
                 success = stream.upload(put_url, destination, source,
                                         self.get_metadata)
                 return success
             except Exception as e:
-                print("***********")
+                last_exception = e
                 logger.debug('Error uploading URI {} to location {} - {}'.
                              format(source, put_url, str(e)))
-        raise OSError('Failed to copy {0} -> {1}'.format(source, destination))
+        raise OSError('Failed to copy {0} -> {1}: {2}'.format(
+            source, destination, str(last_exception)))
 
     def _is_remote(self, uri):
         _uri = urlparse(uri)
@@ -390,7 +394,7 @@ class Stream(object):
         header
         :type disposition: bool
         """
-        response = self.session.get(get_url, timeout=(2, 5), stream=True)
+        response = self.session.get(get_url, timeout=(3.05, 120), stream=True)
         if disposition:
             # Build the destination location from the
             # content-disposition value, or source name.

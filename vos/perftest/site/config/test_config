@@ -1,0 +1,30 @@
+[GENERAL]
+REG=mach275.cadc.dao.nrc.ca
+CERT_FILE=./cert/cadcproxy.pem
+# number of calls/user/sec
+CALL_FREQ=1
+# cannot set both ANON_TESTS_ONLY and AUTH_TESTS_ONLY
+#ANON_TESTS_ONLY=True
+#AUTH_TESTS_ONLY=True
+
+
+[GLOBAL]
+RESOURCE_ID=ivo://cadc.nrc.ca/alpha-global/raven
+# luskan sync url
+LUSKAN_URL=https://proc5-27.cadc.dao.nrc.ca/luskan/sync
+
+ARGUS_URL=https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus/sync
+# number of public/private uris to randomly access in order to avoid the effect of caching on test results.
+NUM_URIS = 1000
+
+[SITE]
+RESOURCE_ID=ivo://cadc.nrc.ca/alpha-site-ceph4k/minoc
+# directories to create and upload/download the tests files from/to
+UPLOAD_DIR=/tmp
+DOWNLOAD_DIR=/dev/null
+# Min file size to use in tests in bytes
+MIN_FILESIZE = 10
+# Maximum file size order relativ to the minimum size. e.g if MIN_FILESIZE=100 and MAX_FILESIZE_ORDER=2,
+# the tests will generate and use files of length 100KB, 1000KB, 100000KB
+# Accepted values >= 0
+MAX_FILE_SIZE_ORDER = 1

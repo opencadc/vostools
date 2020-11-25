@@ -9,20 +9,19 @@ RUN pip install -e 'git+https://github.com/opencadc/vostools@newstorage#egg=vost
 # Make requests trust all certificates
 ENV CURL_CA_BUNDLE=
 
-#COPY dev_requirements.txt /tmp/
+RUN mkdir /locust
+WORKDIR /locust
 COPY locustfile.py . 
 COPY testers.py .
-COPY test_config .
 RUN mkdir cert
 COPY cert/* cert/
+RUN mkdir config
+COPY config/test_config config/
 
 COPY entrypoint.sh /
 
 RUN chmod +x /entrypoint.sh
 
-#RUN pip install -r /tmp/dev_requirements.txt
-
 USER locust
 
 ENTRYPOINT ["/entrypoint.sh"]
-#CMD ["./docker_start.sh"]

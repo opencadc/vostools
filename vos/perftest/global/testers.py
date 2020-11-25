@@ -151,4 +151,4 @@ if __name__ == '__main__':
     gt = GlobalTester()
     # gt.anon_get_pub()
     # gt.anon_get_priv()
-    gt.anon_put()
+    #gt.anon_put()
