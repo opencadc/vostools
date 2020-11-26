@@ -13,8 +13,6 @@ RUN mkdir /locust
 WORKDIR /locust
 COPY locustfile.py . 
 COPY testers.py .
-RUN mkdir cert
-COPY cert/* cert/
 RUN mkdir config
 COPY config/test_config config/
 

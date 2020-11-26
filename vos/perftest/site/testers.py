@@ -37,7 +37,7 @@ class SiteTester():
             self.site_auth_client = storage_inventory.Client(
             site_config['RESOURCE_ID'], certfile='./config/cadcproxy.pem')
         except KeyError:
-            raise AttributeError('CERT_FILE not set in the config file')
+            raise AttributeError('RESOURCE_ID not set in the config file')
         self.gpub_uris = None
         self.gpriv_uris = None
         try:
