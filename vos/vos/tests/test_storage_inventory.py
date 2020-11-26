@@ -116,7 +116,7 @@ def test_copy_from(endpoints_mock):
     assert len(test_file_content_1) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
         '{}/{}'.format(ep_mock.files, storage_location),
-        stream=True, timeout=(2, 5))
+        stream=True, timeout=(3.05, 120))
 
     # no gets for subsequent calls since the local file is current
     ep_mock.session.head.reset_mock()
@@ -135,7 +135,7 @@ def test_copy_from(endpoints_mock):
     assert len(test_file_content_1) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
         '{}/{}'.format(ep_mock.files, storage_location),
-        stream=True, timeout=(2, 5))
+        stream=True, timeout=(3.05, 120))
 
     # gets for when file is not current (more recent Date in the header)
     ep_mock.session.head.reset_mock()
@@ -147,7 +147,7 @@ def test_copy_from(endpoints_mock):
     assert len(test_file_content_1) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
         '{}/{}'.format(ep_mock.files, storage_location),
-        stream=True, timeout=(2, 5))
+        stream=True, timeout=(3.05, 120))
 
     # local file is newer but remote content different -> update local
     ep_mock.session.head.reset_mock()
@@ -166,7 +166,7 @@ def test_copy_from(endpoints_mock):
     assert len(test_file_content_2) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
         '{}/{}'.format(ep_mock.files, storage_location),
-        stream=True, timeout=(2, 5))
+        stream=True, timeout=(3.05, 120))
 
     # -------------- GLOBAL ----------------
     # check it uses content disposition for the name of the file when not
@@ -191,7 +191,7 @@ def test_copy_from(endpoints_mock):
     assert os.stat(expected_file).st_size == len(test_file_content_2)
     assert len(test_file_content_2) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
-        locations[0], stream=True, timeout=(2, 5))
+        locations[0], stream=True, timeout=(3.05, 120))
     os.remove(expected_file)
 
     # check it uses the path of the URI when destination is directory and
@@ -210,7 +210,7 @@ def test_copy_from(endpoints_mock):
     assert os.stat(os_location).st_size == len(test_file_content_2)
     assert len(test_file_content_2) == response, 'Got incorrect file size'
     ep_mock.session.get.assert_called_with(
-        locations[0], stream=True, timeout=(2, 5))
+        locations[0], stream=True, timeout=(3.05, 120))
 
     # cleanup
     os.remove(os_location)
@@ -230,7 +230,8 @@ def test_copy_from(endpoints_mock):
                 transfer_mock.transfer.return_value = locations
                 tm.return_value = transfer_mock
                 test_client.copy(storage_location, os_location)
-    assert 'Failed to get file {}'.format(storage_location) == str(e.value)
+    assert 'Failed to copy {} -> {}: '.format(
+        storage_location, os_location) == str(e.value)
 
 
 @patch('vos.storage_inventory.StorageEndPoints')
@@ -425,7 +426,7 @@ def test_copy_to(endpoints_mock):
                 transfer_mock.transfer.return_value = locations
                 tm.return_value = transfer_mock
                 test_client.copy(os_location, storage_location)
-    assert 'Failed to copy {} -> {}'.format(
+    assert 'Failed to copy {} -> {}: '.format(
         os_location, storage_location) == str(e.value)
 
 
