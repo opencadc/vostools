@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  master:
+    image: newstorage_global_test
+    ports:
+     - "8089:8089"
+    volumes:
+      - ./config:/locust/config
+    command: locust --master -H http://master:8089
+  
+  worker:
+    image: newstorage_global_test
+    volumes:
+      - ./config:/locust/config
+    command: locust --worker --master-host master

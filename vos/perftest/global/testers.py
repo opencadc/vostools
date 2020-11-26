@@ -25,7 +25,7 @@ class GlobalTester():
             global_config['RESOURCE_ID'])
         try:
             self.global_auth_client = storage_inventory.Client(
-            global_config['RESOURCE_ID'], certfile=config['CERT_FILE'])
+            global_config['RESOURCE_ID'], certfile='./config/cadcproxy.pem')
         except KeyError:
             raise AttributeError('CERT_FILE not set in the config file')
         self.gpub_uris = None

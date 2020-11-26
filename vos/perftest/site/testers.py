@@ -35,7 +35,7 @@ class SiteTester():
             site_config['RESOURCE_ID'])
         try:
             self.site_auth_client = storage_inventory.Client(
-            site_config['RESOURCE_ID'], certfile=config['CERT_FILE'])
+            site_config['RESOURCE_ID'], certfile='./config/cadcproxy.pem')
         except KeyError:
             raise AttributeError('CERT_FILE not set in the config file')
         self.gpub_uris = None
@@ -55,7 +55,7 @@ class SiteTester():
 
     def get_next_file_size(self):
         # returns the next size of the file.
-        # round rubin
+        # round-robin
         next_size = self.file_size * 10**self.current_size_order
         # or random
         # next_size = self.file_size * \

@@ -25,3 +25,4 @@ RUN chmod +x /entrypoint.sh
 USER locust
 
 ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/entrypoint.sh"]
