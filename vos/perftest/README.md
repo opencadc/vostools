@@ -54,7 +54,7 @@ Start master node:
 `$docker-compose run master --expected-workers=X`
 
 Then on each node start the workers:
-`$docker-compose run worker --master-host=X.X.X.X --master-port=5557`
+`$docker-compose run worker --master-host=X.X.X.X --master-port=8089`
 
 Number of attached workers will be see at the `http://0.0.0.0:8089/`. Tests cannot be started untill all the workers have
 attached.
