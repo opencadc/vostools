@@ -1,6 +1,5 @@
 [GENERAL]
 REG=mach275.cadc.dao.nrc.ca
-CERT_FILE=./cert/cadcproxy.pem
 # number of calls/user/sec
 CALL_FREQ=1
 # cannot set both ANON_TESTS_ONLY and AUTH_TESTS_ONLY

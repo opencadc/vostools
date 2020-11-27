@@ -1,6 +1,5 @@
 [GENERAL]
 REG=mach275.cadc.dao.nrc.ca
-CERT_FILE=./cert/cadcproxy.pem
 # number of calls/user/sec
 CALL_FREQ=120
 #ANON_TESTS_ONLY=True
