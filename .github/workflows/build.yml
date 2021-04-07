@@ -86,6 +86,7 @@ jobs:
           CI_BRANCH: ${GITHUB_REF#"ref/heads"}
         run: |
            coveralls
+           
   publish:
     needs: coverage
     runs-on: ubuntu-latest
