@@ -32,7 +32,7 @@ jobs:
       matrix:
         #TODO 2.7 fails on GH Actions but cannot be reproduced locally. Disabled for now.
         # python-version: [2.7,3.5,3.6,3.7,3.8,3.9]
-        python-version: [3.5,3.6,3.7,3.8,3.9]
+        python-version: [35,36,37,38,39]
         package: [vos, vofs]
     steps:
     - name: Checkout code
