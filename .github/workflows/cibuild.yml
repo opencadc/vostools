@@ -46,7 +46,7 @@ jobs:
     - name: Install tox
       run: python -m pip install --upgrade tox
     - name: Test ${{ matrix.package }}
-      run: cd ${{ matrix.package }} && tox -e $(echo ${{matrix.python-version}} | sed 's/\.//') 
+      run: cd ${{ matrix.package }} && tox -e py$(echo ${{matrix.python-version}} | sed 's/\.//') 
 
   style_n_coverage:
     runs-on: ubuntu-latest
