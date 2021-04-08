@@ -133,8 +133,8 @@ class Cache(object):
         @param maxFlushThreads: Maximum number of nodes to flush simultaneously
         """
 
-        # Why set a custom checkinterval ?
-        sys.setcheckinterval(CACHE_CHECK_INTERVAL)
+        # Why set a custom switchinterval (checkinterval) ?
+        sys.setswitchinterval(CACHE_CHECK_INTERVAL)
 
         self.cacheDir = os.path.abspath(cacheDir)
         self.dataDir = os.path.join(self.cacheDir, CACHE_DATA_SUBDIR)
