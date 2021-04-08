@@ -46,7 +46,11 @@ jobs:
     - name: Install tox
       run: python -m pip install --upgrade tox
     - name: Test ${{ matrix.package }}
-      run: cd ${{ matrix.package }} && tox -e py$(echo ${{matrix.python-version}} | sed 's/\.//') 
+      run: |
+        # add py and remove the "." from python-version in order to get the tox_target
+        tox_target = py$(echo ${{matrix.python-version}} | sed 's/\.//')
+        echo "Tox target: " $tox_target
+        cd ${{ matrix.package }} && tox -e $tox_target 
 
   style_n_coverage:
     runs-on: ubuntu-latest
