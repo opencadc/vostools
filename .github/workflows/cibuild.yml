@@ -48,7 +48,7 @@ jobs:
     - name: Test ${{ matrix.package }}
       run: |
         # add py and remove the "." from python-version in order to get the tox_target
-        tox_target = py$(echo ${{matrix.python-version}} | sed 's/\.//')
+        tox_target = $(echo py${{matrix.python-version}} | sed 's/\.//')
         echo "Tox target: " $tox_target
         cd ${{ matrix.package }} && tox -e $tox_target 
 
