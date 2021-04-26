@@ -1898,12 +1898,10 @@ class Client(object):
                                     format(src_md5, dest_md5))
                             success = True
                         except Exception as ex:
-                            import traceback
-                            traceback.print_exc()
                             copy_failed_message = str(ex)
                             logger.debug(
-                                "FAILED to PUT to {0}".format(put_url))
-                            logger.debug("Got error: {0}".format(ex))
+                                "FAILED to PUT to site {0}".format(put_url))
+                            logger.debug(ex)
                             continue
                         break
 
@@ -2938,9 +2936,12 @@ class Transfer(object):
             resp = self.endpoints.session.get(goto_url,
                                               allow_redirects=False)
         if resp.status_code == 200:
-            transfer_url = resp.url
+            transfer_url = str(resp.url)
             if view == 'move':
                 return transfer_url
+            # check the status of the job first
+            self.check_job_error(
+                str.replace(transfer_url, 'xfer', 'transfers'), str(uri), True)
             xml_string = resp.text
             logging.debug('Transfer Document:{}'.format(xml_string))
             transfer_document = ElementTree.fromstring(xml_string)
@@ -2972,26 +2973,15 @@ class Transfer(object):
         return response.text
 
     def get_transfer_error(self, url, uri):
-        """Follow a transfer URL to the Error message
+        """Follow a transfer URL to completion and returns the error if it
+        fails
         :param url: The URL of the transfer request that had the error.
         :param uri: The uri that we were trying to transfer (get or put).
 
         :raises When a network problem occurs, it raises one of the
         HttpException exceptions declared in the
-        cadcutils.exceptions module
+        cadcutils.exceptions module. Returns None if job completes successfully
         """
-        error_codes = {'NodeNotFound': errno.ENOENT,
-                       'RequestEntityTooLarge': errno.E2BIG,
-                       'PermissionDenied': errno.EACCES,
-                       'OperationNotSupported': errno.EOPNOTSUPP,
-                       'InternalFault': errno.EFAULT,
-                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
-                       'ViewNotSupported': errno.ENOSYS,
-                       'InvalidArgument': errno.EINVAL,
-                       'InvalidURI': errno.EFAULT,
-                       'TransferFailed': errno.EIO,
-                       'DuplicateNode.': errno.EEXIST,
-                       'NodeLocked': errno.EPERM}
         job_url = str.replace(url, "/results/transferDetails", "")
 
         try:
@@ -3037,6 +3027,35 @@ class Transfer(object):
         if phase in ['HELD', 'SUSPENDED', 'ABORTED']:
             # re-queue the job and continue to monitor for completion.
             raise OSError("UWS status: {0}".format(phase), errno.EFAULT)
+        return self.check_job_error(url, uri)
+
+    def check_job_error(self, url, uri, check_phase=False):
+        """
+        Checks whether a job is an error state and raises the appropriate
+        exception. Job does not have to be completed.
+        :param url: job url
+        :param uri: vospace artifac
+        :param check_phase: True if job phase needs to be read from server,
+        False otherwise
+        :return: Raises an exception if job failed.
+        """
+        error_codes = {'NodeNotFound': errno.ENOENT,
+                       'RequestEntityTooLarge': errno.E2BIG,
+                       'PermissionDenied': errno.EACCES,
+                       'OperationNotSupported': errno.EOPNOTSUPP,
+                       'InternalFault': errno.EFAULT,
+                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
+                       'ViewNotSupported': errno.ENOSYS,
+                       'InvalidArgument': errno.EINVAL,
+                       'InvalidURI': errno.EFAULT,
+                       'TransferFailed': errno.EIO,
+                       'DuplicateNode.': errno.EEXIST,
+                       'NodeLocked': errno.EPERM}
+        job_url = str.replace(str(url), "/results/transferDetails", "")
+        if check_phase:
+            phase = self._get_phase(job_url + "/phase")
+            if phase not in ['ERROR']:
+                return False
         error_url = job_url + "/error"
         error_message = self.endpoints.session.get(error_url).text
         logger.debug(

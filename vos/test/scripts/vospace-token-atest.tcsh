@@ -10,14 +10,6 @@ else
 	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
 endif
 
-if (! ${?VOSPACE_CONFIG_FILE} ) then
-    echo "VOSPACE_CONFIG_FILE env variable not set. Using /tmp/vos-config"
-    $THIS_DIR/set_config_file || echo "FAIL set_config_file" && exit -1
-    setenv VOSPACE_CONFIG_FILE /tmp/test-vos-config
-else
-    echo "Using VOSPACE_CONFIG_FILE: $VOSPACE_CONFIG_FILE"
-endif
-
 if($#argv == 0) then
     set resources = "vault cavern"
     echo "Testing against default resources: $resources"

@@ -81,7 +81,7 @@ def _get_sort_key(node, sort):
 
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
-    parser.add_argument('node', nargs="+", help="URI of VOSpace Node to list.")
+    parser.add_argument('node', nargs=1, help="URI of VOSpace Node to list.")
     parser.add_option("--help", action="help", default='==SUPPRESS==',
                       help='show this help message and exit')
     parser.add_option("-l", "--long", action="store_true",
