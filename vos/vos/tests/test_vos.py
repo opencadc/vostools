@@ -591,6 +591,7 @@ class TestClient(unittest.TestCase):
         conn_mock.session.return_value = session
         end_point_mock = Mock(session=session)
         test_transfer = vos.Transfer(end_point_mock)
+        test_transfer.get_transfer_error = Mock()  # not transfer error
         protocols = test_transfer.transfer(
             'https://some.host/service', 'vos://abc', 'pullFromVoSpace')
         assert protocols == ['https://transfer.host/transfer/abc']

@@ -327,7 +327,7 @@ def vcp():
                 logging.warning("%s: Skipping" % str(os_exception))
                 Nonlocal.exit_code += getattr(os_exception, 'errno', -1)
             else:
-                raise os_exception
+                exit_on_exception(os_exception)
 
     # main loop
     # Set source to the initial value of args so that if we have any issues
