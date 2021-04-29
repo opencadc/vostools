@@ -56,7 +56,7 @@ Tutorial
 1. Get a `CANFAR
    account <http://www.canfar.phys.uvic.ca/canfar/auth/request.html>`__
 2. Install the vos package.
-3. Retrieve a X509/SSL certificate using the ``getCert``
+3. Retrieve a X509/SSL certificate using the ``cadc-get-cert``
    script installed as part of the ``cadcutils`` package that is automatically installed wiht vos.
 4. Example Usage.
 
