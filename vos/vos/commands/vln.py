@@ -36,15 +36,15 @@ def vln():
     try:
         opt = parser.parse_args()
         set_logging_level_from_args(opt)
-
-        if not vos.is_remote_file(opt.source) or \
-                not vos.is_remote_file(opt.target):
-            raise ArgumentError(
-                None,
-                "source must be vos node or http url, target must be vos node")
         client = vos.Client(
             vospace_certfile=opt.certfile,
             vospace_token=opt.token)
+        if not client.is_remote_file(opt.source) or \
+                not client.is_remote_file(opt.target):
+            raise ArgumentError(
+                None,
+                "source must be vos node or http url, target must be vos node")
+
         client.link(opt.source, opt.target)
     except ArgumentError as ex:
         parser.print_usage()

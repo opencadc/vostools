@@ -117,21 +117,24 @@ class TestClient(unittest.TestCase):
         Client.VOSPACE_CERTFILE = "some-cert-file.pem"
         with patch('os.access'):
             client = Client(vospace_certfile=certfile)
-        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        client.is_remote_file = Mock()
+        client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
         self.assertTrue(conn.subject.certificate)
         self.assertFalse(conn.vo_token)
 
         # Supplying an empty string for certfile implies anonymous / http
         client = Client(vospace_certfile='')
-        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        client.is_remote_file = Mock()
+        client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
         self.assertTrue(conn.subject.anon)
         self.assertFalse(conn.vo_token)
 
         # Specifying a token implies authenticated / http
         client = Client(vospace_token='a_token_string')
-        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        client.is_remote_file = Mock()
+        client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
         self.assertTrue(conn.subject.anon)
         self.assertTrue(conn.vo_token)
@@ -140,14 +143,14 @@ class TestClient(unittest.TestCase):
         with patch('os.access'):
             client = Client(vospace_certfile=certfile,
                             vospace_token='a_token_string')
-        client.get_session(uri='ivo://cadc.nrc.ca/vault')
+        client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
         self.assertTrue(conn.subject.anon)
         self.assertTrue(conn.vo_token)
 
         # update auth for specific service
         with patch('os.access'):
-            client.set_auth(uri='ivo://cadc.nrc.ca/vault',
+            client.set_auth(uri='vos://cadc.nrc.ca~vault',
                             vospace_certfile=certfile)
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
         self.assertTrue(conn.subject.certificate)
@@ -292,6 +295,7 @@ class TestClient(unittest.TestCase):
         mock_base_node.name = 'vos:'
         mock_base_node.node_list = [mock_node1, mock_node2]
         client = Client()
+        client.is_remote_file = Mock()
         client.get_node = Mock(
             side_effect=[mock_base_node, mock_node1, mock_node2])
         self.assertEqual(['vos:/bnode/sometests'],
@@ -300,8 +304,11 @@ class TestClient(unittest.TestCase):
     @patch('vos.vos.md5_cache.MD5Cache.compute_md5')
     @patch('__main__.open', MagicMock(), create=True)
     def test_copy(self, computed_md5_mock):
-        file_content = 'File content'.encode('utf-8')
 
+        def is_remote_file(uri):
+            return True if ':' in uri else False
+
+        file_content = 'File content'.encode('utf-8')
         # the md5sum of the file being copied
         transfer_md5 = hashlib.md5()
         transfer_md5.update(file_content)
@@ -339,11 +346,12 @@ class TestClient(unittest.TestCase):
         test_client.get_node = get_node_mock
 
         # time to test...
-        vospaceLocation = 'vos://test/foo'
+        vospaceLocation = 'vos://authority~test/foo'
         osLocation = '/tmp/foo'
         if os.path.isfile(osLocation):
             os.remove(osLocation)
         # copy from vospace
+        test_client.is_remote_file = is_remote_file
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
@@ -725,6 +733,7 @@ class TestClient(unittest.TestCase):
         mock_vofile = Mock()
         client = Client()
         client.open = Mock(return_value=mock_vofile)
+        client.is_remote_file = Mock()
 
         mock_vofile.read = Mock(
             return_value=NODE_XML.format(uri, '').encode('UTF-8'))
@@ -750,22 +759,23 @@ class TestClient(unittest.TestCase):
         conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
         conn.session.post = Mock(return_value=mock_resp_403)
         client = Client(conn=conn)
+        client.is_remote_file = Mock()
 
-        uri1 = 'notvos://cadc.nrc.ca!vospace/nosuchfile1'
-        uri2 = 'notvos://cadc.nrc.ca!vospace/nosuchfile2'
+        uri1 = 'notvos://cadc.nrc.ca!vault/nosuchfile1'
+        uri2 = 'notvos://cadc.nrc.ca!vault/nosuchfile2'
 
-        with self.assertRaises(OSError):
+        with self.assertRaises(AttributeError):
             client.move(uri1, uri2)
 
     @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
-           Mock(return_value='https://www.canfar.phys.uvic.ca/vospace/nodes'))
+           Mock(return_value='https://ws.canfar.net/vault/nodes'))
     def test_delete(self):
         certfile = '/tmp/SomeCert.pem'
         open(certfile, 'w+')
         with patch('os.access'):
             client = Client(vospace_certfile=certfile)
-        uri1 = 'vos://cadc.nrc.ca!vospace/nosuchfile1'
-        url = 'https://www.canfar.phys.uvic.ca/vospace/nodes/nosuchfile1'
+        uri1 = 'vos://cadc.nrc.ca!vault/nosuchfile1'
+        url = 'https://ws.canfar.net/vault/nodes/nosuchfile1'
         mock_session = Mock()
         client.get_session = Mock(return_value=mock_session)
         client.delete(uri1)
