@@ -25,9 +25,8 @@ class VosConfig(Config):
             super(VosConfig, self).__init__(config_path=config_path)
         else:
             super(VosConfig, self).__init__(config_path=default_config_path)
-        # default resources vos and arc
-        self.resource_id = {'vos': 'ivo://cadc.nrc.ca/vault',
-                            'arc': 'ivo://cadc.nrc.ca/arbutus-cavern'}
+        # default vos resource shortcut
+        self.resource_id = {'vos': 'ivo://cadc.nrc.ca/vault'}
         default_rname = set(self.resource_id.keys())
         if self.get('vos', 'resourceID'):
             for resource in self.get('vos', 'resourceID').split('\n'):

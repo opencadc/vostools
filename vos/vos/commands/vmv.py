@@ -30,16 +30,16 @@ def vmv():
     try:
         source = args.source
         dest = args.destination
-        if not vos.is_remote_file(source):
+        client = vos.Client(
+            vospace_certfile=args.certfile,
+            vospace_token=args.token)
+        if not client.is_remote_file(source):
             raise ValueError('Source {} is not a remote node'.format(source))
-        if not vos.is_remote_file(dest):
+        if not client.is_remote_file(dest):
             raise ValueError(
                 'Destination {} is not a remote node'.format(dest))
         if urlparse(source).scheme != urlparse(dest).scheme:
             raise ValueError('Move between services not supported')
-        client = vos.Client(
-            vospace_certfile=args.certfile,
-            vospace_token=args.token)
         logging.info("{} -> {}".format(source, dest))
         client.move(source, dest)
     except Exception as ex:

@@ -131,18 +131,22 @@ def vls():
             order = 'desc' if sort else 'asc'
 
         for node in opt.node:
-            if not vos.is_remote_file(file_name=node):
-                raise ArgumentError(opt.node,
-                                    "Invalid node name: {}".format(node))
-            logging.debug("getting listing of: %s" % str(node))
             client = vos.Client(
                 vospace_certfile=opt.certfile,
                 vospace_token=opt.token)
+            if not client.is_remote_file(file_name=node):
+                raise ArgumentError(opt.node,
+                                    "Invalid node name: {}".format(node))
+            logging.debug("getting listing of: %s" % str(node))
+
             targets = client.glob(node)
 
             # segregate files from directories
             for target in targets:
                 target_node = client.get_node(target)
+                if target.endswith('/') or not opt.long:
+                    while target_node.islink():
+                        target_node = client.get_node(target_node.target)
                 if target_node.isdir():
                     dirs.append((_get_sort_key(target_node, sort),
                                  target_node, target))

@@ -87,12 +87,12 @@ def vsync():
         global_md5_cache = md5_cache.MD5Cache(cache_db=opt.cache_filename)
 
     destination = opt.destination
-    if not vos.is_remote_file(destination):
+    client = vos.Client(
+        vospace_certfile=opt.certfile, vospace_token=opt.token)
+    if not client.is_remote_file(destination):
         parser.error("Only allows sync FROM local copy TO VOSpace")
     # Currently we don't create nodes in sync and we don't sync onto files
     logging.info("Connecting to VOSpace")
-    client = vos.Client(
-        vospace_certfile=opt.certfile, vospace_token=opt.token)
     logging.info("Confirming Destination is a directory")
     dest_is_dir = client.isdir(destination)
 

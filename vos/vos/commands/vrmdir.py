@@ -24,12 +24,12 @@ def vrmdir():
 
     try:
         for container_node in args.nodes:
-            if not vos.is_remote_file(container_node):
+            client = vos.Client(
+                vospace_certfile=args.certfile,
+                vospace_token=args.token)
+            if not client.is_remote_file(container_node):
                 raise ValueError(
                     "{} is not a valid VOSpace handle".format(container_node))
-            client = vos.Client(
-                    vospace_certfile=args.certfile,
-                    vospace_token=args.token)
             if client.isdir(container_node):
                 logging.info("deleting {}".format(container_node))
                 client.delete(container_node)
