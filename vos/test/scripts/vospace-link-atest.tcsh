@@ -121,7 +121,6 @@ foreach resource ($resources)
       echo " [SKIPPED, vos/issues/83]"
   else
       $RMCMD $CERT $CONTAINER/e1link >& /dev/null
-      echo $LNCMD $CERT vos://cadc.nrc.ac~~arc/unknown $CONTAINER/e1link
       $LNCMD $CERT vos://cadc.nrc.ca~arc/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
@@ -131,7 +130,7 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to unknown scheme in URI"
-  $LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCRegtest1 $CONTAINER/e2ink >& /dev/null && echo " [FAIL]" && exit -1
+  $LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCRegtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "Follow the invalid link and fail"

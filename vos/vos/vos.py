@@ -1591,8 +1591,8 @@ class Client(object):
                     resource_id, vospace_certfile=self.vospace_certfile,
                     vospace_token=self.vospace_token)
             except Exception:
-                # that did work. Try a shortcut from config (only for
-                # backwards compatibility
+                # no services by that short name. Try a shortcut from
+                # config (only for backwards compatibility)
                 try:
                     resource_id = vos_config.get_resource_id(scheme)
                     self._endpoints[resource_id] = EndPoints(
@@ -1967,12 +1967,6 @@ class Client(object):
             if linkuri[0] is not None:
                 # TODO This does not work with invalid links. Should it?
                 return self.fix_uri(linkuri[0])
-        # if not vos_config.get_resource_id(parts.scheme):
-        #     # Just past this back, I don't know how to fix...
-        #     raise ValueError(
-        #         'resource name {} is not configured. Update the vos config '
-        #         'file (~/.config/vos/vos-config) to associate it to a '
-        #         'resourceID'.format(parts.scheme))
 
         # Check for filename values.
         path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
