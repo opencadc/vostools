@@ -65,7 +65,6 @@ foreach resource ($resources)
   endif
   echo -n "** setting home and base to public, no groups"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
-  echo -n " [OK]"
   $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -90,6 +89,17 @@ foreach resource ($resources)
   $LNCMD $CERT $CONTAINER/target $CONTAINER/clink >& /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
+  echo -n "list container"
+  # content displayed unless -l and no / at the end
+  # content displayed
+  $LSCMD $CERT $CONTAINER/clink | grep -q something || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER/clink/ | grep -q something || echo " [FAIL]" && exit -1
+  $LSCMD $CERT -l $CONTAINER/clink/ | grep -q something || echo " [FAIL]" && exit -1
+  # case where the content of the target is not displayed just the link
+  $LSCMD $CERT -l $CONTAINER/clink | grep 'clink ->' | grep -q target || echo " [FAIL]" && exit -1
+  echo " [OK]"
+
+
   echo -n "Follow the link to get the file"
   $CPCMD $CERT $CONTAINER/clink/something.png /tmp || echo " [FAIL]" && exit -1
   echo " [OK]"
@@ -106,12 +116,12 @@ foreach resource ($resources)
   $CPCMD $CERT $CONTAINER/dlink /tmp || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "create link to unknown authority in URI"
+  echo -n "create link to external vos URI"
   if ( ${?TESTING_CAVERN} ) then
       echo " [SKIPPED, vos/issues/83]"
   else
       $RMCMD $CERT $CONTAINER/e1link >& /dev/null
-      $LNCMD $CERT vos://unknown.authority~vospace/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
+      $LNCMD $CERT vos://cadc.nrc.ca~arc/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
 
@@ -120,7 +130,7 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to unknown scheme in URI"
-  $LNCMD $CERT unknown://cadc.nrc.ca~vospace/CADCRegtest1 $CONTAINER/e2ink >& /dev/null && echo " [FAIL]" && exit -1
+  $LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCRegtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "Follow the invalid link and fail"

@@ -23,12 +23,12 @@ def vrm():
 
     try:
         for node in args.node:
-            if not vos.is_remote_file(node):
+            client = vos.Client(
+                vospace_certfile=args.certfile,
+                vospace_token=args.token)
+            if not client.is_remote_file(node):
                 raise Exception(
                     '{} is not a valid VOSpace handle'.format(node))
-            client = vos.Client(
-                    vospace_certfile=args.certfile,
-                    vospace_token=args.token)
             if not node.endswith('/'):
                 if client.get_node(node).islink():
                     logging.info('deleting link {}'.format(node))

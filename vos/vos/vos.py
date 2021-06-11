@@ -125,24 +125,6 @@ MAGIC_GLOB_CHECK = re.compile('[*?[]')
 logging.getLogger('requests').setLevel(logging.ERROR)
 
 
-def is_remote_file(file_name, resource_id=None):
-    if file_name.startswith(('http://', 'https://')):
-        # assume full uri
-        return True
-    file_scheme = urlparse(file_name).scheme
-    if file_scheme:
-        if resource_id:
-            # resource id already known
-            return True
-        if vos_config.get_resource_id(resource_name=file_scheme) is not None:
-            return True
-        else:
-            raise ValueError(
-                'Unsupported resource name {}. Check the config file at '
-                '~/.config/vos/vos-config'.format(file_scheme))
-    return False
-
-
 def convert_vospace_time_to_seconds(str_date):
     """A convenience method that takes a string from a vospace time field (UTC)
     and converts it to seconds since epoch local time.
@@ -1278,9 +1260,6 @@ class VOFile(object):
 class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
-    VODataView = {'cadc.nrc.ca!vospace': 'ivo://cadc.nrc.ca/vospace',
-                  'cadc.nrc.ca~vospace': 'ivo://cadc.nrc.ca/vospace'}
-
     # standard ids
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
@@ -1556,19 +1535,20 @@ class Client(object):
         self.get_endpoints(uri).set_auth(vospace_certfile=vospace_certfile,
                                          vospace_token=vospace_token)
 
-    def get_resource_id(self, uri):
-        uri_parts = urlparse(self.fix_uri(uri))
-        if uri_parts.scheme.startswith('vos'):
-            if uri_parts.netloc is None:
-                resource_id = vos_config.get('vos', 'resourceID')
-            else:
-                resource_id = 'ivo://{0}'.format(uri_parts.netloc).replace(
-                    "!", "/").replace("~", "/")
-        elif uri_parts.scheme.startswith('ivo'):
-            resource_id = uri
-        else:
-            raise OSError('Unsupported scheme in {}'.format(uri))
-        return resource_id
+    def is_remote_file(self, file_name):
+        if file_name.startswith(('http://', 'https://')):
+            # assume full uri
+            return True
+        file_scheme = urlparse(file_name).scheme
+        if file_scheme:
+            try:
+                self.get_endpoints(file_name)
+                return True
+            except Exception as ex:
+                msg = 'No VOSpace service found for {}'.format(file_name)
+                logger.debug('{}, Reason: {}'.format(msg, ex))
+                raise ValueError(msg)
+        return False
 
     def get_endpoints(self, uri):
         """
@@ -1582,17 +1562,46 @@ class Client(object):
         :return: corresponding EndPoint object
         """
 
-        uri_parts = urlparse(self.fix_uri(uri))
-        if uri_parts.scheme is not None:
-            resource_id = self.get_resource_id(uri)
+        uri_parts = urlparse(uri)
+        if uri.startswith('ivo://'):
+            raise AttributeError(
+                'BUG: VOSpace identifier expected (vos scheme), '
+                'received registry identifier {}'.format(uri))
+        if uri.startswith('vos://'):
+            resource_id = 'ivo://{}'.format(
+                uri_parts.hostname.replace('!', '/').replace('~', '/'))
         else:
-            raise OSError('No scheme in {}'.format(uri))
+            if uri_parts.scheme is not None:
+                # assume first that the file_scheme is the short name of the
+                # of the resource e.g. arc corresponds to ivo://cadc.nrc.ca/arc
+                # With a proper reg, this could be replaced by a TAP search
+                # into the registry
+                if uri_parts.scheme == 'vos':
+                    # special shortcut
+                    scheme = 'vault'
+                else:
+                    scheme = uri_parts.scheme
+                resource_id = 'ivo://cadc.nrc.ca/{}'.format(scheme)
 
+            else:
+                raise OSError('No scheme in {}'.format(uri))
         if resource_id not in self._endpoints:
-            self._endpoints[resource_id] = EndPoints(
-                resource_id, vospace_certfile=self.vospace_certfile,
-                vospace_token=self.vospace_token)
-
+            try:
+                self._endpoints[resource_id] = EndPoints(
+                    resource_id, vospace_certfile=self.vospace_certfile,
+                    vospace_token=self.vospace_token)
+            except Exception:
+                # no services by that short name. Try a shortcut from
+                # config (only for backwards compatibility)
+                try:
+                    resource_id = vos_config.get_resource_id(scheme)
+                    self._endpoints[resource_id] = EndPoints(
+                        resource_id, vospace_certfile=self.vospace_certfile,
+                        vospace_token=self.vospace_token)
+                except Exception:
+                    raise AttributeError(
+                        'No service with resource ID {} found in registry or '
+                        'the config file'.format(resource_id))
         return self._endpoints[resource_id]
 
     def get_session(self, uri):
@@ -1652,7 +1661,7 @@ class Client(object):
 
         get_node_url_retried = False
         content_disposition = None
-        if is_remote_file(source):
+        if self.is_remote_file(source):
             # GET
             if destination is None:
                 # Set the destination, initially, to the same directory as
@@ -1942,7 +1951,7 @@ class Client(object):
             return uri
         parts = urlparse(uri)
 
-        if not is_remote_file(uri):
+        if not self.is_remote_file(uri):
             if self.rootNode is not None:
                 uri = self.rootNode + uri
             else:
@@ -1958,12 +1967,6 @@ class Client(object):
             if linkuri[0] is not None:
                 # TODO This does not work with invalid links. Should it?
                 return self.fix_uri(linkuri[0])
-        if not vos_config.get_resource_id(parts.scheme):
-            # Just past this back, I don't know how to fix...
-            raise ValueError(
-                'resource name {} is not configured. Update the vos config '
-                'file (~/.config/vos/vos-config) to associate it to a '
-                'resourceID'.format(parts.scheme))
 
         # Check for filename values.
         path = FILENAME_PATTERN_MAGIC.match(os.path.normpath(parts.path))
@@ -1978,7 +1981,7 @@ class Client(object):
         host = parts.netloc
         if not host or host == '':
             # default host corresponds to the resource ID of the client
-            host = vos_config.get_resource_id(parts.scheme).\
+            host = self.get_endpoints(uri).uri.\
                 replace('ivo://', '').replace('/', '!')
 
         path = os.path.normpath(filename).strip('/')
@@ -2016,7 +2019,7 @@ class Client(object):
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
                 # TODO removed ad. Not sure it was used
-                if is_remote_file(uri):
+                if self.is_remote_file(uri):
                     vo_fobj = self.open(uri, os.O_RDONLY, limit=limit)
                     vo_xml_string = vo_fobj.read().decode('UTF-8')
                     xml_file = StringIO(vo_xml_string)
@@ -2710,7 +2713,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if is_remote_file(uri):
+            if self.is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return "vos:DataNode"
@@ -2720,7 +2723,7 @@ class Client(object):
         node = self.get_node(uri, limit=0)
         while node.type == "vos:LinkNode":
             uri = node.target
-            if is_remote_file(uri):
+            if self.is_remote_file(uri):
                 node = self.get_node(uri, limit=0)
             else:
                 return int(requests.head(uri).headers.get('Content-Length', 0))

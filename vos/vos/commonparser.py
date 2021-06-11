@@ -116,11 +116,8 @@ class CommonParser(argparse.ArgumentParser):
 
 
 URI_DESCRIPTION = \
-    'Remote resources are identified either by their full ' \
-    'URIs (ivo://cadc.nrc.ca/vault) or by a user configured name in the ' \
-    'config file.\n' \
-    'Some names are reserved:\n' \
-    '     vos for ivo:/cadc.nrc.ca/vault and\n' \
-    '     arc for ivo:cadc.nc.ca/arbutus-cavern.\n' \
-    'Thus, arc:somepath is a shorter version of the full URI ' \
-    'vos://cadc.nrc.ca~arbutus-cavern/somepath'
+    'Remote resources are identified either by their full URIs \n' \
+    '(vos://cadc.nrc.ca~vault/<path>) or by shorter equivalent URIs with \n' \
+    'the scheme representing the name of the service (vault:<path>). \n' \
+    'Due to historical reasons, the `vos` scheme can be used to refer \n' \
+    'to the `vault` service, ie vos:<path> and vault:<path> are equivalent.\n'

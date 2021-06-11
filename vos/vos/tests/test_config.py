@@ -72,7 +72,6 @@ def test_get_resource_id():
     # config file does not exist
     conf = vosconfig.VosConfig('somedir', 'somedir')
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
-    assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
     with pytest.raises(ValueError) as e:
         conf.get_resource_id(None)
     assert str(e.value) == 'resource name required'
@@ -88,7 +87,6 @@ def test_get_resource_id():
     open(config_file, 'w').write(config_content)
     vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
-    assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
 
     # default 1 resource without name should fail
     config_content = '[vos]\nresourceID = ivo://cadc.nrc.ca/vv\n'
@@ -105,7 +103,6 @@ def test_get_resource_id():
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
-    assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
     assert conf.get_resource_id('cadcvos') == 'ivo://cadc.nrc.ca/vault'
 
     # extra resource to the config file with proper name
@@ -114,7 +111,6 @@ def test_get_resource_id():
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
-    assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
     assert conf.get_resource_id('spvo') == 'ivo://some.provider/vo'
     assert conf.get_resource_id('sopvo') == 'ivo://some.other.provider/vo'
 
@@ -123,7 +119,6 @@ def test_get_resource_id():
     open(config_file, 'w').write(config_content)
     conf = vosconfig.VosConfig(config_file)
     assert conf.get_resource_id('vos') == 'ivo://cadc.nrc.ca/vault'
-    assert conf.get_resource_id('arc') == 'ivo://cadc.nrc.ca/arbutus-cavern'
     assert conf.get_resource_id('vault') == 'ivo://cadc.nrc.ca/vault'
 
     # attempt to assign a reserved name (vos or arc)

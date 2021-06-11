@@ -97,27 +97,38 @@ class TestVls(unittest.TestCase):
         mock_node1.props = {'length': 100, 'date': 50000}
         mock_node1.isdir.return_value = False
         mock_node1.get_info.return_value = ''
+        mock_node1.islink.return_value = False
 
         mock_node2 = MagicMock(type='vos:DataNode')
         mock_node2.name = 'node2'
         mock_node2.props = {'length': 30, 'date': 70000}
         mock_node2.isdir.return_value = False
         mock_node2.get_info.return_value = ''
+        mock_node2.islink.return_value = False
+
+        mock_node3_link = MagicMock(type='vos:DataNode')
+        mock_node3_link.name = 'node3_link'
+        mock_node3_link.props = {'length': 60, 'date': 20000}
+        mock_node3_link.isdir.return_value = False
+        mock_node3_link.get_info.return_value = ''
+        mock_node3_link.islink.return_value = True
 
         mock_node3 = MagicMock(type='vos:DataNode')
         mock_node3.name = 'node3'
         mock_node3.props = {'length': 60, 'date': 20000}
         mock_node3.isdir.return_value = False
         mock_node3.get_info.return_value = ''
+        mock_node3.islink.return_value = False
 
         vos_client_mock.return_value.glob.return_value = \
-            ['target2', 'target3', 'target1']
+            ['target2', 'target3_link', 'target1']
 
         # vls command with sort == None (i.e. sort by node name), order == None
         out = 'node1\nnode2\nnode3\n'
         with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
             vos_client_mock.return_value.get_node = \
-                MagicMock(side_effect=[mock_node2, mock_node3, mock_node1])
+                MagicMock(side_effect=[mock_node2, mock_node3_link, mock_node3,
+                                       mock_node1])
             sys.argv = ['vls', 'vos:/CADCRegtest1']
             cmd_attr = getattr(commands, 'vls')
             cmd_attr()
