@@ -2541,7 +2541,7 @@ class Client(object):
         data = str(node)
         size = len(data)
         return Node(self.get_session(uri).put(
-            url, data=data, headers={'size': str(size)}).content)
+            url, data=data, headers={'size': str(size), 'Content-Type': 'text/xml'}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2610,7 +2610,7 @@ class Client(object):
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         try:
-            response = self.get_session(uri).put(url, data=str(node))
+            response = self.get_session(uri).put(url, data=str(node), headers={'Content-Type': 'text/xml'})
             response.raise_for_status()
         except HTTPError as http_error:
             if http_error.response.status_code != 409:

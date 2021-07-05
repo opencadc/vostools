@@ -651,7 +651,7 @@ class TestClient(unittest.TestCase):
         node2 = Node(str(node))
         self.assertEqual(node, node2)
         data = str(node)
-        headers = {'size': str(len(data))}
+        headers = {'size': str(len(data)), 'Content-Type': 'text/xml'}
 
         client = Client()
         # client.get_node_url = Mock(return_value='http://foo.com/bar')
@@ -780,6 +780,23 @@ class TestClient(unittest.TestCase):
         client.get_session = Mock(return_value=mock_session)
         client.delete(uri1)
         mock_session.delete.assert_called_once_with(url)
+
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://www.canfar.phys.uvic.ca/vospace/nodes'))
+    def test_mkdir(self):
+        uri = 'vos://create.vospace.auth!vospace/bar'
+        client = Client()
+        node = Node(client.fix_uri(uri), Node.CONTAINER_NODE)
+        headers = {'Content-Type': 'text/xml'}
+
+        client = Client()
+        session_mock = MagicMock()
+        client.get_session = Mock(return_value=session_mock)
+
+        client.mkdir(uri)
+        session_mock.put.assert_called_with(
+            'http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
+            headers=headers, data=str(node))
 
 
 class TestNode(unittest.TestCase):
