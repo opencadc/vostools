@@ -67,6 +67,7 @@ MAX_RETRY_DELAY = 128  # maximum delay between retries
 # start delay between retries when Try_After not sent by server.
 DEFAULT_RETRY_DELAY = 30
 MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
+MAX_INTERMTTENT_RETRIES = 3
 
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
 HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
@@ -144,7 +145,7 @@ class Connection(object):
 
     def __init__(self, vospace_certfile=None, vospace_token=None,
                  http_debug=False,
-                 resource_id=None):
+                 resource_id=None, insecure=False):
         """Setup the Certificate for later usage
 
         vospace_certfile -- where to store the certificate, if None then
@@ -153,6 +154,7 @@ class Connection(object):
         http_debug -- set True to generate debug statements (Deprecated)
         resource_id -- The resource ID of the vospace service. Defaults to
         CADC vos.
+        insecure -- Allow insecure server connections when using SSL.
 
         If the user supplies an empty vospace_certificate, the connection
         will be 'anonymous'. If no certificate or token are provided, and
@@ -205,7 +207,8 @@ class Connection(object):
                                           'vos/' + version,
                                           host=os.getenv('VOSPACE_WEBSERVICE',
                                                          None),
-                                          session_headers=session_headers)
+                                          session_headers=session_headers,
+                                          insecure=insecure)
         EndPoints.subject = self.subject
 
     @property
@@ -1269,7 +1272,7 @@ class EndPoints(object):
     subject = net.Subject()  # default subject is for anonymous access
 
     def __init__(self, resource_id_uri, vospace_certfile=None,
-                 vospace_token=None):
+                 vospace_token=None, insecure=False):
         """
         Determines the end points of a vospace service
         :param resource_id_uri: the resource id uri
@@ -1279,11 +1282,14 @@ class EndPoints(object):
         :type vospace_certfile: unicode
         :param vospace_token: token string (alternative to vospace_certfile)
         :type vospace_token: unicode
+        :param insecure: Allow insecure server connections when using SSL
+        :type insecure: bool
         """
         self.resource_id = resource_id_uri
         self.conn = Connection(vospace_certfile=vospace_certfile,
                                vospace_token=vospace_token,
-                               resource_id=self.resource_id)
+                               resource_id=self.resource_id,
+                               insecure=insecure)
 
     @property
     def properties(self):
@@ -1374,7 +1380,7 @@ class Client(object):
     def __init__(self, vospace_certfile=None,
                  root_node=None, conn=None,
                  transfer_shortcut=False, http_debug=False,
-                 secure_get=True, vospace_token=None):
+                 secure_get=True, vospace_token=None, insecure=False):
         """This could/should be expanded to set various defaults
         :param vospace_certfile: x509 proxy certificate file location. The
         certificate will be used with all the services that the Client
@@ -1398,6 +1404,9 @@ class Client(object):
         files using SSL encryption. Used for more and more unlikely case when
         the service supports unsecure (HTTP) transfer.
         :type secure_get: bool
+        :param insecure: Allow insecure server connections when using SSL
+        :type insecure: bool
+        :
         """
 
         if os.getenv('VOSPACE_WEBSERVICE', None):
@@ -1423,6 +1432,7 @@ class Client(object):
         self._endpoints = {}
         self.vospace_certfile = vospace_certfile
         self.vospace_token = vospace_token
+        self.insecure = insecure
         return
 
     def glob(self, pathname):
@@ -1589,7 +1599,7 @@ class Client(object):
             try:
                 self._endpoints[resource_id] = EndPoints(
                     resource_id, vospace_certfile=self.vospace_certfile,
-                    vospace_token=self.vospace_token)
+                    vospace_token=self.vospace_token, insecure=self.insecure)
             except Exception:
                 # no services by that short name. Try a shortcut from
                 # config (only for backwards compatibility)
@@ -1597,7 +1607,8 @@ class Client(object):
                     resource_id = vos_config.get_resource_id(scheme)
                     self._endpoints[resource_id] = EndPoints(
                         resource_id, vospace_certfile=self.vospace_certfile,
-                        vospace_token=self.vospace_token)
+                        vospace_token=self.vospace_token,
+                        insecure=self.insecure)
                 except Exception:
                     raise AttributeError(
                         'No service with resource ID {} found in registry or '
@@ -1661,6 +1672,8 @@ class Client(object):
 
         get_node_url_retried = False
         content_disposition = None
+        # url retry counter - how many times an url has been retried
+        retried_urls = {}
         if self.is_remote_file(source):
             # GET
             if destination is None:
@@ -1772,7 +1785,7 @@ class Client(object):
                                                               dest_md5))
                         elif src_size:
                             if dest_size != src_size:
-                                raise IOError(
+                                raise exceptions.TransferException(
                                     'Source and destination sizes do not '
                                     'match: {} vs. {}'.format(src_size,
                                                               dest_size))
@@ -1780,10 +1793,17 @@ class Client(object):
                             logger.debug(
                                 "Source md5 or size not available to check")
                     success = True
-                except Exception as ex:
+                except exceptions.HttpException as ex:
+                    msg = ''
+                    if isinstance(ex, exceptions.TransferException):
+                        msg = ' (intermittent error)'
+                        retried_urls[get_url] = retried_urls.get(get_url, 0)
+                        if retried_urls[get_url] <= MAX_INTERMTTENT_RETRIES:
+                            # intermittent error - worth retrying url later
+                            get_urls.append(get_url)
                     copy_failed_message = str(ex)
-                    logging.debug("Failed to GET {0}".format(get_url))
-                    logging.debug("Got error {0}".format(ex))
+                    logging.debug("Failed to GET {0}: {1}{2}".format(
+                        get_url, str(ex), msg))
                     continue
         else:
             # PUT
@@ -1865,14 +1885,25 @@ class Client(object):
                             node = self.get_node(destination, force=True)
                             dest_md5 = node.props.get('MD5', None)
                             if dest_md5 != src_md5:
-                                raise IOError(
+                                # raise TransferException so that the URL
+                                # can be retried later
+                                raise exceptions.TransferException(
                                    "Source md5 ({}) != destination md5 ({})".
                                    format(src_md5, dest_md5))
-                        except Exception as ex:
+                        except exceptions.HttpException as ex:
+                            msg = ''
+                            if isinstance(ex, exceptions.TransferException):
+                                msg = ' (intermittent error)'
+                                retried_urls[put_url] = retried_urls.get(
+                                    put_url, 0)
+                                if retried_urls[put_url] <= \
+                                        MAX_INTERMTTENT_RETRIES:
+                                    # intermittent error - worth retrying later
+                                    put_urls.append(put_url)
                             copy_failed_message = str(ex)
                             logger.debug(
-                                "FAILED to PUT to {0}".format(put_url))
-                            logger.debug("Got error: {0}".format(ex))
+                                "FAILED to PUT to {0}: {1}{2}".format(
+                                    put_url, str(ex), msg))
                             continue
                         success = True
                         break
@@ -1902,15 +1933,26 @@ class Client(object):
                             node = self.get_node(destination, force=True)
                             dest_md5 = node.props.get('MD5', None)
                             if dest_md5 != src_md5:
-                                raise IOError(
+                                # raise TransferException so that the URL
+                                # can be retried later
+                                raise exceptions.TransferException(
                                     "Source md5 ({}) != destination md5 ({})".
                                     format(src_md5, dest_md5))
                             success = True
-                        except Exception as ex:
+                        except exceptions.HttpException as ex:
+                            msg = ''
+                            if isinstance(ex, exceptions.TransferException):
+                                msg = ' (intermittent error)'
+                                retried_urls[put_url] = retried_urls.get(
+                                    put_url, 0)
+                                if retried_urls[put_url] <= \
+                                        MAX_INTERMTTENT_RETRIES:
+                                    # intermittent error - worth retrying later
+                                    put_urls.append(put_url)
                             copy_failed_message = str(ex)
                             logger.debug(
-                                "FAILED to PUT to site {0}".format(put_url))
-                            logger.debug(ex)
+                                "FAILED to PUT to site {0}: {1}{2}".format(
+                                    put_url, str(ex), msg))
                             continue
                         break
 
@@ -2345,7 +2387,7 @@ class Client(object):
         """
         endpoints = self.get_endpoints(uri)
 
-        trans = Transfer(self.get_endpoints(uri))
+        trans = net.Transfer(self.get_session(uri))
         security_methods = []
         if endpoints.conn.subject.certificate:
             security_methods.append(
@@ -2374,7 +2416,7 @@ class Client(object):
         cadcutils.exceptions module
         """
 
-        trans = Transfer(self.get_endpoints(uri))
+        trans = net.Transfer(self.get_session(uri))
         return trans.get_transfer_error(url, uri)
 
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, url=None,
@@ -2541,7 +2583,8 @@ class Client(object):
         data = str(node)
         size = len(data)
         return Node(self.get_session(uri).put(
-            url, data=data, headers={'size': str(size), 'Content-Type': 'text/xml'}).content)
+            url, data=data,
+            headers={'size': str(size), 'Content-Type': 'text/xml'}).content)
 
     def update(self, node, recursive=False):
         """Updates the node properties on the server. For non-recursive
@@ -2610,7 +2653,8 @@ class Client(object):
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
         try:
-            response = self.get_session(uri).put(url, data=str(node), headers={'Content-Type': 'text/xml'})
+            response = self.get_session(uri).put(
+                url, data=str(node), headers={'Content-Type': 'text/xml'})
             response.raise_for_status()
         except HTTPError as http_error:
             if http_error.response.status_code != 409:
@@ -2842,232 +2886,3 @@ class Md5File(object):
     @property
     def md5_checksum(self):
         return self._md5_checksum.hexdigest()
-
-
-class Transfer(object):
-    DIRECTION_PULL_FROM = "pullFromVoSpace"
-    DIRECTION_PUSH_TO = "pushToVoSpace"
-
-    def __init__(self, endpoints):
-        """
-        Handle transfer related business.  This is here to be reused as needed.
-        :param endpoints: endpoints for this service
-        """
-        self.endpoints = endpoints
-
-    def transfer(self, endpoint_url, uri, direction, view=None, cutout=None,
-                 security_methods=None):
-        """Build the transfer XML document
-        :param endpoint_url: URL of the endpoint to POST to
-        :param uri: the uri to transfer from or to VOSpace.
-        :param direction: is this a pushToVoSpace or a pullFromVoSpace ?
-        :param view: which view of the node (data/default/cutout/etc.) is
-        being transferred
-        :param cutout: a special parameter added to the 'cutout' view
-        request. e.g. '[0][1:10,1:10]'
-        :param security_methods: the IVOA SSO security methods (see
-        vos.SSO_SECURITY_METHODS) that the client
-        intends to use. The service is supposed to return appropriate URLs
-        for the security_method. When the security method is not present,
-        the service returns pre-authorized URLs that only work for the
-        intended purpose, e.g. a pre-authorized PUT URL cannot be used for
-        a read (GET or HEAD)
-
-        :raises When a network problem occurs, it raises one of the
-        HttpException exceptions declared in the
-        cadcutils.exceptions module
-        """
-        protocol = {
-            Transfer.DIRECTION_PULL_FROM: "httpsget",
-            Transfer.DIRECTION_PUSH_TO: "httpsput"}
-
-        transfer_xml = ElementTree.Element("vos:transfer")
-        transfer_xml.attrib['xmlns:vos'] = Node.VOSNS
-        transfer_xml.attrib['version'] = Node.VOSVERSION
-        ElementTree.SubElement(transfer_xml, "vos:target").text = uri
-        ElementTree.SubElement(transfer_xml, "vos:direction").text = \
-            direction
-
-        if view == 'move':
-            ElementTree.SubElement(transfer_xml,
-                                   "vos:keepBytes").text = "false"
-        else:
-            if view == 'defaultview':
-                ElementTree.SubElement(transfer_xml, "vos:view").attrib[
-                    'uri'] = VO_VIEW_DEFAULT
-            elif view is not None:
-                vos_view = ElementTree.SubElement(transfer_xml, "vos:view")
-                vos_view.attrib['uri'] = CADC_VO_VIEWS[view]
-                if cutout is not None and view == 'cutout':
-                    param = ElementTree.SubElement(vos_view, "vos:param")
-                    param.attrib['uri'] = CADC_VO_VIEWS[view]
-                    param.text = cutout
-            protocol_element = ElementTree.SubElement(transfer_xml,
-                                                      "vos:protocol")
-            protocol_element.attrib['uri'] = "{0}#{1}".format(
-                Node.IVOAURL, protocol[direction])
-            if security_methods:
-                for sm in security_methods:
-                    if sm not in SSO_SECURITY_METHODS.values():
-                        raise AttributeError(
-                            'Invalid security method {}. Supported values: {}'.
-                            format(sm, SSO_SECURITY_METHODS.values))
-                security_element = ElementTree.SubElement(
-                    protocol_element, "vos:securityMethod")
-                security_element.attrib['uri'] = sm
-
-        logging.debug(ElementTree.tostring(transfer_xml))
-        logging.debug("Sending to : {}".format(endpoint_url))
-
-        data = ElementTree.tostring(transfer_xml)
-        resp = self.endpoints.session.post(
-            endpoint_url, data=data, allow_redirects=False,
-            headers={'Content-Type': 'text/xml'})
-
-        logging.debug("{0}".format(resp))
-        logging.debug("{0}".format(resp.text))
-        while resp.status_code == 303:
-            goto_url = resp.headers.get('Location', None)
-
-            if self.endpoints.session.auth is not None and \
-                    "auth" not in goto_url:
-                goto_url = goto_url.replace('/vospace/', '/vospace/auth/')
-
-            logging.debug(
-                'Got back from transfer URL: {}'.format(goto_url))
-            # for get or put we need the protocol value
-            resp = self.endpoints.session.get(goto_url,
-                                              allow_redirects=False)
-        if resp.status_code == 200:
-            transfer_url = str(resp.url)
-            if view == 'move':
-                return transfer_url
-            # check the status of the job first
-            self.check_job_error(
-                str.replace(transfer_url, 'xfer', 'transfers'), str(uri), True)
-            xml_string = resp.text
-            logging.debug('Transfer Document:{}'.format(xml_string))
-            transfer_document = ElementTree.fromstring(xml_string)
-            logging.debug(
-                "XML version: {0}".format(
-                    ElementTree.tostring(transfer_document)))
-            all_protocols = transfer_document.findall(Node.PROTOCOL)
-            if all_protocols is None or not len(all_protocols) > 0:
-                raise RuntimeError(
-                    "BUG: No protocol/endpoint returned for transfer URL {}".
-                    format(transfer_url))
-        elif resp.status_code == 404:
-            raise OSError(resp.status_code,
-                          "File not found: {0}".format(uri))
-        else:
-            raise OSError(resp.status_code,
-                          "Failed to get transfer service response.")
-
-        result = []
-        for protocol in all_protocols:
-            for node in protocol.findall(Node.ENDPOINT):
-                result.append(node.text)
-        return result
-
-    def _get_phase(self, phase_url):
-        response = self.endpoints.session.get(phase_url,
-                                              allow_redirects=True)
-        response.raise_for_status()
-        return response.text
-
-    def get_transfer_error(self, url, uri):
-        """Follow a transfer URL to completion and returns the error if it
-        fails
-        :param url: The URL of the transfer request that had the error.
-        :param uri: The uri that we were trying to transfer (get or put).
-
-        :raises When a network problem occurs, it raises one of the
-        HttpException exceptions declared in the
-        cadcutils.exceptions module. Returns None if job completes successfully
-        """
-        job_url = str.replace(url, "/results/transferDetails", "")
-
-        try:
-            phase_url = job_url + "/phase"
-            sleep_time = 1
-            roller = ('\\', '-', '/', '|', '\\', '-', '/', '|')
-            phase = self._get_phase(phase_url)
-            # do not remove the line below. It is used for testing
-            logging.debug("Job URL: " + job_url + "/phase")
-            while phase in ['PENDING', 'QUEUED', 'EXECUTING', 'UNKNOWN']:
-                # poll the job. Sleeping time in between polls is doubling
-                # each time until it gets to 32sec
-                total_time_slept = 0
-                if sleep_time <= 32:
-                    sleep_time *= 2
-                slept = 0
-                if logger.getEffectiveLevel() == logging.INFO:
-                    while slept < sleep_time:
-                        sys.stdout.write(
-                            '\r{} {}'.format(phase, roller[total_time_slept %
-                                                           len(roller)]))
-                        sys.stdout.flush()
-                        slept += 1
-                        total_time_slept += 1
-                        time.sleep(1)
-                    sys.stdout.write("\r                    \n")
-                else:
-                    time.sleep(sleep_time)
-                phase = self._get_phase(phase_url)
-                logging.debug(
-                    'Async transfer Phase for url {}: {}'.format(url, phase))
-        except KeyboardInterrupt:
-            # abort the job when receiving a Ctrl-C/Interrupt from the client
-            logging.error("Received keyboard interrupt")
-            self.endpoints.session.post(
-                job_url + "/phase", allow_redirects=False, data="PHASE=ABORT",
-                headers={'Content-type': 'application/x-www-form-urlencoded'})
-            raise KeyboardInterrupt
-        phase = self._get_phase(phase_url)
-        logger.debug("Phase:  {0}".format(phase))
-        if phase in ['COMPLETED']:
-            return False
-        if phase in ['HELD', 'SUSPENDED', 'ABORTED']:
-            # re-queue the job and continue to monitor for completion.
-            raise OSError("UWS status: {0}".format(phase), errno.EFAULT)
-        return self.check_job_error(url, uri)
-
-    def check_job_error(self, url, uri, check_phase=False):
-        """
-        Checks whether a job is an error state and raises the appropriate
-        exception. Job does not have to be completed.
-        :param url: job url
-        :param uri: vospace artifac
-        :param check_phase: True if job phase needs to be read from server,
-        False otherwise
-        :return: Raises an exception if job failed.
-        """
-        error_codes = {'NodeNotFound': errno.ENOENT,
-                       'RequestEntityTooLarge': errno.E2BIG,
-                       'PermissionDenied': errno.EACCES,
-                       'OperationNotSupported': errno.EOPNOTSUPP,
-                       'InternalFault': errno.EFAULT,
-                       'ProtocolNotSupported': errno.EPFNOSUPPORT,
-                       'ViewNotSupported': errno.ENOSYS,
-                       'InvalidArgument': errno.EINVAL,
-                       'InvalidURI': errno.EFAULT,
-                       'TransferFailed': errno.EIO,
-                       'DuplicateNode.': errno.EEXIST,
-                       'NodeLocked': errno.EPERM}
-        job_url = str.replace(str(url), "/results/transferDetails", "")
-        if check_phase:
-            phase = self._get_phase(job_url + "/phase")
-            if phase not in ['ERROR']:
-                return False
-        error_url = job_url + "/error"
-        error_message = self.endpoints.session.get(error_url).text
-        logger.debug(
-            "Got transfer error {0} on URI {1}".format(error_message, uri))
-        # Check if the error was that the link type is unsupported and try and
-        # follow that link.
-        target = re.search('Unsupported link target:(?P<target> .*)$',
-                           error_message)
-        if target is not None:
-            return target.group('target').strip()
-        raise OSError(error_codes.get(error_message, errno.EFAULT),
-                      '{0}: {1}'.format(uri, error_message))

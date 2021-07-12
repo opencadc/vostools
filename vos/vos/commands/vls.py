@@ -133,7 +133,8 @@ def vls():
         for node in opt.node:
             client = vos.Client(
                 vospace_certfile=opt.certfile,
-                vospace_token=opt.token)
+                vospace_token=opt.token,
+                insecure=opt.insecure)
             if not client.is_remote_file(file_name=node):
                 raise ArgumentError(opt.node,
                                     "Invalid node name: {}".format(node))
