@@ -1,4 +1,3 @@
-# Test the NodeCache class
 import unittest
 import sys
 import logging
@@ -52,9 +51,3 @@ class TestCommonParser(unittest.TestCase):
                 with patch('sys.stderr', new_callable=StringIO) as stderr_mock:
                     exit_on_exception(e, 'Error message')
             self.assertEqual('ERROR:: Error message\n', stderr_mock.getvalue())
-
-
-def run():
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(TestCommonParser)
-    all_tests = unittest.TestSuite([suite1])
-    return unittest.TextTestRunner(verbosity=2).run(all_tests)

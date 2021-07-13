@@ -1730,16 +1730,18 @@ class Client(object):
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
                                          view=view)
+            negotiated = False
             while not success:
                 # If there are no urls available, drop through to full
                 # negotiation if that wasn't already tried
-                if len(get_urls) == 0:
+                if len(get_urls) == 0 and not negotiated:
                     if self.transfer_shortcut and not get_node_url_retried:
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
                         # remove the first one as we already tried that one.
                         get_urls.pop(0)
+                        negotiated = True
                         get_node_url_retried = True
                     else:
                         break
@@ -1798,8 +1800,9 @@ class Client(object):
                     msg = ''
                     if isinstance(ex, exceptions.TransferException):
                         msg = ' (intermittent error)'
-                        retried_urls[get_url] = retried_urls.get(get_url, 0)
-                        if retried_urls[get_url] <= MAX_INTERMTTENT_RETRIES:
+                        retried_urls[get_url] = \
+                            retried_urls.get(get_url, 0) + 1
+                        if retried_urls[get_url] < MAX_INTERMTTENT_RETRIES:
                             # intermittent error - worth retrying url later
                             get_urls.append(get_url)
                     copy_failed_message = str(ex)
@@ -1865,8 +1868,9 @@ class Client(object):
                     put_urls = self.get_node_url(destination, 'PUT',
                                                  content_length=src_size,
                                                  md5_checksum=dest_md5)
+                    negotiated = False
                     while not success:
-                        if len(put_urls) == 0:
+                        if len(put_urls) == 0 and not negotiated:
                             if self.transfer_shortcut and not \
                                     get_node_url_retried:
                                 put_urls = self.get_node_url(
@@ -1875,6 +1879,7 @@ class Client(object):
                                 # remove the first one as we already tried
                                 # that one.
                                 put_urls.pop(0)
+                                negotiated = True
                                 get_node_url_retried = True
                             else:
                                 break
@@ -1896,8 +1901,8 @@ class Client(object):
                             if isinstance(ex, exceptions.TransferException):
                                 msg = ' (intermittent error)'
                                 retried_urls[put_url] = retried_urls.get(
-                                    put_url, 0)
-                                if retried_urls[put_url] <= \
+                                    put_url, 0) + 1
+                                if retried_urls[put_url] < \
                                         MAX_INTERMTTENT_RETRIES:
                                     # intermittent error - worth retrying later
                                     put_urls.append(put_url)
@@ -1945,8 +1950,8 @@ class Client(object):
                             if isinstance(ex, exceptions.TransferException):
                                 msg = ' (intermittent error)'
                                 retried_urls[put_url] = retried_urls.get(
-                                    put_url, 0)
-                                if retried_urls[put_url] <= \
+                                    put_url, 0) + 1
+                                if retried_urls[put_url] < \
                                         MAX_INTERMTTENT_RETRIES:
                                     # intermittent error - worth retrying later
                                     put_urls.append(put_url)

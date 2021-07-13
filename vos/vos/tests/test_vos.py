@@ -13,6 +13,7 @@ from six.moves import urllib
 from six import BytesIO
 import hashlib
 import tempfile
+from cadcutils import exceptions
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -505,11 +506,105 @@ class TestClient(unittest.TestCase):
         test_client.get_node_url = get_node_url_mock
         get_node_mock.reset_mock()
         response.iter_content.return_value = BytesIO(file_content)
-        headers.get.return_value = None
         test_client.copy(vospaceLocation, osLocation, head=True)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='header')
+
+        # test GET intermittent exceptions on both URLs
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = [exceptions.TransferException()] * \
+                                  2 * vos.MAX_INTERMTTENT_RETRIES
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
+
+        # test GET Transfer error on one URL and a "permanent" one on the other
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = [exceptions.TransferException(),
+                                   exceptions.HttpException(),
+                                   exceptions.TransferException(),
+                                   exceptions.TransferException()]
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count ==  vos.MAX_INTERMTTENT_RETRIES + 1
+
+        # test GET both "permanent" errors
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = [exceptions.HttpException(),
+                                   exceptions.HttpException()]
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count == 2
+
+        # test PUT intermittent exceptions on both URLs
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = [exceptions.TransferException()] * \
+                                   2 * vos.MAX_INTERMTTENT_RETRIES
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
+
+        # test GET Transfer error on one URL and a "permanent" one on the other
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = [exceptions.TransferException(),
+                                   exceptions.HttpException(),
+                                   exceptions.TransferException(),
+                                   exceptions.TransferException()]
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
+
+        # test GET both "permanent" errors
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = [exceptions.HttpException(),
+                                   exceptions.HttpException()]
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == 2
+
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))
