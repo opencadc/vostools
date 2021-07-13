@@ -520,8 +520,8 @@ class TestClient(unittest.TestCase):
         response.iter_content.return_value = BytesIO(file_content)
         headers.get.return_value = None
         session.get.reset_mock()
-        session.get.side_effect = [exceptions.TransferException()] * \
-                                  2 * vos.MAX_INTERMTTENT_RETRIES
+        session.get.side_effect = \
+            [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
         with pytest.raises(OSError):
             test_client.copy(vospaceLocation, osLocation, head=True)
         assert session.get.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
@@ -541,7 +541,7 @@ class TestClient(unittest.TestCase):
                                    exceptions.TransferException()]
         with pytest.raises(OSError):
             test_client.copy(vospaceLocation, osLocation, head=True)
-        assert session.get.call_count ==  vos.MAX_INTERMTTENT_RETRIES + 1
+        assert session.get.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
 
         # test GET both "permanent" errors
         props.get.side_effect = md5sum
@@ -567,8 +567,8 @@ class TestClient(unittest.TestCase):
         response.iter_content.return_value = BytesIO(file_content)
         headers.get.return_value = None
         session.put.reset_mock()
-        session.put.side_effect = [exceptions.TransferException()] * \
-                                   2 * vos.MAX_INTERMTTENT_RETRIES
+        session.put.side_effect = \
+            [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
         with pytest.raises(OSError):
             test_client.copy(osLocation, vospaceLocation, head=True)
         assert session.put.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
@@ -604,7 +604,6 @@ class TestClient(unittest.TestCase):
         with pytest.raises(OSError):
             test_client.copy(osLocation, vospaceLocation, head=True)
         assert session.put.call_count == 2
-
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))

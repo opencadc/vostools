@@ -1431,7 +1431,7 @@ class Client(object):
         self.secure_get = secure_get
         self._endpoints = {}
         self.vospace_certfile = vospace_certfile is None and \
-                                Client.VOSPACE_CERTFILE or vospace_certfile
+            Client.VOSPACE_CERTFILE or vospace_certfile
         self.vospace_token = vospace_token
         self.insecure = insecure
         return
