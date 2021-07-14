@@ -1730,21 +1730,17 @@ class Client(object):
 
             get_urls = self.get_node_url(source, method='GET', cutout=cutout,
                                          view=view)
-            negotiated = False
             while not success:
-                # If there are no urls available, drop through to full
-                # negotiation if that wasn't already tried
-                if len(get_urls) == 0 and not negotiated:
+                if len(get_urls) == 0:
                     if self.transfer_shortcut and not get_node_url_retried:
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
                         # remove the first one as we already tried that one.
                         get_urls.pop(0)
-                        negotiated = True
                         get_node_url_retried = True
-                    else:
-                        break
+                if len(get_urls) == 0:
+                    break
                 get_url = get_urls.pop(0)
                 try:
                     response = self.get_session(source).get(
@@ -1868,9 +1864,8 @@ class Client(object):
                     put_urls = self.get_node_url(destination, 'PUT',
                                                  content_length=src_size,
                                                  md5_checksum=dest_md5)
-                    negotiated = False
                     while not success:
-                        if len(put_urls) == 0 and not negotiated:
+                        if len(put_urls) == 0:
                             if self.transfer_shortcut and not \
                                     get_node_url_retried:
                                 put_urls = self.get_node_url(
@@ -1879,10 +1874,9 @@ class Client(object):
                                 # remove the first one as we already tried
                                 # that one.
                                 put_urls.pop(0)
-                                negotiated = True
                                 get_node_url_retried = True
-                            else:
-                                break
+                        if len(put_urls) == 0:
+                            break
                         put_url = put_urls.pop(0)
                         try:
                             with open(source, str('rb')) as fin:
@@ -1928,8 +1922,8 @@ class Client(object):
                                 # that one.
                                 put_urls.pop(0)
                                 get_node_url_retried = True
-                            else:
-                                break
+                        if len(put_urls) == 0:
+                            break
                         put_url = put_urls.pop(0)
                         try:
                             with Md5File(source, 'rb') as reader:
