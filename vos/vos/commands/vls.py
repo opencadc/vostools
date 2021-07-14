@@ -145,7 +145,7 @@ def vls():
             # segregate files from directories
             for target in targets:
                 target_node = client.get_node(target)
-                if target.endswith('/') or not opt.long:
+                if target.endswith('/') and not opt.long:
                     while target_node.islink():
                         target_node = client.get_node(target_node.target)
                 if target_node.isdir():
