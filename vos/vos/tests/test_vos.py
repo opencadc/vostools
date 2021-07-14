@@ -13,6 +13,7 @@ from six.moves import urllib
 from six import BytesIO
 import hashlib
 import tempfile
+from cadcutils import exceptions
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -505,120 +506,104 @@ class TestClient(unittest.TestCase):
         test_client.get_node_url = get_node_url_mock
         get_node_mock.reset_mock()
         response.iter_content.return_value = BytesIO(file_content)
-        headers.get.return_value = None
         test_client.copy(vospaceLocation, osLocation, head=True)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='header')
 
-    # patch sleep to stop the test from sleeping and slowing down execution
-    @patch('vos.vos.time.sleep', MagicMock(), create=True)
-    def test_transfer_error(self):
-        session = Mock()
-        conn_mock = MagicMock(spec=Connection)
-        conn_mock.session.return_value = session
-        end_point_mock = Mock(session=session)
+        # test GET intermittent exceptions on both URLs
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = \
+            [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
 
-        vospace_url = 'https://somevospace.server/vospace'
+        # test GET Transfer error on one URL and a "permanent" one on the other
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = [exceptions.TransferException(),
+                                   exceptions.HttpException(),
+                                   exceptions.TransferException(),
+                                   exceptions.TransferException()]
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
 
-        session.get.side_effect = [Mock(text='COMPLETED'),
-                                   Mock(text='COMPLETED')]
-        test_transfer = vos.Transfer(end_point_mock)
+        # test GET both "permanent" errors
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.get.reset_mock()
+        session.get.side_effect = [exceptions.HttpException(),
+                                   exceptions.HttpException()]
+        with pytest.raises(OSError):
+            test_client.copy(vospaceLocation, osLocation, head=True)
+        assert session.get.call_count == 2
 
-        # job successfully completed
-        self.assertFalse(test_transfer.get_transfer_error(
-            vospace_url + '/results/transferDetails', 'vos://vospace'))
-        session.get.assert_called_with(vospace_url + '/phase',
-                                       allow_redirects=True)
+        # test PUT intermittent exceptions on both URLs
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = \
+            [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
 
-        # job suspended
-        session.reset_mock()
-        session.get.side_effect = [Mock(text='COMPLETED'),
-                                   Mock(text='ABORTED')]
-        with self.assertRaises(OSError):
-            test_transfer.get_transfer_error(
-                vospace_url + '/results/transferDetails', 'vos://vospace')
-        # check arguments for session.get calls
-        self.assertEqual(
-            [call(vospace_url + '/phase', allow_redirects=True),
-             call(vospace_url + '/phase', allow_redirects=True)],
-            session.get.call_args_list)
+        # test GET Transfer error on one URL and a "permanent" one on the other
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = [exceptions.TransferException(),
+                                   exceptions.HttpException(),
+                                   exceptions.TransferException(),
+                                   exceptions.TransferException()]
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
 
-        # job encountered an internal error
-        session.reset_mock()
-        session.get.side_effect = [Mock(text='COMPLETED'),
-                                   Mock(text='ERROR'),
-                                   Mock(text='InternalFault')]
-        with self.assertRaises(OSError):
-            test_transfer.get_transfer_error(
-                vospace_url + '/results/transferDetails', 'vos://vospace')
-        self.assertEqual([call(vospace_url + '/phase', allow_redirects=True),
-                          call(vospace_url + '/phase', allow_redirects=True),
-                          call(vospace_url + '/error')],
-                         session.get.call_args_list)
-
-        # job encountered an unsupported link error
-        session.reset_mock()
-        link_file = 'testlink.fits'
-        session.get.side_effect = [Mock(text='COMPLETED'),
-                                   Mock(text='ERROR'),
-                                   Mock(
-                                       text="Unsupported link target: " +
-                                            link_file)]
-        self.assertEqual(link_file, test_transfer.get_transfer_error(
-            vospace_url + '/results/transferDetails', 'vos://vospace'))
-        self.assertEqual([call(vospace_url + '/phase', allow_redirects=True),
-                          call(vospace_url + '/phase', allow_redirects=True),
-                          call(vospace_url + '/error')],
-                         session.get.call_args_list)
-
-    def test_transfer(self):
-        session = Mock()
-        redirect_response = Mock()
-        redirect_response.status_code = 303
-        redirect_response.headers = \
-            {'Location': 'https://transfer.host/transfer'}
-        response = Mock()
-        response.status_code = 200
-        response.text = (
-            '<?xml version="1.0" encoding="UTF-8"?>'
-            '<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" '
-            'version="2.1">'
-            '<vos:target>vos://some.host~vault/abc</vos:target>'
-            '<vos:direction>pullFromVoSpace</vos:direction>'
-            '<vos:protocol uri="ivo://ivoa.net/vospace/core#httpsget">'
-            '<vos:endpoint>https://transfer.host/transfer/abc</vos:endpoint>'
-            '<vos:securityMethod '
-            'uri="ivo://ivoa.net/sso#tls-with-certificate" />'
-            '</vos:protocol>'
-            '<vos:keepBytes>true</vos:keepBytes>'
-            '</vos:transfer>')
-        session.post.return_value = redirect_response
-        session.get.return_value = response
-        conn_mock = MagicMock(spec=Connection)
-        conn_mock.session.return_value = session
-        end_point_mock = Mock(session=session)
-        test_transfer = vos.Transfer(end_point_mock)
-        test_transfer.get_transfer_error = Mock()  # not transfer error
-        protocols = test_transfer.transfer(
-            'https://some.host/service', 'vos://abc', 'pullFromVoSpace')
-        assert protocols == ['https://transfer.host/transfer/abc']
-
-        session.reset_mock()
-        session.post.return_value = Mock(status_code=404)
-        with self.assertRaises(OSError) as e:
-            test_transfer.transfer(
-                'https://some.host/service', 'vos://abc',
-                'pullFromVoSpace')
-            assert 'File not found: vos://abc' == str(e)
-
-        session.reset_mock()
-        session.post.return_value = Mock(status_code=500)
-        with self.assertRaises(OSError) as e:
-            test_transfer.transfer(
-                'https://some.host/service', 'vos://abc',
-                'pullFromVoSpace')
-            assert 'Failed to get transfer service response.' == str(e)
+        # test GET both "permanent" errors
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        headers.get.return_value = None
+        session.put.reset_mock()
+        session.put.side_effect = [exceptions.HttpException(),
+                                   exceptions.HttpException()]
+        with pytest.raises(OSError):
+            test_client.copy(osLocation, vospaceLocation, head=True)
+        assert session.put.call_count == 2
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))

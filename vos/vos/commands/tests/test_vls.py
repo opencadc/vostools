@@ -127,8 +127,7 @@ class TestVls(unittest.TestCase):
         out = 'node1\nnode2\nnode3\n'
         with patch('sys.stdout', new_callable=StringIO) as stdout_mock:
             vos_client_mock.return_value.get_node = \
-                MagicMock(side_effect=[mock_node2, mock_node3_link, mock_node3,
-                                       mock_node1])
+                MagicMock(side_effect=[mock_node2, mock_node3, mock_node1])
             sys.argv = ['vls', 'vos:/CADCRegtest1']
             cmd_attr = getattr(commands, 'vls')
             cmd_attr()

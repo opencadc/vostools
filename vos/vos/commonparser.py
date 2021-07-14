@@ -104,7 +104,7 @@ class CommonParser(argparse.ArgumentParser):
         self.add_argument("--version", action="version",
                           version=version)
         self.add_argument("-d", "--debug", action="store_true", default=False,
-                          help="print on command debug messages.")
+                          help=argparse.SUPPRESS)
         self.add_argument("--vos-debug", action="store_true",
                           help="Print on vos debug messages.")
         self.add_argument("-v", "--verbose", action="store_true",
@@ -113,6 +113,8 @@ class CommonParser(argparse.ArgumentParser):
         self.add_argument("-w", "--warning", action="store_true",
                           default=False,
                           help="print warning messages only")
+        self.add_argument('-k', '--insecure', action='store_true',
+                          help=argparse.SUPPRESS)
 
 
 URI_DESCRIPTION = \
