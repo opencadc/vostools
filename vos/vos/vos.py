@@ -2826,7 +2826,7 @@ class Client(object):
         status on.
         :param code: NOT SUPPORTED.
         """
-        if not code:
+        if code:
             raise OSError(errno.ENOSYS,
                           "Use of 'code' option values no longer supported.")
         self.get_node(uri)

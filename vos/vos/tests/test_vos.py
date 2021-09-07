@@ -42,6 +42,8 @@ class Object(object):
     pass
 
 
+@patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+       Mock(return_value='http://foo.com/vospace'))
 def test_get_node_url():
     client = Client()
     with pytest.raises(TypeError):
@@ -782,6 +784,13 @@ class TestClient(unittest.TestCase):
         session_mock.put.assert_called_with(
             'http://www.canfar.phys.uvic.ca/vospace/nodes/bar',
             headers=headers, data=str(node))
+
+    @patch('vos.vos.net.ws.WsCapabilities.get_access_url',
+           Mock(return_value='http://foo.com/vospace'))
+    def test_success_failure_case(self):
+        with pytest.raises(OSError):
+            client = Client()
+            ignore = client.status('vos:test/node.fits', code='abc')
 
 
 class TestNode(unittest.TestCase):
