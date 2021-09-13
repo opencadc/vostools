@@ -20,8 +20,9 @@ def _cat(uri, cert_filename=None, head=None):
     fh = None
     try:
         view = head and 'header' or 'data'
-        fh = Client(vospace_certfile=cert_filename).open(uri, view=view)
-        if fh.is_remote_file(uri):
+        c = Client(vospace_certfile=cert_filename)
+        fh = c.open(uri, view=view)
+        if c.is_remote_file(uri):
             sys.stdout.write(fh.read(return_response=True).text)
             sys.stdout.write('\n\n')
         else:
