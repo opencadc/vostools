@@ -790,7 +790,7 @@ class TestClient(unittest.TestCase):
     def test_success_failure_case(self):
         with pytest.raises(OSError):
             client = Client()
-            ignore = client.status('vos:test/node.fits', code='abc')
+            client.status('vos:test/node.fits', code='abc')
 
 
 class TestNode(unittest.TestCase):

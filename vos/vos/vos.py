@@ -796,7 +796,7 @@ class Node(object):
                         current_index = 1
                 else:
                     run = False
-            with client.nodeCache.watch(yield_node.uri) as childWatch:
+            with nodeCache.watch(yield_node.uri) as childWatch:
                 childWatch.insert(yield_node)
             yield yield_node
 
@@ -1353,6 +1353,9 @@ class EndPoints(object):
                                resource_id=self.resource_id)
 
 
+nodeCache = NodeCache()
+
+
 class Client(object):
     """The Client object does the work"""
 
@@ -1426,7 +1429,7 @@ class Client(object):
 
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
         self.rootNode = root_node
-        self.nodeCache = NodeCache()
+        # self.nodeCache = NodeCache()
         self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
         self._endpoints = {}
@@ -1434,7 +1437,6 @@ class Client(object):
             Client.VOSPACE_CERTFILE or vospace_certfile
         self.vospace_token = vospace_token
         self.insecure = insecure
-        return
 
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
@@ -2052,11 +2054,11 @@ class Client(object):
         logger.debug("Getting node {0}".format(uri))
         uri = self.fix_uri(uri)
         node = None
-        if not force and uri in self.nodeCache:
-            node = self.nodeCache[uri]
+        if not force and uri in nodeCache:
+            node = nodeCache[uri]
         if node is None:
             logger.debug("Getting node {0} from ws".format(uri))
-            with self.nodeCache.watch(uri) as watch:
+            with nodeCache.watch(uri) as watch:
                 # If this is vospace URI then we can request the node info
                 # using the uri directly, but if this a URL then the metadata
                 # comes from the HTTP header.
@@ -2110,7 +2112,7 @@ class Client(object):
                             next_page.node_list.pop(0)
                         node.node_list.extend(next_page.node_list)
         for childNode in node.node_list:
-            with self.nodeCache.watch(childNode.uri) as childWatch:
+            with nodeCache.watch(childNode.uri) as childWatch:
                 childWatch.insert(childNode)
         return node
 
@@ -2319,7 +2321,7 @@ class Client(object):
         if self.isdir(link_uri):
             link_uri = os.path.join(link_uri, os.path.basename(src_uri))
 
-        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(
+        with nodeCache.volatile(src_uri), nodeCache.volatile(
                 link_uri):
             link_node = Node(link_uri, node_type="vos:LinkNode")
             ElementTree.SubElement(link_node.node, "target").text = src_uri
@@ -2344,7 +2346,7 @@ class Client(object):
         """
         src_uri = self.fix_uri(src_uri)
         destination_uri = self.fix_uri(destination_uri)
-        with self.nodeCache.volatile(src_uri), self.nodeCache.volatile(
+        with nodeCache.volatile(src_uri), nodeCache.volatile(
                 destination_uri):
             job_url = self.transfer(self.get_endpoints(src_uri).async_transfer,
                                     src_uri, destination_uri, view='move')
@@ -2357,12 +2359,12 @@ class Client(object):
             return self.get_transfer_error(job_url, src_uri)
 
     def _get(self, uri, view="defaultview", cutout=None):
-        with self.nodeCache.volatile(uri):
+        with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
                                  uri, "pullFromVoSpace", view, cutout)
 
     def _put(self, uri, content_length=None, md5_checksum=None):
-        with self.nodeCache.volatile(uri):
+        with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
                                  uri, "pushToVoSpace", view="defaultview",
                                  content_length=content_length,
@@ -2673,7 +2675,7 @@ class Client(object):
         """
         uri = self.fix_uri(uri)
         logger.debug("delete {0}".format(uri))
-        with self.nodeCache.volatile(uri):
+        with nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
             response = self.get_session(uri).delete(url)
             response.raise_for_status()

@@ -3,12 +3,15 @@ from __future__ import (absolute_import, division, print_function,
 
 import os
 import sys
-from multiprocessing import Process, JoinableQueue
 from vos.commonparser import CommonParser, set_logging_level_from_args, \
-    URI_DESCRIPTION
+    URI_DESCRIPTION, exit_on_exception
 import logging
 import time
 import signal
+import threading
+import concurrent.futures
+import re
+
 from vos import vos
 from cadcutils import exceptions as transfer_exceptions
 from .. import md5_cache
@@ -37,13 +40,265 @@ does result in a  cache database file: $HOME/.config/vos/node_cache.db
 
 HOME = os.getenv("HOME", "./")
 
+global_md5_cache = None
+node_dict = {}
+good_dirs = []  # remote directories that exists on the VOSpace service
+
+# placeholder for data local to a thread
+thread_local = threading.local()
+
+
+def file_md5(filename):
+    """"
+    Computes the md5 of a file and caches the value for subsequent calls
+    """
+    md5 = None
+    if global_md5_cache is not None:
+        md5 = global_md5_cache.get(filename)
+    if md5 is None or md5[2] < os.stat(filename).st_mtime:
+        md5 = md5_cache.MD5Cache.compute_md5(filename,
+                                             block_size=2**19)
+        if global_md5_cache is not None:
+            stat = os.stat(filename)
+            global_md5_cache.update(filename, md5, stat.st_size,
+                                    stat.st_mtime)
+    else:
+        md5 = md5[0]
+    return md5
+
+
+def get_client(certfile, token):
+    """
+    Returns a VOS client instance for each thread. VOS Client uses requests
+    session which is not thread safe hence creating one instance of this class
+    for each thread
+    :param certfile:
+    :param token:
+    :return: vos.Client
+    """
+    if not hasattr(thread_local, "client"):
+        thread_local.client = vos.Client(vospace_certfile=certfile,
+                                         vospace_token=token)
+    return thread_local.client
+
+
+class TransferReport:
+    """
+    Report of a job.
+    """
+    def __init__(self):
+        self.bytes_sent = 0
+        self.files_sent = 0
+        self.bytes_skipped = 0
+        self.files_skipped = 0
+        self.files_erred = 0
+
+    def __eq__(self, other):
+        return (self.bytes_sent == other.bytes_sent) and \
+               (self.files_sent == other.files_sent) and \
+               (self.bytes_skipped == other.bytes_skipped) and \
+               (self.files_skipped == other.files_skipped) and \
+               (self.files_erred == other.files_erred)
+
+
+def execute(src, dest, opt):
+    """
+    Transfer a file from source to destination
+    :param src: local path to file to transfer
+    :param dest: vospace location
+    :param opt: command line parameters
+    :return: TransferReport()
+    """
+    result = TransferReport()
+    src_md5 = None
+    stat = os.stat(src)
+    if not opt.ignore_checksum and not opt.overwrite:
+        src_md5 = file_md5(src)
+    client = get_client(opt.certfile, opt.token)
+    if not opt.overwrite:
+        # Check if the file is the same
+        try:
+            node_info = None
+            if opt.cache_nodes:
+                node_info = global_md5_cache.get(dest)
+            if node_info is None:
+                logging.debug('Getting node info from VOSpace')
+                logging.debug(str(node_dict.keys()))
+                logging.debug(str(dest))
+                node = client.get_node(dest, limit=None)
+                dest_md5 = node.props.get(
+                    'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+                dest_length = node.attr['st_size']
+                dest_time = node.attr['st_ctime']
+                if opt.cache_nodes:
+                    global_md5_cache.update(
+                        dest,
+                        dest_md5,
+                        dest_length,
+                        dest_time)
+            else:
+                dest_md5 = node_info[0]
+                dest_length = node_info[1]
+                dest_time = node_info[2]
+            logging.debug('Destination MD5: {}'.format(
+                dest_md5))
+            if ((not opt.ignore_checksum and src_md5 == dest_md5) or
+                    (opt.ignore_checksum and
+                     dest_time >= stat.st_mtime and
+                     dest_length == stat.st_size)):
+                logging.info('skipping: {}  matches {}'.format(src, dest))
+                result.files_skipped = 1
+                result.bytes_skipped = dest_length
+                return result
+        except (transfer_exceptions.AlreadyExistsException,
+                transfer_exceptions.NotFoundException):
+            pass
+    logging.info('{} -> {}'.format(src, dest))
+    try:
+        client.copy(src, dest, send_md5=True)
+        node = client.get_node(dest, limit=None)
+        dest_md5 = node.props.get(
+            'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
+        dest_length = node.attr['st_size']
+        dest_time = node.attr['st_ctime']
+        if opt.cache_nodes:
+            global_md5_cache.update(dest,
+                                    dest_md5,
+                                    dest_length,
+                                    dest_time)
+        result.files_sent += 1
+        result.bytes_sent += stat.st_size
+        return result
+    except (IOError, OSError) as exc:
+        logging.error(
+            'Error writing {} to server, skipping'.format(src))
+        logging.error(str(exc))
+        if re.search('NodeLocked', str(exc)) is not None:
+            logging.error(
+                ('Use vlock to unlock the node before syncing '
+                 'to {}').format(dest))
+    result.files_erred += 1
+    return result
+
+
+def validate(path, include=None, exclude=None):
+    """
+    Determines whether a directory or filename should be included or not
+    :param path: path to consider
+    :param include: pattern for names to include
+    :param exclude: patter for names to exclude
+    :return: True if filename is to be included, False otherwise
+    """
+    if re.match(r'^[A-Za-z0-9._\-();:&*$@!+=/]*$', path) is None:
+        logging.error("filename {} contains illegal characters, "
+                      "skipping".format(path))
+        return False
+    if include is not None and not re.search(include, path):
+        logging.error("{} not included".format(path))
+        return False
+    if exclude:
+        for thisIgnore in exclude.split(','):
+            if not path.find(thisIgnore) < 0:
+                logging.info("excluding: {}".format(path))
+                return False
+    return True
+
+
+def prepare(src, dest, client):
+    """
+    If src is a directory it creates it otherwise prepares the transfer of file
+    :param src: name of local file
+    :param dest: name of location on VOSpace to copy file
+    :param client: vos client to use for operations on the server (mkdir)
+    :return: (src, dest) tuple to be sync if required or None otherwise
+    """
+    # strip down current_destination until we find a part that exists
+    # and then build up the path.
+    if os.path.islink(src):
+        logging.error("{} is a link, skipping".format(src))
+        return
+    if not os.access(src, os.R_OK):
+        logging.error(
+            "Failed to open file {}, skipping".format(src))
+        return
+
+    if os.path.isdir(src):
+        # make directory but nothing to transfer
+        try:
+            client.mkdir(dest)
+            logging.info("Made directory {}".format(dest))
+        except transfer_exceptions.AlreadyExistsException:
+            # OK, must already have existed, add to list
+            pass
+        return
+    return src, dest
+
+
+def build_file_list(paths, vos_root, recursive=False, include=None,
+                    exclude=None):
+    """
+    Build a list of files that should be copied into VOSpace
+    :param paths: source paths
+    :param vos_root: directory container on vospace service to sync to
+    :param recursive: True if recursive sync, False otherwise
+    :param include: patters to include
+    :param exclude: comma separated strings to exclude when occuring in names
+    :return: set of expanded (src, dest) pairs
+    """
+
+    spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
+    count = 0
+    results = []  # order is important to create the directories first
+    vos_root = vos_root.strip('/')
+    for path in paths:
+        content = False
+        if path.endswith('/'):
+            # vsync just the content and not the source dir
+            content = True
+            base_path = os.path.abspath(path)
+            path = path[:-1]
+        else:
+            base_path = os.path.dirname(path)
+        path = os.path.abspath(path)
+        rel_path = os.path.relpath(path, base_path)
+        if not os.path.exists(path):
+            raise ValueError('{} not found'.format(path))
+        if os.path.isfile(path):
+            results.append((path, '{}/{}'.format(vos_root, rel_path)))
+            continue
+        elif not content:
+            results.append((path, '{}/{}'.format(vos_root, rel_path)))
+        for (root, dirs, filenames) in os.walk(path):
+            if recursive:
+                for this_dirname in dirs:
+                    this_dirname = os.path.join(root, this_dirname)
+                    rel_dirname = os.path.relpath(this_dirname, base_path)
+                    if not validate(rel_dirname, include=include,
+                                    exclude=exclude):
+                        continue
+                    results.append((this_dirname, '{}/{}'.format(
+                        vos_root, rel_dirname)))
+            for thisfilename in filenames:
+                srcfilename = os.path.normpath(os.path.join(root,
+                                                            thisfilename))
+                rel_name = os.path.relpath(srcfilename, base_path)
+                if not validate(rel_name, include=include, exclude=exclude):
+                    continue
+                count += 1
+                logging.info("Building list of files to transfer {}\r".format(
+                             spinner[count % len(spinner)]))
+                results.append((srcfilename, '{}/{}'.format(
+                    vos_root, rel_name)))
+            if not recursive:
+                break
+    return results
+
 
 def vsync():
-    global_md5_cache = None
 
     def signal_handler(h_stream, h_frame):
-        logging.debug("{} {}".format(h_stream, h_frame))
-        logging.critical("Interrupt\n")
+        logging.debug('{} {}'.format(h_stream, h_frame))
+        logging.critical('Interrupt\n')
         sys.exit(-1)
 
     # handle interrupts nicely
@@ -84,336 +339,85 @@ def vsync():
         parser.error("Maximum of 30 streams exceeded")
 
     if opt.cache_nodes:
+        global global_md5_cache
         global_md5_cache = md5_cache.MD5Cache(cache_db=opt.cache_filename)
 
     destination = opt.destination
-    client = vos.Client(
-        vospace_certfile=opt.certfile, vospace_token=opt.token)
-    if not client.is_remote_file(destination):
-        parser.error("Only allows sync FROM local copy TO VOSpace")
-    # Currently we don't create nodes in sync and we don't sync onto files
-    logging.info("Connecting to VOSpace")
-    logging.info("Confirming Destination is a directory")
-    dest_is_dir = client.isdir(destination)
-
-    queue = JoinableQueue(maxsize=10 * opt.nstreams)
-    good_dirs = []
-    node_dict = {}
-
-    def compute_md5(this_filename, block_size=None):
-        """
-        Read through a file and compute that files MD5 checksum.
-        :param this_filename: name of the file on disk
-        :param block_size: number of bytes to read into memory,
-        defaults to 2**19 bytes
-        :return: md5 as a hexadecimal string
-        """
-        block_size = block_size is None and 2 ** 19 or block_size
-        return md5_cache.MD5Cache.compute_md5(this_filename,
-                                              block_size=block_size)
-
-    def file_md5(this_filename):
-        import os
-        md5 = None
-        if global_md5_cache is not None:
-            md5 = global_md5_cache.get(this_filename)
-        if md5 is None or md5[2] < os.stat(this_filename).st_mtime:
-            md5 = compute_md5(this_filename)
-            if global_md5_cache is not None:
-                stat = os.stat(this_filename)
-                global_md5_cache.update(this_filename, md5, stat.st_size,
-                                        stat.st_mtime)
+    try:
+        client = vos.Client(
+            vospace_certfile=opt.certfile, vospace_token=opt.token)
+        if not client.is_remote_file(destination):
+            parser.error("Only allows sync FROM local copy TO VOSpace")
+        # Currently we don't create nodes in sync and we don't sync onto files
+        logging.info("Connecting to VOSpace")
+        logging.info("Confirming Destination is a directory")
+        if client.isfile(destination):
+            if len(opt.files) == 1:
+                if os.path.isfile(opt.files):
+                    files = [(opt.files, destination)]
+                else:
+                    raise RuntimeError(
+                        'Cannot sync directory into a remote file')
+            else:
+                raise RuntimeError(
+                    'Cannot sync multiple sources into a single remote file')
         else:
-            md5 = md5[0]
-        return md5
+            files = build_file_list(paths=opt.files,
+                                    vos_root=destination,
+                                    recursive=opt.recursive,
+                                    include=opt.include,
+                                    exclude=opt.exclude)
 
-    class ThreadCopy(Process):
-        def __init__(self, this_queue):
-            super(ThreadCopy, self).__init__()
-            self.client = vos.Client(
-                vospace_certfile=opt.certfile,
-                vospace_token=opt.token)
-            self.queue = this_queue
-            self.filesSent = 0
-            self.filesSkipped = 0
-            self.bytesSent = 0
-            self.bytesSkipped = 0
-            self.filesErrored = 0
+        # build the list of transfers
+        transfers = []
+        for src_path, vos_dest in files:
+            transfer = prepare(src_path, vos_dest, client)
+            if transfer:
+                transfers.append(transfer)
 
-        def run(self):
-            while True:
-                (current_source, current_destination) = self.queue.get()
-                requeue = (current_source, current_destination)
-                src_md5 = None
-                stat = os.stat(current_source)
-                if not opt.ignore_checksum and not opt.overwrite:
-                    src_md5 = file_md5(current_source)
-                if not opt.overwrite:
-                    # Check if the file is the same
-                    try:
-                        node_info = None
-                        if opt.cache_nodes:
-                            node_info = global_md5_cache.get(
-                                current_destination)
-                        if node_info is None:
-                            logging.debug("Getting node info from VOSpace")
-                            logging.debug(str(node_dict.keys()))
-                            logging.debug(str(current_destination))
-                            node = self.client.get_node(current_destination,
-                                                        limit=None)
-                            current_destination_md5 = node.props.get(
-                                'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
-                            current_destination_length = node.attr['st_size']
-                            current_destination_time = node.attr['st_ctime']
-                            if opt.cache_nodes:
-                                global_md5_cache.update(
-                                    current_destination,
-                                    current_destination_md5,
-                                    current_destination_length,
-                                    current_destination_time)
-                        else:
-                            current_destination_md5 = node_info[0]
-                            current_destination_length = node_info[1]
-                            current_destination_time = node_info[2]
-                        logging.debug("Destination MD5: {}".format(
-                            current_destination_md5))
-                        if ((not opt.ignore_checksum and src_md5 ==
-                                current_destination_md5) or
-                            (opt.ignore_checksum and
-                            current_destination_time >= stat.st_mtime and
-                                current_destination_length == stat.st_size)):
-                            logging.info("skipping: %s  matches %s" % (
-                                current_source, current_destination))
-                            self.filesSkipped += 1
-                            self.bytesSkipped += current_destination_length
-                            self.queue.task_done()
-                            continue
-                    except (transfer_exceptions.AlreadyExistsException,
-                            transfer_exceptions.NotFoundException):
-                        pass
-                logging.info(
-                    "%s -> %s" % (current_source, current_destination))
-                try:
-                    self.client.copy(current_source, current_destination,
-                                     send_md5=True)
-                    node = self.client.get_node(current_destination,
-                                                limit=None)
-                    current_destination_md5 = node.props.get(
-                        'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
-                    current_destination_length = node.attr['st_size']
-                    current_destination_time = node.attr['st_ctime']
-                    if opt.cache_nodes:
-                        global_md5_cache.update(current_destination,
-                                                current_destination_md5,
-                                                current_destination_length,
-                                                current_destination_time)
-                    self.filesSent += 1
-                    self.bytesSent += stat.st_size
-                except (IOError, OSError) as exc:
-                    logging.error(
-                        "Error writing {} to server, skipping".format(
-                            current_source))
-                    logging.error(str(exc))
-                    import re
-                    if re.search('NodeLocked', str(exc)) is not None:
-                        logging.error(
-                            ("Use vlock to unlock the node before syncing "
-                             "to {}").format(current_destination))
-                    try:
-                        if exc.errno == 104:
-                            self.queue.put(requeue)
-                    except Exception as e2:
-                        logging.error("Error during requeue")
-                        logging.error(str(e2))
-                        pass
-                    self.filesErrored += 1
-                    pass
-                self.queue.task_done()
+        # main execution loop
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=opt.nstreams) \
+                as executor:
+            for file_src, vos_dest in transfers:
+                futures.append(executor.submit(
+                    execute, file_src, vos_dest, opt))
 
-    def mkdirs(directory):
-        """Recursively make all nodes in the path to directory.
-
-        :param directory: str, vospace location of ContainerNode (directory)
-        to make
-        :return:
-        """
-
-        logging.debug("%s %s" % (directory, str(good_dirs)))
-        # if we've seen this before skip it.
-        if directory in good_dirs:
-            return
-
-        # try and make a new directory and return
-        # failure indicates we should see if subdirectories exist
-        try:
-            client.mkdir(directory)
-            logging.info("Made directory {}".format(directory))
-            good_dirs.append(directory)
-            return
-        except transfer_exceptions.AlreadyExistsException:
-            pass
-
-        # OK, must already have existed, add to list
-        good_dirs.append(directory)
-
-        return
-
-    def copy(current_source, current_destination):
-        """
-        Copy current_source from local file system to current_destination.
-
-        :param current_source: name of local file
-        :param current_destination: name of localtion on VOSpace to copy file
-        to (includes filename part)
-        :return: None
-        """
-        # strip down current_destination until we find a part that exists
-        # and then build up the path.
-        if os.path.islink(current_source):
-            logging.error("{} is a link, skipping".format(current_source))
-            return
-        if not os.access(current_source, os.R_OK):
-            logging.error(
-                "Failed to open file {}, skipping".format(current_source))
-            return
-        import re
-        if re.match(r'^[A-Za-z0-9._\-();:&*$@!+=/]*$', current_source) is None:
-            logging.error(
-                "filename %s contains illegal characters, skipping" %
-                current_source)
-            return
-
-        dirname = os.path.dirname(current_destination)
-        mkdirs(dirname)
-        if opt.include is not None and not re.search(opt.include,
-                                                     current_source):
-            return
-        queue.put((current_source, current_destination), timeout=3600)
-
-    def start_streams(no_streams):
-        list_of_streams = []
-        for i in range(no_streams):
-            logging.info("Launching VOSpace connection stream %d" % i)
-            t = ThreadCopy(queue)
-            t.daemon = True
-            t.start()
-            list_of_streams.append(t)
-        return list_of_streams
-
-    def build_file_list(base_path, destination_root='', recursive=False,
-                        ignore=None):
-        """Build a list of files that should be copied into VOSpace"""
-
-        spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
-        count = 0
-
-        for (root, dirs, filenames) in os.walk(base_path):
-            for this_dirname in dirs:
-                if not recursive:
-                    continue
-                this_dirname = os.path.join(root, this_dirname)
-                skip = False
-                if ignore is not None:
-                    for thisIgnore in ignore.split(','):
-                        if not this_dirname.find(thisIgnore) < 0:
-                            logging.info("excluding: %s " % this_dirname)
-                            skip = True
-                            continue
-                if skip:
-                    continue
-                cprefix = os.path.commonprefix((base_path, this_dirname))
-                this_dirname = os.path.normpath(
-                    destination_root + "/" + this_dirname[len(cprefix):])
-                mkdirs(this_dirname)
-            for thisfilename in filenames:
-                srcfilename = os.path.normpath(
-                    os.path.join(root, thisfilename))
-                skip = False
-                if ignore is not None:
-                    for thisIgnore in ignore.split(','):
-                        if not srcfilename.find(thisIgnore) < 0:
-                            logging.info("excluding: %s " % srcfilename)
-                            skip = True
-                            continue
-                if skip:
-                    continue
-                cprefix = os.path.commonprefix((base_path, srcfilename))
-                destfilename = os.path.normpath(
-                    destination_root + "/" + srcfilename[len(cprefix):])
-                this_dirname = os.path.dirname(destfilename)
-                mkdirs(this_dirname)
-
-                count += 1
-                if opt.verbose:
-                    sys.stderr.write(
-                        "Building list of files to transfer %s\r" % (
-                            spinner[count % len(spinner)]))
-                copy(srcfilename, destfilename)
-            if not recursive:
-                return
-        return
-
-    streams = start_streams(opt.nstreams)
-
-    # build a complete file list given all the things on the command line
-    for filename in opt.files:
-        filename = os.path.abspath(filename)
-        this_root = destination
-        if os.path.isdir(filename):
-            if filename[-1] != "/":
-                if os.path.basename(filename) != os.path.basename(destination):
-                    this_root = os.path.join(destination,
-                                             os.path.basename(filename))
-            mkdirs(this_root)
-            node_dict[this_root] = client.get_node(this_root, limit=None)
-            try:
-                build_file_list(filename, destination_root=this_root,
-                                recursive=opt.recursive, ignore=opt.exclude)
-            except Exception as e:
-                logging.error(str(e))
-                logging.error("ignoring error")
-        elif os.path.isfile(filename):
-            if dest_is_dir:
-                this_root = os.path.join(destination,
-                                         os.path.basename(filename))
-            copy(filename, this_root)
-        else:
-            logging.error("%s: No such file or directory." % filename)
-
-    logging.info(
-        ("Waiting for transfers to complete "
-         r"********  CTRL-\ to interrupt  ********"))
-
-    queue.join()
-    end_time = time.time()
-    bytes_sent = 0
-    files_sent = 0
-    bytes_skipped = 0
-    files_skipped = 0
-    files_erred = 0
-    for stream in streams:
-        bytes_sent += stream.bytesSent
-        bytes_skipped += stream.bytesSkipped
-        files_sent += stream.filesSent
-        files_skipped += stream.filesSkipped
-        files_erred += stream.filesErrored
-
-    logging.info("==== TRANSFER REPORT ====")
-
-    if bytes_sent > 0:
-        rate = bytes_sent / (end_time - start_time) / 1024.0
-        logging.info("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)" % (
-            files_sent, bytes_sent / 1024.0, rate))
-        speed_up = (bytes_skipped + bytes_sent) / bytes_sent
         logging.info(
-            "Speedup:  %f (skipped %d files)" % (speed_up, files_skipped))
+            ("Waiting for transfers to complete "
+             r"********  CTRL-\ to interrupt  ********"))
 
-    if bytes_sent == 0:
-        logging.info("No files needed sending ")
+        end_time = time.time()
+        end_result = TransferReport()
+        for r in concurrent.futures.as_completed(futures):
+            res = r.result()
+            end_result.bytes_sent += res.bytes_sent
+            end_result.bytes_skipped += res.bytes_skipped
+            end_result.files_sent += res.files_sent
+            end_result.files_skipped += res.files_skipped
+            end_result.files_erred += res.files_erred
 
-    if files_erred > 0:
-        logging.info(
-            "Error transferring %d files, please try again" % files_erred)
+        logging.info("==== TRANSFER REPORT ====")
+
+        if end_result.bytes_sent > 0:
+            rate = end_result.bytes_sent / (end_time - start_time) / 1024.0
+            logging.info("Sent {} files ({} kbytes @ {} kBytes/s)".format(
+                end_result.files_sent,
+                round(end_result.bytes_sent / 1024.0, 2),
+                round(rate, 2)))
+            speed_up = (end_result.bytes_skipped + end_result.bytes_sent) / \
+                end_result.bytes_sent
+            logging.info("Speedup:  {} (skipped {} files)".format(
+                speed_up, end_result.files_skipped))
+        if end_result.bytes_sent == 0:
+            logging.info("No files needed sending ")
+
+        if end_result.files_erred > 0:
+            logging.info(
+                "Error transferring {} files, please try again".format(
+                    end_result.files_erred))
+    except Exception as ex:
+        exit_on_exception(ex)
 
 
 vsync.__doc__ = DESCRIPTION
