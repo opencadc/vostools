@@ -76,10 +76,12 @@ import datetime
 import pytest
 import mock
 from mock import Mock
+import hashlib
 
 from vos.commands.vsync import validate, prepare, build_file_list, execute, \
-    TransferReport, file_md5
+    TransferReport, compute_md5
 from cadcutils import exceptions as transfer_exceptions
+from vos.vos import ZERO_MD5
 
 
 def module_patch(*args):
@@ -110,6 +112,25 @@ def module_patch(*args):
     return mock.patch(*args)
 
 
+def test_compute_md5():
+    tmp_file = tempfile.NamedTemporaryFile()
+    assert compute_md5(tmp_file.name) == ZERO_MD5
+
+    content = b'abc'
+    open(tmp_file.name, 'wb').write(content)
+    md5 = hashlib.md5()
+    md5.update(content)
+    assert compute_md5(tmp_file.name) == md5.hexdigest()
+    # try again to use cache
+    assert compute_md5(tmp_file.name) == md5.hexdigest()
+    # make cache stalled
+    content = b'cba'
+    open(tmp_file.name, 'wb').write(content)
+    md5 = hashlib.md5()
+    md5.update(content)
+    assert compute_md5(tmp_file.name) == md5.hexdigest()
+
+
 def test_validate():
     assert validate('somepath')
     assert validate('somepath', exclude='.')
@@ -120,6 +141,8 @@ def test_validate():
     assert not validate('sopath', include='.?me.?')
     # exclude wins
     assert not validate('somepath', include='.?me.?', exclude='me')
+    # illegal characters
+    assert not validate('ab[cd')
 
 
 def test_prepare():
@@ -308,7 +331,7 @@ def test_execute(get_client):
     # no override, same md5 and older remote time = > no update
     now = datetime.datetime.timestamp(datetime.datetime.now())
     node.attr['st_ctime'] = now
-    md5 = file_md5(tmp_file.name)
+    md5 = compute_md5(tmp_file.name)
     node.props['MD5'] = md5
     options.overwrite = False
     expected_report = TransferReport()

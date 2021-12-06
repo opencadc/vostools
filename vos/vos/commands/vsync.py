@@ -48,7 +48,7 @@ good_dirs = []  # remote directories that exists on the VOSpace service
 thread_local = threading.local()
 
 
-def file_md5(filename):
+def compute_md5(filename):
     """"
     Computes the md5 of a file and caches the value for subsequent calls
     """
@@ -113,7 +113,7 @@ def execute(src, dest, opt):
     src_md5 = None
     stat = os.stat(src)
     if not opt.ignore_checksum and not opt.overwrite:
-        src_md5 = file_md5(src)
+        src_md5 = compute_md5(src)
     client = get_client(opt.certfile, opt.token)
     if not opt.overwrite:
         # Check if the file is the same
@@ -278,9 +278,9 @@ def build_file_list(paths, vos_root, recursive=False, include=None,
                         continue
                     results.append((this_dirname, '{}/{}'.format(
                         vos_root, rel_dirname)))
-            for thisfilename in filenames:
+            for this_filename in filenames:
                 srcfilename = os.path.normpath(os.path.join(root,
-                                                            thisfilename))
+                                                            this_filename))
                 rel_name = os.path.relpath(srcfilename, base_path)
                 if not validate(rel_name, include=include, exclude=exclude):
                     continue

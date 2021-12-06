@@ -10,10 +10,11 @@ from vos import Client, Connection, Node, VOFile, vosconfig
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
-from six import BytesIO
+from six import BytesIO, StringIO
 import hashlib
 import tempfile
 from cadcutils import exceptions
+import mock
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -796,36 +797,6 @@ class TestClient(unittest.TestCase):
 class TestNode(unittest.TestCase):
     """Test the vos Node class.
     """
-
-    def test_compute_md5(self):
-        pass
-        # from vos import vos
-        # mock_file = MagicMock(spec=file, wraps=StringIO('a'))
-        # foo = mock_file.open()
-        # self.assertEqual(foo.read, 'a')
-        #     # hash = vos.compute_md5('/dev/null')
-        # # self.assertEqual(hash, '098f6bcd4621d373cade4e832627b4f6')
-
-        # import mock
-        # my_mock = mock.MagicMock()
-        # with mock.patch('__builtin__.open', my_mock):
-        #     manager = my_mock.return_value.__enter__.return_value
-        #     manager.read.return_value = 'some data'
-        # with open('foo') as h:
-        #     data = h.read()
-        # print data
-
-        # with mock.patch('__builtin__.open') as my_mock:
-        #     my_mock.return_value.__enter__ = lambda s: s
-        #     my_mock.return_value.__exit__ = mock.Mock()
-        #     my_mock.return_value.read.return_value = 'some data'
-        # with open('foo') as h:
-        #     data = h.read()
-
-        # mocked_open = unittest.mock.mock_open(read_data='foo')
-        # with unittest.mock.patch('vos.open', mocked_open, create=True):
-        #     hash = vos.compute_md5('foo')
-        #     self.assertEqual(hash, '098f6bcd4621d373cade4e832627b4f6')
 
     def test_node_eq(self):
         # None node raises LoookupError
