@@ -92,11 +92,8 @@ foreach resource ($resources)
   echo -n "list container"
   # content displayed unless -l and no / at the end
   # content displayed
-  echo "$LSCMD $CERT $CONTAINER/clink | grep -q something"
   $LSCMD $CERT $CONTAINER/clink | grep -q something || echo " [FAIL]" && exit -1
-  echo "$LSCMD $CERT $CONTAINER/clink/ | grep -q something"
   $LSCMD $CERT $CONTAINER/clink/ | grep -q something || echo " [FAIL]" && exit -1
-  echo "$LSCMD $CERT -l $CONTAINER/clink/ | grep -q something"
   $LSCMD $CERT -l $CONTAINER/clink/ | grep -q something || echo " [FAIL]" && exit -1
   # case where the content of the target is not displayed just the link
   $LSCMD $CERT -l $CONTAINER/clink | grep 'clink ->' | grep -q target || echo " [FAIL]" && exit -1
