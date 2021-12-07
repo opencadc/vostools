@@ -42,7 +42,6 @@ HOME = os.getenv("HOME", "./")
 
 global_md5_cache = None
 node_dict = {}
-good_dirs = []  # remote directories that exists on the VOSpace service
 
 # placeholder for data local to a thread
 thread_local = threading.local()
@@ -172,7 +171,7 @@ def execute(src, dest, opt):
     except (IOError, OSError) as exc:
         logging.error(
             'Error writing {} to server, skipping'.format(src))
-        logging.error(str(exc))
+        logging.debug(str(exc))
         if re.search('NodeLocked', str(exc)) is not None:
             logging.error(
                 ('Use vlock to unlock the node before syncing '
@@ -186,7 +185,7 @@ def validate(path, include=None, exclude=None):
     Determines whether a directory or filename should be included or not
     :param path: path to consider
     :param include: pattern for names to include
-    :param exclude: patter for names to exclude
+    :param exclude: pattern for names to exclude
     :return: True if filename is to be included, False otherwise
     """
     if re.match(r'^[A-Za-z0-9._\-();:&*$@!+=/]*$', path) is None:
@@ -194,7 +193,7 @@ def validate(path, include=None, exclude=None):
                       "skipping".format(path))
         return False
     if include is not None and not re.search(include, path):
-        logging.error("{} not included".format(path))
+        logging.info("{} not included".format(path))
         return False
     if exclude:
         for thisIgnore in exclude.split(','):
@@ -241,7 +240,7 @@ def build_file_list(paths, vos_root, recursive=False, include=None,
     :param paths: source paths
     :param vos_root: directory container on vospace service to sync to
     :param recursive: True if recursive sync, False otherwise
-    :param include: patters to include
+    :param include: patterns to include
     :param exclude: comma separated strings to exclude when occuring in names
     :return: set of expanded (src, dest) pairs
     """
@@ -291,7 +290,8 @@ def build_file_list(paths, vos_root, recursive=False, include=None,
                     vos_root, rel_name)))
             if not recursive:
                 break
-    return results
+    # remove duplicates while maintaining the order
+    return list(dict.fromkeys(results))
 
 
 def vsync():

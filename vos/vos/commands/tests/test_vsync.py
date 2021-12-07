@@ -177,8 +177,8 @@ def test_prepare():
 def test_build_file_list():
     def check_list(expected, actual):
         """
-        checks lists of of expected file vs actual. Order is determined by
-        the os.walk function and it's not deterministic so we test
+        checks lists of expected files vs actual. Order is determined by
+        the os.walk function and it's not deterministic so we test just
         the existence of elements in the list
         """
         assert len(actual) == len(expected)
@@ -203,10 +203,6 @@ def test_build_file_list():
 
     check_list([(src_dir, get_vos_path(src_dir, src_dir))],
                build_file_list([src_dir], vos_root))
-
-    # duplicate the list when source is duplicated
-    check_list([(src_dir, get_vos_path(src_dir, src_dir))] * 2,
-               build_file_list([src_dir, src_dir], vos_root))
 
     file1 = 'file1'
     file1_path = os.path.join(src_dir, file1)
@@ -286,7 +282,7 @@ def test_build_file_list():
 
     # redo while doubling up the list
     check_list(expected_list, build_file_list(
-        [src_dir], vos_root, recursive=True, exclude="2"))
+        [src_dir]*2, vos_root, recursive=True, exclude="2"))
 
     # sync src_dir + a file
     expected_list.append((file1_path, '{}/{}'.format(vos_root, file1)))
@@ -296,6 +292,15 @@ def test_build_file_list():
     # error when the src file does not exist
     with pytest.raises(ValueError):
         build_file_list([src_dir, 'bogus'], vos_root)
+
+
+def test_transfer_report():
+    tr = TransferReport()
+    assert not tr.files_erred
+    assert not tr.files_sent
+    assert not tr.files_skipped
+    assert not tr.bytes_sent
+    assert not tr.bytes_skipped
 
 
 @module_patch('vos.commands.vsync.get_client')
@@ -366,8 +371,8 @@ def test_execute(get_client):
     assert expected_report == execute(tmp_file.name,
                                       'vos:service/path', options)
 
-    # errors on update
-    client_mock.copy.side_effect = OSError()
+    # OSErrors on update
+    client_mock.copy.side_effect = OSError('NodeLocked')
     expected_report = TransferReport()
     expected_report.files_erred = 1
     assert expected_report == execute(tmp_file.name,

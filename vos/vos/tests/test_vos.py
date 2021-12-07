@@ -10,11 +10,10 @@ from vos import Client, Connection, Node, VOFile, vosconfig
 from vos import vos as vos
 from six.moves.urllib.parse import urlparse
 from six.moves import urllib
-from six import BytesIO, StringIO
+from six import BytesIO
 import hashlib
 import tempfile
 from cadcutils import exceptions
-import mock
 
 
 # The following is a temporary workaround for Python issue 25532
