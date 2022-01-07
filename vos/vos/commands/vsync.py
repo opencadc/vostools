@@ -245,7 +245,6 @@ def build_file_list(paths, vos_root, recursive=False, include=None,
     :return: set of expanded (src, dest) pairs
     """
 
-    spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
     count = 0
     results = []  # order is important to create the directories first
     vos_root = vos_root.strip('/')
@@ -284,8 +283,6 @@ def build_file_list(paths, vos_root, recursive=False, include=None,
                 if not validate(rel_name, include=include, exclude=exclude):
                     continue
                 count += 1
-                logging.info("Building list of files to transfer {}\r".format(
-                             spinner[count % len(spinner)]))
                 results.append((srcfilename, '{}/{}'.format(
                     vos_root, rel_name)))
             if not recursive:

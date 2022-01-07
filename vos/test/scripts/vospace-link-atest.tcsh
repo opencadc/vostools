@@ -100,11 +100,11 @@ foreach resource ($resources)
   echo " [OK]"
 
 
-  echo -n "Follow the link to get the file"
+  echo -n "follow the link to get the file"
   $CPCMD $CERT $CONTAINER/clink/something.png /tmp || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "Follow the link without read permission and fail"
+  echo -n "follow the link without read permission and fail"
   $CPCMD $CERT2 $CONTAINER/clink/something.png /tmp >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -112,7 +112,7 @@ foreach resource ($resources)
   $LNCMD $CERT $CONTAINER/target/something.png $CONTAINER/dlink >& /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "Follow the link to get the file"
+  echo -n "follow the link to get the file"
   $CPCMD $CERT $CONTAINER/dlink /tmp || echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -125,7 +125,7 @@ foreach resource ($resources)
       echo " [OK]"
   endif
 
-  echo -n "Follow the invalid link and fail"
+  echo -n "follow the invalid link and fail"
   $CPCMD $CERT $CONTAINER/e1link/somefile /tmp >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -134,7 +134,7 @@ foreach resource ($resources)
   #$LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCRegtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
   echo " [SKIPPED - TODO]"
 
-  echo -n "Follow the invalid link and fail"
+  echo -n "follow the invalid link and fail"
   $CPCMD $CERT $CONTAINER/e2link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -142,9 +142,21 @@ foreach resource ($resources)
   if ( ${?TESTING_CAVERN} ) then
       echo " [SKIPPED, vos/issues/83]"
   else
-      $LNCMD $CERT http://www.google.ca $CONTAINER/e3link > /dev/null || echo " [FAIL]" && exit -1
+      $LNCMD $CERT https://www.google.ca $CONTAINER/e3link > /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
+
+  echo -n "copy external link"
+  if ( ${?TESTING_CAVERN} ) then
+      echo " [SKIPPED, vos/issues/83]"
+  else
+      rm -f /tmp/e3link
+      $CPCMD $CERT -L $CONTAINER/e3link /tmp/ >& /dev/null || echo " [FAIL]" && exit -1
+      grep -q google /tmp/e3link || echo " [FAIL]" && exit -1
+      rm -f /tmp/e3link
+      echo " [OK]"
+  endif
+
 
   echo -n "Follow the invalid link and fail"
   $CPCMD $CERT $CONTAINER/e3link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
