@@ -43,13 +43,6 @@ except ImportError:
 from cadcutils import net, exceptions
 from . import md5_cache
 
-try:
-    from urllib import splittag
-except ImportError:
-    import six.moves.urllib.parse
-
-    splittag = six.moves.urllib.parse.splittag
-
 urlparse = six.moves.urllib.parse.urlparse
 parse_qs = six.moves.urllib.parse.parse_qs
 logger = logging.getLogger('vos')
@@ -482,39 +475,32 @@ class Node(object):
         property.
         :rtype unicode
         """
-        (url, tag) = splittag(prop)
-        if tag is None and url in ['title',
-                                   'creator',
-                                   'subject',
-                                   'description',
-                                   'publisher',
-                                   'contributer',
-                                   'date',
-                                   'type',
-                                   'format',
-                                   'identifier',
-                                   'source',
-                                   'language',
-                                   'relation',
-                                   'coverage',
-                                   'rights',
-                                   'availableSpace',
-                                   'groupread',
-                                   'groupwrite',
-                                   'publicread',
-                                   'quota',
-                                   'length',
-                                   'MD5',
-                                   'mtime',
-                                   'ctime',
-                                   'ispublic']:
-            tag = url
-            url = Node.IVOAURL
-            prop = url + "#" + tag
-
-        parts = urlparse(url)
-        if parts.path is None or tag is None:
-            raise ValueError("Invalid VOSpace property uri: {0}".format(prop))
+        if prop in ['title',
+                    'creator',
+                    'subject',
+                    'description',
+                    'publisher',
+                    'contributer',
+                    'date',
+                    'type',
+                    'format',
+                    'identifier',
+                    'source',
+                    'language',
+                    'relation',
+                    'coverage',
+                    'rights',
+                    'availableSpace',
+                    'groupread',
+                    'groupwrite',
+                    'publicread',
+                    'quota',
+                    'length',
+                    'MD5',
+                    'mtime',
+                    'ctime',
+                    'ispublic']:
+            prop = Node.IVOAURL + "#" + prop
 
         return prop
 
@@ -856,9 +842,10 @@ class Node(object):
         :param prop: the uri of the property to get the name of.
 
         """
-        (url, prop_name) = splittag(prop)
-        if url == Node.IVOAURL:
-            return prop_name
+        parts = urlparse(prop)
+        if '{}://{}{}'.format(parts.scheme, parts.netloc, parts.path) == \
+                Node.IVOAURL:
+            return parts.fragment
         return prop
 
     @staticmethod
@@ -2760,6 +2747,8 @@ class Client(object):
         while node.type == "vos:LinkNode":
             uri = node.target
             if self.is_remote_file(uri):
+                if uri.startswith("http"):
+                    return 'vos:DataNode'
                 node = self.get_node(uri, limit=0)
             else:
                 return "vos:DataNode"
