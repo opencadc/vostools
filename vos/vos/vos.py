@@ -1733,7 +1733,7 @@ class Client(object):
                 get_url = get_urls.pop(0)
                 try:
                     response = self.get_session(source).get(
-                        get_url, timeout=(2, 5), stream=True)
+                        get_url, stream=True)
                     response.raise_for_status()
                     if disposition:
                         # Build the destination location from the
