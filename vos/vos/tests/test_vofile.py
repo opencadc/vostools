@@ -1,7 +1,7 @@
 # Test the vos module
 from six.moves import builtins
 import requests
-import unittest2 as unittest
+import unittest
 from mock import Mock, MagicMock, patch
 import os
 
