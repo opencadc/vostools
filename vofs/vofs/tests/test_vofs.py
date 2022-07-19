@@ -9,7 +9,7 @@ import stat
 import ctypes
 from fuse import FuseOSError, fuse_operations
 from errno import EIO, EPERM, ENOENT
-import unittest2 as unittest
+import unittest
 from mock import Mock, MagicMock, patch, ANY
 import vos
 from cadcutils import exceptions

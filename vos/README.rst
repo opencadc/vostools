@@ -33,9 +33,7 @@ System Requirments
 
 -  A CANFAR VOSpace account (required for WRITE access, READ access can
    be anonymous)
--  fuse OR OSX-FUSE (see additional documentation, only required for
-   filesystem based access, not for command line or programmatic)
--  python2.6 or later
+-  python3.7 or later
 
 Installation
 ------------
@@ -83,81 +81,13 @@ Tutorial
           client = vos.Client()
           client.listdir('vos:jkavelaars')
 
-Development
------------
-
-A virtual environment (**venv**) is recommended to set up external
-dependencies without installing them system-wide. Following `these
-instructions <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`__,
-install **virtualenv**:
-
-::
-
-    $ pip install virtualenv
-
-Next, create, and activate a local **venv** (this example uses
-**bash**):
-
-::
-
-    $ virtualenv venv
-    $ source venv/bin/activate
-
-
-Setup the new development environment for testing by installing the appropriate packages:
-
-::
-
-    $ pip install -r dev_requirements.txt
-
-The test environment is built into the *setup.py* so that conducting unit-tests can be achieved like so:
-
-::
-
-    $ python setup.py test
-
-If you would like versbose output formated as a web page, for example,
-you can add options to the test call:
-
-::
-
-    $ python setup.py test --addopts '--cov-report html:cov_html --cov=vos'
-
-The same option attribute can be used to pass other arguments to py.test
-that is executing the test. To run specific only tests for example:
-
-::
-
-    $ python setup.py test --addopts 'vos/test/Test_vos.py::TestClient::test_transfer_error'
-
-Each time you resume work on the project and want to use the **venv**
-(e.g., from a new shell), simply re-activate it:
-
-::
-
-    $ source venv/bin/activate
-
-When done, just issue a
-
-::
-
-    $ deactivate
-
-command to deactivate the virtual environment.
 
 Integration Tests
 ~~~~~~~~~~~~~~~~~
 
 The integration tests are, at present, designed to run only with the
-CADC VOSpace. Tests assume that vos and/or vofs packages have been
+CADC VOSpace and test accounts credentials. Tests assume that vos and/or vofs packages have been
 installed.
-
-Activate the **venv** and install vos
-
-::
-
-    $ source venv/bin/activate.csh
-    $ pip install vos
 
 Run the tests:
 
