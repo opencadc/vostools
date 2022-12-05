@@ -322,6 +322,7 @@ def test_execute(get_client):
     options.certfile = None
     options.token = None
     options.cache_nodes = False
+    options.insecure = False
     expected_report = TransferReport()
     expected_report.files_sent = 1
     assert expected_report == execute(tmp_file.name,

@@ -38,7 +38,8 @@ def vln():
         set_logging_level_from_args(opt)
         client = vos.Client(
             vospace_certfile=opt.certfile,
-            vospace_token=opt.token)
+            vospace_token=opt.token,
+            insecure=opt.insecure)
         if not client.is_remote_file(opt.source) or \
                 not client.is_remote_file(opt.target):
             raise ArgumentError(

@@ -34,7 +34,8 @@ def vlock():
         set_logging_level_from_args(opt)
         client = vos.Client(
             vospace_certfile=opt.certfile,
-            vospace_token=opt.token)
+            vospace_token=opt.token,
+            insecure=opt.insecure)
         node = client.get_node(opt.node)
         if opt.lock or opt.unlock:
             lock = not opt.unlock and opt.lock

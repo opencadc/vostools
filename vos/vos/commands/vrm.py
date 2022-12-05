@@ -25,7 +25,8 @@ def vrm():
         for node in args.node:
             client = vos.Client(
                 vospace_certfile=args.certfile,
-                vospace_token=args.token)
+                vospace_token=args.token,
+                insecure=args.insecure)
             if not client.is_remote_file(node):
                 raise Exception(
                     '{} is not a valid VOSpace handle'.format(node))

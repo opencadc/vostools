@@ -104,7 +104,7 @@ def vcp():
 
     client = vos.Client(
         vospace_certfile=args.certfile, vospace_token=args.token,
-        transfer_shortcut=args.quick)
+        transfer_shortcut=args.quick, insecure=args.insecure)
 
     if not client.is_remote_file(dest):
         dest = os.path.abspath(dest)

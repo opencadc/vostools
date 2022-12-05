@@ -66,18 +66,20 @@ def compute_md5(filename):
     return md5
 
 
-def get_client(certfile, token):
+def get_client(certfile, token, insecure):
     """
     Returns a VOS client instance for each thread. VOS Client uses requests
     session which is not thread safe hence creating one instance of this class
     for each thread
     :param certfile:
     :param token:
+    :param insecure: do not check server SSL certs
     :return: vos.Client
     """
     if not hasattr(thread_local, "client"):
         thread_local.client = vos.Client(vospace_certfile=certfile,
-                                         vospace_token=token)
+                                         vospace_token=token,
+                                         insecure=insecure)
     return thread_local.client
 
 
@@ -113,7 +115,7 @@ def execute(src, dest, opt):
     stat = os.stat(src)
     if not opt.ignore_checksum and not opt.overwrite:
         src_md5 = compute_md5(src)
-    client = get_client(opt.certfile, opt.token)
+    client = get_client(opt.certfile, opt.token, opt.insecure)
     if not opt.overwrite:
         # Check if the file is the same
         try:
@@ -342,7 +344,8 @@ def vsync():
     destination = opt.destination
     try:
         client = vos.Client(
-            vospace_certfile=opt.certfile, vospace_token=opt.token)
+            vospace_certfile=opt.certfile, vospace_token=opt.token,
+            insecure=opt.insecure)
         if not client.is_remote_file(destination):
             parser.error("Only allows sync FROM local copy TO VOSpace")
         # Currently we don't create nodes in sync and we don't sync onto files

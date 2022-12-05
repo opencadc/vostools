@@ -63,7 +63,8 @@ def vtag():
     try:
         client = vos.Client(
             vospace_certfile=opt.certfile,
-            vospace_token=opt.token)
+            vospace_token=opt.token,
+            insecure=opt.insecure)
         node = client.get_node(node)
         if len(props) == 0:
             # print all properties
