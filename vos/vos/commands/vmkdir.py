@@ -32,7 +32,8 @@ def vmkdir():
         this_dir = args.container_node
         client = vos.Client(
             vospace_certfile=args.certfile,
-            vospace_token=args.token)
+            vospace_token=args.token,
+            insecure=args.insecure)
 
         dir_names = []
         if args.p:

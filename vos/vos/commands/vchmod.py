@@ -122,7 +122,8 @@ def vchmod():
 
     try:
         client = Client(vospace_certfile=opt.certfile,
-                        vospace_token=opt.token)
+                        vospace_token=opt.token,
+                        insecure=opt.insecure)
         node = client.get_node(opt.node)
         if opt.recursive:
             node.props.clear()

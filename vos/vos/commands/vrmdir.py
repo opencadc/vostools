@@ -26,7 +26,8 @@ def vrmdir():
         for container_node in args.nodes:
             client = vos.Client(
                 vospace_certfile=args.certfile,
-                vospace_token=args.token)
+                vospace_token=args.token,
+                insecure=args.insecure)
             if not client.is_remote_file(container_node):
                 raise ValueError(
                     "{} is not a valid VOSpace handle".format(container_node))

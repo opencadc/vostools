@@ -8,19 +8,20 @@ from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, URI_DESCRIPTION
 
 
-def _cat(uri, cert_filename=None, head=None):
+def _cat(uri, cert_filename=None, head=None, insecure=False):
     """Cat out the given uri stored in VOSpace.
 
     :param uri: the VOSpace URI that will be piped to stdout.
     :type uri: basestring
     :param cert_filename: filename of the PEM certificate used to gain access.
+    :param insecure: SSL server certificates not checked
     :type cert_filename: basestring
     """
 
     fh = None
     try:
         view = head and 'header' or 'data'
-        c = Client(vospace_certfile=cert_filename)
+        c = Client(vospace_certfile=cert_filename, insecure=insecure)
         fh = c.open(uri, view=view)
         if c.is_remote_file(uri):
             sys.stdout.write(fh.read(return_response=True).text)
@@ -68,7 +69,8 @@ def vcat():
                 exit_code = 1
                 continue
             try:
-                _cat(uri, cert_filename=args.certfile, head=args.head)
+                _cat(uri, cert_filename=args.certfile, head=args.head,
+                     insecure=args.insecure)
             except Exception as e:
                 exit_code = getattr(e, 'errno', -1)
                 if not args.q:

@@ -21,8 +21,6 @@ jobs:
         run: python -m pip install --upgrade tox
       - name: egg-info vos
         run: cd vos && tox -e egg_info
-      - name: egg-info vofs
-        run: cd vofs && tox -e egg_info
 
   tests:
     needs: egginfo
@@ -31,8 +29,8 @@ jobs:
       fail-fast: true
       matrix:
         #TODO 2.7 fails on GH Actions but cannot be reproduced locally. Disabled for now.
-        python-version: ["3.5", "3.6", "3.7", "3.8", "3.9", "3.10"]
-        package: [vos, vofs]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        package: [vos]
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -67,12 +65,10 @@ jobs:
         run: python -m pip install --upgrade tox
       - name: checkstyle & coverage vos
         run: cd vos && tox -e checkstyle && tox -e cov
-      - name: checkstyle & coverage vofs
-        run: cd vofs && tox -e checkstyle && tox -e cov
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v1
         with:
-          files: ./vos/coverage.xml,./vofs/coverage.xml
+          files: ./vos/coverage.xml
        
   build-n-publish:
     name: Build and publish to PyPI

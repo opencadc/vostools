@@ -32,7 +32,8 @@ def vmv():
         dest = args.destination
         client = vos.Client(
             vospace_certfile=args.certfile,
-            vospace_token=args.token)
+            vospace_token=args.token,
+            insecure=args.insecure)
         if not client.is_remote_file(source):
             raise ValueError('Source {} is not a remote node'.format(source))
         if not client.is_remote_file(dest):
