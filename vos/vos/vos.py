@@ -72,9 +72,7 @@
    Connections to VOSpace are made using a SSL X509 certificat which is
    stored in a .pem file.
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from future.utils import bytes_to_native_str
+
 import warnings
 import copy
 import errno
@@ -98,7 +96,6 @@ import stat
 import sys
 import time
 import urllib
-import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .node_cache import NodeCache
@@ -108,11 +105,10 @@ try:
     from .version import version
 except ImportError:
     version = "unknown"
-from cadcutils import net, exceptions
+from cadcutils import net, exceptions, util
 from . import md5_cache
 
-urlparse = six.moves.urllib.parse.urlparse
-parse_qs = six.moves.urllib.parse.parse_qs
+from urllib.parse import urlparse, parse_qs
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -339,9 +335,7 @@ class Node(object):
         if node_type is None:
             node_type = Node.DATA_NODE
 
-        if isinstance(node, bytes):
-            node = bytes_to_native_str(node)
-        if isinstance(node, six.text_type) or isinstance(node, str):
+        if isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
 
         if node is None:
@@ -1467,6 +1461,8 @@ class Client(object):
         :
         """
 
+        util.check_version(version=version)
+
         if os.getenv('VOSPACE_WEBSERVICE', None):
             msg = 'Using custom host: env.VOSPACE_WEBSERVICE={}'.\
                   format(os.getenv('VOSPACE_WEBSERVICE', None))
@@ -1562,8 +1558,7 @@ class Client(object):
         """
         if not dirname:
             dirname = self.rootNode
-        if isinstance(pattern, six.string_types) and\
-                not isinstance(dirname, six.string_types):
+        if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = str(dirname).encode(
                 sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
