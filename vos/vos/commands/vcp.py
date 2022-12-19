@@ -1,4 +1,3 @@
-# # -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -68,8 +67,6 @@
 #
 
 """copy files vospace to local or local to VOSpace"""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 from .. import md5_cache
 from .. import vos
 from ..commonparser import CommonParser, set_logging_level_from_args,\

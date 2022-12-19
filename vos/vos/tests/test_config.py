@@ -1,4 +1,3 @@
-# # -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -71,7 +70,7 @@
 from mock import Mock, patch
 import warnings
 
-from vos import vosconfig
+from vos import vosconfig, Connection
 import pytest
 import tempfile
 import os
@@ -83,15 +82,13 @@ skipTests = False
 
 @patch('vos.vos.os.path.exists', Mock())
 def test_update_config():
-    # TODO - for some reason in Python 2.7 the warnings context is not working
-    # although the warning is raised in the code.
     # test rename vospace resource
-    # with warnings.catch_warnings(record=True) as w:
-    #     vos.Connection(resource_id='ivo://cadc.nrc.ca/vospace')
-    #     assert len(w) == 1
-    #     assert issubclass(w[-1].category, UserWarning)
-    #     assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
-    #            'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
+    with pytest.raises(AttributeError) as w:
+         Connection(resource_id='ivo://cadc.nrc.ca/vospace')
+         assert len(w) == 1
+         assert issubclass(w[-1].category, UserWarning)
+         assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
+                'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
 
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
