@@ -82,14 +82,6 @@ skipTests = False
 
 @patch('vos.vos.os.path.exists', Mock())
 def test_update_config():
-    # test rename vospace resource
-    with pytest.raises(AttributeError) as w:
-         Connection(resource_id='ivo://cadc.nrc.ca/vospace')
-         assert len(w) == 1
-         assert issubclass(w[-1].category, UserWarning)
-         assert 'Deprecated resource id ivo://cadc.nrc.ca/vospace. ' \
-                'Use ivo://cadc.nrc.ca/vault instead' == str(w[-1].message)
-
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
     with patch('vos.vos.open') as open_mock:

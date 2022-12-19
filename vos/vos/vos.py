@@ -220,10 +220,6 @@ class Connection(object):
         attempt to find user/password combination in the .netrc file is made
         before the connection is downgraded to 'anonymous'
         """
-        if resource_id == 'ivo://cadc.nrc.ca/vospace':
-            warnings.warn(
-                'Deprecated resource id {}. Use ivo://cadc.nrc.ca/vault '
-                'instead'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
                 "Connection object no longer uses http_debug setting.",
