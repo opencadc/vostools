@@ -1,6 +1,6 @@
 from vos.commands import vls, vcp, vmkdir, vrm, vrmdir, vchmod, vmv, vln, vsync
 from vos.commands import vtag, vlock
-from six import StringIO
+from io import StringIO
 from cadcutils import net
 from mock import patch, Mock
 import pytest
