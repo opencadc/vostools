@@ -28,8 +28,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        #TODO 2.7 fails on GH Actions but cannot be reproduced locally. Disabled for now.
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         package: [vos]
     steps:
     - name: Checkout code

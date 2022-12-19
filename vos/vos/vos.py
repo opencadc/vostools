@@ -147,6 +147,9 @@ SSO_SECURITY_METHODS = {
     'token': 'vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0'
 }
 
+SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
+                             'cavern': '0.4'}
+
 
 # sorting-related uris
 class SortNodeProperty(Enum):
@@ -265,7 +268,8 @@ class Connection(object):
                                           host=os.getenv('VOSPACE_WEBSERVICE',
                                                          None),
                                           session_headers=session_headers,
-                                          insecure=insecure)
+                                          insecure=insecure,
+                                          server_versions=SUPPORTED_SERVER_VERSIONS)
         EndPoints.subject = self.subject
 
     @property
