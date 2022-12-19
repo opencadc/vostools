@@ -339,6 +339,9 @@ class Node(object):
         if node_type is None:
             node_type = Node.DATA_NODE
 
+        if isinstance(node, bytes):
+            node = ElementTree.fromstring(node)
+
         if isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
 
