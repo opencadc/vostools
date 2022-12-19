@@ -121,7 +121,6 @@ setup(name=PACKAGENAME,
       long_description=readme(),
       project_urls={
           'Source': 'https://github.com/opencadc/vostools',
-          'Travis CI': 'https://travis-ci.org/opencadc/vostools',
           'Issues': 'https://github.com/opencadc/vostools/issues',
           'VOSpace Standard': 'http://www.ivoa.net/documents/VOSpace/'
       },

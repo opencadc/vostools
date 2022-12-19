@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -72,9 +71,7 @@
    Connections to VOSpace are made using a SSL X509 certificat which is
    stored in a .pem file.
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from future.utils import bytes_to_native_str
+
 import warnings
 import copy
 import errno
@@ -98,7 +95,6 @@ import stat
 import sys
 import time
 import urllib
-import six
 from xml.etree import ElementTree
 from copy import deepcopy
 from .node_cache import NodeCache
@@ -108,11 +104,10 @@ try:
     from .version import version
 except ImportError:
     version = "unknown"
-from cadcutils import net, exceptions
+from cadcutils import net, exceptions, util
 from . import md5_cache
 
-urlparse = six.moves.urllib.parse.urlparse
-parse_qs = six.moves.urllib.parse.parse_qs
+from urllib.parse import urlparse, parse_qs
 logger = logging.getLogger('vos')
 logger.setLevel(logging.ERROR)
 
@@ -150,6 +145,9 @@ SSO_SECURITY_METHODS = {
     'cookie': 'ivo://ivoa.net/sso#cookie',
     'token': 'vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0'
 }
+
+SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
+                             'cavern': '0.4'}
 
 
 # sorting-related uris
@@ -222,10 +220,6 @@ class Connection(object):
         attempt to find user/password combination in the .netrc file is made
         before the connection is downgraded to 'anonymous'
         """
-        if resource_id == 'ivo://cadc.nrc.ca/vospace':
-            warnings.warn(
-                'Deprecated resource id {}. Use ivo://cadc.nrc.ca/vault '
-                'instead'.format(resource_id))
         if http_debug is not False:
             warnings.warn(
                 "Connection object no longer uses http_debug setting.",
@@ -269,7 +263,8 @@ class Connection(object):
                                           host=os.getenv('VOSPACE_WEBSERVICE',
                                                          None),
                                           session_headers=session_headers,
-                                          insecure=insecure)
+                                          insecure=insecure,
+                                          server_versions=SUPPORTED_SERVER_VERSIONS)
         EndPoints.subject = self.subject
 
     @property
@@ -340,8 +335,9 @@ class Node(object):
             node_type = Node.DATA_NODE
 
         if isinstance(node, bytes):
-            node = bytes_to_native_str(node)
-        if isinstance(node, six.text_type) or isinstance(node, str):
+            node = ElementTree.fromstring(node)
+
+        if isinstance(node, str):
             node = self.create(node, node_type, properties, subnodes=subnodes)
 
         if node is None:
@@ -1467,6 +1463,8 @@ class Client(object):
         :
         """
 
+        util.check_version(version=version)
+
         if os.getenv('VOSPACE_WEBSERVICE', None):
             msg = 'Using custom host: env.VOSPACE_WEBSERVICE={}'.\
                   format(os.getenv('VOSPACE_WEBSERVICE', None))
@@ -1562,8 +1560,7 @@ class Client(object):
         """
         if not dirname:
             dirname = self.rootNode
-        if isinstance(pattern, six.string_types) and\
-                not isinstance(dirname, six.string_types):
+        if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = str(dirname).encode(
                 sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
