@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -73,7 +73,7 @@ import unittest
 import pytest
 import requests
 from xml.etree import ElementTree
-from mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock, call
 from vos import Client, Connection, Node, VOFile, vosconfig
 from vos import vos as vos
 from urllib.parse import urlparse, unquote
