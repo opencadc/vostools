@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -72,7 +72,7 @@ import unittest
 import hashlib
 
 from vos.md5_cache import MD5Cache
-from mock import patch, MagicMock, call, mock_open
+from unittest.mock import patch, MagicMock, call, mock_open
 
 # The following is a temporary workaround for Python issue 25532
 # (https://bugs.python.org/issue25532)
