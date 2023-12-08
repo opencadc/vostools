@@ -72,6 +72,7 @@ functions for property(ies) of a node.
 The tag system is meant to allow tags, in addition to the standard node
 properties. """
 import pprint
+import sys
 from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, URI_DESCRIPTION
 from .. import vos
@@ -107,6 +108,8 @@ def vtag():
         nargs="*")
     parser.add_option('--remove', action="store_true",
                       help='remove the listed property')
+    parser.add_option('-r', '--recursive', action="store_true",
+                      help='perform the operation recursively on all the descendants')
 
     opt = parser.parse_args()
     args = opt
@@ -114,7 +117,7 @@ def vtag():
 
     # the node should be the first argument, the rest should contain
     # the key/val pairs
-    node = args.node
+    node_arg = args.node
 
     props = []
     if args.remove:
@@ -131,32 +134,49 @@ def vtag():
             vospace_certfile=opt.certfile,
             vospace_token=opt.token,
             insecure=opt.insecure)
-        node = client.get_node(node)
+        node = client.get_node(node_arg)
         if len(props) == 0:
             # print all properties
             pprint.pprint(node.props)
-
-        changed = False
-        for prop in props:
-            prop = prop.split('=')
-            if len(prop) == 1:
-                # get one property
-                pprint.pprint(node.props.get(prop[0], None))
-            elif len(prop) == 2:
-                # update properties
-                key, value = prop
+        if args.recursive:
+            node_props = {}
+            for prop in props:
+                key, value = prop.split('=')
                 if len(value) == 0:
                     value = None
-                if value != node.props.get(key, None):
-                    node.props[key] = value
-                    changed = True
-            else:
-                raise ValueError(
-                    "Illegal keyword of value character ('=') used: %s" % (
-                        '='.join(prop)))
+                node_props[key] = value
+            successes, failures = client.recursive_props(node.uri, node_props)
+            if opt.recursive:
+                if failures:
+                    sys.stderr.write(
+                        'WARN. updated count: {}, failed count: {}\n'.
+                        format(successes, failures))
+                    sys.exit(-1)
+                else:
+                    sys.stdout.write(
+                        'DONE. updated count: {}\n'.format(successes))
+        else:
+            changed = False
+            for prop in props:
+                prop = prop.split('=')
+                if len(prop) == 1:
+                    # get one property
+                    pprint.pprint(node.props.get(prop[0], None))
+                elif len(prop) == 2:
+                    # update properties
+                    key, value = prop
+                    if len(value) == 0:
+                        value = None
+                    if value != node.props.get(key, None):
+                        node.props[key] = value
+                        changed = True
+                else:
+                    raise ValueError(
+                        "Illegal keyword of value character ('=') used: %s" % (
+                            '='.join(prop)))
 
-        if changed:
-            client.add_props(node)
+            if changed:
+                client.add_props(node)
     except Exception as ex:
         exit_on_exception(ex)
 

@@ -190,10 +190,8 @@ def vchmod():
                         vospace_token=opt.token,
                         insecure=opt.insecure)
         node = client.get_node(opt.node)
-        if opt.recursive:
-            node.props.clear()
-            node.clear_properties()
-            # del node.node.findall(vos.Node.PROPERTIES)[0:]
+        node.props.clear()
+        node.clear_properties()
         if 'readgroup' in props:
             node.chrgrp(props['readgroup'])
         if 'writegroup' in props:
@@ -201,9 +199,14 @@ def vchmod():
         if 'ispublic' in props:
             node.set_public(props['ispublic'])
         logging.debug("Node: {0}".format(node))
-        status = client.update(node, opt.recursive)
-        if status:
-            sys.exit(status)
+        successes, failures = client.update(node, opt.recursive)
+        if opt.recursive:
+            if failures:
+                sys.stderr.write('WARN. updated count: {}, failed count: {}\n'.
+                                 format(successes, failures))
+                sys.exit(-1)
+            else:
+                sys.stdout.write('DONE. updated count: {}\n'.format(successes))
     except Exception as ex:
         exit_on_exception(ex)
 

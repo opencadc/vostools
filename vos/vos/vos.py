@@ -149,6 +149,9 @@ SSO_SECURITY_METHODS = {
 SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
                              'cavern': '0.4'}
 
+# this should one day go into its own uws library
+UWS_NSMAP = {'uws': 'http://www.ivoa.net/xml/UWS/v1.0',
+             'xlink': 'http://www.w3.org/1999/xlink'}
 
 # sorting-related uris
 class SortNodeProperty(Enum):
@@ -800,7 +803,7 @@ class Node(object):
                     self.add_child(nodeNode)
         return self._node_list
 
-    def get_children(self, client, sort, order, limit=500):
+    def get_children(self, client, sort, order, limit=None):
         """ Gets an iterator over the nodes held to by a ContainerNode"""
         # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
         # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
@@ -1315,10 +1318,13 @@ class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
     # standard ids
+    # TODO - VO_PROPERTIES has been replaced by VO_RECURSIVE_PROPS
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
     VO_ASYNC_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#transfers'
+    VO_RECURSIVE_DEL = 'ivo://ivoa.net/std/VOSpace#recursive-delete-proto'
+    VO_RECURSIVE_PROPS = 'ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto'
 
     subject = net.Subject()  # default subject is for anonymous access
 
@@ -1384,6 +1390,20 @@ class EndPoints(object):
         :return: The Node service endpoint.
         """
         return self.conn.ws_client._get_url((self.VO_NODES, None))
+
+    @property
+    def recursive_del(self):
+        """
+        :return: recursive delete endpoint
+        """
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_DEL, None))
+
+    @property
+    def recursive_props(self):
+        """
+        :return: recusive property set endpoint
+        """
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
 
     @property
     def session(self):
@@ -2657,39 +2677,59 @@ class Client(object):
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
         endpoints = self.get_endpoints(node.uri)
+        session = self.get_session(node.uri)
         if recursive:
+            property_url = None
             try:
-                property_url = endpoints.properties
-            except KeyError as ex:
-                logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
-                raise Exception('Operation not supported')
+                property_url = endpoints.recursive_props
+            except KeyError:
+                pass
+            if property_url:
+                logger.debug("prop URL: {0}".format(property_url))
+                # quickly check target exists
+                session.get(endpoints.nodes + '/' + urlparse(node.uri).path)
+                response = session.post(endpoints.recursive_props,
+                                        data=str(node), allow_redirects=False,
+                                        headers={'Content-type': 'text/xml'})
+                response.raise_for_status()
+                if response.status_code != 303:
+                    raise RuntimeError('Unexpected response for running job: '
+                                       + response.status_code)
+                return self._run_recursive_job(session,
+                                               response.headers['location'])
+            else:
+                # TODO this is deprecated and should be removed soon
+                try:
+                    property_url = endpoints.properties
+                except KeyError as ex:
+                    logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
+                    raise Exception('Operation not supported')
 
-            logger.debug("prop URL: {0}".format(property_url))
-            try:
-                resp = self.get_session(node.uri).post(
-                    property_url, allow_redirects=False, data=str(node),
-                    headers={'Content-type': 'text/xml'})
-            except Exception as ex:
-                logger.error(str(ex))
-                raise ex
-            if resp is None:
-                raise OSError(errno.EFAULT, "Failed to connect VOSpace")
-            logger.debug("Got prop-update response: {0}".format(resp.content))
-            transfer_url = resp.headers.get('Location', None)
-            logger.debug("Got job status redirect: {0}".format(transfer_url))
-            # Start the job
-            self.get_session(node.uri).post(
-                transfer_url + "/phase",
-                allow_redirects=False,
-                data="PHASE=RUN",
-                headers={'Content-type': "application/x-www-form-urlencoded"})
-            self.get_transfer_error(transfer_url, node.uri)
+                logger.debug("prop URL: {0}".format(property_url))
+                try:
+                    resp = session.post(
+                        property_url, allow_redirects=False, data=str(node),
+                        headers={'Content-type': 'text/xml'})
+                except Exception as ex:
+                    logger.error(str(ex))
+                    raise ex
+                if resp is None:
+                    raise OSError(errno.EFAULT, "Failed to connect VOSpace")
+                logger.debug("Got prop-update response: {0}".format(resp.content))
+                transfer_url = resp.headers.get('Location', None)
+                logger.debug("Got job status redirect: {0}".format(transfer_url))
+                # Start the job
+                session.post(
+                    transfer_url + "/phase",
+                    allow_redirects=False,
+                    data="PHASE=RUN",
+                    headers={'Content-type': "application/x-www-form-urlencoded"})
+                self.get_transfer_error(transfer_url, node.uri)
         else:
-            resp = self.get_session(node.uri).post(url,
-                                                   data=str(node),
-                                                   allow_redirects=False)
+            resp = session.post(url, data=str(node), allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))
-        return 0
+            resp.raise_for_status()
+        return 1, 0
 
     def mkdir(self, uri):
         """
@@ -2732,6 +2772,106 @@ class Client(object):
             response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
+    def recursive_props(self, uri, props):
+        """Updates properties of a node and its descendants
+        :param uri: The (Container/Link/Data)Node to delete from the service.
+        :param props: Properties to set/delete
+
+        :returns: tuple of the form (successfull_updates, failed_updates)
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        uri = self.fix_uri(uri)
+        logger.debug("recursive property sets {0}".format(uri))
+        with nodeCache.volatile(uri):
+            session = self.get_session(uri)
+            # quickly check target exists
+            node = self.get_node(uri)
+            node.props.clear()
+            node.clear_properties()
+            for pp in props:
+                node.change_prop(pp, props[pp])
+            response = session.post(self.get_endpoints(uri).recursive_props, data=str(node), allow_redirects=False, headers={'Content-type': 'text/xml'})
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session, response.headers['location'])
+
+    def recursive_delete(self, uri):
+        """Delete the node and its content.
+        :param uri: The (Container/Link/Data)Node to delete from the service.
+
+        :returns: tuple of the form (successfull_deletes, failed_deletes)
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        uri = self.fix_uri(uri)
+        logger.debug("recursive delete {0}".format(uri))
+        with nodeCache.volatile(uri):
+            session = self.get_session(uri)
+            # quickly check target exists
+            self.get_node(uri)
+            response = session.post(self.get_endpoints(uri).recursive_del, {'target': uri}, allow_redirects=False)
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session, response.headers['location'])
+
+    def _run_recursive_job(self, session, url):
+        # runs an already created recursive job and returns the number of
+        # successfull and unsuccessfull actions
+        logger.debug('POST: ' + url)
+        response = session.post(url + '/phase', data={'phase': 'RUN'}, allow_redirects=False)
+        if response.status_code != 303:
+            raise RuntimeError('Unexpected response for running job: '
+                               + response.status_code)
+
+        # polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        # a terminal phase
+        jobPoll = url + '?WAIT=6'
+        count = 0;
+        done = False;
+        while not done and count < 100:  # max 100*6 = 600 sec polling
+            logger.debug("poll: " + jobPoll)
+            resp = session.get(jobPoll)
+            resp.raise_for_status()
+            xml_string = resp.content
+            logging.debug('Job Document:{}'.format(xml_string))
+            job_document = ElementTree.fromstring(xml_string)
+            if job_document.find('uws:phase', UWS_NSMAP) is not None:
+                phase = job_document.find('uws:phase', UWS_NSMAP).text
+            else:
+                raise RuntimeError('Cannot determine job phase')
+            if phase.upper() in ['QUEUED', 'EXECUTING']:
+                count += 1
+            elif phase.upper() == 'ERROR':
+                message = ''
+                error_summary = job_document.find('uws:errorSummary', UWS_NSMAP)
+                if (error_summary is not None and
+                        error_summary.find('uws:message', UWS_NSMAP) is not None):
+                    message = error_summary.find('uws:message', UWS_NSMAP).text
+                raise RuntimeError(message)
+            elif phase.upper() in ['COMPLETED', 'ABORTED']:
+                results = job_document.find('uws:results', UWS_NSMAP)
+                error_count = 0
+                success_count = 0
+                if results is not None:
+                    results = results.findall('uws:result', UWS_NSMAP)
+                    if results is not None:
+                        for res in results:
+                            if res.attrib['id'] == 'successcount':
+                                success_count = res.attrib['{' + UWS_NSMAP['xlink'] + '}href'].split(':')[1]
+                            elif res.attrib['id'] == 'errorcount':
+                                error_count = res.attrib['{' + UWS_NSMAP['xlink'] + '}href'].split(':')[1]
+                return success_count, error_count
+            else:
+                raise RuntimeError('Unknow job phase: ' + phase)
+
+
     def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
@@ -2754,7 +2894,7 @@ class Client(object):
         if node.type in ["vos:DataNode", "vos:LinkNode"]:
             return [node]
         else:
-            return node.get_children(self, sort, order, 500)
+            return node.get_children(self, sort, order, None)
 
     def get_info_list(self, uri):
         """Retrieve a list of tuples of (NodeName, Info dict).
