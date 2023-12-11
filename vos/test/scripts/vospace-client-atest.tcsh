@@ -68,7 +68,6 @@ foreach resource ($resources)
 
 
   echo -n "** checking base URI"
-  echo $BASE
   $LSCMD $CERT $BASE > /dev/null
   if ( $status == 0) then
       echo " [OK]"
