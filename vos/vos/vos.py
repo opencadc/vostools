@@ -153,6 +153,7 @@ SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
 UWS_NSMAP = {'uws': 'http://www.ivoa.net/xml/UWS/v1.0',
              'xlink': 'http://www.w3.org/1999/xlink'}
 
+
 # sorting-related uris
 class SortNodeProperty(Enum):
     """ URIs of node properties used for sorting"""
@@ -1347,10 +1348,6 @@ class EndPoints(object):
                                vospace_token=vospace_token,
                                resource_id=self.resource_id,
                                insecure=insecure)
-
-    @property
-    def properties(self):
-        return self.conn.ws_client._get_url((self.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -2610,7 +2607,7 @@ class Client(object):
                       size=size, byte_range=byte_range,
                       possible_partial_read=possible_partial_read)
 
-    def add_props(self, node):
+    def add_props(self, node, recursive=False):
         """Given a node structure do a POST of the XML to the VOSpace to
            update the node properties
 
@@ -2636,8 +2633,20 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.get_session(node.uri).post(url, headers={'size': str(size)},
-                                        data=data)
+        session = self.get_session(node.uri)
+        if recursive:
+            response = session.post(self.get_endpoints(node.uri).recursive_props,
+                                    data=str(node), allow_redirects=False,
+                                    headers={'Content-type': 'text/xml'})
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session,
+                                           response.headers['location'])
+        else:
+            session.post(url, headers={'size': str(size)}, data=data)
+            return 1, 0
 
     def create(self, uri):
         """
@@ -2679,52 +2688,52 @@ class Client(object):
         endpoints = self.get_endpoints(node.uri)
         session = self.get_session(node.uri)
         if recursive:
-            property_url = None
             try:
                 property_url = endpoints.recursive_props
-            except KeyError:
-                pass
-            if property_url:
-                logger.debug("prop URL: {0}".format(property_url))
-                # quickly check target exists
-                session.get(endpoints.nodes + '/' + urlparse(node.uri).path)
-                response = session.post(endpoints.recursive_props,
-                                        data=str(node), allow_redirects=False,
-                                        headers={'Content-type': 'text/xml'})
-                response.raise_for_status()
-                if response.status_code != 303:
-                    raise RuntimeError('Unexpected response for running job: '
-                                       + response.status_code)
-                return self._run_recursive_job(session,
-                                               response.headers['location'])
-            else:
-                # TODO this is deprecated and should be removed soon
-                try:
-                    property_url = endpoints.properties
-                except KeyError as ex:
-                    logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
-                    raise Exception('Operation not supported')
-
-                logger.debug("prop URL: {0}".format(property_url))
-                try:
-                    resp = session.post(
-                        property_url, allow_redirects=False, data=str(node),
-                        headers={'Content-type': 'text/xml'})
-                except Exception as ex:
-                    logger.error(str(ex))
-                    raise ex
-                if resp is None:
-                    raise OSError(errno.EFAULT, "Failed to connect VOSpace")
-                logger.debug("Got prop-update response: {0}".format(resp.content))
-                transfer_url = resp.headers.get('Location', None)
-                logger.debug("Got job status redirect: {0}".format(transfer_url))
-                # Start the job
-                session.post(
-                    transfer_url + "/phase",
-                    allow_redirects=False,
-                    data="PHASE=RUN",
-                    headers={'Content-type': "application/x-www-form-urlencoded"})
-                self.get_transfer_error(transfer_url, node.uri)
+            except KeyError as ex:
+                logger.debug('recursive props endpoint does not exist: {0}'.
+                             format(str(ex)))
+                raise Exception('Operation not supported')
+            logger.debug("prop URL: {0}".format(property_url))
+            # quickly check target exists
+            session.get(endpoints.nodes + '/' + urlparse(node.uri).path)
+            response = session.post(endpoints.recursive_props,
+                                    data=str(node), allow_redirects=False,
+                                    headers={'Content-type': 'text/xml'})
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session,
+                                           response.headers['location'])
+            # else:
+            #     # TODO this is deprecated and should be removed soon
+            #     try:
+            #         property_url = endpoints.properties
+            #     except KeyError as ex:
+            #         logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
+            #         raise Exception('Operation not supported')
+            #
+            #     logger.debug("prop URL: {0}".format(property_url))
+            #     try:
+            #         resp = session.post(
+            #             property_url, allow_redirects=False, data=str(node),
+            #             headers={'Content-type': 'text/xml'})
+            #     except Exception as ex:
+            #         logger.error(str(ex))
+            #         raise ex
+            #     if resp is None:
+            #         raise OSError(errno.EFAULT, "Failed to connect VOSpace")
+            #     logger.debug("Got prop-update response: {0}".format(resp.content))
+            #     transfer_url = resp.headers.get('Location', None)
+            #     logger.debug("Got job status redirect: {0}".format(transfer_url))
+            #     # Start the job
+            #     session.post(
+            #         transfer_url + "/phase",
+            #         allow_redirects=False,
+            #         data="PHASE=RUN",
+            #         headers={'Content-type': "application/x-www-form-urlencoded"})
+            #     self.get_transfer_error(transfer_url, node.uri)
         else:
             resp = session.post(url, data=str(node), allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))
@@ -2772,33 +2781,6 @@ class Client(object):
             response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
-    def recursive_props(self, uri, props):
-        """Updates properties of a node and its descendants
-        :param uri: The (Container/Link/Data)Node to delete from the service.
-        :param props: Properties to set/delete
-
-        :returns: tuple of the form (successfull_updates, failed_updates)
-        :raises When a network problem occurs, it raises one of the
-        HttpException exceptions declared in the
-        cadcutils.exceptions module
-        """
-        uri = self.fix_uri(uri)
-        logger.debug("recursive property sets {0}".format(uri))
-        with nodeCache.volatile(uri):
-            session = self.get_session(uri)
-            # quickly check target exists
-            node = self.get_node(uri)
-            node.props.clear()
-            node.clear_properties()
-            for pp in props:
-                node.change_prop(pp, props[pp])
-            response = session.post(self.get_endpoints(uri).recursive_props, data=str(node), allow_redirects=False, headers={'Content-type': 'text/xml'})
-            response.raise_for_status()
-            if response.status_code != 303:
-                raise RuntimeError('Unexpected response for running job: '
-                                   + response.status_code)
-            return self._run_recursive_job(session, response.headers['location'])
-
     def recursive_delete(self, uri):
         """Delete the node and its content.
         :param uri: The (Container/Link/Data)Node to delete from the service.
@@ -2833,8 +2815,8 @@ class Client(object):
         # polling: WAIT will block for up to 6 sec or until phase change or if job is in
         # a terminal phase
         jobPoll = url + '?WAIT=6'
-        count = 0;
-        done = False;
+        count = 0
+        done = False
         while not done and count < 100:  # max 100*6 = 600 sec polling
             logger.debug("poll: " + jobPoll)
             resp = session.get(jobPoll)
@@ -2849,7 +2831,7 @@ class Client(object):
             if phase.upper() in ['QUEUED', 'EXECUTING']:
                 count += 1
             elif phase.upper() == 'ERROR':
-                message = ''
+                message = 'Failed'
                 error_summary = job_document.find('uws:errorSummary', UWS_NSMAP)
                 if (error_summary is not None and
                         error_summary.find('uws:message', UWS_NSMAP) is not None):
@@ -2870,7 +2852,6 @@ class Client(object):
                 return success_count, error_count
             else:
                 raise RuntimeError('Unknow job phase: ' + phase)
-
 
     def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)

@@ -728,6 +728,7 @@ class TestClient(unittest.TestCase):
 
         session = Mock(spec=vos.Connection)
         session.post = Mock(return_value=resp)
+        session.get = Mock()
         client = Client()
         client.get_session = Mock(return_value=session)
         client.get_node_url = Mock(
@@ -736,28 +737,27 @@ class TestClient(unittest.TestCase):
         client.protocol = 'https'
 
         data = str(node)
-        property_url = 'https://www.canfar.phys.uvic.ca/vospace/nodeprops'
-        endpoints_mock = Mock()
-        endpoints_mock.properties = property_url
+        property_url = 'https://www.canfar.phys.uvic.ca/vospace/async-setprops'
+        endpoints_mock = Mock(nodes='https://www.canfar.phys.uvic.ca/vospace/nodes')
+        endpoints_mock.recursive_props = property_url
         client.get_endpoints = Mock(return_value=endpoints_mock)
+        client.get_session.return_value = session
         result = client.update(node, False)
-        self.assertEqual(result, 0)
+        self.assertEqual(result, (1, 0))
         session.post.assert_called_with(
             'https://www.canfar.phys.uvic.ca/vospace',
             data=data, allow_redirects=False)
 
-        call1 = call(property_url, allow_redirects=False, data=data,
-                     headers={'Content-type': 'text/xml'})
-        call2 = call('https://www.canfar.phys.uvic.ca/vospace/phase',
-                     allow_redirects=False, data="PHASE=RUN",
-                     headers={
-                         'Content-type': 'application/x-www-form-urlencoded'})
-        calls = [call1, call2]
-
+        resp.status_code = 303
+        resp.headers = {'location': 'https://www.canfar.phys.uvic.ca/vospace/job'}
+        client._run_recursive_job = Mock(return_value=(4, 3))
         session.post = Mock(return_value=resp)
         result = client.update(node, True)
-        self.assertEqual(result, 0)
-        session.post.assert_has_calls(calls)
+        assert (4, 3) == result
+        session.post.assert_called_with(
+            'https://www.canfar.phys.uvic.ca/vospace/async-setprops',
+            data=data, allow_redirects=False,
+            headers={'Content-type': 'text/xml'})
 
     def test_getNode(self):
         """

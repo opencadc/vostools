@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -108,7 +108,7 @@ def vtag():
         nargs="*")
     parser.add_option('--remove', action="store_true",
                       help='remove the listed property')
-    parser.add_option('-r', '--recursive', action="store_true",
+    parser.add_option('-R', '--recursive', action="store_true",
                       help='perform the operation recursively on all the descendants')
 
     opt = parser.parse_args()
@@ -139,13 +139,14 @@ def vtag():
             # print all properties
             pprint.pprint(node.props)
         if args.recursive:
-            node_props = {}
+            node.props.clear()
+            node.clear_properties()
             for prop in props:
                 key, value = prop.split('=')
                 if len(value) == 0:
                     value = None
-                node_props[key] = value
-            successes, failures = client.recursive_props(node.uri, node_props)
+                node.props[key] = value
+            successes, failures = client.add_props(node, recursive=True)
             if opt.recursive:
                 if failures:
                     sys.stderr.write(

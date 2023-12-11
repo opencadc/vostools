@@ -70,7 +70,7 @@
 from unittest.mock import Mock, patch
 import warnings
 
-from vos import vosconfig, Connection
+from vos import vosconfig
 import pytest
 import tempfile
 import os
