@@ -324,19 +324,6 @@ def vcp():
                         if ans != 'y':
                             raise Exception("File exists")
 
-                if not access(os.path.dirname(destination_name), os.F_OK):
-                    raise OSError(errno.EEXIST,
-                                  "vcp: ContainerNode %s does not exist" %
-                                  os.path.dirname(
-                                      destination_name))
-
-                if not isdir(os.path.dirname(destination_name)) and not islink(
-                        os.path.dirname(destination_name)):
-                    raise OSError(errno.ENOTDIR,
-                                  "vcp: %s is not a ContainerNode or LinkNode"
-                                  % os.path.dirname(
-                                      destination_name))
-
                 skip = False
                 if exclude is not None:
                     for thisIgnore in exclude.split(','):

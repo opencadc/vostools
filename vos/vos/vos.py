@@ -596,7 +596,7 @@ class Node(object):
                 if uri != prop.attrib.get('uri', None):
                     continue
                 found = True
-                if getattr(prop, 'text', None) == value:
+                if getattr(prop, 'text') == value:
                     break
                 changed = True
                 if value is None:
@@ -613,7 +613,10 @@ class Node(object):
         property_node = ElementTree.SubElement(properties[0], Node.PROPERTY)
         property_node.attrib['readOnly'] = "false"
         property_node.attrib['uri'] = uri
-        property_node.text = value
+        if value is not None:
+            property_node.text = value
+        else:
+            property_node.attrib['xsi:nil'] = 'true'
         self.props[self.get_prop_name(uri)] = value
         return changed
 
@@ -681,7 +684,8 @@ class Node(object):
 
         # create a properties section
         if 'type' not in properties:
-            properties['type'] = mimetypes.guess_type(uri)[0]
+            if mimetypes.guess_type(uri)[0]:
+                properties['type'] = mimetypes.guess_type(uri)[0]
         properties_node = ElementTree.SubElement(node, Node.PROPERTIES)
         for prop in properties.keys():
             property_node = ElementTree.SubElement(properties_node,
@@ -747,11 +751,11 @@ class Node(object):
     def is_locked(self, lock):
         if lock == self.is_locked:
             return
-        self.change_prop(VO_PROPERTY_URI_ISLOCKED, lock and "true" or "false")
+        self.change_prop(VO_PROPERTY_URI_ISLOCKED, lock and "true" or None)
 
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props.get(VO_PROPERTY_URI_ISLOCKED, "false") == "true"
+        return self.props.get(VO_PROPERTY_URI_ISLOCKED) == "true"
 
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
@@ -1655,7 +1659,7 @@ class Client(object):
         else:
             if uri_parts.scheme is not None:
                 # assume first that the file_scheme is the short name of the
-                # of the resource e.g. arc corresponds to ivo://cadc.nrc.ca/arc
+                # resource e.g. arc corresponds to ivo://cadc.nrc.ca/arc
                 # With a proper reg, this could be replaced by a TAP search
                 # into the registry
                 if uri_parts.scheme == 'vos':
@@ -1663,7 +1667,11 @@ class Client(object):
                     scheme = 'vault'
                 else:
                     scheme = uri_parts.scheme
-                resource_id = 'ivo://cadc.nrc.ca/{}'.format(scheme)
+                if (os.getenv('VOSPACE_WEBSERVICE')):
+                    # assume testing against local deployment
+                    resource_id = 'ivo://opencadc.org/{}'.format(scheme)
+                else:
+                    resource_id = 'ivo://cadc.nrc.ca/{}'.format(scheme)
 
             else:
                 raise OSError('No scheme in {}'.format(uri))
@@ -1895,21 +1903,22 @@ class Client(object):
             #   1. source file is empty -> just re-create the node
             #   2. source and destination are identical
             if src_size == 0:
-                logger.info("destination: size is 0")
+                logger.info("src: size is 0")
                 if destination_node:
                     # TODO delete and recreate the node. Is there a better way
                     # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
                 destination_node = self.get_node(destination, force=True)
-                dest_md5 = destination_node.props.get('MD5', None)
-                dest_size = destination_node.props.get('length', None)
-                if dest_size:
+                dest_md5 = destination_node.props.get('MD5')
+                dest_size = destination_node.props.get('length')
+                # In vault the presence of size is optional
+                if dest_size is not None:
                     dest_size = int(dest_size)
-                if dest_size != src_size:
-                    raise IOError(
-                        "Source size ({}) != destination size ({})".
-                        format(src_size, dest_size))
+                    if dest_size != src_size:
+                        raise IOError(
+                            "Source size ({}) != destination size ({})".
+                            format(src_size, dest_size))
                 success = True
             elif src_size == dest_size:
                 if dest_md5 is not None:
@@ -2387,8 +2396,8 @@ class Client(object):
 
         # if the link_uri points at an existing directory then we try and
         # make a link into that directory
-        if self.isdir(link_uri):
-            link_uri = os.path.join(link_uri, os.path.basename(src_uri))
+        # if self.isdir(link_uri):
+        #     link_uri = os.path.join(link_uri, os.path.basename(src_uri))
 
         with nodeCache.volatile(src_uri), nodeCache.volatile(
                 link_uri):
@@ -2427,15 +2436,15 @@ class Client(object):
                 headers={'Content-type': 'application/x-www-form-urlencoded'})
             return self.get_transfer_error(job_url, src_uri)
 
-    def _get(self, uri, view="defaultview", cutout=None):
+    def _get(self, uri, view=None, cutout=None):
         with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pullFromVoSpace", view, cutout)
+                                 uri, "pullFromVoSpace", None, cutout)
 
     def _put(self, uri, content_length=None, md5_checksum=None):
         with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pushToVoSpace", view="defaultview",
+                                 uri, "pushToVoSpace", view=None,
                                  content_length=content_length,
                                  md5_checksum=md5_checksum)
 
