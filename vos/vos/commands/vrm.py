@@ -84,7 +84,7 @@ eg. vrm vos:/root/node   -- deletes a data node""".format(URI_DESCRIPTION)
 def vrm():
     parser = CommonParser(description=DESCRIPTION)
     parser.add_argument(
-        "-r", "--recursive", action="store_true",
+        "-R", "--recursive", action="store_true",
         help="Delete a file or directory even if it's not empty.",
         default=False)
     parser.add_argument('node',
@@ -106,11 +106,11 @@ def vrm():
             if args.recursive:
                 successes, failures = client.recursive_delete(node)
                 if failures:
-                    sys.stderr.write('WARN. deleted count: {}, failed count: '
+                    logging.error('WARN. deleted count: {}, failed count: '
                                      '{}\n'.format(successes, failures))
                     sys.exit(-1)
                 else:
-                    sys.stdout.write(
+                    logging.info(
                         'DONE. deleted count: {}\n'.format(successes))
             else:
                 if not node.endswith('/'):

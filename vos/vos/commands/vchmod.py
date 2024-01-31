@@ -202,11 +202,11 @@ def vchmod():
         successes, failures = client.update(node, opt.recursive)
         if opt.recursive:
             if failures:
-                sys.stderr.write('WARN. updated count: {}, failed count: {}\n'.
+                logging.error('WARN. updated count: {}, failed count: {}\n'.
                                  format(successes, failures))
                 sys.exit(-1)
             else:
-                sys.stdout.write('DONE. updated count: {}\n'.format(successes))
+                logging.info('DONE. updated count: {}\n'.format(successes))
     except Exception as ex:
         exit_on_exception(ex)
 

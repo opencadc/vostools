@@ -2715,34 +2715,6 @@ class Client(object):
                                    + response.status_code)
             return self._run_recursive_job(session,
                                            response.headers['location'])
-            # else:
-            #     # TODO this is deprecated and should be removed soon
-            #     try:
-            #         property_url = endpoints.properties
-            #     except KeyError as ex:
-            #         logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
-            #         raise Exception('Operation not supported')
-            #
-            #     logger.debug("prop URL: {0}".format(property_url))
-            #     try:
-            #         resp = session.post(
-            #             property_url, allow_redirects=False, data=str(node),
-            #             headers={'Content-type': 'text/xml'})
-            #     except Exception as ex:
-            #         logger.error(str(ex))
-            #         raise ex
-            #     if resp is None:
-            #         raise OSError(errno.EFAULT, "Failed to connect VOSpace")
-            #     logger.debug("Got prop-update response: {0}".format(resp.content))
-            #     transfer_url = resp.headers.get('Location', None)
-            #     logger.debug("Got job status redirect: {0}".format(transfer_url))
-            #     # Start the job
-            #     session.post(
-            #         transfer_url + "/phase",
-            #         allow_redirects=False,
-            #         data="PHASE=RUN",
-            #         headers={'Content-type': "application/x-www-form-urlencoded"})
-            #     self.get_transfer_error(transfer_url, node.uri)
         else:
             resp = session.post(url, data=str(node), allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))

@@ -71,6 +71,7 @@ functions for property(ies) of a node.
 
 The tag system is meant to allow tags, in addition to the standard node
 properties. """
+import logging
 import pprint
 import sys
 from ..commonparser import CommonParser, set_logging_level_from_args, \
@@ -111,8 +112,7 @@ def vtag():
     parser.add_option('-R', '--recursive', action="store_true",
                       help='perform the operation recursively on all the descendants')
 
-    opt = parser.parse_args()
-    args = opt
+    args = parser.parse_args()
     set_logging_level_from_args(args)
 
     # the node should be the first argument, the rest should contain
@@ -131,9 +131,9 @@ def vtag():
 
     try:
         client = vos.Client(
-            vospace_certfile=opt.certfile,
-            vospace_token=opt.token,
-            insecure=opt.insecure)
+            vospace_certfile=args.certfile,
+            vospace_token=args.token,
+            insecure=args.insecure)
         node = client.get_node(node_arg)
         if len(props) == 0:
             # print all properties
@@ -147,14 +147,14 @@ def vtag():
                     value = None
                 node.props[key] = value
             successes, failures = client.add_props(node, recursive=True)
-            if opt.recursive:
+            if args.recursive:
                 if failures:
-                    sys.stderr.write(
+                    logging.error(
                         'WARN. updated count: {}, failed count: {}\n'.
                         format(successes, failures))
                     sys.exit(-1)
                 else:
-                    sys.stdout.write(
+                    logging.info(
                         'DONE. updated count: {}\n'.format(successes))
         else:
             changed = False
