@@ -426,8 +426,7 @@ class TestClient(unittest.TestCase):
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
-        assert not computed_md5_mock.called,\
-            'MD5 should be computed on the fly'
+        assert not computed_md5_mock.called, 'MD5 should be computed on the fly'
         assert get_node_mock.called
 
         # repeat - local file and vospace file are now the same -> only
@@ -810,9 +809,7 @@ class TestClient(unittest.TestCase):
         mock_resp_403 = Mock(name="mock_resp_303")
         mock_resp_403.status_code = 403
 
-        conn = Connection(resource_id='ivo://cadc.nrc.ca/vault')
-        conn.session.post = Mock(return_value=mock_resp_403)
-        client = Client(conn=conn)
+        client = Client()
         client.is_remote_file = Mock()
 
         uri1 = 'notvos://cadc.nrc.ca!vault/nosuchfile1'

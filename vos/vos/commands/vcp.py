@@ -69,7 +69,7 @@
 """copy files vospace to local or local to VOSpace"""
 from .. import md5_cache
 from .. import vos
-from ..commonparser import CommonParser, set_logging_level_from_args,\
+from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, URI_DESCRIPTION
 
 try:

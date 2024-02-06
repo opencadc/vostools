@@ -683,9 +683,8 @@ class Node(object):
         node.attrib["uri"] = uri
 
         # create a properties section
-        if 'type' not in properties:
-            if mimetypes.guess_type(uri)[0]:
-                properties['type'] = mimetypes.guess_type(uri)[0]
+        if ('type' not in properties) and (mimetypes.guess_type(uri)[0]):
+            properties['type'] = mimetypes.guess_type(uri)[0]
         properties_node = ElementTree.SubElement(node, Node.PROPERTIES)
         for prop in properties.keys():
             property_node = ElementTree.SubElement(properties_node,
@@ -1790,6 +1789,18 @@ class Client(object):
                 src_size = source_props.get('length', None)
                 if src_size:
                     src_size = int(src_size)
+                if src_size == 0:
+                    if os.path.isdir(destination):
+                        dest_name = os.path.split(source)[-1]
+                        destination = os.path.join(destination, dest_name)
+                    if os.path.isfile(destination) and os.stat(destination).st_size == 0:
+                        logger.info('copy: src and dest are already the same')
+                    else:
+                        open(destination, 'w').write('')
+                    if send_md5:
+                        return ZERO_MD5
+                    return 0
+
                 if os.path.isfile(destination):
                     # check if the local file is up to date before doing the
                     # transfer. Use size for first comparison as it's faster
@@ -2548,7 +2559,7 @@ class Client(object):
         # really that's an error, but I thought I'd just accept those are
         # os.O_RDONLY
 
-        if type(mode) == str:
+        if isinstance(mode, str):
             mode = os.O_RDONLY
 
         # the url of the connection depends if we are 'getting', 'putting' or
@@ -2809,7 +2820,7 @@ class Client(object):
                 phase = job_document.find('uws:phase', UWS_NSMAP).text
             else:
                 raise RuntimeError('Cannot determine job phase')
-            if phase.upper() in ['QUEUED', 'EXECUTING']:
+            if phase.upper() in ['QUEUED', 'EXECUTING', 'SUSPENDED']:
                 count += 1
             elif phase.upper() == 'ERROR':
                 message = 'Failed'
@@ -2832,7 +2843,7 @@ class Client(object):
                                 error_count = res.attrib['{' + UWS_NSMAP['xlink'] + '}href'].split(':')[1]
                 return success_count, error_count
             else:
-                raise RuntimeError('Unknow job phase: ' + phase)
+                raise RuntimeError('Unknown job phase: ' + phase)
 
     def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)

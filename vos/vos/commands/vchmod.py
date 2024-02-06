@@ -71,7 +71,7 @@
 """
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args,\
+from ..commonparser import CommonParser, set_logging_level_from_args, \
     URI_DESCRIPTION
 from ..commonparser import exit_on_exception
 import logging
@@ -203,7 +203,7 @@ def vchmod():
         if opt.recursive:
             if failures:
                 logging.error('WARN. updated count: {}, failed count: {}\n'.
-                                 format(successes, failures))
+                              format(successes, failures))
                 sys.exit(-1)
             else:
                 logging.info('DONE. updated count: {}\n'.format(successes))

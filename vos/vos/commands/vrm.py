@@ -107,7 +107,7 @@ def vrm():
                 successes, failures = client.recursive_delete(node)
                 if failures:
                     logging.error('WARN. deleted count: {}, failed count: '
-                                     '{}\n'.format(successes, failures))
+                                  '{}\n'.format(successes, failures))
                     sys.exit(-1)
                 else:
                     logging.info(
