@@ -3,12 +3,12 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-#echo "Enter path to the CADC test certificates"
-#echo -n "Cert path: "
-#set certpath = "$<"
-#setenv CADC_TESTCERT_PATH ${certpath}
-#
-#echo "cert files path:  $CADC_TESTCERT_PATH"
+echo "Enter path to the CADC test certificates"
+echo -n "Cert path: "
+set certpath = "$<"
+setenv CADC_TESTCERT_PATH ${certpath}
+
+echo "cert files path:  $CADC_TESTCERT_PATH"
 echo
 echo "*** start all tests ***"
 echo "vospace-client-atest.tcsh"
@@ -20,8 +20,8 @@ echo "vospace-delete-permission-atest.tcsh"
 $THIS_DIR/vospace-delete-permission-atest.tcsh $args || echo "FAIL vospace-delete-permission-atest.tcsh" && exit -1
 echo "vospace-vsync-atest.tcsh"
 $THIS_DIR/vospace-vsync-atest.tcsh $args || echo "FAIL vospace-vsync-atest.tcsh" && exit -1
-#echo "vospace-quota-atest.tcsh"
-#$THIS_DIR/vospace-quota-atest.tcsh $args || echo "FAIL vospace-quota-atest.tcsh" && exit -1
+echo "vospace-quota-atest.tcsh"
+$THIS_DIR/vospace-quota-atest.tcsh $args || echo "FAIL vospace-quota-atest.tcsh" && exit -1
 echo "vospace-link-atest.tcsh"
 $THIS_DIR/vospace-link-atest.tcsh $args || echo "FAIL vospace-link-atest.tcsh" && exit -1
 echo "vospace-read-permission-atest.tcsh"

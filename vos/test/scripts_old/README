@@ -1,0 +1,7 @@
+This is a set of integration tests against the VOSpace service hosted
+at the CADC. These tests can only be executed at the CADC against that
+service. The vos package must be installed before the these tests
+are executed.
+
+Environment variables (optional):
+VOSPACE_WEBSERVICE = URL of the VOSpace service host (Default: "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca")
