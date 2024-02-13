@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -71,7 +71,7 @@
 """
 from ..vos import Client
 from ..vos import CADC_GMS_PREFIX
-from ..commonparser import CommonParser, set_logging_level_from_args,\
+from ..commonparser import CommonParser, set_logging_level_from_args, \
     URI_DESCRIPTION
 from ..commonparser import exit_on_exception
 import logging
@@ -190,10 +190,8 @@ def vchmod():
                         vospace_token=opt.token,
                         insecure=opt.insecure)
         node = client.get_node(opt.node)
-        if opt.recursive:
-            node.props.clear()
-            node.clear_properties()
-            # del node.node.findall(vos.Node.PROPERTIES)[0:]
+        node.props.clear()
+        node.clear_properties()
         if 'readgroup' in props:
             node.chrgrp(props['readgroup'])
         if 'writegroup' in props:
@@ -201,9 +199,14 @@ def vchmod():
         if 'ispublic' in props:
             node.set_public(props['ispublic'])
         logging.debug("Node: {0}".format(node))
-        status = client.update(node, opt.recursive)
-        if status:
-            sys.exit(status)
+        successes, failures = client.update(node, opt.recursive)
+        if opt.recursive:
+            if failures:
+                logging.error('WARN. updated count: {}, failed count: {}\n'.
+                              format(successes, failures))
+                sys.exit(-1)
+            else:
+                logging.info('DONE. updated count: {}\n'.format(successes))
     except Exception as ex:
         exit_on_exception(ex)
 

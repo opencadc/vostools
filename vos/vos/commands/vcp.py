@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -69,7 +69,7 @@
 """copy files vospace to local or local to VOSpace"""
 from .. import md5_cache
 from .. import vos
-from ..commonparser import CommonParser, set_logging_level_from_args,\
+from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, URI_DESCRIPTION
 
 try:
@@ -323,19 +323,6 @@ def vcp():
                         ans = sys.stdin.readline().strip()
                         if ans != 'y':
                             raise Exception("File exists")
-
-                if not access(os.path.dirname(destination_name), os.F_OK):
-                    raise OSError(errno.EEXIST,
-                                  "vcp: ContainerNode %s does not exist" %
-                                  os.path.dirname(
-                                      destination_name))
-
-                if not isdir(os.path.dirname(destination_name)) and not islink(
-                        os.path.dirname(destination_name)):
-                    raise OSError(errno.ENOTDIR,
-                                  "vcp: %s is not a ContainerNode or LinkNode"
-                                  % os.path.dirname(
-                                      destination_name))
 
                 skip = False
                 if exclude is not None:

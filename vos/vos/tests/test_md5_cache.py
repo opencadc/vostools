@@ -100,12 +100,12 @@ class TestMD5Cache(unittest.TestCase):
         sql_conn_mock.reset_mock()
         md5_cache.delete('somefile')
         sql_conn_mock.execute.assert_called_once_with(
-           'DELETE from md5_cache WHERE filename = ?', ('somefile',))
+            'DELETE from md5_cache WHERE filename = ?', ('somefile',))
 
         # test update
         sql_conn_mock.reset_mock()
-        self.assertEquals(0x00123, md5_cache.update('somefile', 0x00123, 23,
-                                                    'Jan 01 2001'))
+        self.assertEqual(0x00123, md5_cache.update('somefile', 0x00123, 23,
+                                                   'Jan 01 2001'))
         call1 = call('DELETE from md5_cache WHERE filename = ?', ('somefile',))
         call2 = call(
             'INSERT INTO md5_cache (filename, md5, st_size, st_mtime) '
@@ -118,11 +118,11 @@ class TestMD5Cache(unittest.TestCase):
         cursor_mock = MagicMock()
         cursor_mock.fetchone.return_value = ['0x0023', '23', 'Jan 01 2000']
         sql_conn_mock.execute.return_value = cursor_mock
-        self.assertEquals(cursor_mock.fetchone.return_value,
-                          md5_cache.get('somefile'))
+        self.assertEqual(cursor_mock.fetchone.return_value,
+                         md5_cache.get('somefile'))
         sql_conn_mock.execute.assert_called_once_with(
-           'SELECT md5, st_size, st_mtime FROM md5_cache WHERE filename = ? ',
-           ('somefile',))
+            'SELECT md5, st_size, st_mtime FROM md5_cache WHERE filename = ? ',
+            ('somefile',))
 
     def test_compute_md5(self):
         file_mock = MagicMock()

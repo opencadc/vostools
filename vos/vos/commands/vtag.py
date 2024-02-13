@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -71,7 +71,9 @@ functions for property(ies) of a node.
 
 The tag system is meant to allow tags, in addition to the standard node
 properties. """
+import logging
 import pprint
+import sys
 from ..commonparser import CommonParser, set_logging_level_from_args, \
     exit_on_exception, URI_DESCRIPTION
 from .. import vos
@@ -107,14 +109,15 @@ def vtag():
         nargs="*")
     parser.add_option('--remove', action="store_true",
                       help='remove the listed property')
+    parser.add_option('-R', '--recursive', action="store_true",
+                      help='perform the operation recursively on all the descendants')
 
-    opt = parser.parse_args()
-    args = opt
+    args = parser.parse_args()
     set_logging_level_from_args(args)
 
     # the node should be the first argument, the rest should contain
     # the key/val pairs
-    node = args.node
+    node_arg = args.node
 
     props = []
     if args.remove:
@@ -128,35 +131,53 @@ def vtag():
 
     try:
         client = vos.Client(
-            vospace_certfile=opt.certfile,
-            vospace_token=opt.token,
-            insecure=opt.insecure)
-        node = client.get_node(node)
+            vospace_certfile=args.certfile,
+            vospace_token=args.token,
+            insecure=args.insecure)
+        node = client.get_node(node_arg)
         if len(props) == 0:
             # print all properties
             pprint.pprint(node.props)
-
-        changed = False
-        for prop in props:
-            prop = prop.split('=')
-            if len(prop) == 1:
-                # get one property
-                pprint.pprint(node.props.get(prop[0], None))
-            elif len(prop) == 2:
-                # update properties
-                key, value = prop
+        if args.recursive:
+            node.props.clear()
+            node.clear_properties()
+            for prop in props:
+                key, value = prop.split('=')
                 if len(value) == 0:
                     value = None
-                if value != node.props.get(key, None):
-                    node.props[key] = value
-                    changed = True
-            else:
-                raise ValueError(
-                    "Illegal keyword of value character ('=') used: %s" % (
-                        '='.join(prop)))
+                node.props[key] = value
+            successes, failures = client.add_props(node, recursive=True)
+            if args.recursive:
+                if failures:
+                    logging.error(
+                        'WARN. updated count: {}, failed count: {}\n'.
+                        format(successes, failures))
+                    sys.exit(-1)
+                else:
+                    logging.info(
+                        'DONE. updated count: {}\n'.format(successes))
+        else:
+            changed = False
+            for prop in props:
+                prop = prop.split('=')
+                if len(prop) == 1:
+                    # get one property
+                    pprint.pprint(node.props.get(prop[0], None))
+                elif len(prop) == 2:
+                    # update properties
+                    key, value = prop
+                    if len(value) == 0:
+                        value = None
+                    if value != node.props.get(key, None):
+                        node.props[key] = value
+                        changed = True
+                else:
+                    raise ValueError(
+                        "Illegal keyword of value character ('=') used: %s" % (
+                            '='.join(prop)))
 
-        if changed:
-            client.add_props(node)
+            if changed:
+                client.add_props(node)
     except Exception as ex:
         exit_on_exception(ex)
 

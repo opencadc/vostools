@@ -65,12 +65,12 @@
 #
 # ***********************************************************************
 #
-
+import unittest
 # Test the vosconfig functionality
 from unittest.mock import Mock, patch
 import warnings
 
-from vos import vosconfig, Connection
+from vos import vosconfig
 import pytest
 import tempfile
 import os
@@ -80,29 +80,30 @@ import os
 skipTests = False
 
 
+# @unittest.skip('Functionality no longer used')
 @patch('vos.vos.os.path.exists', Mock())
 def test_update_config():
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
+    with patch('builtins.open') as open_mock:
         old_content = 'blah'
         new_config_mock = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_config_mock
         vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content)
+    new_config_mock.assert_called_once_with(old_content)
 
     # test rewrite vospace resource in config file
     new_config_mock.reset_mock()
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
+    with patch('builtins.open') as open_mock:
         old_content = 'blah\nresourceID=ivo://cadc.nrc.ca/vospace\nfoo'
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
         vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content.replace(
+    new_content.assert_called_once_with(old_content.replace(
         'vospace', 'vault'))
 
     # test rewrite transfer protocol in config file
@@ -111,14 +112,14 @@ def test_update_config():
         "# transfer protocol configuration is no longer supported\n"
     # Cause all warnings to always be triggered.
     warnings.simplefilter("always")
-    with patch('vos.vos.open') as open_mock:
+    with patch('builtins.open') as open_mock:
         old_content = 'blah\nprotocol=http\nfoo'
         new_content = Mock()
         open_mock.return_value.read.return_value = old_content
         open_mock.return_value.write = new_content
         vosconfig._update_config()
-    assert new_config_mock.called_once_with(old_content.replace(
-        'protocol', '{}#protocol'.format(protocol_text)))
+    new_content.assert_called_once_with(old_content.replace(
+        'protocol', '{}# protocol'.format(protocol_text)))
 
 
 @patch('vos.vosconfig.os.path.isfile', Mock())

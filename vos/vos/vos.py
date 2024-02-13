@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -148,6 +148,10 @@ SSO_SECURITY_METHODS = {
 
 SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
                              'cavern': '0.4'}
+
+# this should one day go into its own uws library
+UWS_NSMAP = {'uws': 'http://www.ivoa.net/xml/UWS/v1.0',
+             'xlink': 'http://www.w3.org/1999/xlink'}
 
 
 # sorting-related uris
@@ -592,7 +596,7 @@ class Node(object):
                 if uri != prop.attrib.get('uri', None):
                     continue
                 found = True
-                if getattr(prop, 'text', None) == value:
+                if getattr(prop, 'text') == value:
                     break
                 changed = True
                 if value is None:
@@ -609,7 +613,10 @@ class Node(object):
         property_node = ElementTree.SubElement(properties[0], Node.PROPERTY)
         property_node.attrib['readOnly'] = "false"
         property_node.attrib['uri'] = uri
-        property_node.text = value
+        if value is not None:
+            property_node.text = value
+        else:
+            property_node.attrib['xsi:nil'] = 'true'
         self.props[self.get_prop_name(uri)] = value
         return changed
 
@@ -676,7 +683,7 @@ class Node(object):
         node.attrib["uri"] = uri
 
         # create a properties section
-        if 'type' not in properties:
+        if ('type' not in properties) and (mimetypes.guess_type(uri)[0]):
             properties['type'] = mimetypes.guess_type(uri)[0]
         properties_node = ElementTree.SubElement(node, Node.PROPERTIES)
         for prop in properties.keys():
@@ -743,11 +750,11 @@ class Node(object):
     def is_locked(self, lock):
         if lock == self.is_locked:
             return
-        self.change_prop(VO_PROPERTY_URI_ISLOCKED, lock and "true" or "false")
+        self.change_prop(VO_PROPERTY_URI_ISLOCKED, lock and "true" or None)
 
     def islocked(self):
         """Check if target state is locked for update/delete."""
-        return self.props.get(VO_PROPERTY_URI_ISLOCKED, "false") == "true"
+        return self.props.get(VO_PROPERTY_URI_ISLOCKED) == "true"
 
     def get_info(self):
         """Organize some information about a node and return as dictionary"""
@@ -800,7 +807,7 @@ class Node(object):
                     self.add_child(nodeNode)
         return self._node_list
 
-    def get_children(self, client, sort, order, limit=500):
+    def get_children(self, client, sort, order, limit=None):
         """ Gets an iterator over the nodes held to by a ContainerNode"""
         # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
         # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
@@ -1315,10 +1322,13 @@ class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
     # standard ids
+    # TODO - VO_PROPERTIES has been replaced by VO_RECURSIVE_PROPS
     VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
     VO_ASYNC_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#transfers'
+    VO_RECURSIVE_DEL = 'ivo://ivoa.net/std/VOSpace#recursive-delete-proto'
+    VO_RECURSIVE_PROPS = 'ivo://ivoa.net/std/VOSpace#recursive-nodeprops-proto'
 
     subject = net.Subject()  # default subject is for anonymous access
 
@@ -1341,10 +1351,6 @@ class EndPoints(object):
                                vospace_token=vospace_token,
                                resource_id=self.resource_id,
                                insecure=insecure)
-
-    @property
-    def properties(self):
-        return self.conn.ws_client._get_url((self.VO_PROPERTIES, None))
 
     @property
     def uri(self):
@@ -1384,6 +1390,20 @@ class EndPoints(object):
         :return: The Node service endpoint.
         """
         return self.conn.ws_client._get_url((self.VO_NODES, None))
+
+    @property
+    def recursive_del(self):
+        """
+        :return: recursive delete endpoint
+        """
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_DEL, None))
+
+    @property
+    def recursive_props(self):
+        """
+        :return: recusive property set endpoint
+        """
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
 
     @property
     def session(self):
@@ -1638,7 +1658,7 @@ class Client(object):
         else:
             if uri_parts.scheme is not None:
                 # assume first that the file_scheme is the short name of the
-                # of the resource e.g. arc corresponds to ivo://cadc.nrc.ca/arc
+                # resource e.g. arc corresponds to ivo://cadc.nrc.ca/arc
                 # With a proper reg, this could be replaced by a TAP search
                 # into the registry
                 if uri_parts.scheme == 'vos':
@@ -1646,7 +1666,11 @@ class Client(object):
                     scheme = 'vault'
                 else:
                     scheme = uri_parts.scheme
-                resource_id = 'ivo://cadc.nrc.ca/{}'.format(scheme)
+                if (os.getenv('VOSPACE_WEBSERVICE')):
+                    # assume testing against local deployment
+                    resource_id = 'ivo://opencadc.org/{}'.format(scheme)
+                else:
+                    resource_id = 'ivo://cadc.nrc.ca/{}'.format(scheme)
 
             else:
                 raise OSError('No scheme in {}'.format(uri))
@@ -1765,6 +1789,18 @@ class Client(object):
                 src_size = source_props.get('length', None)
                 if src_size:
                     src_size = int(src_size)
+                if src_size == 0:
+                    if os.path.isdir(destination):
+                        dest_name = os.path.split(source)[-1]
+                        destination = os.path.join(destination, dest_name)
+                    if os.path.isfile(destination) and os.stat(destination).st_size == 0:
+                        logger.info('copy: src and dest are already the same')
+                    else:
+                        open(destination, 'w').write('')
+                    if send_md5:
+                        return ZERO_MD5
+                    return 0
+
                 if os.path.isfile(destination):
                     # check if the local file is up to date before doing the
                     # transfer. Use size for first comparison as it's faster
@@ -1878,21 +1914,22 @@ class Client(object):
             #   1. source file is empty -> just re-create the node
             #   2. source and destination are identical
             if src_size == 0:
-                logger.info("destination: size is 0")
+                logger.info("src: size is 0")
                 if destination_node:
                     # TODO delete and recreate the node. Is there a better way
                     # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
                 destination_node = self.get_node(destination, force=True)
-                dest_md5 = destination_node.props.get('MD5', None)
-                dest_size = destination_node.props.get('length', None)
-                if dest_size:
+                dest_md5 = destination_node.props.get('MD5')
+                dest_size = destination_node.props.get('length')
+                # In vault the presence of size is optional
+                if dest_size is not None:
                     dest_size = int(dest_size)
-                if dest_size != src_size:
-                    raise IOError(
-                        "Source size ({}) != destination size ({})".
-                        format(src_size, dest_size))
+                    if dest_size != src_size:
+                        raise IOError(
+                            "Source size ({}) != destination size ({})".
+                            format(src_size, dest_size))
                 success = True
             elif src_size == dest_size:
                 if dest_md5 is not None:
@@ -2370,8 +2407,8 @@ class Client(object):
 
         # if the link_uri points at an existing directory then we try and
         # make a link into that directory
-        if self.isdir(link_uri):
-            link_uri = os.path.join(link_uri, os.path.basename(src_uri))
+        # if self.isdir(link_uri):
+        #     link_uri = os.path.join(link_uri, os.path.basename(src_uri))
 
         with nodeCache.volatile(src_uri), nodeCache.volatile(
                 link_uri):
@@ -2410,15 +2447,15 @@ class Client(object):
                 headers={'Content-type': 'application/x-www-form-urlencoded'})
             return self.get_transfer_error(job_url, src_uri)
 
-    def _get(self, uri, view="defaultview", cutout=None):
+    def _get(self, uri, view=None, cutout=None):
         with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pullFromVoSpace", view, cutout)
+                                 uri, "pullFromVoSpace", None, cutout)
 
     def _put(self, uri, content_length=None, md5_checksum=None):
         with nodeCache.volatile(uri):
             return self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pushToVoSpace", view="defaultview",
+                                 uri, "pushToVoSpace", view=None,
                                  content_length=content_length,
                                  md5_checksum=md5_checksum)
 
@@ -2522,7 +2559,7 @@ class Client(object):
         # really that's an error, but I thought I'd just accept those are
         # os.O_RDONLY
 
-        if type(mode) == str:
+        if isinstance(mode, str):
             mode = os.O_RDONLY
 
         # the url of the connection depends if we are 'getting', 'putting' or
@@ -2590,7 +2627,7 @@ class Client(object):
                       size=size, byte_range=byte_range,
                       possible_partial_read=possible_partial_read)
 
-    def add_props(self, node):
+    def add_props(self, node, recursive=False):
         """Given a node structure do a POST of the XML to the VOSpace to
            update the node properties
 
@@ -2616,8 +2653,20 @@ class Client(object):
         url = self.get_node_url(node.uri, method='GET')
         data = str(node)
         size = len(data)
-        self.get_session(node.uri).post(url, headers={'size': str(size)},
-                                        data=data)
+        session = self.get_session(node.uri)
+        if recursive:
+            response = session.post(self.get_endpoints(node.uri).recursive_props,
+                                    data=str(node), allow_redirects=False,
+                                    headers={'Content-type': 'text/xml'})
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session,
+                                           response.headers['location'])
+        else:
+            session.post(url, headers={'size': str(size)}, data=data)
+            return 1, 0
 
     def create(self, uri):
         """
@@ -2657,39 +2706,31 @@ class Client(object):
         # Let's do this update using the async transfer method
         url = self.get_node_url(node.uri)
         endpoints = self.get_endpoints(node.uri)
+        session = self.get_session(node.uri)
         if recursive:
             try:
-                property_url = endpoints.properties
+                property_url = endpoints.recursive_props
             except KeyError as ex:
-                logger.debug('Endpoint does not exist: {0}'.format(str(ex)))
+                logger.debug('recursive props endpoint does not exist: {0}'.
+                             format(str(ex)))
                 raise Exception('Operation not supported')
-
             logger.debug("prop URL: {0}".format(property_url))
-            try:
-                resp = self.get_session(node.uri).post(
-                    property_url, allow_redirects=False, data=str(node),
-                    headers={'Content-type': 'text/xml'})
-            except Exception as ex:
-                logger.error(str(ex))
-                raise ex
-            if resp is None:
-                raise OSError(errno.EFAULT, "Failed to connect VOSpace")
-            logger.debug("Got prop-update response: {0}".format(resp.content))
-            transfer_url = resp.headers.get('Location', None)
-            logger.debug("Got job status redirect: {0}".format(transfer_url))
-            # Start the job
-            self.get_session(node.uri).post(
-                transfer_url + "/phase",
-                allow_redirects=False,
-                data="PHASE=RUN",
-                headers={'Content-type': "application/x-www-form-urlencoded"})
-            self.get_transfer_error(transfer_url, node.uri)
+            # quickly check target exists
+            session.get(endpoints.nodes + '/' + urlparse(node.uri).path)
+            response = session.post(endpoints.recursive_props,
+                                    data=str(node), allow_redirects=False,
+                                    headers={'Content-type': 'text/xml'})
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session,
+                                           response.headers['location'])
         else:
-            resp = self.get_session(node.uri).post(url,
-                                                   data=str(node),
-                                                   allow_redirects=False)
+            resp = session.post(url, data=str(node), allow_redirects=False)
             logger.debug("update response: {0}".format(resp.content))
-        return 0
+            resp.raise_for_status()
+        return 1, 0
 
     def mkdir(self, uri):
         """
@@ -2732,6 +2773,78 @@ class Client(object):
             response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
+    def recursive_delete(self, uri):
+        """Delete the node and its content.
+        :param uri: The (Container/Link/Data)Node to delete from the service.
+
+        :returns: tuple of the form (successfull_deletes, failed_deletes)
+        :raises When a network problem occurs, it raises one of the
+        HttpException exceptions declared in the
+        cadcutils.exceptions module
+        """
+        uri = self.fix_uri(uri)
+        logger.debug("recursive delete {0}".format(uri))
+        with nodeCache.volatile(uri):
+            session = self.get_session(uri)
+            # quickly check target exists
+            self.get_node(uri)
+            response = session.post(self.get_endpoints(uri).recursive_del, {'target': uri}, allow_redirects=False)
+            response.raise_for_status()
+            if response.status_code != 303:
+                raise RuntimeError('Unexpected response for running job: '
+                                   + response.status_code)
+            return self._run_recursive_job(session, response.headers['location'])
+
+    def _run_recursive_job(self, session, url):
+        # runs an already created recursive job and returns the number of
+        # successfull and unsuccessfull actions
+        logger.debug('POST: ' + url)
+        response = session.post(url + '/phase', data={'phase': 'RUN'}, allow_redirects=False)
+        if response.status_code != 303:
+            raise RuntimeError('Unexpected response for running job: '
+                               + response.status_code)
+
+        # polling: WAIT will block for up to 6 sec or until phase change or if job is in
+        # a terminal phase
+        jobPoll = url + '?WAIT=6'
+        count = 0
+        done = False
+        while not done and count < 100:  # max 100*6 = 600 sec polling
+            logger.debug("poll: " + jobPoll)
+            resp = session.get(jobPoll)
+            resp.raise_for_status()
+            xml_string = resp.content
+            logging.debug('Job Document:{}'.format(xml_string))
+            job_document = ElementTree.fromstring(xml_string)
+            if job_document.find('uws:phase', UWS_NSMAP) is not None:
+                phase = job_document.find('uws:phase', UWS_NSMAP).text
+            else:
+                raise RuntimeError('Cannot determine job phase')
+            if phase.upper() in ['QUEUED', 'EXECUTING', 'SUSPENDED']:
+                count += 1
+            elif phase.upper() == 'ERROR':
+                message = 'Failed'
+                error_summary = job_document.find('uws:errorSummary', UWS_NSMAP)
+                if (error_summary is not None and
+                        error_summary.find('uws:message', UWS_NSMAP) is not None):
+                    message = error_summary.find('uws:message', UWS_NSMAP).text
+                raise RuntimeError(message)
+            elif phase.upper() in ['COMPLETED', 'ABORTED']:
+                results = job_document.find('uws:results', UWS_NSMAP)
+                error_count = 0
+                success_count = 0
+                if results is not None:
+                    results = results.findall('uws:result', UWS_NSMAP)
+                    if results is not None:
+                        for res in results:
+                            if res.attrib['id'] == 'successcount':
+                                success_count = res.attrib['{' + UWS_NSMAP['xlink'] + '}href'].split(':')[1]
+                            elif res.attrib['id'] == 'errorcount':
+                                error_count = res.attrib['{' + UWS_NSMAP['xlink'] + '}href'].split(':')[1]
+                return success_count, error_count
+            else:
+                raise RuntimeError('Unknown job phase: ' + phase)
+
     def get_children_info(self, uri, sort=None, order=None, force=False):
         """Returns an iterator over tuples of (NodeName, Info dict)
         :param uri: the Node to get info about.
@@ -2754,7 +2867,7 @@ class Client(object):
         if node.type in ["vos:DataNode", "vos:LinkNode"]:
             return [node]
         else:
-            return node.get_children(self, sort, order, 500)
+            return node.get_children(self, sort, order, None)
 
     def get_info_list(self, uri):
         """Retrieve a list of tuples of (NodeName, Info dict).
