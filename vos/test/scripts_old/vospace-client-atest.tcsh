@@ -12,11 +12,11 @@ else
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-  echo "Missing CADC_TESTCERT_PATH location to cadc-auth.pem and cadc-auth-test.pem files"
+  echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
   exit -1
 else
-	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
-	set CERT =  "--cert=$CADC_TESTCERT_PATH/cadc-auth.pem"
+  set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
+  echo "cert file:  (CADC_TESTCERT_PATH env variable): $CERTFILE"
 endif
 
 if (! ${?TMPDIR} ) then
@@ -26,13 +26,14 @@ else
         echo "Using ${TMPDIR} for temporary files"
 endif
 
-set LSCMD = "vls -l -k"
-set MKDIRCMD = "vmkdir -k"
-set RMCMD = "vrm -k"
-set CPCMD = "vcp -k"
-set RMDIRCMD = "vrmdir -k"
-set CHMODCMD = "vchmod -k"
-set VTAGCMD = 'vtag -k'
+set LSCMD = "vls -l"
+set MKDIRCMD = "vmkdir"
+set RMCMD = "vrm"
+set CPCMD = "vcp"
+set RMDIRCMD = "vrmdir"
+set CHMODCMD = "vchmod"
+
+set CERT = " --cert=$CERTFILE"
 
 echo "vls command: " $LSCMD $CERT
 echo
@@ -49,30 +50,33 @@ foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
   # use resourceID in vos-config to determine the base URI
+  # vault uses CADCRegtest1, cavern uses home/cadcregtest1
   echo $resource | grep "cavern" >& /dev/null
   if ( $status == 0) then
-      set VOROOT = "cavern:"
+      set VOROOT = "arc:"
+      set HOME_BASE = "home/cadcregtest1"
       set TESTING_CAVERN = "true"
   else
       set VOROOT = "vos:"
-
+      set HOME_BASE = "CADCRegtest1"
   endif
-  set HOME_BASE = "vostools-inttest"
   set VOHOME = "$VOROOT""$HOME_BASE"
-  set BASE = $VOHOME
+  set BASE = "$VOHOME/atest"
 
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
   set CONTAINER = $BASE/$TIMESTAMP
 
 
   echo -n "** checking base URI"
-  $RMCMD $CERT $BASE > /dev/null
-
-#  echo -n ", creating base URI"
-#      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-#      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
-#  echo " [OK]"
-
+  $LSCMD $CERT $BASE > /dev/null
+  if ( $status == 0) then
+      echo " [OK]"
+  else
+      echo -n ", creating base URI"
+      exit
+          $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+      echo " [OK]"
+  endif
   echo -n "** setting home and base to public, no groups"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
   echo -n " [OK]"
@@ -103,7 +107,7 @@ foreach resource ($resources)
 
   echo -n "verify public=false after create "
   if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, permission inheritance not supported]"
+      echo " [SKIPPED, permission inheitance not supported]"
   else
       $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw----r--' || echo " [FAIL]" && exit -1
       echo " [OK]"
@@ -111,35 +115,35 @@ foreach resource ($resources)
 
   echo -n "check set permission properties "
   if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, permission inheritance not supported]"
+      echo " [SKIPPED, permission inheitance not supported]"
   else
-      $CHMODCMD $CERT g+rw $CONTAINER test-g1 test-g2 || echo " [FAIL]" && exit -1
+      $CHMODCMD $CERT g+rw $CONTAINER test:g1 test:g2 || echo " [FAIL]" && exit -1
       $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test-g1' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test-g2' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'test:g2' || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
 
   echo -n "check inherit permission properties "
   if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, permission inheritance not supported]"
+      echo " [SKIPPED, permission inheitance not supported]"
   else
       $MKDIRCMD $CERT $CONTAINER/pub || echo " [FAIL]" && exit -1
       $LSCMD $CERT $CONTAINER | grep pub | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test-g1' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test-g2' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g1' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $CONTAINER | grep pub | grep -q 'test:g2' || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
 
   echo -n "check inherit + change certain properties "
   if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, permission inheritance not supported]"
+      echo " [SKIPPED, permission inheitance not supported]"
   else
       $MKDIRCMD $CERT $CONTAINER/priv || echo " [FAIL]" && exit -1
-      $CHMODCMD $CERT g+r $CONTAINER/priv test-g3 || echo " [FAIL]" && exit -1
+      $CHMODCMD $CERT g+r $CONTAINER/priv test:g3 || echo " [FAIL]" && exit -1
       $LSCMD $CERT $CONTAINER | grep priv | grep -q 'drw-rw-r--' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test-g3' || echo " [FAIL]" && exit -1
-      $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test-g2' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g3' || echo " [FAIL]" && exit -1
+      $LSCMD $CERT $CONTAINER | grep priv | grep -q 'test:g2' || echo " [FAIL]" && exit -1
       echo " [OK]"
   endif
 
@@ -155,24 +159,24 @@ foreach resource ($resources)
   echo -n "copy empty files"
   rm -f /tmp/zerosize.txt
   touch /tmp/zerosize.txt
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL1]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
   # repeat
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL2]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
   # change size
   echo "test" > /tmp/zerosize.txt
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL3]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
   # repeat
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL4]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null && echo " [FAIL]" && exit -1
   # make it back 0 size
   /bin/cp /dev/null /tmp/zerosize.txt
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL5]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
   # repeat
-  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL6]" && exit -1
+  $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -183,8 +187,8 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "copy data node to local filesystem "
-  $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL1]" && exit -1
-  cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL2]" && exit -1
+  $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+  cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
   \rm -f $THIS_DIR/something.png.2
   echo " [OK]"
 
@@ -206,7 +210,7 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "Do a real cutout of a known file"
-  #$CPCMD $CERT "vos:CADCAuthtest1/DONOTDELETE_VOSPACE_CUTOUT_TEST.fits(34.436194,19.34665,0.01)" $TMPDIR/testcutout || echo " [FAIL]" && exit -1
+  #$CPCMD $CERT "vos:CADCRegtest1/DONOTDELETE_VOSPACE_CUTOUT_TEST.fits(34.436194,19.34665,0.01)" $TMPDIR/testcutout || echo " [FAIL]" && exit -1
   #if (`cat $TMPDIR/testcutout | md5` != "cb7d6a829277975d1016a769970ec45a") then
       #	echo " [FAIL]" && exit -1
       #endif
@@ -247,19 +251,19 @@ foreach resource ($resources)
   $RMCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
-#  echo -n "delete non-empty container - THIS NOW REQURIES vrm -R INSTEAD"
-#  $RMCMD -R $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER/something2.png >& /dev/null && echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-#  echo " [OK]"
+  echo -n "delete non-empty container "
+  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER/something2.png >& /dev/null && echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+  echo " [OK]"
 
-#  echo -n "delete empty container "
-#  $MKDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-#  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-#  echo " [OK]"
-#  echo
+  echo -n "delete empty container "
+  $MKDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+  echo " [OK]"
+  echo
   echo "*** test sequence passed for resource $resource ***"
 end
 

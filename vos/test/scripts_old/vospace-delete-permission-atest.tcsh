@@ -10,12 +10,10 @@ else
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-  echo "Missing CADC_TESTCERT_PATH location to cadc-auth.pem and cadc-auth-test.pem files"
-  exit -1
+	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of test cert files"
+    exit -1
 else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
-	set CERT =  "--cert=$CADC_TESTCERT_PATH/cadc-auth.pem"
-  set CERT1 = "--cert=$CADC_TESTCERT_PATH/cadc-auth-test.pem"
 endif
 
 if($#argv == 0) then
@@ -26,18 +24,21 @@ else
     echo "Testing against resources: $resources"
 endif
 
-set CHMODCMD = "vchmod -k"
-set MKDIRCMD = "vmkdir -k"
-set LSCMD = "vls -k -l"
-set CPCMD = "vcp -k"
-set RMDIRCMD = "vrmdir -k"
-set RMCMD = "vrm -k"
-set VTAGCMD = "vtag -k"
+set CHMODCMD = "vchmod"
+set MKDIRCMD = "vmkdir"
+set LSCMD = "vls -l"
+set CPCMD = "vcp"
+set RMDIRCMD = "vrmdir"
 
-set CADC_TESTCERT_PATH = "/Users/adriand/A/test-certificates"
-set CERT =  "--cert=$CADC_TESTCERT_PATH/cadcproxy.pem"
+set CERT =  "--cert=$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
 set CERT1 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 set CERT2 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest2.pem"
+
+echo "vchmod command: " $CHMODCMD $CERT
+echo "vchmod command 1:    " $CHMODCMD $CERT1
+echo "vchmod command 2:    " $CHMODCMD $CERT2
+
+echo
 
 # group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
 set GROUP1 = "CADC_TEST_GROUP1"
@@ -45,31 +46,22 @@ set GROUP1 = "CADC_TEST_GROUP1"
 # group 3100 aka CADC_TEST_GROUP2 has members: CADCAuthtest1, CADCAuthtest2
 set GROUP2 = "CADC_TEST_GROUP2"
 
-echo "vchmod command: " $CHMODCMD $CERT
-echo "vchmod command 1:    " $CHMODCMD $CERT1
-
-echo
-
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
+    # vault uses CADCRegtest1, cavern uses home/cadcregtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-        set VOROOT = "cavern:"
+    set HOME_BASE = "home/cadcregtest1"
+        set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else
         set VOROOT = "vos:"
+        set HOME_BASE = "CADCRegtest1"
     endif
 
-    set HOME_BASE = "vostools-inttest"
     set VOHOME = "$VOROOT""$HOME_BASE"
-    set BASE = $VOHOME
-
-#    echo -n ", creating base URI"
-#    $RMCMD -R $CERT $BASE > /dev/null
-#    $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-#    $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
-  echo " [OK]"
+    set BASE = "$VOHOME/atest"
 
     set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
     set CONTAINER = $BASE/$TIMESTAMP
@@ -138,8 +130,7 @@ foreach resource ($resources)
     if ( ${?TESTING_CAVERN} ) then
         echo " [SKIPPED, permission inheritance not supported]"
     else
-      echo "$RMCMD -R $CERT1 $CONTAINER/sub1"
-        $RMCMD -R $CERT1 $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
+        $RMDIRCMD $CERT1 $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
         echo -n " verify "
         $LSCMD $CERT $CONTAINER/sub1 >& /dev/null && echo " [FAIL]" && exit -1
         echo " [OK]"
@@ -168,7 +159,7 @@ foreach resource ($resources)
     echo " [OK]"
 
     echo -n "test root delete"
-    $RMCMD -R $CERT $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
+    $RMDIRCMD $CERT $CONTAINER/sub1 >& /dev/null || echo " [FAIL]" && exit -1
     echo -n " verify "
     $LSCMD $CERT1 $CONTAINER/sub1 >& /dev/null && echo " [FAIL]" && exit -1
     echo " [OK]"
