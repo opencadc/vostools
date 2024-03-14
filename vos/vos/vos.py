@@ -1770,10 +1770,11 @@ class Client(object):
                 if cutout_match.group('pix'):
                     cutout = cutout_match.group('pix')
                 elif cutout_match.group('wcs') is not None:
-                    cutout = "CIRCLE ICRS {} {} {}".format(
+                    from urllib.parse import quote
+                    cutout = 'CIRCLE=' + quote('{} {} {}'.format(
                         cutout_match.group('ra'),
                         cutout_match.group('dec'),
-                        cutout_match.group('rad'))
+                        cutout_match.group('rad')))
                 else:
                     raise ValueError("Bad source name: {}".format(source))
                 source = cutout_match.group('filename')
@@ -2249,31 +2250,9 @@ class Client(object):
         uri = self.fix_uri(uri)
 
         if sort is not None and not isinstance(sort, SortNodeProperty):
-            raise TypeError('sort must be an instace of vos.NodeProperty Enum')
+            raise TypeError('sort must be an instance of vos.NodeProperty Enum')
         if order not in [None, 'asc', 'desc']:
             raise ValueError('order must be either "asc" or "desc"')
-        if view in ['data', 'cutout'] and method == 'GET':
-            node = self.get_node(uri, limit=0)
-            if node.islink():
-                target = node.node.findtext(Node.TARGET)
-                logger.debug('{} is a link to {}'.format(node.uri, target))
-                if target is None:
-                    raise OSError(errno.ENOENT, "No target for link")
-                parts = urlparse(target)
-                if parts.scheme != "vos":
-                    # This is not a link to another VOSpace node so lets just
-                    # return the target as the url
-                    url = target
-                    if cutout is not None:
-                        url = "{0}?cutout={1}".format(target, cutout)
-                        logger.debug("Line 3.1.2")
-                    logger.debug("Returning URL: {0}".format(url))
-                    return [url]
-                logger.debug("Getting URLs for: {0}".format(target))
-                return self.get_node_url(target, method=method, view=view,
-                                         limit=limit, next_uri=next_uri,
-                                         cutout=cutout, sort=sort, order=order,
-                                         full_negotiation=full_negotiation)
 
         logger.debug("Getting URL for: " + str(uri))
 
@@ -2290,7 +2269,7 @@ class Client(object):
         else:
             do_shortcut = self.transfer_shortcut
 
-        if not do_shortcut and method == 'GET' and view in ['data', 'cutout']:
+        if not do_shortcut and method == 'GET' and view in ['data', 'cutout', 'header']:
             return self._get(uri, view=view, cutout=cutout)
 
         if not do_shortcut and method == 'PUT':
@@ -2319,7 +2298,7 @@ class Client(object):
                 fields['uri'] = next_uri
 
             tmp_url = '{}/{}'.format(endpoints.nodes, parts.path.strip('/'))
-            # include the parameters into the url. Use Request to get it rigth
+            # include the parameters into the url. Use Request to get it right
             req = requests.Request(method, tmp_url, params=fields)
             prepped = req.prepare()
             url = prepped.url
@@ -2449,8 +2428,29 @@ class Client(object):
 
     def _get(self, uri, view=None, cutout=None):
         with nodeCache.volatile(uri):
-            return self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pullFromVoSpace", None, cutout)
+            urls = self.transfer(self.get_endpoints(uri).transfer,
+                                 uri, "pullFromVoSpace", None, None)
+            # assume that the returned urls point to SODA services
+            if view == 'header':
+                head_urls = []
+                for url in urls:
+                    head_urls.append('{}?META=true'.format(url))
+                urls = head_urls
+            elif cutout:
+                cutout_urls = []
+                for url in urls:
+                    if cutout.strip().startswith('['):
+                        # pixel cutout
+                        cutout_urls.append('{}?SUB={}'.format(url, cutout))
+                    elif cutout.strip().startswith('CIRCLE'):
+                        # circle cutout
+                        cutout_urls.append('{}?{}'.format(url, cutout))
+                    else:
+                        # TODO add support for other SODA cutouts SUB, POL etc
+                        raise ValueError('Unknown cutout type: ' + cutout)
+                urls = cutout_urls
+
+            return urls
 
     def _put(self, uri, content_length=None, md5_checksum=None):
         with nodeCache.volatile(uri):
