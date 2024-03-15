@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2023.                            (c) 2023.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -70,6 +70,8 @@
 
 import os
 import unittest
+import urllib.parse
+
 import pytest
 import requests
 from xml.etree import ElementTree
@@ -142,18 +144,38 @@ def test_get_node_url():
     assert ('order=desc' == unquote(equery))
 
     # test header view
-    transfer_url = 'https://some.location/some/headers'
-    response.headers = {'Location': transfer_url}
-    client._endpoints[resource_id].conn.ws_client._session.get = \
-        Mock(return_value=response)
-    assert transfer_url == \
+    transfer_url = 'https://mystorage.org/minoc/files/abc:VOS/002'
+    client.transfer = Mock(return_value=[transfer_url])
+    expected_url = transfer_url + '?META=true'
+    assert expected_url == \
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                             view='header')[0]
-    # get the argument lists for client.conn.session.get
-    args, kwargs = client._endpoints[
-        resource_id].conn.ws_client._session.get.call_args_list[0]
-    # check head is amongst the other parameters
-    assert kwargs['params']['view'] == 'header'
+
+    # test pixel cutouts
+    transfer_url1 = 'https://mystorage.org/minoc/files/abc:VOS/001'
+    transfer_url2 = 'https://myotherstorage.org/minoc/files/abc:VOS/001'
+    client.transfer = Mock(return_value=[transfer_url1, transfer_url2])
+    pcutout = '[1][100:125,100:175]'
+    expected_url1 = transfer_url1 + '?SUB=' + pcutout
+    expected_url2 = transfer_url2 + '?SUB=' + pcutout
+    assert expected_url1 == \
+           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                               cutout=pcutout, view='cutout')[0]
+    assert expected_url2 == \
+           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                               cutout=pcutout, view='cutout')[1]
+
+    # test sky coordinates
+    client.transfer = Mock(return_value=[transfer_url1, transfer_url2])
+    scutout = 'CIRCLE=' + urllib.parse.quote('(1.1 2.2 3.3')
+    expected_url1 = transfer_url1 + '?' + scutout
+    expected_url2 = transfer_url2 + '?' + scutout
+    assert expected_url1 == \
+           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                               cutout=scutout, view='cutout')[0]
+    assert expected_url2 == \
+           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
+                               cutout=scutout, view='cutout')[1]
 
 
 class TestClient(unittest.TestCase):

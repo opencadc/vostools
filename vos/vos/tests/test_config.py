@@ -65,7 +65,6 @@
 #
 # ***********************************************************************
 #
-import unittest
 # Test the vosconfig functionality
 from unittest.mock import Mock, patch
 import warnings
