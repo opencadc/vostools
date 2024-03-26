@@ -1321,10 +1321,13 @@ class VOFile(object):
 class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
 
+    VO_FILES_OLD = 'ivo://ivoa.net/std/VOSpace/v2.x#files'
+    VO_PROPERTIES_OLD = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
+
     # standard ids
     # TODO - VO_PROPERTIES has been replaced by VO_RECURSIVE_PROPS
-    VO_PROPERTIES = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
+    VO_FILES = 'ivo://ivoa.net/std/VOSpace#files-proto'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
     VO_ASYNC_TRANSFER = 'ivo://ivoa.net/std/VOSpace/v2.0#transfers'
     VO_RECURSIVE_DEL = 'ivo://ivoa.net/std/VOSpace#recursive-delete-proto'
@@ -1392,6 +1395,17 @@ class EndPoints(object):
         return self.conn.ws_client._get_url((self.VO_NODES, None))
 
     @property
+    def files(self):
+        """
+        :return: The files service endpoint.
+        """
+        try:
+            return self.conn.ws_client._get_url((self.VO_FILES, None))
+        except KeyError:
+            # TODO Temporary
+            return self.conn.ws_client._get_url((self.VO_FILES_OLD, None))
+
+    @property
     def recursive_del(self):
         """
         :return: recursive delete endpoint
@@ -1453,7 +1467,7 @@ class Client(object):
 
     def __init__(self, vospace_certfile=None,
                  root_node=None, conn=None,
-                 transfer_shortcut=False, http_debug=False,
+                 transfer_shortcut=None, http_debug=False,
                  secure_get=True, vospace_token=None, insecure=False):
         """This could/should be expanded to set various defaults
         :param vospace_certfile: x509 proxy certificate file location. The
@@ -1469,9 +1483,7 @@ class Client(object):
         :param root_node: the base of the VOSpace for uri references.
         :type root_node: unicode
         :param conn: DEPRECATED
-        :param transfer_shortcut: if True then just assumed data web service
-        urls
-        :type transfer_shortcut: bool
+        :param transfer_shortcut: DEPRECATED
         :param http_debug: turn on http debugging.
         :type http_debug: bool
         :param secure_get: Use HTTPS (by default): ie. transfer contents of
@@ -1503,7 +1515,6 @@ class Client(object):
         self.protocols = Client.VO_TRANSFER_PROTOCOLS
         self.rootNode = root_node
         # self.nodeCache = NodeCache()
-        self.transfer_shortcut = transfer_shortcut
         self.secure_get = secure_get
         self._endpoints = {}
         self.vospace_certfile = vospace_certfile is None and \
@@ -1819,11 +1830,15 @@ class Client(object):
                                 return dest_md5
                             return dest_size
 
-            get_urls = self.get_node_url(source, method='GET', cutout=cutout,
-                                         view=view)
+            files_url = self.get_node_url(source, method='GET', cutout=cutout,
+                                          view=view)
+            get_urls = []
+            if files_url:
+                get_urls.append(files_url)
+
             while not success:
                 if len(get_urls) == 0:
-                    if self.transfer_shortcut and not get_node_url_retried:
+                    if not get_node_url_retried:
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
@@ -1832,7 +1847,13 @@ class Client(object):
                         get_node_url_retried = True
                 if len(get_urls) == 0:
                     break
-                get_url = get_urls.pop(0)
+                try:
+                    self.get_endpoints(source).recursive_props
+                    get_url = self._add_soda_ops(get_urls.pop(0), view, cutout)
+                except KeyError:
+                    # TODO - DELETE regression
+                    get_url = self._add_soda_ops(get_urls.pop(0), view, cutout)
+
                 try:
                     response = self.get_session(source).get(
                         get_url, stream=True)
@@ -1958,8 +1979,7 @@ class Client(object):
                                                  md5_checksum=dest_md5)
                     while not success:
                         if len(put_urls) == 0:
-                            if self.transfer_shortcut and not \
-                                    get_node_url_retried:
+                            if not get_node_url_retried:
                                 put_urls = self.get_node_url(
                                     destination, method='PUT',
                                     full_negotiation=True)
@@ -2005,8 +2025,7 @@ class Client(object):
                     put_urls = self.get_node_url(destination, 'PUT')
                     while not success:
                         if len(put_urls) == 0:
-                            if self.transfer_shortcut and not \
-                                    get_node_url_retried:
+                            if not get_node_url_retried:
                                 put_urls = self.get_node_url(
                                     destination, method='PUT',
                                     full_negotiation=True)
@@ -2262,17 +2281,10 @@ class Client(object):
 
         endpoints = self.get_endpoints(uri)
 
-        # full_negotiation is an override, so it can be used to force either
-        # shortcut (false) or full negotiation (true)
-        if full_negotiation is not None:
-            do_shortcut = not full_negotiation
-        else:
-            do_shortcut = self.transfer_shortcut
+        if not full_negotiation and method == 'GET' and view in ['data', 'cutout', 'header']:
+            return self._get(uri)
 
-        if not do_shortcut and method == 'GET' and view in ['data', 'cutout', 'header']:
-            return self._get(uri, view=view, cutout=cutout)
-
-        if not do_shortcut and method == 'PUT':
+        if not full_negotiation and method == 'PUT':
             return self._put(uri, content_length=content_length,
                              md5_checksum=md5_checksum)
 
@@ -2309,64 +2321,9 @@ class Client(object):
         # parameters sent as arguments.
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-
-        # Future expansion: can use self.secure_get to filter the protocols
-        # sent to the server.
-        protocol = {
-            'GET': {'https': ((self.secure_get and Client.VO_HTTPSGET_PROTOCOL)
-                              or Client.VO_HTTPGET_PROTOCOL),
-                    'http': Client.VO_HTTPGET_PROTOCOL},
-            'PUT': {'https': Client.VO_HTTPSPUT_PROTOCOL,
-                    'http': Client.VO_HTTPPUT_PROTOCOL}}
-
-        # build the url for that will request the url that provides access to
-        # the node.
-
-        protocol_list = []
-        for p in self.protocols:
-            protocol_list.append(protocol[method][p])
-
-        url = endpoints.transfer
-        args = {
-            'TARGET': uri,
-            'DIRECTION': direction[method],
-            'PROTOCOL': protocol_list,
-            'view': view}
-
-        if cutout is not None:
-            args['cutout'] = cutout
-        headers = {"Content-type": "application/x-www-form-urlencoded",
-                   "Accept": "text/plain"}
-
-        response = self.get_session(uri).get(
-            endpoints.transfer, params=args, headers=headers,
-            allow_redirects=False)
-        logging.debug("Transfer Server said: {0}".format(response.content))
-
-        if response.status_code == 303:
-            # Normal case is a redirect
-            url = response.headers.get('Location', None)
-        elif response.status_code == 404:
-            # The file doesn't exist
-            raise OSError(errno.ENOENT, response.content, url)
-        elif response.status_code == 409:
-            raise OSError(errno.EREMOTE, response.content, url)
-        elif response.status_code == 413:
-            raise OSError(errno.E2BIG, response.content, url)
-        else:
-            logger.debug("Reverting to full negotiation")
-            return self.get_node_url(uri,
-                                     method=method,
-                                     view=view,
-                                     full_negotiation=True,
-                                     limit=limit,
-                                     next_uri=next_uri,
-                                     cutout=cutout,
-                                     sort=sort,
-                                     order=order)
-
-        logger.debug("Sending short cut url: {0}".format(url))
-        return [url]
+        urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
+        logger.debug('Transfer URLs: ' + ', '.join(urls))
+        return urls
 
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.
@@ -2426,31 +2383,40 @@ class Client(object):
                 headers={'Content-type': 'application/x-www-form-urlencoded'})
             return self.get_transfer_error(job_url, src_uri)
 
-    def _get(self, uri, view=None, cutout=None):
+    def _get(self, uri):
         with nodeCache.volatile(uri):
-            urls = self.transfer(self.get_endpoints(uri).transfer,
-                                 uri, "pullFromVoSpace", None, None)
-            # assume that the returned urls point to SODA services
-            if view == 'header':
-                head_urls = []
-                for url in urls:
-                    head_urls.append('{}?META=true'.format(url))
-                urls = head_urls
-            elif cutout:
-                cutout_urls = []
-                for url in urls:
-                    if cutout.strip().startswith('['):
-                        # pixel cutout
-                        cutout_urls.append('{}?SUB={}'.format(url, cutout))
-                    elif cutout.strip().startswith('CIRCLE'):
-                        # circle cutout
-                        cutout_urls.append('{}?{}'.format(url, cutout))
-                    else:
-                        # TODO add support for other SODA cutouts SUB, POL etc
-                        raise ValueError('Unknown cutout type: ' + cutout)
-                urls = cutout_urls
+            files_ep = self.get_endpoints(uri).files
+            if not files_ep:
+                return None
+            file_path = urlparse(uri).path
+            if not file_path:
+                return None
+            files_url = '{}{}'.format(files_ep, file_path)
+            try:
+                response = self.get_session(uri).get(files_url, allow_redirects=False)
+                response.raise_for_status()
+            except Exception:
+                return None
+            if response.status_code == 303:
+                return response.headers.get('Location', None)
+            return None
 
-            return urls
+    def _add_soda_ops(self, url, view=None, cutout=None):
+        # assume that the url points to a SODA service
+        result = url
+        if view == 'header':
+            result = '{}?META=true'.format(result)
+        elif cutout:
+            if cutout.strip().startswith('['):
+                # pixel cutout
+                result = '{}?SUB={}'.format(result, cutout)
+            elif cutout.strip().startswith('CIRCLE'):
+                # circle cutout
+                result = '{}?{}'.format(result, cutout)
+            else:
+                # TODO add support for other SODA cutouts SUB, POL etc
+                raise ValueError('Unknown cutout type: ' + cutout)
+        return result
 
     def _put(self, uri, content_length=None, md5_checksum=None):
         with nodeCache.volatile(uri):
