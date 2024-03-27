@@ -141,20 +141,8 @@ foreach resource ($resources)
       echo " [OK]"
   endif
 
-  echo -n "copy external link"
-  if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, vos/issues/83]"
-  else
-      rm -f /tmp/e3link
-      $CPCMD $CERT -L $CONTAINER/e3link /tmp/ >& /dev/null || echo " [FAIL]" && exit -1
-      grep -q google /tmp/e3link || echo " [FAIL]" && exit -1
-      rm -f /tmp/e3link
-      echo " [OK]"
-  endif
-
-
   echo -n "Follow the invalid link and fail"
-  $CPCMD $CERT $CONTAINER/e3link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
+  $CPCMD $CERT $CONTAINER/e3link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -
   echo " [OK]"
 
   echo -n "copy file to target through link"

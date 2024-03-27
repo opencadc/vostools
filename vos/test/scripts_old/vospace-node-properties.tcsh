@@ -120,6 +120,7 @@ foreach resource ($resources)
           echo " [FAIL]" && exit -1
       endif
   else
+      echo "$CHMODCMD $CERT -R g+r $CONTAINER $GROUP1"
       $CHMODCMD $CERT -R g+r $CONTAINER $GROUP1 ||  echo " [FAIL]" && exit -1
       echo -n " verify "
       $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP1 | grep -q "drw-r-----" || echo " [FAIL]" && exit -1

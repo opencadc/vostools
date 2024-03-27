@@ -79,6 +79,7 @@ from datetime import datetime
 import fnmatch
 from enum import Enum
 import hashlib
+from urllib.parse import quote
 
 try:
     from cStringIO import StringIO
@@ -1417,7 +1418,11 @@ class EndPoints(object):
         """
         :return: recusive property set endpoint
         """
-        return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
+        try:
+            return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
+        except KeyError:
+            # TODO temporary for regression
+            return self.conn.ws_client._get_url((self.VO_PROPERTIES_OLD, None))
 
     @property
     def session(self):
@@ -1781,11 +1786,10 @@ class Client(object):
                 if cutout_match.group('pix'):
                     cutout = cutout_match.group('pix')
                 elif cutout_match.group('wcs') is not None:
-                    from urllib.parse import quote
-                    cutout = 'CIRCLE=' + quote('{} {} {}'.format(
+                    cutout = 'CIRCLE=' + '{} {} {}'.format(
                         cutout_match.group('ra'),
                         cutout_match.group('dec'),
-                        cutout_match.group('rad')))
+                        cutout_match.group('rad'))
                 else:
                     raise ValueError("Bad source name: {}".format(source))
                 source = cutout_match.group('filename')
@@ -1830,11 +1834,20 @@ class Client(object):
                                 return dest_md5
                             return dest_size
 
-            files_url = self.get_node_url(source, method='GET', cutout=cutout,
-                                          view=view)
+            # TODO - remove. This is temporary for regression
+            try:
+                self.get_endpoints(source).recursive_props
+                new_vos = True
+            except KeyError:
+                # TODO - to delete temporary regression code
+                new_vos = False
+
             get_urls = []
-            if files_url:
-                get_urls.append(files_url)
+            if new_vos:
+                files_url = self.get_node_url(source, method='GET', cutout=cutout,
+                                              view=view)
+                if files_url:
+                    get_urls.append(files_url)
 
             while not success:
                 if len(get_urls) == 0:
@@ -1842,17 +1855,13 @@ class Client(object):
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
-                        # remove the first one as we already tried that one.
-                        get_urls.pop(0)
+                        # one of the ur
                         get_node_url_retried = True
                 if len(get_urls) == 0:
                     break
-                try:
-                    self.get_endpoints(source).recursive_props
-                    get_url = self._add_soda_ops(get_urls.pop(0), view, cutout)
-                except KeyError:
-                    # TODO - DELETE regression
-                    get_url = self._add_soda_ops(get_urls.pop(0), view, cutout)
+                get_url = get_urls.pop(0)
+                if new_vos:
+                    get_url = self._add_soda_ops(get_url, view, cutout)
 
                 try:
                     response = self.get_session(source).get(
@@ -2321,9 +2330,21 @@ class Client(object):
         # parameters sent as arguments.
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-        urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
-        logger.debug('Transfer URLs: ' + ', '.join(urls))
-        return urls
+        try:
+            self.get_endpoints(uri).recursive_del
+            urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
+            logger.debug('Transfer URLs: ' + ', '.join(urls))
+            return urls
+        except KeyError:
+            # TODO - delete temporary code for regression
+            old_cutout = cutout
+            if old_cutout:
+                old_cutout = old_cutout.replace('CIRCLE=', 'CIRCLE ICRS ')
+                old_cutout = old_cutout.replace('SUB=', 'CUTOUT ')
+            urls = self.transfer(self.get_endpoints(uri).transfer, uri,
+                                 direction[method], view=view, cutout=old_cutout)
+            logger.debug('Transfer URLs: ' + ', '.join(urls))
+            return urls
 
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.
@@ -2399,6 +2420,8 @@ class Client(object):
                 return None
             if response.status_code == 303:
                 return response.headers.get('Location', None)
+            elif response.status_code == 200:
+                return files_url
             return None
 
     def _add_soda_ops(self, url, view=None, cutout=None):
@@ -2412,7 +2435,7 @@ class Client(object):
                 result = '{}?SUB={}'.format(result, cutout)
             elif cutout.strip().startswith('CIRCLE'):
                 # circle cutout
-                result = '{}?{}'.format(result, cutout)
+                result = '{}?CIRCLE={}'.format(result, quote(cutout.replace('CIRCLE=', '')))
             else:
                 # TODO add support for other SODA cutouts SUB, POL etc
                 raise ValueError('Unknown cutout type: ' + cutout)
@@ -2677,12 +2700,13 @@ class Client(object):
             try:
                 property_url = endpoints.recursive_props
             except KeyError as ex:
+                property_url = endpoints.p
                 logger.debug('recursive props endpoint does not exist: {0}'.
                              format(str(ex)))
                 raise Exception('Operation not supported')
             logger.debug("prop URL: {0}".format(property_url))
             # quickly check target exists
-            session.get(endpoints.nodes + '/' + urlparse(node.uri).path)
+            session.get(endpoints.nodes + urlparse(node.uri).path)
             response = session.post(endpoints.recursive_props,
                                     data=str(node), allow_redirects=False,
                                     headers={'Content-type': 'text/xml'})
