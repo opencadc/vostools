@@ -1836,18 +1836,19 @@ class Client(object):
 
             # TODO - remove. This is temporary for regression
             try:
-                self.get_endpoints(source).recursive_props
+                self.get_endpoints(source).recursive_del
                 new_vos = True
             except KeyError:
                 # TODO - to delete temporary regression code
                 new_vos = False
 
             get_urls = []
+            files_url = None
             if new_vos:
                 files_url = self.get_node_url(source, method='GET', cutout=cutout,
                                               view=view)
                 if files_url:
-                    get_urls.append(files_url)
+                    get_urls.append(self._add_soda_ops(files_url, view, cutout))
 
             while not success:
                 if len(get_urls) == 0:
@@ -1855,13 +1856,16 @@ class Client(object):
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
-                        # one of the ur
+                        # remove files_url that we've tried already
+                        if new_vos:
+                            get_urls = [self._add_soda_ops(url, view, cutout)
+                                        for url in get_urls if url != files_url]
+                        else:
+                            get_urls = [url for url in get_urls if url != files_url]
                         get_node_url_retried = True
                 if len(get_urls) == 0:
                     break
                 get_url = get_urls.pop(0)
-                if new_vos:
-                    get_url = self._add_soda_ops(get_url, view, cutout)
 
                 try:
                     response = self.get_session(source).get(
@@ -1994,7 +1998,8 @@ class Client(object):
                                     full_negotiation=True)
                                 # remove the first one as we already tried
                                 # that one.
-                                put_urls.pop(0)
+                                if put_urls:
+                                    put_urls.pop(0)
                                 get_node_url_retried = True
                         if len(put_urls) == 0:
                             break
@@ -2040,7 +2045,8 @@ class Client(object):
                                     full_negotiation=True)
                                 # remove the first one as we already tried
                                 # that one.
-                                put_urls.pop(0)
+                                if put_urls:
+                                    put_urls.pop(0)
                                 get_node_url_retried = True
                         if len(put_urls) == 0:
                             break
@@ -2421,6 +2427,9 @@ class Client(object):
             if response.status_code == 303:
                 return response.headers.get('Location', None)
             elif response.status_code == 200:
+                # TODO this happens for cavern. It is wasteful since the response
+                # already contains the bytes but there's no other way to find out the
+                # actual location of the bytes.
                 return files_url
             return None
 
