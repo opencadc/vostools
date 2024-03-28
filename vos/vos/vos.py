@@ -1526,6 +1526,7 @@ class Client(object):
             Client.VOSPACE_CERTFILE or vospace_certfile
         self.vospace_token = vospace_token
         self.insecure = insecure
+        self._fs_type = True  # True - file system type (cavern), False - db type (vault)
 
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
@@ -1690,6 +1691,10 @@ class Client(object):
 
             else:
                 raise OSError('No scheme in {}'.format(uri))
+        # following is a CADC hack as others can deploy the services under different
+        # resource IDs
+        if 'vault' in resource_id:
+            self._fs_type = False
         if resource_id not in self._endpoints:
             try:
                 self._endpoints[resource_id] = EndPoints(
@@ -1844,6 +1849,8 @@ class Client(object):
 
             get_urls = []
             files_url = None
+            if self._fs_type and (cutout or view == 'header'):
+                raise ValueError('cavern/arc service does not support cutouts or header operations')
             if new_vos:
                 files_url = self.get_node_url(source, method='GET', cutout=cutout,
                                               view=view)
@@ -2419,6 +2426,10 @@ class Client(object):
             if not file_path:
                 return None
             files_url = '{}{}'.format(files_ep, file_path)
+            if self._fs_type:
+                # files_url contains the bytes
+                return files_url
+            # remaining is for vault
             try:
                 response = self.get_session(uri).get(files_url, allow_redirects=False)
                 response.raise_for_status()
@@ -2426,11 +2437,6 @@ class Client(object):
                 return None
             if response.status_code == 303:
                 return response.headers.get('Location', None)
-            elif response.status_code == 200:
-                # TODO this happens for cavern. It is wasteful since the response
-                # already contains the bytes but there's no other way to find out the
-                # actual location of the bytes.
-                return files_url
             return None
 
     def _add_soda_ops(self, url, view=None, cutout=None):

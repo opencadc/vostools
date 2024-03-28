@@ -149,6 +149,7 @@ def test_get_node_url():
     response.headers = {'Location': transfer_url}
     mock_session = Mock(spec=requests.Session, get=Mock(return_value=response))
     client.get_session = Mock(return_value=mock_session)
+    client._fs_type = False
     assert transfer_url == \
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
                             view='header')
@@ -478,11 +479,21 @@ class TestClient(unittest.TestCase):
         response.iter_content.return_value = BytesIO(file_content)
         session.get.return_value = response
         test_client.get_session = Mock(return_value=session)
+        # client must be a vault client
+        test_client._fs_type = False
         test_client.copy('{}{}'.format(vospaceLocation,
                                        '[1][10:60]'), osLocation)
         get_node_url_mock.assert_called_once_with(
             vospaceLocation, method='GET', cutout='[1][10:60]', view='cutout')
 
+        # test cavern does not support SODA operations
+        test_client._fs_type = True
+        with pytest.raises(ValueError):
+            test_client.copy('{}{}'.format(vospaceLocation, '[1][10:60]'), osLocation)
+            with pytest.raises(ValueError):
+                test_client.copy(vospaceLocation, osLocation, head=True)
+
+        test_client._fs_type = False
         # copy to vospace when md5 sums are the same -> only update occurs
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
