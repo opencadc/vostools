@@ -2709,7 +2709,6 @@ class Client(object):
             try:
                 property_url = endpoints.recursive_props
             except KeyError as ex:
-                property_url = endpoints.p
                 logger.debug('recursive props endpoint does not exist: {0}'.
                              format(str(ex)))
                 raise Exception('Operation not supported')
