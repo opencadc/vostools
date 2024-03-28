@@ -121,12 +121,10 @@ foreach resource ($resources)
   if ( ${?TESTING_CAVERN} ) then
       echo " [SKIPPED, vos/issues/82]"
   else
-      echo "$LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS"
       $LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
       echo -n "check unlocked container "
-      echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS"
-      $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q false && set SUCCESS = "true"
+      $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q None && set SUCCESS = "true"
 
       if ( ${SUCCESS} == "true" ) then
           set SUCCESS = "false"
@@ -175,7 +173,7 @@ foreach resource ($resources)
       $LOCKCMD $CERT $CONTAINER/target $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
       echo -n "check unlocked link "
-      $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q false && set SUCCESS = "true"
+      $TAGCMD $CERT $CONTAINER/target $LIST_ARGS | grep -q None && set SUCCESS = "true"
 
       if ( ${SUCCESS} == "true" ) then
           set SUCCESS = "false"
@@ -226,7 +224,7 @@ foreach resource ($resources)
       $LOCKCMD $CERT $CONTAINER/something.png $VUNLOCK_ARGS> /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
       echo -n "check unlocked node "
-      $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q false && set SUCCESS = "true"
+      $TAGCMD $CERT $CONTAINER/something.png $LIST_ARGS | grep -q None && set SUCCESS = "true"
       if ( ${SUCCESS} == "true" ) then
           set SUCCESS = "false"
           echo " [OK]"

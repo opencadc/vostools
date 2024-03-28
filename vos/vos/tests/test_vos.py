@@ -122,6 +122,7 @@ def test_get_node_url():
 
     response = Mock(spec=requests.Response)
     response.status_code = 303
+
     resource_id = 'ivo://cadc.nrc.ca/vospace'
     session_mock = Mock(spec=requests.Session, get=Mock(return_value=response))
     session_mock.headers = Mock()
@@ -143,39 +144,27 @@ def test_get_node_url():
                                           order='desc')).query
     assert ('order=desc' == unquote(equery))
 
-    # test header view
+    # test files URL
     transfer_url = 'https://mystorage.org/minoc/files/abc:VOS/002'
-    client.transfer = Mock(return_value=[transfer_url])
-    expected_url = transfer_url + '?META=true'
-    assert expected_url == \
+    response.headers = {'Location': transfer_url}
+    mock_session = Mock(spec=requests.Session, get=Mock(return_value=response))
+    client.get_session = Mock(return_value=mock_session)
+    assert transfer_url == \
         client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                            view='header')[0]
+                            view='header')
+
+    # test fits header
+    assert transfer_url + "?META=true" == client._add_soda_ops(transfer_url, view='header')
 
     # test pixel cutouts
-    transfer_url1 = 'https://mystorage.org/minoc/files/abc:VOS/001'
-    transfer_url2 = 'https://myotherstorage.org/minoc/files/abc:VOS/001'
-    client.transfer = Mock(return_value=[transfer_url1, transfer_url2])
     pcutout = '[1][100:125,100:175]'
-    expected_url1 = transfer_url1 + '?SUB=' + pcutout
-    expected_url2 = transfer_url2 + '?SUB=' + pcutout
-    assert expected_url1 == \
-           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                               cutout=pcutout, view='cutout')[0]
-    assert expected_url2 == \
-           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                               cutout=pcutout, view='cutout')[1]
+    assert transfer_url + "?SUB=" + pcutout == client._add_soda_ops(transfer_url,
+                                                                    cutout=pcutout)
 
     # test sky coordinates
-    client.transfer = Mock(return_value=[transfer_url1, transfer_url2])
-    scutout = 'CIRCLE=' + urllib.parse.quote('(1.1 2.2 3.3')
-    expected_url1 = transfer_url1 + '?' + scutout
-    expected_url2 = transfer_url2 + '?' + scutout
-    assert expected_url1 == \
-           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                               cutout=scutout, view='cutout')[0]
-    assert expected_url2 == \
-           client.get_node_url('vos://cadc.nrc.ca!vospace/auser',
-                               cutout=scutout, view='cutout')[1]
+    scutout = '1.1,2.2,3.3'
+    assert (transfer_url + "?CIRCLE=" + urllib.parse.quote(scutout) ==
+            client._add_soda_ops(transfer_url, cutout='CIRCLE='+scutout))
 
 
 class TestClient(unittest.TestCase):
@@ -444,6 +433,7 @@ class TestClient(unittest.TestCase):
             os.remove(osLocation)
         # copy from vospace
         test_client.is_remote_file = is_remote_file
+        test_client.get_endpoints = Mock()
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
@@ -603,8 +593,8 @@ class TestClient(unittest.TestCase):
 
         # test GET intermittent exceptions on both URLs
         props.get.side_effect = md5sum
-        get_node_url_mock = Mock(
-            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+        # first side effect corresponds to the files end point call, the second to full negotiation
+        get_node_url_mock = Mock(side_effect=['http://cadc1.ca/test', ['http://cadc2.ca/test']])
         test_client.get_node_url = get_node_url_mock
         get_node_mock.reset_mock()
         response.iter_content.return_value = BytesIO(file_content)
@@ -613,13 +603,13 @@ class TestClient(unittest.TestCase):
         session.get.side_effect = \
             [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
         with pytest.raises(OSError):
-            test_client.copy(vospaceLocation, osLocation, head=True)
+            test_client.copy(vospaceLocation, osLocation, head=False)
         assert session.get.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
 
         # test GET Transfer error on one URL and a "permanent" one on the other
         props.get.side_effect = md5sum
         get_node_url_mock = Mock(
-            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+            side_effect=[None, ['http://cadc1.ca/test', 'http://cadc2.ca/test']])
         test_client.get_node_url = get_node_url_mock
         get_node_mock.reset_mock()
         response.iter_content.return_value = BytesIO(file_content)
@@ -636,7 +626,7 @@ class TestClient(unittest.TestCase):
         # test GET both "permanent" errors
         props.get.side_effect = md5sum
         get_node_url_mock = Mock(
-            return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
+            side_effect=['http://cadc1.ca/test', ['http://cadc2.ca/test']])
         test_client.get_node_url = get_node_url_mock
         get_node_mock.reset_mock()
         response.iter_content.return_value = BytesIO(file_content)

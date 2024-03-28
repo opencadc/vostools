@@ -140,7 +140,7 @@ def vcp():
         help="DEPRECATED")
     parser.add_argument(
         "--quick", action="store_true",
-        help="assuming CANFAR VOSpace, only comptible with CANFAR VOSpace.",
+        help="DEPRECATED",
         default=False)
     parser.add_argument(
         "-L", "--follow-links",
@@ -169,7 +169,7 @@ def vcp():
 
     client = vos.Client(
         vospace_certfile=args.certfile, vospace_token=args.token,
-        transfer_shortcut=args.quick, insecure=args.insecure)
+        insecure=args.insecure)
 
     if not client.is_remote_file(dest):
         dest = os.path.abspath(dest)

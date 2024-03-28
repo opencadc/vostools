@@ -78,9 +78,9 @@ foreach resource ($resources)
       echo " [OK]"
   endif
   echo -n "** setting home and base to public, no groups"
-  $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
+  $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL1]" && exit -1
   echo -n " [OK]"
-  $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
+  $CHMODCMD $CERT o+r $BASE || echo " [FAIL2]" && exit -1
   echo " [OK]"
   echo
   echo "*** starting test sequence ***"
@@ -187,14 +187,15 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "copy data node to local filesystem "
-  $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-  cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
+
+  $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL1]" && exit -1
+  cmp $THIS_DIR/something.png $THIS_DIR/something.png.2 || echo " [FAIL2]" && exit -1
   \rm -f $THIS_DIR/something.png.2
   echo " [OK]"
 
   echo -n "Check quick copy"
-  $CPCMD $CERT --quick $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL]" && exit -1
-  $CPCMD $CERT --quick $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
+  $CPCMD $CERT --quick $THIS_DIR/something.png $CONTAINER/something.png.3|| echo " [FAIL1]" && exit -1
+  $CPCMD $CERT --quick $CONTAINER/something.png.3 $THIS_DIR/something.png.3 || echo " [FAIL2]" && exit -1
   cmp $THIS_DIR/something.png $THIS_DIR/something.png.3 || echo " [FAIL]" && exit -1
   \rm -f $THIS_DIR/something.png.3
   echo " [OK]"
