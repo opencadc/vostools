@@ -58,7 +58,7 @@ foreach resource ($resources)
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
   set CONTAINER = $BASE/$TIMESTAMP
 
-  echo -n "** checking base URI"
+#  echo -n "** checking base URI"
 #  $RMCMD -R $CERT $BASE > /dev/null
 #  echo -n ", creating base URI"
 #      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
@@ -107,24 +107,23 @@ foreach resource ($resources)
   $LSCMD $CERT $CONTAINER | grep ccc | grep -q "drw-------" || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-#  echo -n "test vchmod with recursive option"
-#
-#  $CHMODCMD $CERT -R g+r $CONTAINER $GROUP ||  echo " [FAIL]" && exit -1
-#  echo -n " verify "
-#  $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-#  echo " [OK]"
+  echo -n "test vchmod with recursive option"
+
+  $CHMODCMD $CERT -R g+r $CONTAINER $GROUP ||  echo " [FAIL]" && exit -1
+  echo -n " verify "
+  $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER | grep aaa | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+  echo " [OK]"
 
   echo -n "test vchmod with multiple groups"
 
   set MULTIGROUP = "ABC $GROUP"
-  $CHMODCMD $CERT g+r $CONTAINER/aaa "$MULTIGROUP" ||  echo " [FAIL]" && exit -1
+  $CHMODCMD $CERT g+r $CONTAINER/aaa "$MULTIGROUP" ||  echo " [FAIL1]" && exit -1
   echo -n " verify "
-  $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
-  echo ""
-  $LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r-----" || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL2]" && exit -1
+  $LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r-----" || echo " [FAIL3]" && exit -1
   echo " [OK]"
 
   echo -n "make a sub-container public"
@@ -134,7 +133,7 @@ foreach resource ($resources)
   $LSCMD $CERT $BASE | grep $TIMESTAMP | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL1]" && exit -1
   $LSCMD $CERT $CONTAINER | grep aaa | grep "$MULTIGROUP" | grep -q "drw-r-----" || echo " [FAIL2]" && exit -1
   $LSCMD $CERT $CONTAINER | grep ccc | grep $GROUP | grep -q "drw-r-----" || echo " [FAIL3]" && exit -1
-  $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep "$MULTIGROUP" | grep -q "drw-r--r--" || echo " [FAIL4]" && exit -1
+  $LSCMD $CERT $CONTAINER/aaa | grep bbb | grep "$GROUP" | grep -q "drw-r--r--" || echo " [FAIL4]" && exit -1
   echo " [OK]"
 
 #  echo -n "recursively make all directories public"

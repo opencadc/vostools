@@ -30,7 +30,6 @@ Note: might need to escape chars in your shell
 ::
 
     cd vos && pip install -e .[test]
-    cd vofs && pip install -e .[test]
 
 Testing packages
 ----------------
@@ -43,14 +42,6 @@ Testing vos
     cd ./vos
     pytest vos
 
-Testing vofs
-~~~~~~~~~~~~
-
-::
-
-    cd ./vofs
-    pytest vofs
-
 
 
 Checkstyle
@@ -60,7 +51,7 @@ not report errors
 
 ::
 
-     flake8 vos/vos vofs/vofs
+     flake8 vos/vos
 
 
 Testing with tox

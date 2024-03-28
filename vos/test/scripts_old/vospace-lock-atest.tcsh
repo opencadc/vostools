@@ -133,6 +133,7 @@ foreach resource ($resources)
       $LOCKCMD $CERT $CONTAINER $VUNLOCK_ARGS > /dev/null || echo " [FAIL]" && exit -1
       echo " [OK]"
       echo -n "check unlocked container "
+      echo "$TAGCMD $CERT $CONTAINER $LIST_ARGS"
       $TAGCMD $CERT $CONTAINER $LIST_ARGS | grep -q None && set SUCCESS = "true"
 
       if ( ${SUCCESS} == "true" ) then
