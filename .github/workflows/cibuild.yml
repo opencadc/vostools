@@ -73,6 +73,9 @@ jobs:
     name: Build and publish to PyPI
     needs: style_n_coverage
     runs-on: ubuntu-latest
+    permissions:
+       # IMPORTANT: this permission is mandatory for trusted publishing
+       id-token: write
     if: contains(github.ref, '=')
     steps:
     - uses: actions/checkout@v2
@@ -96,11 +99,5 @@ jobs:
         cd ${{ env.repo_name }}
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_PUBLISH_USER }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_PWORD }}
-      run: |
-        cd ${{ env.repo_name }}
-        python setup.py sdist bdist_wheel
-        twine upload --skip-existing dist/*
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
