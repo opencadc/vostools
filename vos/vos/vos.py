@@ -263,10 +263,10 @@ class Connection(object):
                         ('No valid authentication found. '
                          'Reverting to anonymous.'))
                     self.subject = net.Subject()
+        host = os.getenv('VOSPACE_WEBSERVICE', os.getenv('LOCAL_VOSPACE_WEBSERVICE', None))
         self.ws_client = net.BaseWsClient(resource_id, self.subject,
                                           'vos/' + version,
-                                          host=os.getenv('VOSPACE_WEBSERVICE',
-                                                         None),
+                                          host=host,
                                           session_headers=session_headers,
                                           insecure=insecure,
                                           server_versions=SUPPORTED_SERVER_VERSIONS)
@@ -1320,7 +1320,7 @@ class VOFile(object):
 
 
 class EndPoints(object):
-    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', None)
+    VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', os.getenv('LOCAL_VOSPACE_WEBSERVICE', None))
 
     VO_FILES_OLD = 'ivo://ivoa.net/std/VOSpace/v2.x#files'
     VO_PROPERTIES_OLD = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
@@ -1506,6 +1506,10 @@ class Client(object):
             msg = 'Using custom host: env.VOSPACE_WEBSERVICE={}'.\
                   format(os.getenv('VOSPACE_WEBSERVICE', None))
             logging.getLogger().warning(msg)
+        elif os.getenv('LOCAL_VOSPACE_WEBSERVICE', None):
+            msg = 'Using custom host: env.LOCAL_VOSPACE_WEBSERVICE={}'.\
+                  format(os.getenv('LOCAL_VOSPACE_WEBSERVICE', None))
+            logging.getLogger().warning(msg)
 
         protocol = vos_config.get('transfer', 'protocol')
         if protocol is not None:
@@ -1683,7 +1687,7 @@ class Client(object):
                     scheme = 'vault'
                 else:
                     scheme = uri_parts.scheme
-                if (os.getenv('VOSPACE_WEBSERVICE')):
+                if (os.getenv('LOCAL_VOSPACE_WEBSERVICE')):
                     # assume testing against local deployment
                     resource_id = 'ivo://opencadc.org/{}'.format(scheme)
                 else:
@@ -1773,9 +1777,18 @@ class Client(object):
         get_node_url_retried = False
         content_disposition = None
         # url retry counter - how many times an url has been retried
-        retried_urls = {}
+
         if self.is_remote_file(source):
             # GET
+            retried_urls = {}
+            files_url = None
+            # TODO - remove. This is temporary for regression
+            try:
+                self.get_endpoints(source).recursive_del
+                new_vos = True
+            except KeyError:
+                # TODO - to delete temporary regression code
+                new_vos = False
             if destination is None:
                 # Set the destination, initially, to the same directory as
                 # the source (strip the scheme)
@@ -1786,6 +1799,7 @@ class Client(object):
                 disposition = True
             check_md5 = False
             cutout_match = FILENAME_PATTERN_MAGIC.search(source)
+            get_urls = []
             if cutout_match is not None and cutout_match.group('cutout'):
                 view = 'cutout'
                 if cutout_match.group('pix'):
@@ -1805,9 +1819,29 @@ class Client(object):
                 view = 'data'
                 cutout = None
                 check_md5 = True
-                source_props = self.get_node(source, force=True).props
-                src_md5 = source_props.get('MD5', None)
-                src_size = source_props.get('length', None)
+                src_md5 = None
+                src_size = 0
+                if new_vos:
+                    if new_vos:
+                        files_url = self.get_node_url(source, method='GET',
+                                                      cutout=cutout,
+                                                      view=view)
+                        if files_url:
+                            try:
+                                response = self.get_session(source).head(files_url)
+                                response.raise_for_status()
+                                src_md5 = net.extract_md5(response.headers)
+                                src_size = response.headers.get('Content-Length', 0)
+                                get_urls.append(
+                                    self._add_soda_ops(files_url, view=view, cutout=cutout))
+                            except Exception:
+                                # not much to do. With transfer negotiation it could
+                                # try a different URL.
+                                pass
+                else:
+                    source_props = self.get_node(source, force=True).props
+                    src_md5 = source_props.get('MD5', None)
+                    src_size = source_props.get('length', None)
                 if src_size:
                     src_size = int(src_size)
                 if src_size == 0:
@@ -1839,23 +1873,8 @@ class Client(object):
                                 return dest_md5
                             return dest_size
 
-            # TODO - remove. This is temporary for regression
-            try:
-                self.get_endpoints(source).recursive_del
-                new_vos = True
-            except KeyError:
-                # TODO - to delete temporary regression code
-                new_vos = False
-
-            get_urls = []
-            files_url = None
             if self._fs_type and (cutout or view == 'header'):
                 raise ValueError('cavern/arc service does not support cutouts or header operations')
-            if new_vos:
-                files_url = self.get_node_url(source, method='GET', cutout=cutout,
-                                              view=view)
-                if files_url:
-                    get_urls.append(self._add_soda_ops(files_url, view, cutout))
 
             while not success:
                 if len(get_urls) == 0:
@@ -1865,7 +1884,7 @@ class Client(object):
                                                      full_negotiation=True)
                         # remove files_url that we've tried already
                         if new_vos:
-                            get_urls = [self._add_soda_ops(url, view, cutout)
+                            get_urls = [self._add_soda_ops(url, view=view, cutout=cutout)
                                         for url in get_urls if url != files_url]
                         else:
                             get_urls = [url for url in get_urls if url != files_url]
@@ -2013,11 +2032,11 @@ class Client(object):
                         put_url = put_urls.pop(0)
                         try:
                             with open(source, str('rb')) as fin:
-                                self.get_session(destination).put(
+                                response = self.get_session(destination).put(
                                     put_url, data=fin)
-                            node = self.get_node(destination, force=True)
-                            dest_md5 = node.props.get('MD5', None)
-                            if dest_md5 != src_md5:
+                            response.raise_for_status()
+                            dest_md5 = net.extract_md5(response.headers)
+                            if dest_md5 and dest_md5 != src_md5:
                                 # raise TransferException so that the URL
                                 # can be retried later
                                 raise exceptions.TransferException(
@@ -2060,12 +2079,12 @@ class Client(object):
                         put_url = put_urls.pop(0)
                         try:
                             with Md5File(source, 'rb') as reader:
-                                self.get_session(destination).put(
+                                response = self.get_session(destination).put(
                                     put_url, data=reader)
+                            response.raise_for_status()
                             src_md5 = reader.md5_checksum
-                            node = self.get_node(destination, force=True)
-                            dest_md5 = node.props.get('MD5', None)
-                            if dest_md5 != src_md5:
+                            dest_md5 = net.extract_md5(response.headers)
+                            if dest_md5 and dest_md5 != src_md5:
                                 # raise TransferException so that the URL
                                 # can be retried later
                                 raise exceptions.TransferException(
