@@ -1820,24 +1820,23 @@ class Client(object):
                 cutout = None
                 check_md5 = True
                 src_md5 = None
-                src_size = 0
+                src_size = None
                 if new_vos:
-                    if new_vos:
-                        files_url = self.get_node_url(source, method='GET',
-                                                      cutout=cutout,
-                                                      view=view)
-                        if files_url:
-                            try:
-                                response = self.get_session(source).head(files_url)
-                                response.raise_for_status()
-                                src_md5 = net.extract_md5(response.headers)
-                                src_size = response.headers.get('Content-Length', 0)
-                                get_urls.append(
-                                    self._add_soda_ops(files_url, view=view, cutout=cutout))
-                            except Exception:
-                                # not much to do. With transfer negotiation it could
-                                # try a different URL.
-                                pass
+                    files_url = self.get_node_url(source, method='GET',
+                                                  cutout=cutout,
+                                                  view=view)
+                    if files_url:
+                        try:
+                            response = self.get_session(source).head(files_url)
+                            response.raise_for_status()
+                            src_md5 = net.extract_md5(response.headers)
+                            src_size = response.headers.get('Content-Length', None)
+                            get_urls.append(
+                                self._add_soda_ops(files_url, view=view, cutout=cutout))
+                        except Exception:
+                            # not much to do. With transfer negotiation it could
+                            # try a different URL.
+                            pass
                 else:
                     source_props = self.get_node(source, force=True).props
                     src_md5 = source_props.get('MD5', None)
