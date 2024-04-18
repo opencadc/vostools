@@ -1,10 +1,10 @@
-This is a set of integration tests against the VOSpace service hosted
-at the CADC. These tests can only be executed at the CADC against that
-service. The vos package must be installed before the these tests
+This is a set of integration tests against the VOSpace service deployed locally
+on a users host. Note that these tests are destructive, destroying and re-creating
+the expected test data. The vos package must be installed before the these tests
 are executed.
 
 Environment variables:
-VOSPACE_WEBSERVICE (optional) = URL of the VOSpace service host (Default: "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca")
+LOCAL_VOSPACE_WEBSERVICE (required) = URL of the local reg pointing to testing vospace service
 CADC_TESTCERT_PATH (required) = Path to local directories containing 2 proxy certificates:
  - cadc-auth.pem - proxy certificate of the owner of the vospace root directory
- - cadc-auth-test.pem - proxy certificate of a valid user.
+ - cadc-auth-test.pem - proxy certificate of a valid user that is member of the CADC_TEST_GROUP1 group

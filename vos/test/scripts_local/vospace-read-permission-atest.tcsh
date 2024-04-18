@@ -21,7 +21,6 @@ else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
 	set CERT =  "--cert=$CADC_TESTCERT_PATH/cadc-auth.pem"
   set CERT1 = "--cert=$CADC_TESTCERT_PATH/cadc-auth-test.pem"
-  set CERT2 = "--cert=$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
 
 endif
 
@@ -46,9 +45,6 @@ set VTAGCMD = "vtag -k"
 
 # group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest1
 set GROUP1 = "CADC_TEST_GROUP1"
-
-# group 3100 aka CADC_TEST_GROUP2 has members: CADCAuthtest1, CADCAuthtest2
-set GROUP2 = "CADC_TEST_GROUP2"
 
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
@@ -106,7 +102,7 @@ foreach resource ($resources)
   $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "testing read as CADCAuthtest2 (denied) "
+  echo -n "testing read as CERT1 (denied) "
   $LSCMD $CERT1 $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
@@ -116,18 +112,8 @@ foreach resource ($resources)
   $LSCMD $CERT $CONTAINER/something.png | grep "\-rw-r-----" | grep -q "$GROUP1" || echo " [FAIL check container]" && exit -1
   echo " [OK]"
 
-  echo -n "testing read as CADCAuthtest2 vs $GROUP1 (allowed) "
+  echo -n "testing read as CERT1 vs $GROUP1 (allowed) "
   $LSCMD $CERT1 $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
-  echo " [OK]"
-
-  echo -n "testing read as CADCRegtest1 vs $GROUP1 (denied) "
-  $LSCMD $CERT2 $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
-  echo " [OK]"
-
-  echo -n "delete test container as CADCRegtest1 (denied) "
-  $RMDIRCMD $CERT2 $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-  echo -n " verify "
-  $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "delete test container (allowed)"
@@ -232,7 +218,7 @@ foreach resource ($resources)
   $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1
   echo " [OK] "
 
-  echo -n "try to set --public as CADCAuthtest1 (denied) "
+  echo -n "try to set --public as CADCAuthtest2 (denied) "
   $CHMODCMD $CERT1 o+r $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
   echo -n " verify "
   $LSCMD $CERT $BASE | grep $TIMESTAMP | grep -q 'drw-------' || echo " [FAIL]" && exit -1

@@ -4,4 +4,8 @@ service. The vos package must be installed before the these tests
 are executed.
 
 Environment variables (optional):
-VOSPACE_WEBSERVICE = URL of the VOSpace service host (Default: "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca")
+VOSPACE_WEBSERVICE = URL of the VOSpace service host (Default: "ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca")
+CADC_TESTCERT_PATH (required) = Path to local directories containing 2 proxy certificates:
+ - CADCAuthtest1.pem - proxy certificate of the owner of the vospace root directory
+ - CADCAuthtest2.pem - proxy certificate of a valid user that is member of the CADC_TEST_GROUP1 group
+

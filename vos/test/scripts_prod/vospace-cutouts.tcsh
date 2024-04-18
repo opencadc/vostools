@@ -29,6 +29,8 @@ else
     echo "Testing against resources: $resources"
 endif
 
+set CERT =  "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
+
 echo
 
 set LSCMD = "vls"

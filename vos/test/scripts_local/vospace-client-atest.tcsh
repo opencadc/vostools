@@ -209,17 +209,6 @@ foreach resource ($resources)
   $CPCMD $CERT "$BASE/test*.fits[1:10,1:10]" $TMPDIR || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "Do a real cutout of a known file"
-  #$CPCMD $CERT "vos:CADCAuthtest1/DONOTDELETE_VOSPACE_CUTOUT_TEST.fits(34.436194,19.34665,0.01)" $TMPDIR/testcutout || echo " [FAIL]" && exit -1
-  #if (`cat $TMPDIR/testcutout | md5` != "cb7d6a829277975d1016a769970ec45a") then
-      #	echo " [FAIL]" && exit -1
-      #endif
-      #\rm -f $TMPDIR/testcutout
-      #echo "[OK]"
-  echo "[SKIP]"
-
-  $CPCMD $CERT $CONTAINER/something.png $THIS_DIR/something.png.2 || echo " [FAIL]" && exit -1
-
   echo -n "copy/overwrite existing data node "
   $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
   echo " [OK]"
