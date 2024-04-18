@@ -4,6 +4,11 @@ date
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+if ( ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable for local tests must be unset"
+	exit -1
+endif
+
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
 else
@@ -13,7 +18,7 @@ if (! ${?CADC_TESTCERT_PATH} ) then
 	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
     exit -1
 else
-    set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
+    set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
 	echo "cert file:  ($CADC_TESTCERT_PATH env variable): $CERTFILE"
 endif
 
@@ -32,6 +37,7 @@ set CPCMD = "vcp"
 
 set MVCMD = "vmv"
 set RMDIRCMD = "vrmdir"
+set RMCMD = "vrm"
 set CHMODCMD = "vchmod"
 set TAGCMD = "vtag"
 set LNCMD = "vln"
@@ -50,15 +56,14 @@ echo
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
-    # vault uses CADCRegtest1, cavern uses home/cadcregtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-    set HOME_BASE = "home/cadcregtest1"
+        set HOME_BASE = "home/cadcauthtest1"
         set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else
         set VOROOT = "vos:"
-        set HOME_BASE = "CADCRegtest1"
+        set HOME_BASE = "CADCAuthtest1"
     endif
   set VOHOME = "$VOROOT""$HOME_BASE"
   set BASE = "$VOHOME/atest/locktest"
@@ -253,7 +258,7 @@ foreach resource ($resources)
 
   echo -n "delete non-empty container "
 
-  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $RMCMD -R $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
   $TAGCMD $CERT $CONTAINER $LIST_ARGS >& /dev/null || set SUCCESS = "true"
   if ( ${SUCCESS} == "true" ) then
       set SUCCESS = "false"

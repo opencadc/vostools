@@ -1322,11 +1322,7 @@ class VOFile(object):
 class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', os.getenv('LOCAL_VOSPACE_WEBSERVICE', None))
 
-    VO_FILES_OLD = 'ivo://ivoa.net/std/VOSpace/v2.x#files'
-    VO_PROPERTIES_OLD = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
-
     # standard ids
-    # TODO - VO_PROPERTIES has been replaced by VO_RECURSIVE_PROPS
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_FILES = 'ivo://ivoa.net/std/VOSpace#files-proto'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
@@ -1400,11 +1396,7 @@ class EndPoints(object):
         """
         :return: The files service endpoint.
         """
-        try:
-            return self.conn.ws_client._get_url((self.VO_FILES, None))
-        except KeyError:
-            # TODO Temporary
-            return self.conn.ws_client._get_url((self.VO_FILES_OLD, None))
+        return self.conn.ws_client._get_url((self.VO_FILES, None))
 
     @property
     def recursive_del(self):
@@ -1418,11 +1410,7 @@ class EndPoints(object):
         """
         :return: recusive property set endpoint
         """
-        try:
-            return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
-        except KeyError:
-            # TODO temporary for regression
-            return self.conn.ws_client._get_url((self.VO_PROPERTIES_OLD, None))
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
 
     @property
     def session(self):
@@ -1782,13 +1770,6 @@ class Client(object):
             # GET
             retried_urls = {}
             files_url = None
-            # TODO - remove. This is temporary for regression
-            try:
-                self.get_endpoints(source).recursive_del
-                new_vos = True
-            except KeyError:
-                # TODO - to delete temporary regression code
-                new_vos = False
             if destination is None:
                 # Set the destination, initially, to the same directory as
                 # the source (strip the scheme)
@@ -1821,26 +1802,21 @@ class Client(object):
                 check_md5 = True
                 src_md5 = None
                 src_size = None
-                if new_vos:
-                    files_url = self.get_node_url(source, method='GET',
-                                                  cutout=cutout,
-                                                  view=view)
-                    if files_url:
-                        try:
-                            response = self.get_session(source).head(files_url)
-                            response.raise_for_status()
-                            src_md5 = net.extract_md5(response.headers)
-                            src_size = response.headers.get('Content-Length', None)
-                            get_urls.append(
-                                self._add_soda_ops(files_url, view=view, cutout=cutout))
-                        except Exception:
-                            # not much to do. With transfer negotiation it could
-                            # try a different URL.
-                            pass
-                else:
-                    source_props = self.get_node(source, force=True).props
-                    src_md5 = source_props.get('MD5', None)
-                    src_size = source_props.get('length', None)
+                files_url = self.get_node_url(source, method='GET',
+                                              cutout=cutout,
+                                              view=view)
+                if files_url:
+                    try:
+                        response = self.get_session(source).head(files_url)
+                        response.raise_for_status()
+                        src_md5 = net.extract_md5(response.headers)
+                        src_size = response.headers.get('Content-Length', None)
+                        get_urls.append(
+                            self._add_soda_ops(files_url, view=view, cutout=cutout))
+                    except Exception:
+                        # not much to do. With transfer negotiation it could
+                        # try a different URL.
+                        pass
                 if src_size:
                     src_size = int(src_size)
                 if src_size == 0:
@@ -1882,11 +1858,8 @@ class Client(object):
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
                         # remove files_url that we've tried already
-                        if new_vos:
-                            get_urls = [self._add_soda_ops(url, view=view, cutout=cutout)
-                                        for url in get_urls if url != files_url]
-                        else:
-                            get_urls = [url for url in get_urls if url != files_url]
+                        get_urls = [self._add_soda_ops(url, view=view, cutout=cutout)
+                                    for url in get_urls if url != files_url]
                         get_node_url_retried = True
                 if len(get_urls) == 0:
                     break
@@ -2361,21 +2334,9 @@ class Client(object):
         # parameters sent as arguments.
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-        try:
-            self.get_endpoints(uri).recursive_del
-            urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
-            logger.debug('Transfer URLs: ' + ', '.join(urls))
-            return urls
-        except KeyError:
-            # TODO - delete temporary code for regression
-            old_cutout = cutout
-            if old_cutout:
-                old_cutout = old_cutout.replace('CIRCLE=', 'CIRCLE ICRS ')
-                old_cutout = old_cutout.replace('SUB=', 'CUTOUT ')
-            urls = self.transfer(self.get_endpoints(uri).transfer, uri,
-                                 direction[method], view=view, cutout=old_cutout)
-            logger.debug('Transfer URLs: ' + ', '.join(urls))
-            return urls
+        urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
+        logger.debug('Transfer URLs: ' + ', '.join(urls))
+        return urls
 
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.

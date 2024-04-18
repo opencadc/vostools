@@ -3,6 +3,11 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+if ( ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable for local tests must be unset"
+	exit -1
+endif
+
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
 else
@@ -36,10 +41,9 @@ echo
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
-    # vault uses CADCRegtest1, cavern uses home/cadcregtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-    set HOME_BASE = "home/cadcauthtest1"
+      set HOME_BASE = "home/cadcauthtest1"
         set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else

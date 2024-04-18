@@ -3,12 +3,12 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-#echo "Enter path to the CADC test certificates"
-#echo -n "Cert path: "
-#set certpath = "$<"
-#setenv CADC_TESTCERT_PATH ${certpath}
-#
-#echo "cert files path:  $CADC_TESTCERT_PATH"
+echo "Enter path to the CADC test certificates"
+echo -n "Cert path: "
+set certpath = "$<"
+setenv CADC_TESTCERT_PATH ${certpath}
+
+echo "cert files path:  $CADC_TESTCERT_PATH"
 echo
 echo "*** start all tests ***"
 echo "vospace-client-atest.tcsh"
@@ -30,8 +30,6 @@ echo "vospace-node-properties.tcsh"
 $THIS_DIR/vospace-node-properties.tcsh $args || echo "FAIL vospace-node-properties.tcsh" && exit -1
 echo "vospace-lock-atest.tcsh"
 $THIS_DIR/vospace-lock-atest.tcsh $args || echo "FAIL vospace-lock-atest.tcsh" && exit -1
-#echo "vospace-cookie-atest.tcsh"
-#$THIS_DIR/vospace-token-atest.tcsh $args || echo "FAIL vospace-cookie-atest.tcsh" && exit -1
 
 echo
 echo "*** all test sequences passed ***"

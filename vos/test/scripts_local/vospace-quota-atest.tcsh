@@ -3,10 +3,15 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-if (! ${?VOSPACE_WEBSERVICE} ) then
-	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+if (! ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable required"
+	exit -1
 else
-	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+  if ( ${?VOSPACE_WEBSERVICE} ) then
+	  echo "VOSPACE_WEBSERVICE env variable cannot be set for local tests"
+	  exit -1
+	endif
+	echo "WebService URL (LOCAL_VOSPACE_WEBSERVICE env variable): $LOCAL_VOSPACE_WEBSERVICE"
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then

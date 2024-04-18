@@ -4,10 +4,15 @@ date
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-if (! ${?VOSPACE_WEBSERVICE} ) then
-	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+if (! ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable required"
+	exit -1
 else
-	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+  if ( ${?VOSPACE_WEBSERVICE} ) then
+	  echo "VOSPACE_WEBSERVICE env variable cannot be set for local tests"
+	  exit -1
+	endif
+	echo "WebService URL (LOCAL_VOSPACE_WEBSERVICE env variable): $LOCAL_VOSPACE_WEBSERVICE"
 endif
 if (! ${?CADC_TESTCERT_PATH} ) then
   echo "Missing CADC_TESTCERT_PATH location to cadc-auth.pem and cadc-auth-test.pem files"
@@ -66,12 +71,12 @@ foreach resource ($resources)
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
   set CONTAINER = $BASE/$TIMESTAMP
 
-#  echo -n "** checking base URI"
-#  $RMCMD -R $CERT $BASE > /dev/null
-#  echo -n ", creating base URI"
-#      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-#      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
-#  echo " [OK]"
+  echo -n "** checking base URI"
+  $RMCMD -R $CERT $BASE > /dev/null
+  echo -n ", creating base URI"
+      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
+  echo " [OK]"
 
   echo -n "** setting home and base to public, no groups"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1

@@ -5,10 +5,15 @@ echo "###################"
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-if (! ${?VOSPACE_WEBSERVICE} ) then
-	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+if (! ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable required"
+	exit -1
 else
-	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+  if ( ${?VOSPACE_WEBSERVICE} ) then
+	  echo "VOSPACE_WEBSERVICE env variable cannot be set for local tests"
+	  exit -1
+	endif
+	echo "WebService URL (LOCAL_VOSPACE_WEBSERVICE env variable): $LOCAL_VOSPACE_WEBSERVICE"
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
@@ -66,14 +71,15 @@ foreach resource ($resources)
 
 
   echo -n "** checking base URI"
-  $RMCMD $CERT $BASE > /dev/null
+  $RMCMD -R $CERT $BASE > /dev/null
 
-#  echo -n ", creating base URI"
-#      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-#      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
-#  echo " [OK]"
+  echo -n ", creating base URI"
+      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
+  echo " [OK]"
 
   echo -n "** setting home and base to public, no groups"
+  echo "$CHMODCMD $CERT o+r $VOHOME"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
   echo -n " [OK]"
   $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
@@ -176,8 +182,6 @@ foreach resource ($resources)
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-
-
   echo -n "view existing data node "
   $LSCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
@@ -247,19 +251,19 @@ foreach resource ($resources)
   $RMCMD $CERT $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
   echo " [OK]"
 
-#  echo -n "delete non-empty container - THIS NOW REQURIES vrm -R INSTEAD"
-#  $RMCMD -R $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER/something2.png >& /dev/null && echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-#  echo " [OK]"
+  echo -n "delete non-empty container with vrm -R command"
+  $RMCMD -R $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER/something2.png >& /dev/null && echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+  echo " [OK]"
 
-#  echo -n "delete empty container "
-#  $MKDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
-#  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
-#  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
-#  echo " [OK]"
-#  echo
+  echo -n "delete empty container with vrmdir"
+  $MKDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER > /dev/null || echo " [FAIL]" && exit -1
+  $RMDIRCMD $CERT $CONTAINER >& /dev/null || echo " [FAIL]" && exit -1
+  $LSCMD $CERT $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+  echo " [OK]"
+  echo
   echo "*** test sequence passed for resource $resource ***"
 end
 
