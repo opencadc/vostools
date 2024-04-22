@@ -344,8 +344,7 @@ def vcp():
                 while not skip:
                     try:
                         logging.debug("Starting call to copy")
-                        client.copy(source_name, destination_name,
-                                    send_md5=True, head=head)
+                        client.copy(source_name, destination_name, head=head)
                         logging.debug("Call to copy returned")
                         break
                     except Exception as client_exception:

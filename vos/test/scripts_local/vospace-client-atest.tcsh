@@ -79,7 +79,6 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "** setting home and base to public, no groups"
-  echo "$CHMODCMD $CERT o+r $VOHOME"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
   echo -n " [OK]"
   $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1

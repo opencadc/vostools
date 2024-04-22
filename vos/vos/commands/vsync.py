@@ -221,17 +221,14 @@ def execute(src, dest, opt):
             pass
     logging.info('{} -> {}'.format(src, dest))
     try:
-        client.copy(src, dest, send_md5=True)
+        client.copy(src, dest)
         node = client.get_node(dest, limit=None)
         dest_md5 = node.props.get(
             'MD5', 'd41d8cd98f00b204e9800998ecf8427e')
         dest_length = node.attr['st_size']
         dest_time = node.attr['st_ctime']
         if opt.cache_nodes:
-            global_md5_cache.update(dest,
-                                    dest_md5,
-                                    dest_length,
-                                    dest_time)
+            global_md5_cache.update(dest, dest_md5, dest_length, dest_time)
         result.files_sent += 1
         result.bytes_sent += stat.st_size
         return result
