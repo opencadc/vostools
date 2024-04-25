@@ -120,6 +120,10 @@ def vchmod():
     # TODO:  seperate the sys.argv parsing from the actual command.
 
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument(
         'mode', type=__mode__,
         help=r'permission setting accepted modes: (og|go|o|g)[+-=](rw|wr|r\w)')

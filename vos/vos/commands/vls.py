@@ -149,6 +149,9 @@ def _get_sort_key(node, sort):
 
 def vls():
     parser = CommonParser(description=DESCRIPTION, add_help=False)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
     parser.add_argument('node', nargs=1, help="URI of VOSpace Node to list.")
     parser.add_option("--help", action="help", default='==SUPPRESS==',
                       help='show this help message and exit')

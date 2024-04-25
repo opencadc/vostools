@@ -110,6 +110,10 @@ Accepts cutout syntax for FITS files; see vcp --help for syntax details
 
 def vcat():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument("source", help="source to cat to stdout out.",
                         nargs="+")
     parser.add_argument("--head", action="store_true",

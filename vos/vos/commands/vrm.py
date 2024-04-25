@@ -83,6 +83,10 @@ eg. vrm vos:/root/node   -- deletes a data node""".format(URI_DESCRIPTION)
 
 def vrm():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument(
         "-R", "--recursive", action="store_true",
         help="Delete a file or directory even if it's not empty.",

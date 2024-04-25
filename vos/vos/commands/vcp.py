@@ -120,6 +120,10 @@ def vcp():
         exit_code = 0
 
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument(
         "source", nargs="+",
         help="file/directory/dataNode/containerNode to copy from.")

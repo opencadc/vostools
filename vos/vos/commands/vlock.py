@@ -87,6 +87,10 @@ status if no action requested.
 
 def vlock():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument(
         'node',
         help="node to request / view lock on. (eg. vos:RootNode/File.txt")

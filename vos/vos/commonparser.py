@@ -167,7 +167,8 @@ class CommonParser(argparse.ArgumentParser):
             default=os.path.join(os.getenv("HOME", "."), ".ssl/cadcproxy.pem"))
         self.add_argument(
             "--token",
-            help="authentication token string (alternative to certfile)",
+            help="'<type> <token>' : adds an authorization header to HTTP "
+                 "requests with the specified value",
             default=None)
         self.add_argument("--version", action="version",
                           version=version)

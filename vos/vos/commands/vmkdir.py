@@ -83,6 +83,10 @@ eg vmkdir vos:RootNode/NewContainer""".format(URI_DESCRIPTION)
 
 def vmkdir():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument('container_node', action='store',
                         help='Name of the container node to craete.')
     parser.add_argument("-p", action="store_true",

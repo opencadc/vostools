@@ -102,6 +102,10 @@ list all property values:  vtag vos:RootNode/MyImage.fits
 
 def vtag():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument('node', help='Node to set property (tag/attribute) on')
     parser.add_argument(
         'property',

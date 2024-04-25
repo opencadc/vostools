@@ -126,7 +126,7 @@ MAX_RETRY_TIME = 900  # maximum time for retries before giving up...
 MAX_INTERMTTENT_RETRIES = 3
 
 VOSPACE_ARCHIVE = os.getenv("VOSPACE_ARCHIVE", "vospace")
-HEADER_DELEG_TOKEN = 'X-CADC-DelegationToken'
+HEADER_DELEG_TOKEN = 'Authorization'
 HEADER_CONTENT_LENGTH = 'X-CADC-Content-Length'
 HEADER_PARTIAL_READ = 'X-CADC-Partial-Read'
 
@@ -142,8 +142,7 @@ VO_CADC_VIEW_URI = 'ivo://cadc.nrc.ca/vospace/view'
 
 SSO_SECURITY_METHODS = {
     'tls-with-certificate': 'ivo://ivoa.net/sso#tls-with-certificate',
-    'cookie': 'ivo://ivoa.net/sso#cookie',
-    'token': 'vos://cadc.nrc.ca~vospace/CADC/std/Auth#token-1.0'
+    'cookie': 'ivo://ivoa.net/sso#cookie'
 }
 
 SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
@@ -214,16 +213,16 @@ class Connection(object):
 
         vospace_certfile -- where to store the certificate, if None then
                          ${HOME}/.ssl or a temporary filename
-        vospace_token -- token string (alternative to vospace_certfile)
+        vospace_token -- "<type> <token>" : adds an authorization header to
+        HTTP requests with the specified value
         http_debug -- set True to generate debug statements (Deprecated)
         resource_id -- The resource ID of the vospace service. Defaults to
         CADC vos.
         insecure -- Allow insecure server connections when using SSL.
 
         If the user supplies an empty vospace_certificate, the connection
-        will be 'anonymous'. If no certificate or token are provided, and
-        attempt to find user/password combination in the .netrc file is made
-        before the connection is downgraded to 'anonymous'
+        will be 'anonymous'. If no certificate or token are provided the
+        connection is automatically downgraded to 'anonymous'
         """
         if http_debug is not False:
             warnings.warn(
@@ -1341,8 +1340,9 @@ class EndPoints(object):
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
-        :param vospace_token: token string (alternative to vospace_certfile)
-        :type vospace_token: unicode
+        :param vospace_token: "<type> <token>" : adds an authorization header
+        to HTTP requests with the specified value
+        :type vospace_token: string
         :param insecure: Allow insecure server connections when using SSL
         :type insecure: bool
         """
@@ -1423,8 +1423,9 @@ class EndPoints(object):
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
-        :param vospace_token: token string (alternative to vospace_certfile)
-        :type vospace_token: unicode
+        :param vospace_token: "<type> <token>" : adds an authorization header
+        to HTTP requests with the specified value
+        :type vospace_token: string
         """
         self.conn = Connection(vospace_certfile=vospace_certfile,
                                vospace_token=vospace_token,
@@ -1468,11 +1469,8 @@ class Client(object):
         communicates to. To set auth for individual services use `set_auth`
         method.
         :type vospace_certfile: unicode
-        :param vospace_token: token string (alternative to vospace_certfile)
-        The token will be used with all the services that the Client
-        communicates to. To set auth for individual services use `set_auth`
-        method.
-        :type vospace_token: unicode
+        :param vospace_token: "<type> <token>" : adds an authorization header to HTTP requests with the specified value
+        :type vospace_token: string
         :param root_node: the base of the VOSpace for uri references.
         :type root_node: unicode
         :param conn: DEPRECATED
@@ -1624,8 +1622,9 @@ class Client(object):
         :param vospace_certfile: x509 proxy certificate file location.
         Overrides certfile in conn.
         :type vospace_certfile: unicode
-        :param vospace_token: token string (alternative to vospace_certfile)
-        :type vospace_token: unicode
+        :param vospace_token: "<type> <token>" : adds an authorization header
+        to HTTP requests with the specified value
+        :type vospace_token: string
         """
         self.get_endpoints(uri).set_auth(vospace_certfile=vospace_certfile,
                                          vospace_token=vospace_token)
@@ -2301,8 +2300,6 @@ class Client(object):
                 SSO_SECURITY_METHODS['tls-with-certificate'])
         if endpoints.conn.subject.cookies:
             security_methods.append(SSO_SECURITY_METHODS['cookie'])
-        if endpoints.conn.vo_token:
-            security_methods.append(SSO_SECURITY_METHODS['token'])
 
         result = trans.transfer(endpoint_url, uri, direction, view, cutout,
                                 security_methods=security_methods)

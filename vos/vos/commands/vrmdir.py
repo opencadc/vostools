@@ -83,6 +83,10 @@ CAUTION:  The container need not be empty.""".format(URI_DESCRIPTION)
 
 def vrmdir():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument('nodes', help="Container nodes to delete from VOSpace",
                         nargs='+')
 

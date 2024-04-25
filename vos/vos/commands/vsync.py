@@ -367,6 +367,10 @@ def vsync():
 
     start_time = time.time()
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_option('files', nargs='+', help='Files to copy to VOSpace')
     parser.add_option('destination', help='VOSpace location to sync files to')
     parser.add_option('--ignore-checksum', action="store_true",

@@ -85,6 +85,10 @@ e.g. vmv vos:/root/node vos:/root/newNode   --
 
 def vmv():
     parser = CommonParser(description=DESCRIPTION)
+    # TODO temporary - update in CommonParser
+    parser._option_string_actions['--token'].help = \
+        "'<type> <token>' : adds an authorization header to HTTP requests with the specified value"
+
     parser.add_argument("source", help="The name of the node to move.",
                         action='store')
     parser.add_argument("destination",
