@@ -30,8 +30,8 @@ echo "vospace-node-properties.tcsh"
 $THIS_DIR/vospace-node-properties.tcsh $args || echo "FAIL vospace-node-properties.tcsh" && exit -1
 echo "vospace-lock-atest.tcsh"
 $THIS_DIR/vospace-lock-atest.tcsh $args || echo "FAIL vospace-lock-atest.tcsh" && exit -1
-#echo "vospace-cookie-atest.tcsh"
-#$THIS_DIR/vospace-token-atest.tcsh $args || echo "FAIL vospace-cookie-atest.tcsh" && exit -1
+echo "vospace-cutouts.tcsh"
+$THIS_DIR/vospace-cutouts.tcsh $args || echo "FAIL vospace-cutouts.tcsh" && exit -1
 
 echo
 echo "*** all test sequences passed ***"

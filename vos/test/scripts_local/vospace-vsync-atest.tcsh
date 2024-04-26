@@ -3,17 +3,24 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
-if (! ${?VOSPACE_WEBSERVICE} ) then
-	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
+if (! ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable required"
+	exit -1
 else
-	echo "WebService URL (VOSPACE_WEBSERVICE env variable): $VOSPACE_WEBSERVICE"
+  if ( ${?VOSPACE_WEBSERVICE} ) then
+	  echo "VOSPACE_WEBSERVICE env variable cannot be set for local tests"
+	  exit -1
+	endif
+	echo "WebService URL (LOCAL_VOSPACE_WEBSERVICE env variable): $LOCAL_VOSPACE_WEBSERVICE"
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of test cert files"
-    exit -1
+  echo "Missing CADC_TESTCERT_PATH location to cadc-auth.pem and cadc-auth-test.pem files"
+  exit -1
 else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
+	set CERT =  "--cert=$CADC_TESTCERT_PATH/cadc-auth.pem"
+	set CERT1 =  "--cert=$CADC_TESTCERT_PATH/cadc-auth-test.pem"
 endif
 
 if($#argv == 0) then
@@ -26,52 +33,45 @@ endif
 
 echo
 
-set LSCMD = "vls"
-set MKDIRCMD = "vmkdir"
-set RMCMD = "vrm"
-set CHMODCMD = "vchmod"
-set VSYNCCMD = "vsync"
+set LSCMD = "vls -k"
+set MKDIRCMD = "vmkdir -k"
+set RMCMD = "vrm -k"
+set CHMODCMD = "vchmod -k"
+set VSYNCCMD = "vsync -k"
+set VTAGCMD = "vtag -k"
 
 set TEST_DIR = vsync_test
 set ABS_TEST_DIR = /tmp/$TEST_DIR
 
-set CERT = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
-
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
-    # vault uses CADCRegtest1, cavern uses home/cadcregtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-    set HOME_BASE = "home/cadcauthtest1"
-        set VOROOT = "arc:"
+        set VOROOT = "cavern:"
         set TESTING_CAVERN = "true"
     else
         set VOROOT = "vos:"
-        set HOME_BASE = "CADCAuthtest1"
     endif
 
+  set HOME_BASE = "vostools-inttest"
   set VOHOME = "$VOROOT""$HOME_BASE"
-  set BASE = "$VOHOME/atest"
+  set BASE = $VOHOME
 
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
   set CONTAINER = $BASE/$TIMESTAMP
 
   echo -n "** checking base URI"
-  $LSCMD $CERT $BASE > /dev/null
-  if ( $status == 0) then
-      echo " [OK]"
-  else
-      echo -n ", creating base URI"
-          $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-      echo " [OK]"
-  endif
+  $RMCMD -R $CERT $BASE > /dev/null
+  echo -n ", creating base URI"
+      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
+  echo " [OK]"
 
-  echo -n "** setting home and base to public"
+  echo -n "** setting home and base to public, no groups"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
   $CHMODCMD $CERT o+r $BASE || echo " [FAIL]" && exit -1
   echo " [OK]"
-  echo
 
   echo "*** starting test sequence ***"
   echo

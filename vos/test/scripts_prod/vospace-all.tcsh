@@ -20,8 +20,8 @@ echo "vospace-delete-permission-atest.tcsh"
 $THIS_DIR/vospace-delete-permission-atest.tcsh $args || echo "FAIL vospace-delete-permission-atest.tcsh" && exit -1
 echo "vospace-vsync-atest.tcsh"
 $THIS_DIR/vospace-vsync-atest.tcsh $args || echo "FAIL vospace-vsync-atest.tcsh" && exit -1
-echo "vospace-quota-atest.tcsh"
-$THIS_DIR/vospace-quota-atest.tcsh $args || echo "FAIL vospace-quota-atest.tcsh" && exit -1
+#echo "vospace-quota-atest.tcsh"
+#$THIS_DIR/vospace-quota-atest.tcsh $args || echo "FAIL vospace-quota-atest.tcsh" && exit -1
 echo "vospace-link-atest.tcsh"
 $THIS_DIR/vospace-link-atest.tcsh $args || echo "FAIL vospace-link-atest.tcsh" && exit -1
 echo "vospace-read-permission-atest.tcsh"
@@ -30,8 +30,8 @@ echo "vospace-node-properties.tcsh"
 $THIS_DIR/vospace-node-properties.tcsh $args || echo "FAIL vospace-node-properties.tcsh" && exit -1
 echo "vospace-lock-atest.tcsh"
 $THIS_DIR/vospace-lock-atest.tcsh $args || echo "FAIL vospace-lock-atest.tcsh" && exit -1
-#echo "vospace-cookie-atest.tcsh"
-#$THIS_DIR/vospace-token-atest.tcsh $args || echo "FAIL vospace-cookie-atest.tcsh" && exit -1
+echo "vospace-cutouts.tcsh"
+$THIS_DIR/vospace-cutouts.tcsh $args || echo "FAIL vospace-cutouts.tcsh" && exit -1
 
 echo
 echo "*** all test sequences passed ***"

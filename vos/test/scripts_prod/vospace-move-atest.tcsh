@@ -3,6 +3,11 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+if ( ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable for local tests must be unset"
+	exit -1
+endif
+
 if (! ${?VOSPACE_WEBSERVICE} ) then
 	echo "VOSPACE_WEBSERVICE env variable not set, use default WebService URL"
 else
@@ -10,12 +15,10 @@ else
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-  echo "Missing CADC_TESTCERT_PATH location to cadc-auth.pem and cadc-auth-test.pem files"
-  exit -1
+	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of test cert files"
+    exit -1
 else
 	echo "cert files path:  ($CADC_TESTCERT_PATH env variable): $CADC_TESTCERT_PATH"
-	set CERT =  "--cert=$CADC_TESTCERT_PATH/cadc-auth.pem"
-	set CERT1 =  "--cert=$CADC_TESTCERT_PATH/cadc-auth-test.pem"
 endif
 
 if($#argv == 0) then
@@ -27,40 +30,49 @@ else
 endif
 
 
-set LSCMD = "vls -k"
-set MKDIRCMD = "vmkdir -k"
-set RMCMD = "vrm -k"
-set CPCMD = "vcp -k"
-set RMDIRCMD = "vrmdir -k"
-set MVCMD = "vmv -k"
-set CHMODCMD = "vchmod -k"
-set VTAGCMD = "vtag -k"
+set LSCMD = "vls"
+set MKDIRCMD = "vmkdir"
+set RMCMD = "vrm"
+set CPCMD = "vcp"
+set RMDIRCMD = "vrmdir"
+set MVCMD = "vmv"
+set CHMODCMD = "vchmod"
+
+
+set CERT = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
+set CERT2 = "--cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest2.pem"
+
+# group 3000 aka CADC_TEST_GROUP1 has members: CADCAuthtest2
+set GROUP1 = "ivo://cadc.nrc.ca/gms#CADC_TEST_GROUP1"
 
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
-    # vault uses CADCAuthtest1, cavern uses home/cadcauthtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-        set VOROOT = "cavern:"
+        set HOME_BASE = "home/cadcauthtest1"
+        set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else
         set VOROOT = "vos:"
+        set HOME_BASE = "CADCAuthtest1"
     endif
 
-  set HOME_BASE = "vostools-inttest"
-  set VOHOME = "$VOROOT""$HOME_BASE"
-  set BASE = $VOHOME
+  set VOHOME = "$VOROOT$HOME_BASE"
+  set BASE = "$VOHOME/atest"
 
   set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
   set CONTAINER = $BASE/$TIMESTAMP
 
   echo -n "** checking base URI"
-#  $RMCMD -R $CERT $BASE > /dev/null
-#  echo -n ", creating base URI"
-#      $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
-#      $VTAGCMD $CERT $BASE 'ivo://cadc.nrc.ca/vospace/core#inheritPermissions=true'
-#  echo " [OK]"
+  $LSCMD $CERT $BASE > /dev/null
+  if ( $status == 0) then
+      echo " [OK]"
+  else
+      echo -n ", creating base URI"
+          $MKDIRCMD $CERT $BASE || echo " [FAIL]" && exit -1
+      echo " [OK]"
+  endif
 
   echo -n "** setting home and base to public"
   $CHMODCMD $CERT o+r $VOHOME || echo " [FAIL]" && exit -1
@@ -123,19 +135,20 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "check no write permission on source data node (fail)"
-  $MVCMD $CERT1 $CONTAINER/b $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
+
+  $MVCMD $CERT2 $CONTAINER/b $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
   echo -n " verify "
   $LSCMD $CERT $CONTAINER/b > /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "check no recursive write permission on source container node (fail)"
-  $MVCMD $CERT1 $CONTAINER/a $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
+  $MVCMD $CERT2 $CONTAINER/a $CONTAINER/d >& /dev/null && echo " [FAIL]" && exit -1
   echo -n " verify "
   $LSCMD $CERT $CONTAINER/a > /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"
 
   echo -n "check no write permission on dest (fail)"
-  $MVCMD $CERT1 $CONTAINER/c $CONTAINER/e >& /dev/null && echo " [FAIL]" && exit -1
+  $MVCMD $CERT2 $CONTAINER/c $CONTAINER/e >& /dev/null && echo " [FAIL]" && exit -1
   echo -n " verify "
   $LSCMD $CERT $CONTAINER/c > /dev/null || echo " [FAIL]" && exit -1
   echo " [OK]"

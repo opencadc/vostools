@@ -70,8 +70,6 @@
 
 import os
 import unittest
-import urllib.parse
-
 import pytest
 import requests
 from xml.etree import ElementTree
@@ -82,7 +80,6 @@ from urllib.parse import urlparse, unquote
 from io import BytesIO
 import hashlib
 import tempfile
-from cadcutils.net import add_md5_header
 
 
 # The following is a temporary workaround for Python issue 25532
@@ -155,17 +152,15 @@ def test_get_node_url():
                             view='header')
 
     # test fits header
-    assert transfer_url + "?META=true" == client._add_soda_ops(transfer_url, view='header')
+    assert {'META': 'true'} == client._get_soda_params(view='header')
 
     # test pixel cutouts
     pcutout = '[1][100:125,100:175]'
-    assert transfer_url + "?SUB=" + pcutout == client._add_soda_ops(transfer_url,
-                                                                    cutout=pcutout)
+    assert {'SUB': pcutout} == client._get_soda_params(cutout=pcutout)
 
     # test sky coordinates
     scutout = '1.1,2.2,3.3'
-    assert (transfer_url + "?CIRCLE=" + urllib.parse.quote(scutout) ==
-            client._add_soda_ops(transfer_url, cutout='CIRCLE='+scutout))
+    assert {'CIRCLE':  scutout} == client._get_soda_params(cutout='CIRCLE='+scutout)
 
 
 class TestClient(unittest.TestCase):
@@ -403,7 +398,7 @@ class TestClient(unittest.TestCase):
         props.get.return_value = md5sum
         # add props to the mocked node
         node = MagicMock(spec=Node)
-        node.props = {'MD5': md5sum, 'length': 12}
+        node.props = {'MD5': md5sum, 'length': len(file_content)}
 
         # mock one by one the chain of connection.session.response.headers
         session = MagicMock()
@@ -417,8 +412,8 @@ class TestClient(unittest.TestCase):
         test_client = Client()
         test_client.get_session = Mock(return_value=session)
         # use the mocked connection instead of the real one
-        get_node_url_mock = Mock(
-            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        node_location_url = 'http://cadc.ca/test'
+        get_node_url_mock = Mock(return_value=node_location_url)
         test_client.get_node_url = get_node_url_mock
         mock_update = Mock()
         test_client.update = mock_update
@@ -434,42 +429,41 @@ class TestClient(unittest.TestCase):
             os.remove(osLocation)
         # copy from vospace
         test_client.is_remote_file = is_remote_file
-        test_client.get_endpoints = Mock()
-        test_client.copy(vospaceLocation, osLocation)
+        test_client._get_si_client = Mock()
+        test_client._get_si_client.return_value.download_file = (
+            Mock(return_value=('foo', md5sum, len(file_content))))
+        cp_size = test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
+        si_calls = [call('vos://authority~test/foo'),
+                    call().download_file(url=node_location_url, dest=osLocation, params={})]
+        assert si_calls == test_client._get_si_client.mock_calls
         assert not computed_md5_mock.called, 'MD5 should be computed on the fly'
-
-        # repeat - local file and vospace file are now the same -> only
-        # get_node is called to get the md5 of remote file
-        computed_md5_mock.reset_mock()
-        session.get.reset_mock()
-        files_response = Mock(headers={'Content-Length': '12'})
-        add_md5_header(files_response.headers, md5sum)
-        session.head.return_value = files_response
-        test_client.copy(vospaceLocation, osLocation)
-        assert not session.get.called
-        computed_md5_mock.assert_called_once_with(osLocation)
+        assert cp_size == len(file_content)
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
         get_node_mock.reset_mock()
 
         computed_md5_mock.reset_mock()
+        test_client._get_si_client.reset_mock()
         computed_md5_mock.return_value = 'd002233'
         response.iter_content.return_value = BytesIO(file_content)
         test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
-        computed_md5_mock.assert_called_with(osLocation)
+        si_calls = [call('vos://authority~test/foo'),
+                    call().download_file(url=node_location_url,
+                                         dest=osLocation, params={})]
+        assert si_calls == test_client._get_si_client.mock_calls
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
-        get_node_url_mock.return_value = \
-            ['https://mysite.com/files/node123/cutout']
+        get_node_url_mock.return_value = 'https://mysite.com/files/node123/cutout'
         computed_md5_mock.reset_mock()
+        test_client._get_si_client.reset_mock()
         computed_md5_mock.return_value = 'd002233'
         # computed_md5_mock.side_effect = ['d002233', md5sum]
         get_node_mock.reset_mock()
@@ -478,12 +472,13 @@ class TestClient(unittest.TestCase):
         test_client.get_session = Mock(return_value=session)
         # client must be a vault client
         test_client._fs_type = False
-        test_client._add_soda_ops = Mock()
         test_client.copy('{}{}'.format(vospaceLocation,
                                        '[1][10:60]'), osLocation)
 
-        test_client._add_soda_ops.assert_called_once_with(
-            'https://mysite.com/files/node123/cutout', view='cutout', cutout='[1][10:60]')
+        si_calls = [call('vos://authority~test/foo'),
+                    call().download_file(url='https://mysite.com/files/node123/cutout',
+                                         dest=osLocation, params={'SUB': '[1][10:60]'})]
+        assert si_calls == test_client._get_si_client.mock_calls
 
         # test cavern does not support SODA operations
         test_client._fs_type = True
@@ -494,6 +489,7 @@ class TestClient(unittest.TestCase):
 
         test_client._fs_type = False
         # copy to vospace when md5 sums are the same -> only update occurs
+        open(osLocation, 'wb').write(file_content)
         get_node_url_mock.reset_mock()
         computed_md5_mock.reset_mock()
         computed_md5_mock.side_effect = None
@@ -510,14 +506,16 @@ class TestClient(unittest.TestCase):
         mock_update.reset_mock()
         computed_md5_mock.return_value = md5sum
         to_update_node = MagicMock()
-        to_update_node.props = {'MD5': 'abcde', 'length': 12}
+        to_update_node.props = {'MD5': 'abcde', 'length': len(file_content)}
         test_client.get_node = Mock(side_effect=[to_update_node, node])
-        test_client.copy(osLocation, vospaceLocation)
+        test_client._get_si_client.return_value.upload_file = (
+            Mock(return_value=('foo', md5sum, len(file_content))))
+        cp_size = test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
-        get_node_url_mock.assert_called_once_with(vospaceLocation, 'PUT',
-                                                  content_length=12,
-                                                  md5_checksum='abcde')
+        get_node_url_mock.assert_called_once_with(vospaceLocation, method='PUT',
+                                                  full_negotiation=True)
         computed_md5_mock.assert_called_once_with(osLocation)
+        assert cp_size == len(file_content)
 
         # copy 0 size file -> delete and create node but no bytes
         # transferred
@@ -531,10 +529,11 @@ class TestClient(unittest.TestCase):
         test_client.create = mock_create
         with patch('vos.vos.os.stat', Mock()) as stat_mock:
             stat_mock.return_value = Mock(st_size=0)
-            test_client.copy(osLocation, vospaceLocation)
+            cp_size = test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         mock_delete.assert_called_once_with(vospaceLocation)
         assert not get_node_url_mock.called
+        assert 0 == cp_size
 
         # copy new 0 size file -> create node but no bytes transferred
         get_node_url_mock.reset_mock()
@@ -548,153 +547,35 @@ class TestClient(unittest.TestCase):
         test_client.create = mock_create
         with patch('vos.vos.os.stat', Mock()) as stat_mock:
             stat_mock.return_value = Mock(st_size=0)
-            test_client.copy(osLocation, vospaceLocation)
+            cp_size = test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         assert not mock_delete.called
         assert not get_node_url_mock.called
-
-        # error tests - md5sum mismatch
-        computed_md5_mock.return_value = '000bad000'
-        test_client.get_node = Mock(return_value=node)
-        with self.assertRaises(OSError):
-            test_client.copy(vospaceLocation, osLocation)
-
-        # # existing file
-        # mock_delete.reset_mock()
-        # get_node_mock.reset_mock()
-        #
-        # with self.assertRaises(OSError):
-        #     with patch('vos.vos.os.stat', Mock()) as stat_mock:
-        #         stat_mock.return_value = Mock(st_size=12)
-        #         test_client.copy(osLocation, vospaceLocation)
-        # assert not mock_delete.called  # server takes care of cleanup
-
-        # new file
-        # mock_delete.reset_mock()
-        # with self.assertRaises(OSError):
-        #     with patch('vos.vos.os.stat', Mock()) as stat_mock:
-        #         stat_mock.return_value = Mock(st_size=12)
-        #         node.props['MD5'] = None
-        #         test_client.copy(osLocation, vospaceLocation)
-        # assert mock_delete.called  # cleanup required
+        assert cp_size == 0
 
         # requests just the headers when md5 not provided in the header
-        # props.get.side_effect = [None]
-        # get_node_url_mock = Mock(
-        #     return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # headers.get.return_value = None
-        # test_client.copy(vospaceLocation, osLocation, head=True)
-        # get_node_url_mock.assert_called_once_with(vospaceLocation,
-        #                                           method='GET',
-        #                                           cutout=None, view='header', full_negotiation=True)
-        #
-        # # repeat headers request when md5 provided in the header
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # test_client.copy(vospaceLocation, osLocation, head=True)
-        # get_node_url_mock.assert_called_once_with(vospaceLocation,
-        #                                           method='GET',
-        #                                           cutout=None, view='header', full_negotiation=True)
-        #
-        # # test GET intermittent exceptions on both URLs
-        # props.get.side_effect = md5sum
-        # # first side effect corresponds to the files end point call, the second to full negotiation
-        # get_node_url_mock = Mock(side_effect=['http://cadc1.ca/test', ['http://cadc2.ca/test']])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.get.reset_mock()
-        # session.get.side_effect = \
-        #     [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
-        # with pytest.raises(OSError):
-        #     test_client.copy(vospaceLocation, osLocation, head=False)
-        # assert session.get.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
-        #
-        # # test GET Transfer error on one URL and a "permanent" one on the other
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     side_effect=[None, ['http://cadc1.ca/test', 'http://cadc2.ca/test']])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.get.reset_mock()
-        # session.get.side_effect = [exceptions.TransferException(),
-        #                            exceptions.HttpException(),
-        #                            exceptions.TransferException(),
-        #                            exceptions.TransferException()]
-        # with pytest.raises(OSError):
-        #     test_client.copy(vospaceLocation, osLocation, head=True)
-        # assert session.get.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
-        #
-        # # test GET both "permanent" errors
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     side_effect=['http://cadc1.ca/test', ['http://cadc2.ca/test']])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.get.reset_mock()
-        # session.get.side_effect = [exceptions.HttpException(),
-        #                            exceptions.HttpException()]
-        # with pytest.raises(OSError):
-        #     test_client.copy(vospaceLocation, osLocation, head=True)
-        # assert session.get.call_count == 2
-        #
-        # # test PUT intermittent exceptions on both URLs
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.put.reset_mock()
-        # session.put.side_effect = \
-        #     [exceptions.TransferException()] * 2 * vos.MAX_INTERMTTENT_RETRIES
-        # with pytest.raises(OSError):
-        #     test_client.copy(osLocation, vospaceLocation, head=True)
-        # assert session.put.call_count == 2 * vos.MAX_INTERMTTENT_RETRIES
-        #
-        # # test GET Transfer error on one URL and a "permanent" one on the other
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.put.reset_mock()
-        # session.put.side_effect = [exceptions.TransferException(),
-        #                            exceptions.HttpException(),
-        #                            exceptions.TransferException(),
-        #                            exceptions.TransferException()]
-        # with pytest.raises(OSError):
-        #     test_client.copy(osLocation, vospaceLocation, head=True)
-        # assert session.put.call_count == vos.MAX_INTERMTTENT_RETRIES + 1
-        #
-        # # test GET both "permanent" errors
-        # props.get.side_effect = md5sum
-        # get_node_url_mock = Mock(
-        #     return_value=['http://cadc1.ca/test', 'http://cadc2.ca/test'])
-        # test_client.get_node_url = get_node_url_mock
-        # get_node_mock.reset_mock()
-        # response.iter_content.return_value = BytesIO(file_content)
-        # headers.get.return_value = None
-        # session.put.reset_mock()
-        # session.put.side_effect = [exceptions.HttpException(),
-        #                            exceptions.HttpException()]
-        # with pytest.raises(OSError):
-        #     test_client.copy(osLocation, vospaceLocation, head=True)
-        # assert session.put.call_count == 2
+        props.get.side_effect = [None]
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        headers.get.return_value = None
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
+
+        # repeat headers request when md5 provided in the header
+        props.get.side_effect = md5sum
+        get_node_url_mock = Mock(
+            return_value=['http://cadc.ca/test', 'http://cadc.ca/test'])
+        test_client.get_node_url = get_node_url_mock
+        get_node_mock.reset_mock()
+        response.iter_content.return_value = BytesIO(file_content)
+        test_client.copy(vospaceLocation, osLocation, head=True)
+        get_node_url_mock.assert_called_once_with(vospaceLocation,
+                                                  method='GET',
+                                                  cutout=None, view='header')
 
     def test_add_props(self):
         old_node = Node(ElementTree.fromstring(NODE_XML))

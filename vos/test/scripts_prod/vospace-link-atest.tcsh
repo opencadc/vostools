@@ -3,6 +3,11 @@
 set THIS_DIR = `dirname $0`
 set THIS_DIR = `cd $THIS_DIR && pwd`
 
+if ( ${?LOCAL_VOSPACE_WEBSERVICE} ) then
+	echo "LOCAL_VOSPACE_WEBSERVICE env variable for local tests must be unset"
+	exit -1
+endif
+
 if (! ${?CADC_TESTCERT_PATH} ) then
 	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of test cert files"
     exit -1
@@ -28,8 +33,8 @@ set RMDIRCMD = "vrmdir"
 set LNCMD = "vln"
 set CHMODCMD = "vchmod"
 
-set CERT = " --cert=$CADC_TESTCERT_PATH/x509_CADCRegtest1.pem"
-set CERT2 = " --cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
+set CERT = " --cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
+set CERT2 = " --cert=$CADC_TESTCERT_PATH/x509_CADCAuthtest2.pem"
 
 echo "command: " $LNCMD $CERT
 echo
@@ -37,15 +42,14 @@ echo
 foreach resource ($resources)
     echo "************* TESTING AGAINST $resource ****************"
 
-    # vault uses CADCRegtest1, cavern uses home/cadcregtest1
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-    set HOME_BASE = "home/cadcregtest1"
+        set HOME_BASE = "home/cadcauthtest1"
         set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else
         set VOROOT = "vos:"
-        set HOME_BASE = "CADCRegtest1"
+        set HOME_BASE = "CADCAuthtest1"
     endif
 
   set VOHOME = "$VOROOT""$HOME_BASE"
@@ -117,13 +121,9 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to external vos URI"
-  if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, vos/issues/83]"
-  else
-      $RMCMD $CERT $CONTAINER/e1link >& /dev/null
-      $LNCMD $CERT vos://cadc.nrc.ca~arc/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
-      echo " [OK]"
-  endif
+  $RMCMD $CERT $CONTAINER/e1link >& /dev/null
+  $LNCMD $CERT vos://cadc.nrc.ca~arc/unknown $CONTAINER/e1link >& /dev/null || echo " [FAIL]" && exit -1
+  echo " [OK]"
 
   echo -n "follow the invalid link and fail"
   $CPCMD $CERT $CONTAINER/e1link/somefile /tmp >& /dev/null && echo " [FAIL]" && exit -1
@@ -151,28 +151,16 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "copy file to target through link"
-  if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, vos/issues/83]"
-  else
-      $CPCMD  $CERT $THIS_DIR/something.png $CONTAINER/clink/something2.png || echo " [FAIL]" && exit -1
-      echo " [OK]"
-  endif
+  $CPCMD  $CERT $THIS_DIR/something.png $CONTAINER/clink/something2.png || echo " [FAIL]" && exit -1
+  echo " [OK]"
 
   echo -n "Get the file through the link"
-  if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, vos/issues/83]"
-  else
-      $CPCMD  $CERT $CONTAINER/clink/something2.png /tmp || echo " [FAIL]" && exit -1
-      echo " [OK]"
-  endif
+  $CPCMD  $CERT $CONTAINER/clink/something2.png /tmp || echo " [FAIL]" && exit -1
+  echo " [OK]"
 
   echo -n "Get the file through the target"
-  if ( ${?TESTING_CAVERN} ) then
-      echo " [SKIPPED, vos/issues/83]"
-  else
-      $CPCMD   $CERT $CONTAINER/target/something2.png /tmp || echo " [FAIL]" && exit -1
-      echo " [OK]"
-  endif
+  $CPCMD   $CERT $CONTAINER/target/something2.png /tmp || echo " [FAIL]" && exit -1
+  echo " [OK]"
   echo
   echo "*** test sequence passed for resource $resource ***"
 end

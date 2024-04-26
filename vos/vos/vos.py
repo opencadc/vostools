@@ -79,7 +79,6 @@ from datetime import datetime
 import fnmatch
 from enum import Enum
 import hashlib
-from urllib.parse import quote
 
 try:
     from cStringIO import StringIO
@@ -110,7 +109,6 @@ from . import md5_cache
 
 from urllib.parse import urlparse, parse_qs
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
@@ -148,7 +146,8 @@ SSO_SECURITY_METHODS = {
 }
 
 SUPPORTED_SERVER_VERSIONS = {'vault': '1.1',
-                             'cavern': '0.4'}
+                             'cavern': '1.0',
+                             'storage-inventory/minoc': '1.0'}
 
 # this should one day go into its own uws library
 UWS_NSMAP = {'uws': 'http://www.ivoa.net/xml/UWS/v1.0',
@@ -1322,11 +1321,7 @@ class VOFile(object):
 class EndPoints(object):
     VOSPACE_WEBSERVICE = os.getenv('VOSPACE_WEBSERVICE', os.getenv('LOCAL_VOSPACE_WEBSERVICE', None))
 
-    VO_FILES_OLD = 'ivo://ivoa.net/std/VOSpace/v2.x#files'
-    VO_PROPERTIES_OLD = 'vos://cadc.nrc.ca~vospace/CADC/std/VOSpace#nodeprops'
-
     # standard ids
-    # TODO - VO_PROPERTIES has been replaced by VO_RECURSIVE_PROPS
     VO_NODES = 'ivo://ivoa.net/std/VOSpace/v2.0#nodes'
     VO_FILES = 'ivo://ivoa.net/std/VOSpace#files-proto'
     VO_TRANSFER = 'ivo://ivoa.net/std/VOSpace#sync-2.1'
@@ -1400,11 +1395,7 @@ class EndPoints(object):
         """
         :return: The files service endpoint.
         """
-        try:
-            return self.conn.ws_client._get_url((self.VO_FILES, None))
-        except KeyError:
-            # TODO Temporary
-            return self.conn.ws_client._get_url((self.VO_FILES_OLD, None))
+        return self.conn.ws_client._get_url((self.VO_FILES, None))
 
     @property
     def recursive_del(self):
@@ -1418,11 +1409,7 @@ class EndPoints(object):
         """
         :return: recusive property set endpoint
         """
-        try:
-            return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
-        except KeyError:
-            # TODO temporary for regression
-            return self.conn.ws_client._get_url((self.VO_PROPERTIES_OLD, None))
+        return self.conn.ws_client._get_url((self.VO_RECURSIVE_PROPS, None))
 
     @property
     def session(self):
@@ -1531,6 +1518,7 @@ class Client(object):
         self.vospace_token = vospace_token
         self.insecure = insecure
         self._fs_type = True  # True - file system type (cavern), False - db type (vault)
+        self._si_client = None
 
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
@@ -1726,6 +1714,16 @@ class Client(object):
     def has_magic(s):
         return MAGIC_GLOB_CHECK.search(s) is not None
 
+    def _get_si_client(self, uri):
+        ep = self.get_endpoints(uri)
+        if not self._si_client:
+            self._si_client = net.BaseDataClient(ep.resource_id, ep.subject,
+                                                 ep.conn.ws_client.agent, retry=True,
+                                                 host=ep.conn.ws_client.host,
+                                                 insecure=self.insecure,
+                                                 server_versions=SUPPORTED_SERVER_VERSIONS)
+        return self._si_client
+
     # @logExceptions()
     def copy(self, source, destination, send_md5=False, disposition=False,
              head=None):
@@ -1758,37 +1756,16 @@ class Client(object):
         success = False
         copy_failed_message = ""
         dest_size = None
-        dest_md5 = None
-        src_size = None
         src_md5 = None
-        check_md5 = True  # by default try to check all md5
         must_delete = False  # delete node after failed transfer
-        # NOTE: file size and md5 are used to check the opportunity (files
-        # migth be the same) and correctness of the file transfer (interrupted
-        # or incomplete transfer). Although the most reliable of the 2,
-        # md5 checksum introduces higher local computational overheads,
-        # (especially for large files) and might not be available on the server
-        # side. Therefore, sometimes size is used instead.
-        # The algorithm tries to strike a balance between efficiency and
-        # reliability. Worst case scenario is updates to large files that
-        # have only the content updated (FITS headers for example). In that
-        # case both md5 checksum and file transfer are performed
-
+        transf_file = None
         get_node_url_retried = False
-        content_disposition = None
         # url retry counter - how many times an url has been retried
 
         if self.is_remote_file(source):
             # GET
             retried_urls = {}
             files_url = None
-            # TODO - remove. This is temporary for regression
-            try:
-                self.get_endpoints(source).recursive_del
-                new_vos = True
-            except KeyError:
-                # TODO - to delete temporary regression code
-                new_vos = False
             if destination is None:
                 # Set the destination, initially, to the same directory as
                 # the source (strip the scheme)
@@ -1797,9 +1774,8 @@ class Client(object):
                 # We can't write to a directory so take file name from
                 # content-disposition or from filename part of source.
                 disposition = True
-            check_md5 = False
-            cutout_match = FILENAME_PATTERN_MAGIC.search(source)
             get_urls = []
+            cutout_match = FILENAME_PATTERN_MAGIC.search(source)
             if cutout_match is not None and cutout_match.group('cutout'):
                 view = 'cutout'
                 if cutout_match.group('pix'):
@@ -1818,62 +1794,35 @@ class Client(object):
             else:
                 view = 'data'
                 cutout = None
-                check_md5 = True
-                src_md5 = None
-                src_size = None
-                if new_vos:
-                    files_url = self.get_node_url(source, method='GET',
-                                                  cutout=cutout,
-                                                  view=view)
-                    if files_url:
-                        try:
-                            response = self.get_session(source).head(files_url)
-                            response.raise_for_status()
-                            src_md5 = net.extract_md5(response.headers)
-                            src_size = response.headers.get('Content-Length', None)
-                            get_urls.append(
-                                self._add_soda_ops(files_url, view=view, cutout=cutout))
-                        except Exception:
-                            # not much to do. With transfer negotiation it could
-                            # try a different URL.
-                            pass
-                else:
-                    source_props = self.get_node(source, force=True).props
-                    src_md5 = source_props.get('MD5', None)
-                    src_size = source_props.get('length', None)
-                if src_size:
-                    src_size = int(src_size)
-                if src_size == 0:
-                    if os.path.isdir(destination):
-                        dest_name = os.path.split(source)[-1]
-                        destination = os.path.join(destination, dest_name)
-                    if os.path.isfile(destination) and os.stat(destination).st_size == 0:
-                        logger.info('copy: src and dest are already the same')
-                    else:
-                        open(destination, 'w').write('')
-                    if send_md5:
-                        return ZERO_MD5
-                    return 0
-
-                if os.path.isfile(destination):
-                    # check if the local file is up to date before doing the
-                    # transfer. Use size for first comparison as it's faster
-                    dest_size = os.stat(destination).st_size
-                    if dest_size == src_size:
-                        # calculate the destination md5
-                        dest_md5 = \
-                            md5_cache.MD5Cache.compute_md5(destination)
-                        if src_md5 == dest_md5:
-                            logger.info(
-                                'copy: src and dest are already the same')
-                            if disposition:
-                                return None
-                            if send_md5:
-                                return dest_md5
-                            return dest_size
 
             if self._fs_type and (cutout or view == 'header'):
                 raise ValueError('cavern/arc service does not support cutouts or header operations')
+
+            files_url = self.get_node_url(source, method='GET',
+                                          cutout=cutout,
+                                          view=view)
+            try:
+                transf_file = self._get_si_client(source).download_file(
+                    url=files_url, dest=destination,
+                    params=self._get_soda_params(view=view, cutout=cutout))
+                success = True
+            except Exception as e:
+                # not much to do but to fall through with full negotiation
+                logger.debug('GET fail on files endpoint for {}'.format(source), e)
+
+            if not success:
+                # at this point it's probably time to check whether the node is actually empty
+                src_node = self.get_node(source, force=True)
+                src_size = src_node.props.get('length', None)
+                src_size = int(src_size)
+                if src_size == 0:
+                    dest_file = destination
+                    if os.path.isdir(dest_file):
+                        dest_file = os.path.join(dest_file, os.path.basename(source))
+                    open(dest_file, 'wb').write(b'')  # empty file
+                    transf_file = dest_file, ZERO_MD5, 0
+                    dest_size = 0
+                    success = True
 
             while not success:
                 if len(get_urls) == 0:
@@ -1881,11 +1830,8 @@ class Client(object):
                         get_urls = self.get_node_url(source, method='GET',
                                                      cutout=cutout, view=view,
                                                      full_negotiation=True)
-                        # remove files_url that we've tried already
-                        if new_vos:
-                            get_urls = [self._add_soda_ops(url, view=view, cutout=cutout)
-                                        for url in get_urls if url != files_url]
-                        else:
+                        if len(get_urls) > 1:
+                            # remove files_url that we've tried already
                             get_urls = [url for url in get_urls if url != files_url]
                         get_node_url_retried = True
                 if len(get_urls) == 0:
@@ -1893,55 +1839,11 @@ class Client(object):
                 get_url = get_urls.pop(0)
 
                 try:
-                    response = self.get_session(source).get(
-                        get_url, stream=True)
-                    response.raise_for_status()
-                    if disposition:
-                        # Build the destination location from the
-                        # content-disposition value, or source name.
-                        content_disposition = response.headers.get(
-                            'content-disposition', destination)
-                        content_disposition = re.search(r'.*filename=(\S*).*',
-                                                        content_disposition)
-                        if content_disposition is not None:
-                            content_disposition = content_disposition.group(
-                                1).strip()
-                        else:
-                            content_disposition = os.path.split(source)[-1]
-                        if os.path.isdir(destination):
-                            destination = os.path.join(destination,
-                                                       content_disposition)
-                    src_md5 = response.headers.get('Content-MD5', None)
-                    if src_md5:
-                        # server knows to do md5s even for cutouts or headers
-                        check_md5 = True
-                    transfer_md5 = hashlib.md5()
-                    with open(destination, 'wb') as fout:
-                        for chunk in response.iter_content(
-                                chunk_size=512 * 1024):
-                            if chunk:
-                                transfer_md5.update(chunk)
-                                fout.write(chunk)
-                                fout.flush()
-                    dest_md5 = transfer_md5.hexdigest()
-                    dest_size = os.stat(destination).st_size
-                    if check_md5:
-                        if src_md5:
-                            if dest_md5 != src_md5:
-                                raise IOError(
-                                    'Source and destination md5 do not  '
-                                    'match: {} vs. {}'.format(src_md5,
-                                                              dest_md5))
-                        elif src_size:
-                            if dest_size != src_size:
-                                raise exceptions.TransferException(
-                                    'Source and destination sizes do not '
-                                    'match: {} vs. {}'.format(src_size,
-                                                              dest_size))
-                        else:
-                            logger.debug(
-                                "Source md5 or size not available to check")
+                    transf_file = self._get_si_client(source).download_file(
+                        url=get_url, dest=destination,
+                        params=self._get_soda_params(view=view, cutout=cutout))
                     success = True
+                    break
                 except exceptions.HttpException as ex:
                     msg = ''
                     if isinstance(ex, exceptions.TransferException):
@@ -1958,12 +1860,12 @@ class Client(object):
         else:
             # PUT
             success = False
-            dest_md5 = None
             dest_size = None
             destination_node = None
+            dest_node_md5 = None
             try:
                 destination_node = self.get_node(destination, force=True)
-                dest_md5 = destination_node.props.get('MD5', None)
+                dest_node_md5 = destination_node.props.get('MD5', None)
                 dest_size = destination_node.props.get('length', None)
                 if dest_size:
                     dest_size = int(dest_size)
@@ -1980,19 +1882,10 @@ class Client(object):
                     # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
-                destination_node = self.get_node(destination, force=True)
-                dest_md5 = destination_node.props.get('MD5')
-                dest_size = destination_node.props.get('length')
-                # In vault the presence of size is optional
-                if dest_size is not None:
-                    dest_size = int(dest_size)
-                    if dest_size != src_size:
-                        raise IOError(
-                            "Source size ({}) != destination size ({})".
-                            format(src_size, dest_size))
+                transf_file = os.path.basename(destination), ZERO_MD5, 0
                 success = True
             elif src_size == dest_size:
-                if dest_md5 is not None:
+                if dest_node_md5 is not None:
                     # compute the md5 of the source file. This serves 2
                     # purposes:
                     #   1. Check if source is identical to destination and
@@ -2000,136 +1893,61 @@ class Client(object):
                     #   2. send info to the service so it can recover in case
                     #   the bytes got corrupted on the way
                     src_md5 = md5_cache.MD5Cache.compute_md5(source)
-                    if src_md5 == dest_md5:
-                        logger.info(
-                            'copy: src and dest are already the same -> '
-                            'update node metadata')
+                    if src_md5 == dest_node_md5:
+                        logger.info('Source and destination identical for {}. Skip transfer!'.format(source))
                         # post the node so that the modify time is updated
                         self.update(destination_node)
+                        transf_file = os.path.basename(destination), dest_node_md5, dest_size
                         success = True
             if not success:
-                if dest_md5 is not None:
-                    if not src_md5:
-                        src_md5 = md5_cache.MD5Cache.compute_md5(source)
-                    # transfer the bytes with source md5 available
-                    put_urls = self.get_node_url(destination, 'PUT',
-                                                 content_length=src_size,
-                                                 md5_checksum=dest_md5)
-                    while not success:
-                        if len(put_urls) == 0:
-                            if not get_node_url_retried:
-                                put_urls = self.get_node_url(
-                                    destination, method='PUT',
-                                    full_negotiation=True)
-                                # remove the first one as we already tried
-                                # that one.
-                                if put_urls:
-                                    put_urls.pop(0)
-                                get_node_url_retried = True
-                        if len(put_urls) == 0:
-                            break
-                        put_url = put_urls.pop(0)
-                        try:
-                            with open(source, str('rb')) as fin:
-                                response = self.get_session(destination).put(
-                                    put_url, data=fin)
-                            response.raise_for_status()
-                            dest_md5 = net.extract_md5(response.headers)
-                            if dest_md5 and dest_md5 != src_md5:
-                                # raise TransferException so that the URL
-                                # can be retried later
-                                raise exceptions.TransferException(
-                                   "Source md5 ({}) != destination md5 ({})".
-                                   format(src_md5, dest_md5))
-                        except exceptions.HttpException as ex:
-                            msg = ''
-                            if isinstance(ex, exceptions.TransferException):
-                                msg = ' (intermittent error)'
-                                retried_urls[put_url] = retried_urls.get(
-                                    put_url, 0) + 1
-                                if retried_urls[put_url] < \
-                                        MAX_INTERMTTENT_RETRIES:
-                                    # intermittent error - worth retrying later
-                                    put_urls.append(put_url)
-                            copy_failed_message = str(ex)
-                            logger.debug(
-                                "FAILED to PUT to {0}: {1}{2}".format(
-                                    put_url, str(ex), msg))
-                            continue
-                        success = True
+                # transfer the bytes with source md5 available
+                while not success:
+                    if not get_node_url_retried:
+                        put_urls = self.get_node_url(
+                            destination, method='PUT',
+                            full_negotiation=True)
+                        get_node_url_retried = True
+                    if len(put_urls) == 0:
                         break
-                else:
-                    must_delete = True
-                    # transfer the bytes and compute md5 on-the-fly
-                    put_urls = self.get_node_url(destination, 'PUT')
-                    while not success:
-                        if len(put_urls) == 0:
-                            if not get_node_url_retried:
-                                put_urls = self.get_node_url(
-                                    destination, method='PUT',
-                                    full_negotiation=True)
-                                # remove the first one as we already tried
-                                # that one.
-                                if put_urls:
-                                    put_urls.pop(0)
-                                get_node_url_retried = True
-                        if len(put_urls) == 0:
-                            break
-                        put_url = put_urls.pop(0)
-                        try:
-                            with Md5File(source, 'rb') as reader:
-                                response = self.get_session(destination).put(
-                                    put_url, data=reader)
-                            response.raise_for_status()
-                            src_md5 = reader.md5_checksum
-                            dest_md5 = net.extract_md5(response.headers)
-                            if dest_md5 and dest_md5 != src_md5:
-                                # raise TransferException so that the URL
-                                # can be retried later
-                                raise exceptions.TransferException(
-                                    "Source md5 ({}) != destination md5 ({})".
-                                    format(src_md5, dest_md5))
-                            success = True
-                        except exceptions.HttpException as ex:
-                            msg = ''
-                            if isinstance(ex, exceptions.TransferException):
-                                msg = ' (intermittent error)'
-                                retried_urls[put_url] = retried_urls.get(
-                                    put_url, 0) + 1
-                                if retried_urls[put_url] < \
-                                        MAX_INTERMTTENT_RETRIES:
-                                    # intermittent error - worth retrying later
-                                    put_urls.append(put_url)
-                            copy_failed_message = str(ex)
-                            logger.debug(
-                                "FAILED to PUT to site {0}: {1}{2}".format(
-                                    put_url, str(ex), msg))
-                            continue
-                        break
-
+                    put_url = put_urls.pop(0)
+                    try:
+                        transf_file = self._get_si_client(destination).upload_file(
+                            url=put_url,
+                            src=source,
+                            md5_checksum=src_md5)
+                    except Exception as ex:
+                        msg = ''
+                        if isinstance(ex, exceptions.TransferException):
+                            msg = ' (intermittent error)'
+                            retried_urls[put_url] = retried_urls.get(
+                                put_url, 0) + 1
+                            if retried_urls[put_url] < \
+                                    MAX_INTERMTTENT_RETRIES:
+                                # intermittent error - worth retrying later
+                                put_urls.append(put_url)
+                        copy_failed_message = str(ex)
+                        logger.debug(
+                            "FAILED to PUT to {0}: {1}{2}".format(
+                                put_url, str(ex), msg))
+                        continue
+                    success = True
+                    break
         if not success:
             if must_delete:
                 # cleanup
                 self.delete(destination)
             raise OSError(errno.EFAULT,
-                          "Failed copying {0} -> {1} and also failed "
-                          "cleaning up after.\nReason for failure: {2}".
-                          format(source, destination, copy_failed_message))
-        elif check_md5 and src_md5 and dest_md5 and src_md5 != dest_md5:
-            copy_failed_message = 'BUG: Mismatched md5 src ({}) != dest ({})'.\
-                format(src_md5, dest_md5)
-            raise OSError(errno.EFAULT,
-                          "Failed copying {0} -> {1}\n{2}".
+                          "Failed copying {0} -> {1}.\nReason for failure: {2}".
                           format(source, destination, copy_failed_message))
         else:
-            logger.info(
-                'Transfer successful: source md5 ({}) == destination md5 ({})'.
-                format(src_md5, dest_md5))
-        if disposition:
-            return content_disposition
-        if send_md5:
-            return dest_md5
-        return dest_size
+            logger.info('Transfer successful')
+        if transf_file is None:
+            raise RuntimeError('BUG: Not found details of successful transfer')
+        if disposition and transf_file:
+            return transf_file[0]  # file name
+        if send_md5 and transf_file:
+            return transf_file[1]  # file md5
+        return transf_file[2]  # file size
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't
@@ -2361,21 +2179,9 @@ class Client(object):
         # parameters sent as arguments.
 
         direction = {'GET': 'pullFromVoSpace', 'PUT': 'pushToVoSpace'}
-        try:
-            self.get_endpoints(uri).recursive_del
-            urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
-            logger.debug('Transfer URLs: ' + ', '.join(urls))
-            return urls
-        except KeyError:
-            # TODO - delete temporary code for regression
-            old_cutout = cutout
-            if old_cutout:
-                old_cutout = old_cutout.replace('CIRCLE=', 'CIRCLE ICRS ')
-                old_cutout = old_cutout.replace('SUB=', 'CUTOUT ')
-            urls = self.transfer(self.get_endpoints(uri).transfer, uri,
-                                 direction[method], view=view, cutout=old_cutout)
-            logger.debug('Transfer URLs: ' + ', '.join(urls))
-            return urls
+        urls = self.transfer(self.get_endpoints(uri).transfer, uri, direction[method], None, None)
+        logger.debug('Transfer URLs: ' + ', '.join(urls))
+        return urls
 
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.
@@ -2457,18 +2263,18 @@ class Client(object):
                 return response.headers.get('Location', None)
             return None
 
-    def _add_soda_ops(self, url, view=None, cutout=None):
-        # assume that the url points to a SODA service
-        result = url
+    def _get_soda_params(self, view=None, cutout=None):
+        # returns HTTP header corresponding to the soda params
+        result = {}
         if view == 'header':
-            result = '{}?META=true'.format(result)
+            result['META'] = 'true'
         elif cutout:
             if cutout.strip().startswith('['):
                 # pixel cutout
-                result = '{}?SUB={}'.format(result, cutout)
+                result['SUB'] = cutout
             elif cutout.strip().startswith('CIRCLE'):
                 # circle cutout
-                result = '{}?CIRCLE={}'.format(result, quote(cutout.replace('CIRCLE=', '')))
+                result['CIRCLE'] = cutout.replace('CIRCLE=', '')
             else:
                 # TODO add support for other SODA cutouts SUB, POL etc
                 raise ValueError('Unknown cutout type: ' + cutout)
