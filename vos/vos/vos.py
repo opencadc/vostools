@@ -109,7 +109,6 @@ from . import md5_cache
 
 from urllib.parse import urlparse, parse_qs
 logger = logging.getLogger('vos')
-logger.setLevel(logging.ERROR)
 
 if sys.version_info[1] > 6:
     logger.addHandler(logging.NullHandler())
@@ -1757,7 +1756,6 @@ class Client(object):
         success = False
         copy_failed_message = ""
         dest_size = None
-        dest_md5 = None
         src_md5 = None
         must_delete = False  # delete node after failed transfer
         transf_file = None
@@ -1812,6 +1810,20 @@ class Client(object):
                 # not much to do but to fall through with full negotiation
                 logger.debug('GET fail on files endpoint for {}'.format(source), e)
 
+            if not success:
+                # at this point it's probably time to check whether the node is actually empty
+                src_node = self.get_node(source, force=True)
+                src_size = src_node.props.get('length', None)
+                src_size = int(src_size)
+                if src_size == 0:
+                    dest_file = destination
+                    if os.path.isdir(dest_file):
+                        dest_file = os.path.join(dest_file, os.path.basename(source))
+                    open(dest_file, 'wb').write(b'')  # empty file
+                    transf_file = dest_file, ZERO_MD5, 0
+                    dest_size = 0
+                    success = True
+
             while not success:
                 if len(get_urls) == 0:
                     if not get_node_url_retried:
@@ -1848,12 +1860,12 @@ class Client(object):
         else:
             # PUT
             success = False
-            dest_md5 = None
             dest_size = None
             destination_node = None
+            dest_node_md5 = None
             try:
                 destination_node = self.get_node(destination, force=True)
-                dest_md5 = destination_node.props.get('MD5', None)
+                dest_node_md5 = destination_node.props.get('MD5', None)
                 dest_size = destination_node.props.get('length', None)
                 if dest_size:
                     dest_size = int(dest_size)
@@ -1870,9 +1882,10 @@ class Client(object):
                     # to delete just the content of the node?
                     self.delete(destination)
                 self.create(destination)
+                transf_file = os.path.basename(destination), ZERO_MD5, 0
                 success = True
             elif src_size == dest_size:
-                if dest_md5 is not None:
+                if dest_node_md5 is not None:
                     # compute the md5 of the source file. This serves 2
                     # purposes:
                     #   1. Check if source is identical to destination and
@@ -1880,12 +1893,11 @@ class Client(object):
                     #   2. send info to the service so it can recover in case
                     #   the bytes got corrupted on the way
                     src_md5 = md5_cache.MD5Cache.compute_md5(source)
-                    if src_md5 == dest_md5:
-                        logger.info(
-                            'copy: src and dest are already the same -> '
-                            'update node metadata')
+                    if src_md5 == dest_node_md5:
+                        logger.info('Source and destination identical for {}. Skip transfer!'.format(source))
                         # post the node so that the modify time is updated
                         self.update(destination_node)
+                        transf_file = os.path.basename(destination), dest_node_md5, dest_size
                         success = True
             if not success:
                 # transfer the bytes with source md5 available
@@ -1928,14 +1940,14 @@ class Client(object):
                           "Failed copying {0} -> {1}.\nReason for failure: {2}".
                           format(source, destination, copy_failed_message))
         else:
-            logger.info(
-                'Transfer successful: source md5 ({}) == destination md5 ({})'.
-                format(src_md5, dest_md5))
+            logger.info('Transfer successful')
+        if transf_file is None:
+            raise RuntimeError('BUG: Not found details of successful transfer')
         if disposition and transf_file:
-            return transf_file[0]
+            return transf_file[0]  # file name
         if send_md5 and transf_file:
-            return dest_md5[1]
-        return dest_size
+            return transf_file[1]  # file md5
+        return transf_file[2]  # file size
 
     def fix_uri(self, uri):
         """given a uri check if the authority part is there and if it isn't

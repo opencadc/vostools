@@ -14,7 +14,7 @@ else
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
+	echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCAuthtest1.pem cert file"
     exit -1
 else
     set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"

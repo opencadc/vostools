@@ -43,7 +43,7 @@ foreach resource ($resources)
 
     echo $resource | grep "cavern" >& /dev/null
     if ( $status == 0) then
-      set HOME_BASE = "home/cadcauthtest1"
+        set HOME_BASE = "home/cadcauthtest1"
         set VOROOT = "arc:"
         set TESTING_CAVERN = "true"
     else

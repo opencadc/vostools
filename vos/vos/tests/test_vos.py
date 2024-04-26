@@ -398,7 +398,7 @@ class TestClient(unittest.TestCase):
         props.get.return_value = md5sum
         # add props to the mocked node
         node = MagicMock(spec=Node)
-        node.props = {'MD5': md5sum, 'length': 12}
+        node.props = {'MD5': md5sum, 'length': len(file_content)}
 
         # mock one by one the chain of connection.session.response.headers
         session = MagicMock()
@@ -430,7 +430,9 @@ class TestClient(unittest.TestCase):
         # copy from vospace
         test_client.is_remote_file = is_remote_file
         test_client._get_si_client = Mock()
-        test_client.copy(vospaceLocation, osLocation)
+        test_client._get_si_client.return_value.download_file = (
+            Mock(return_value=('foo', md5sum, len(file_content))))
+        cp_size = test_client.copy(vospaceLocation, osLocation)
         get_node_url_mock.assert_called_once_with(vospaceLocation,
                                                   method='GET',
                                                   cutout=None, view='data')
@@ -438,6 +440,7 @@ class TestClient(unittest.TestCase):
                     call().download_file(url=node_location_url, dest=osLocation, params={})]
         assert si_calls == test_client._get_si_client.mock_calls
         assert not computed_md5_mock.called, 'MD5 should be computed on the fly'
+        assert cp_size == len(file_content)
 
         # change the content of local files to trigger a new copy
         get_node_url_mock.reset_mock()
@@ -503,13 +506,16 @@ class TestClient(unittest.TestCase):
         mock_update.reset_mock()
         computed_md5_mock.return_value = md5sum
         to_update_node = MagicMock()
-        to_update_node.props = {'MD5': 'abcde', 'length': 12}
+        to_update_node.props = {'MD5': 'abcde', 'length': len(file_content)}
         test_client.get_node = Mock(side_effect=[to_update_node, node])
-        test_client.copy(osLocation, vospaceLocation)
+        test_client._get_si_client.return_value.upload_file = (
+            Mock(return_value=('foo', md5sum, len(file_content))))
+        cp_size = test_client.copy(osLocation, vospaceLocation)
         assert not mock_update.called
         get_node_url_mock.assert_called_once_with(vospaceLocation, method='PUT',
                                                   full_negotiation=True)
         computed_md5_mock.assert_called_once_with(osLocation)
+        assert cp_size == len(file_content)
 
         # copy 0 size file -> delete and create node but no bytes
         # transferred
@@ -523,10 +529,11 @@ class TestClient(unittest.TestCase):
         test_client.create = mock_create
         with patch('vos.vos.os.stat', Mock()) as stat_mock:
             stat_mock.return_value = Mock(st_size=0)
-            test_client.copy(osLocation, vospaceLocation)
+            cp_size = test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         mock_delete.assert_called_once_with(vospaceLocation)
         assert not get_node_url_mock.called
+        assert 0 == cp_size
 
         # copy new 0 size file -> create node but no bytes transferred
         get_node_url_mock.reset_mock()
@@ -540,10 +547,11 @@ class TestClient(unittest.TestCase):
         test_client.create = mock_create
         with patch('vos.vos.os.stat', Mock()) as stat_mock:
             stat_mock.return_value = Mock(st_size=0)
-            test_client.copy(osLocation, vospaceLocation)
+            cp_size = test_client.copy(osLocation, vospaceLocation)
         mock_create.assert_called_once_with(vospaceLocation)
         assert not mock_delete.called
         assert not get_node_url_mock.called
+        assert cp_size == 0
 
         # requests just the headers when md5 not provided in the header
         props.get.side_effect = [None]

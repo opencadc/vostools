@@ -17,7 +17,7 @@ else
 endif
 
 if (! ${?CADC_TESTCERT_PATH} ) then
-  echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCRegtest1.pem cert file"
+  echo "CADC_TESTCERT_PATH env variable not set. Must point to the location of x509_CADCAuthtest1.pem cert file"
   exit -1
 else
   set CERTFILE = "$CADC_TESTCERT_PATH/x509_CADCAuthtest1.pem"
@@ -143,7 +143,7 @@ foreach resource ($resources)
   $CPCMD $CERT $THIS_DIR/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
   echo " [OK]"
 
-  echo -n "copy empty files"
+  echo -n "copy empty files to server"
   rm -f /tmp/zerosize.txt
   touch /tmp/zerosize.txt
   $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
@@ -151,6 +151,19 @@ foreach resource ($resources)
   # repeat
   $CPCMD $CERT /tmp/zerosize.txt $CONTAINER || echo " [FAIL]" && exit -1
   $LSCMD $CERT $CONTAINER/zerosize.txt | awk '{print $5}'| grep "0" >& /dev/null || echo " [FAIL2]" && exit -1
+
+  echo -n "copy empty files from server"
+  rm -f /tmp/zerosize.txt
+  $CPCMD $CERT $CONTAINER/zerosize.txt /tmp/zerosize.txt >& /dev/null || echo " [FAIL1]" && exit -1
+  rm -f /tmp/zerosize.txt
+
+  echo "Some content" > /tmp/zerosize.txt
+  $CPCMD $CERT $CONTAINER/zerosize.txt /tmp/ >& /dev/null || echo " [FAIL2]" && exit -1
+  if ( -z /tmp/zerosize.txt) then
+      echo " [OK]"
+  else
+      echo " [FAIL3]" && exit -1
+  endif
 
   echo -n "view existing data node "
   $LSCMD $CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && exit -1
