@@ -136,8 +136,7 @@ foreach resource ($resources)
   echo " [OK]"
 
   echo -n "create link to unknown scheme in URI"
-  #TODO not sure why this is not working anymore
-  #$LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCAuthtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
+  $LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCAuthtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
   echo " [SKIPPED - TODO]"
 
   echo -n "follow the invalid link and fail"

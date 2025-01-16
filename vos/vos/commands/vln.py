@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2022.                            (c) 2022.
+#  (c) 2024.                            (c) 2024.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -89,7 +89,8 @@ examples:
 
     vln vos:vospace/junk.txt vos:vospace/linkToJunk.txt
     vln vos:vospace/directory vos:vospace/linkToDirectory
-    vln http://external.data.source vos:vospace/linkToExternalDataSource
+    vln https://external.data.source vos:vospace/linkToExternalDataSource
+    vln file:///data/localfile vos:vospace/linkToLocalFile
 
 """.format(URI_DESCRIPTION)
 
@@ -106,11 +107,10 @@ def vln():
             vospace_certfile=opt.certfile,
             vospace_token=opt.token,
             insecure=opt.insecure)
-        if not client.is_remote_file(opt.source) or \
-                not client.is_remote_file(opt.target):
+        if not client.is_remote_file(opt.target):
             raise ArgumentError(
                 None,
-                "source must be vos node or http url, target must be vos node")
+                "source must be vos node or https url, target must be vos node")
 
         client.link(opt.source, opt.target)
     except ArgumentError as ex:

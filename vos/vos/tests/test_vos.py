@@ -330,51 +330,36 @@ class TestClient(unittest.TestCase):
         # /anode/abc /anode/def - > anode/a* should return
         # /anode/adc
 
-        mock_node = MagicMock(type='vos:ContainerNode')
-        mock_node.configure_mock(name='anode')
-        mock_child_node1 = Mock(type='vos:DataNode')
-        mock_child_node1.name = 'abc'
-        mock_child_node2 = Mock(type='vos:DataNode')
-        mock_child_node2.name = 'def'
-        # because we use wild characters in the root node,
-        # we need to create a corresponding node for the base node
-        mock_base_node = Mock(type='vos:ContainerNode')
-        mock_base_node.name = 'vos:'
-        mock_base_node.node_list = [mock_node]
-        mock_node.node_list = [mock_base_node, mock_child_node1,
-                               mock_child_node2]
         client = Client()
-        client.get_node = Mock(
-            side_effect=[mock_node, mock_base_node, mock_node])
+        client.listdir = Mock(
+            return_value=['abc', 'def'])  # list parent dir and anode dir
         self.assertEqual(['vos:/anode/abc'], client.glob('vos:/anode/a*'))
+        client.listdir = Mock(
+            return_value=['abc', 'def'])  # list parent dir and anode dir
+        self.assertEqual([], client.glob('vos:/anode/m*'))
+        client.access = Mock()
+        client.listdir = Mock(
+            side_effect=[['anode'], ['abc', 'def']])
         self.assertEqual(['vos:/anode/abc'], client.glob('vos:/*node/abc'))
+        client.listdir = Mock(
+            side_effect=[['anode'], ['abc', 'def']])
+        self.assertEqual([], client.glob('vos:/*foo/abc'))
 
         # test nodes:
         # /anode/.test1 /bnode/sometests /bnode/blah
-        # /[a,c]node/*test* should return /bnode/somtests (.test1 is filtered
+        # /[a,c]node/*test* should return /bnode/sometests (.test1 is filtered
         # out as a special file)
-
-        mock_node1 = MagicMock(type='vos:ContainerNode')
-        mock_node1.configure_mock(name='anode')
-        mock_node1.node_list = [mock_child_node1]
-
-        mock_child_node2 = Mock(type='vos:DataNode')
-        mock_child_node2.name = 'sometests'
-        mock_child_node3 = Mock(type='vos:DataNode')
-        mock_child_node3.name = 'blah'
-        mock_node2 = MagicMock(type='vos:ContainerNode')
-        mock_node2.configure_mock(name='bnode')
-        mock_node2.node_list = [mock_child_node2, mock_child_node3]
 
         # because we use wild characters in the root node,
         # we need to create a corresponding node for the base node
-        mock_base_node = Mock(type='vos:DataNode')
-        mock_base_node.name = 'vos:'
-        mock_base_node.node_list = [mock_node1, mock_node2]
         client = Client()
         client.is_remote_file = Mock()
-        client.get_node = Mock(
-            side_effect=[mock_base_node, mock_node1, mock_node2])
+        dirs = ['anode', 'bnode']
+        anode = ['.test']
+        bnode = ['sometests', 'blah']
+        client.listdir = Mock(
+            side_effect=[dirs, anode, bnode])
+        client.access = Mock()
         self.assertEqual(['vos:/bnode/sometests'],
                          client.glob('vos:/[a,b]node/*test*'))
 
