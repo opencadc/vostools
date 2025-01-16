@@ -2723,19 +2723,23 @@ class Client(object):
 
     def listdir(self, uri, force=False):
         """
-        Walk through the directory structure a la os.walk.
-        Setting force=True will make sure no cached results are used.
+        Return a list with the content of the directory
         Follows LinksNodes to their destination location.
         Note: this method returns a list of children names. For larger
-        directories, use get_children_info() to iterate through the list and
-        avoid loading it into memory.
+        directories, use get_children_info() to iterate through it and
+        avoid loading the entire content into memory.
 
         :param force: don't use cached values, retrieve from service.
         :param uri: The ContainerNode to get a listing of.
         :rtype [unicode]
         """
         logger.debug(str(uri))
-        return [i.name for i in self.get_children_info(uri, force=force)]
+        node = self.get_node(uri, limit=0, force=force)
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            # logger.debug(uri)
+            node = self.get_node(uri, limit=0, force=force)
+        return [i.name for i in self.get_children_info(node.uri, force=force)]
 
     def _node_type(self, uri):
         """
