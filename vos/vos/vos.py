@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2024.                            (c) 2024.
+#  (c) 2025.                            (c) 2025.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -811,7 +811,7 @@ class Node(object):
         """ Gets an iterator over the nodes held to by a ContainerNode"""
         # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY
         # CAN SET LIMIT=0 IN THE CALL Also, if the number of nodes
-        # on the firt call was less than 500, we likely got them
+        # on the first call was less than 500, we likely got them
         # all during the init
         if not self.isdir():
             return
@@ -1890,7 +1890,7 @@ class Client(object):
                     # purposes:
                     #   1. Check if source is identical to destination and
                     #   avoid sending the bytes again.
-                    #   2. send info to the service so it can recover in case
+                    #   2. send info to the service so that it can recover in case
                     #   the bytes got corrupted on the way
                     src_md5 = md5_cache.MD5Cache.compute_md5(source)
                     if src_md5 == dest_node_md5:
@@ -2186,8 +2186,7 @@ class Client(object):
     def link(self, src_uri, link_uri):
         """Make link_uri point to src_uri.
 
-        :param src_uri: the existing resource, either a vospace uri or a http
-        url
+        :param src_uri: the existing resource to link to
         :type src_uri: unicode
         :param link_uri: the vospace node to create that will be a link to
         src_uri
@@ -2197,7 +2196,8 @@ class Client(object):
         HttpException exceptions declared in the cadcutils.exceptions module
         """
         link_uri = self.fix_uri(link_uri)
-        src_uri = self.fix_uri(src_uri)
+        if "://" not in src_uri:
+            src_uri = self.fix_uri(src_uri)
 
         # if the link_uri points at an existing directory then we try and
         # make a link into that directory
@@ -2723,24 +2723,23 @@ class Client(object):
 
     def listdir(self, uri, force=False):
         """
-        Walk through the directory structure a la os.walk.
-        Setting force=True will make sure no cached results are used.
+        Return a list with the content of the directory
         Follows LinksNodes to their destination location.
+        Note: this method returns a list of children names. For larger
+        directories, use get_children_info() to iterate through it and
+        avoid loading the entire content into memory.
 
         :param force: don't use cached values, retrieve from service.
         :param uri: The ContainerNode to get a listing of.
         :rtype [unicode]
         """
-        names = []
         logger.debug(str(uri))
-        node = self.get_node(uri, limit=None, force=force)
+        node = self.get_node(uri, limit=0, force=force)
         while node.type == "vos:LinkNode":
             uri = node.target
             # logger.debug(uri)
-            node = self.get_node(uri, limit=None, force=force)
-        for thisNode in node.node_list:
-            names.append(thisNode.name)
-        return names
+            node = self.get_node(uri, limit=0, force=force)
+        return [i.name for i in self.get_children_info(node.uri, force=force)]
 
     def _node_type(self, uri):
         """
