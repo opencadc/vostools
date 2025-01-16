@@ -110,7 +110,7 @@ def vln():
         if not client.is_remote_file(opt.target):
             raise ArgumentError(
                 None,
-                "source must be vos node or https url, target must be vos node")
+                "target must be vos node")
 
         client.link(opt.source, opt.target)
     except ArgumentError as ex:

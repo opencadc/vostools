@@ -137,7 +137,7 @@ foreach resource ($resources)
 
   echo -n "create link to unknown scheme in URI"
   $LNCMD $CERT unknown://cadc.nrc.ca~vault/CADCAuthtest1 $CONTAINER/e2link >& /dev/null && echo " [FAIL]" && exit -1
-  echo " [SKIPPED - TODO]"
+  echo " [OK]"
 
   echo -n "follow the invalid link and fail"
   $CPCMD $CERT $CONTAINER/e2link/somefile /tmp  >& /dev/null && echo " [FAIL]" && exit -1
