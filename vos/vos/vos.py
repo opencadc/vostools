@@ -819,7 +819,7 @@ class Node(object):
         if self.node_list is not None:
             # children already downloaded
             for i in self.node_list:
-                yield i.uri
+                yield i
 
         # stream children
         xml_file = StringIO(
