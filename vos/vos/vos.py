@@ -2602,6 +2602,8 @@ class Client(object):
         logger.debug("delete {0}".format(uri))
         with nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
+            if isinstance(url, list) and len(url) > 0:
+                url = url.pop(0)
             response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
