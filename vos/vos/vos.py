@@ -1801,6 +1801,8 @@ class Client(object):
             files_url = self.get_node_url(source, method='GET',
                                           cutout=cutout,
                                           view=view)
+            if isinstance(files_url, list) and len(files_url) > 0:
+                files_url = files_url.pop(0)
             try:
                 transf_file = self._get_si_client(source).download_file(
                     url=files_url, dest=destination,
@@ -2575,6 +2577,8 @@ class Client(object):
         uri = self.fix_uri(uri)
         node = Node(uri, node_type="vos:ContainerNode")
         url = self.get_node_url(uri)
+        if isinstance(url, list) and len(url) > 0:
+            url = url.pop(0)
         try:
             response = self.get_session(uri).put(
                 url, data=str(node), headers={'Content-Type': 'text/xml'})
@@ -2598,6 +2602,8 @@ class Client(object):
         logger.debug("delete {0}".format(uri))
         with nodeCache.volatile(uri):
             url = self.get_node_url(uri, method='GET')
+            if isinstance(url, list) and len(url) > 0:
+                url = url.pop(0)
             response = self.get_session(uri).delete(url)
             response.raise_for_status()
 
