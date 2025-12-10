@@ -92,3 +92,11 @@ installed.
 Run the tests:
 
     $ ./test/scripts/vospace-all.tcsh
+
+Acknowledgements
+================
+The contributions `vostools PR #232 <https://github.com/opencadc/vostools/pull/232>`__ and
+`vostools PR #234 <https://github.com/opencadc/vostools/pull/234>`__ have received funding from the Spanish Government
+(grant EQC2021-007479-P, funded by MCIN/AEI/10.13039/501100011033), the EU NextGeneration/PRTR (PRTR-C17.I1),
+and the Generalitat de Catalunya.
+
