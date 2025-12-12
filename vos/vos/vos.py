@@ -233,7 +233,7 @@ class Connection(object):
         self.resource_id = resource_id
         if vospace_token is not None:
             session_headers = {HEADER_DELEG_TOKEN: vospace_token}
-            self.subject = net.Subject()
+            self.subject = net.Subject(token=vospace_token)
             self.vo_token = vospace_token
         else:
             cert = vospace_certfile

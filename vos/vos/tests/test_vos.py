@@ -213,7 +213,8 @@ class TestClient(unittest.TestCase):
         client.is_remote_file = Mock()
         client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
-        self.assertTrue(conn.subject.anon)
+        self.assertFalse(conn.subject.anon)
+        self.assertEqual('a_token_string', conn.subject.token)
         self.assertTrue(conn.vo_token)
 
         # Specifying both a certfile and token implies token (auth) / http
@@ -222,7 +223,7 @@ class TestClient(unittest.TestCase):
                             vospace_token='a_token_string')
         client.get_session(uri='vos://cadc.nrc.ca~vault')
         conn = client._endpoints['ivo://cadc.nrc.ca/vault'].conn
-        self.assertTrue(conn.subject.anon)
+        self.assertFalse(conn.subject.anon)
         self.assertTrue(conn.vo_token)
 
         # update auth for specific service
