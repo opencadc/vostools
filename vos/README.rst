@@ -33,7 +33,7 @@ System Requirments
 
 -  A CANFAR VOSpace account (required for WRITE access, READ access can
    be anonymous)
--  python3.7 or later
+-  Python 3.10 through 3.14
 
 Installation
 ------------

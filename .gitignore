@@ -51,6 +51,8 @@ distribute-*.tar.gz
 .project
 .pydevproject
 .settings
+.cursor
+.vscode
 
 # Mac OSX
 .DS_Store

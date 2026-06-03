@@ -69,7 +69,7 @@ To test a specific version:
 
 ::
 
-    cd ./vos && tox -e py3.9
+    cd ./vos && tox -e py310
 
 
 To list all the available environments:

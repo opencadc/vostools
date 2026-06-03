@@ -1861,6 +1861,7 @@ class Client(object):
                     continue
         else:
             # PUT
+            retried_urls = {}
             success = False
             dest_size = None
             destination_node = None
