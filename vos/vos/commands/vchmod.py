@@ -77,7 +77,7 @@ from ..commonparser import exit_on_exception
 import logging
 import sys
 import re
-from argparse import ArgumentError
+from argparse import ArgumentTypeError
 
 
 def __mode__(mode):
@@ -90,7 +90,7 @@ def __mode__(mode):
     _mode = re.match(r"(?P<who>og|go|o|g)(?P<op>[+\-=])(?P<what>rw|wr|r|w)",
                      mode)
     if _mode is None:
-        raise ArgumentError(_mode, 'Invalid mode: {}'.format(mode))
+        raise ArgumentTypeError('Invalid mode: {}'.format(mode))
     return _mode.groupdict()
 
 
@@ -151,8 +151,7 @@ def vchmod():
         if 'g' in mode['who']:
             if '-' == mode['op']:
                 if not len(group_names) == 0:
-                    raise ArgumentError(
-                        opt.groups,
+                    raise ValueError(
                         "Names of groups not valid with remove permission")
                 if 'r' in mode['what']:
                     props['readgroup'] = None
@@ -161,10 +160,9 @@ def vchmod():
             else:
                 if not len(group_names) == len(mode['what']):
                     name = len(mode['what']) > 1 and "names" or "name"
-                    raise ArgumentError(None,
-                                        "{} group {} required for {}".format(
-                                            len(mode['what']), name,
-                                            mode['what']))
+                    raise ValueError(
+                        "{} group {} required for {}".format(
+                            len(mode['what']), name, mode['what']))
                 if mode['what'].find('r') > -1:
                     # remove duplicate whitespaces
                     read_groups = " ".join(
@@ -178,10 +176,10 @@ def vchmod():
                     props['writegroup'] = \
                         (CADC_GMS_PREFIX +
                          wgroups.replace(" ", " " + CADC_GMS_PREFIX))
-    except ArgumentError as er:
+    except ValueError as er:
         parser.print_usage()
         logging.error(str(er))
-        sys.exit(er)
+        sys.exit(1)
 
     logging.debug("Setting {} on {}".format(props, opt.node))
 
