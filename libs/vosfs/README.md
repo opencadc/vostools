@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/opencadc/vostools/actions/workflows/quality.yml/badge.svg)](https://github.com/opencadc/vostools/actions/workflows/quality.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](LICENSE)
 
 `vosfs` is an asynchronous [`fsspec`](https://filesystem-spec.readthedocs.io/)
 filesystem for the **OpenCADC Cavern VOSpace** service: it registers the `vos`
@@ -76,5 +76,9 @@ uv run --all-packages zensical build --strict --clean
 
 ## License
 
+Copyright (c) 2026 National Research Council of Canada / Government of Canada.
+
 `vosfs` is distributed under the terms of the
-[BSD 3-Clause License](LICENSE) (BSD-3-Clause).
+[GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
+`vosfs` 0.11.0 and earlier releases were published under the BSD 3-Clause
+License.
