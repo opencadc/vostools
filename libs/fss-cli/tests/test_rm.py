@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, NoReturn
 import pytest
 import typer
 
-from fsspec_cli._rm import _write_verbose_line
+from fss_cli._rm import _write_verbose_line
 
 from ._support import _invoke, _RecordingSource, _source_must_not_run
 
@@ -911,8 +911,8 @@ def test_rm_never_calls_rm_or_rmdir_primitives() -> None:
 
 
 def test_rm_reuses_unlink_confirmed_removal_boundary() -> None:
-    from fsspec_cli._rm import _confirmed_rm_file as rm_confirmed
-    from fsspec_cli._unlink import _confirmed_rm_file as unlink_confirmed
+    from fss_cli._rm import _confirmed_rm_file as rm_confirmed
+    from fss_cli._unlink import _confirmed_rm_file as unlink_confirmed
 
     assert rm_confirmed is unlink_confirmed
 
@@ -1375,7 +1375,7 @@ def test_rm_verbose_stops_later_mutation_after_stdout_failure(
         message = "disk full"
         raise OSError(message)
 
-    monkeypatch.setattr("fsspec_cli._rm._write_verbose_line", fail_after_first)
+    monkeypatch.setattr("fss_cli._rm._write_verbose_line", fail_after_first)
 
     result = _invoke(
         "rm",
@@ -1405,7 +1405,7 @@ def test_rm_verbose_reports_short_write_and_stops_later_mutation(
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._rm._binary_stdout", _PrefixStdout)
+    monkeypatch.setattr("fss_cli._rm._binary_stdout", _PrefixStdout)
 
     result = _invoke(
         "rm",
@@ -1435,8 +1435,8 @@ def test_rm_verbose_line_uses_shared_binary_writer(
     def write_binary(writer: object, payload: bytes) -> None:
         events.append(("write", writer, payload))
 
-    monkeypatch.setattr("fsspec_cli._rm._binary_stdout", lambda: stdout)
-    monkeypatch.setattr("fsspec_cli._rm._write_binary", write_binary)
+    monkeypatch.setattr("fss_cli._rm._binary_stdout", lambda: stdout)
+    monkeypatch.setattr("fss_cli._rm._write_binary", write_binary)
 
     _write_verbose_line("memory:/docs/notes.txt")
 
@@ -1456,7 +1456,7 @@ def test_rm_verbose_keeps_broken_pipe_silent_but_reports_exit_failure(
         del spelling
         raise broken_pipe
 
-    monkeypatch.setattr("fsspec_cli._rm._write_verbose_line", break_stdout)
+    monkeypatch.setattr("fss_cli._rm._write_verbose_line", break_stdout)
     result = _invoke(
         "rm",
         ["-v", "memory:/docs/notes.txt"],
@@ -1482,7 +1482,7 @@ def test_rm_verbose_solo_broken_pipe_is_silent_status_141(
         del spelling
         raise broken_pipe
 
-    monkeypatch.setattr("fsspec_cli._rm._write_verbose_line", break_stdout)
+    monkeypatch.setattr("fss_cli._rm._write_verbose_line", break_stdout)
     result = _invoke(
         "rm",
         ["-v", "memory:/docs/notes.txt"],

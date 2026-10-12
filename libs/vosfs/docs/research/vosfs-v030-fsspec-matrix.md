@@ -98,8 +98,8 @@ This direct-`vosfs` API matrix does not admit a corresponding `fsspec-cli`
 profile. When this was written, `rm -R`/`rm -r` were rejected outright;
 they are now gated behind the `recursion.remove` capability and are off by
 default. See the
-[`rm` contract](../design/fsspec-cli/commands.md#rm) and
-[why recursive removal is non-atomic](../design/fsspec-cli/lessons.md#11-recursive-removal-is-sequential-and-non-atomic--say-so).
+[`rm` contract](../design/fss-cli/commands.md#rm) and
+[why recursive removal is non-atomic](../design/fss-cli/lessons.md#11-recursive-removal-is-sequential-and-non-atomic--say-so).
 
 | Public API / async hook | Status | v0.3.0 contract |
 | --- | --- | --- |

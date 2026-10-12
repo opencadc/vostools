@@ -1,1 +1,1 @@
-"""fsspec-cli tests."""
+"""fss-cli tests."""

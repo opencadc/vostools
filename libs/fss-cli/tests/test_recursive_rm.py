@@ -11,7 +11,7 @@ import pytest
 from fsspec.asyn import AsyncFileSystem
 from typer.testing import CliRunner, Result
 
-from fsspec_cli import App, AsyncFilesystemSource
+from fss_cli import App, AsyncFilesystemSource
 
 from ._ansi import strip_ansi
 from ._support import _RecordingSource
@@ -618,7 +618,7 @@ def test_recursive_rm_acquires_all_sources_then_exits_in_reverse_order() -> None
 def test_recursive_rm_source_has_no_backend_dispatch_or_forbidden_calls() -> None:
     import inspect
 
-    import fsspec_cli._recursive_rm as recursive_rm
+    import fss_cli._recursive_rm as recursive_rm
 
     source = inspect.getsource(recursive_rm)
     for forbidden in (
@@ -898,7 +898,7 @@ def test_recursive_rm_verbose_output_failure_stops_later_mutation(
     )
     output_error = OSError("closed")
     write = Mock(side_effect=output_error)
-    monkeypatch.setattr("fsspec_cli._rm._write_verbose_line", write)
+    monkeypatch.setattr("fss_cli._rm._write_verbose_line", write)
 
     result = _invoke_recursive_rm(
         ["-Rv", "memory:/one", "memory:/two"],

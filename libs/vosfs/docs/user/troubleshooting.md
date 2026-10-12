@@ -113,7 +113,7 @@ the behavior silently differs from what you may expect:
 | --- | --- |
 | A ranged read transfers only those bytes | On backends that answer `206` (for example minoc/`vault`), yes. On Cavern, `Range` is ignored and `vosfs` falls back to a whole-object read then local slice. |
 | `blockcache::` / `cached::` wrappers | Not supported; use `simplecache::` or `filecache::` instead. |
-| FUSE mounting | Not provided. Use the fsspec API or [`fsspec-cli`](cli/index.md). |
+| FUSE mounting | Not provided. Use the fsspec API or [`fss-cli`](cli/index.md). |
 | `created` timestamps, `open_async` | Not part of the profile. |
 
 ## `TimeoutError` or `ConnectionError`

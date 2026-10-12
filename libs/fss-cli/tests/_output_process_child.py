@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, TextIO
 
 from fsspec.asyn import AsyncFileSystem
 
-from fsspec_cli import App
+from fss_cli import App
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

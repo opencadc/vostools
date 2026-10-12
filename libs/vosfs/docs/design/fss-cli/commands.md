@@ -1,11 +1,11 @@
-# `fsspec-cli` command contracts
+# `fss-cli` command contracts
 
 Status: **Normative.** Each section states one command's *delta* from
 [`contract.md`](contract.md), which supplies operand parsing, diagnostics,
 result validation, buffered output, exit status, and source lifecycle for all
 of them.
 
-Executable evidence is the test suite under `src/fsspec-cli/tests/`; per-row
+Executable evidence is the test suite under `src/fss-cli/tests/`; per-row
 status is in [`matrix.md`](matrix.md). Where prose and a passing gate disagree,
 the gate wins.
 

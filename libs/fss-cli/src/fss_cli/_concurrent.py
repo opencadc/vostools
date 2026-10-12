@@ -5,7 +5,7 @@ independent calls run them concurrently under one fixed bound. Results are
 always returned in submission order, so output and the reported failure stay
 deterministic regardless of completion order.
 
-Per :doc:`lessons.md §3 <../../../vosfs/docs/design/fsspec-cli/lessons>`, a started
+Per :doc:`lessons.md §3 <../../../vosfs/docs/design/fss-cli/lessons>`, a started
 operation is never orphaned: after the first failure no new operation starts,
 and every in-flight one is drained before control flow propagates.
 """

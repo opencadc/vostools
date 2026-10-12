@@ -1,4 +1,4 @@
-"""Run fsspec-cli compatibility tests from fresh installed wheels."""
+"""Run fss-cli compatibility tests from fresh installed wheels."""
 
 from __future__ import annotations
 
@@ -95,9 +95,9 @@ def _build_artifacts(
     root: Path,
     environment: dict[str, str],
 ) -> tuple[Path, Path, Path]:
-    cli_dist = root / "dist" / "fsspec-cli"
+    cli_dist = root / "dist" / "fss-cli"
     vosfs_dist = root / "dist" / "vosfs"
-    rebuilt_dist = root / "dist" / "fsspec-cli-from-sdist"
+    rebuilt_dist = root / "dist" / "fss-cli-from-sdist"
     cli_dist.mkdir(parents=True)
     vosfs_dist.mkdir(parents=True)
     rebuilt_dist.mkdir(parents=True)
@@ -107,7 +107,7 @@ def _build_artifacts(
             uv,
             "build",
             "--package",
-            "fsspec-cli",
+            "fss-cli",
             "--wheel",
             "--out-dir",
             str(cli_dist),
@@ -120,7 +120,7 @@ def _build_artifacts(
             uv,
             "build",
             "--package",
-            "fsspec-cli",
+            "fss-cli",
             "--sdist",
             "--out-dir",
             str(cli_dist),
@@ -142,8 +142,8 @@ def _build_artifacts(
         environment=environment,
     )
 
-    cli_wheel = _only_artifact(cli_dist, "fsspec_cli-*.whl")
-    cli_sdist = _only_artifact(cli_dist, "fsspec_cli-*.tar.gz")
+    cli_wheel = _only_artifact(cli_dist, "fss_cli-*.whl")
+    cli_sdist = _only_artifact(cli_dist, "fss_cli-*.tar.gz")
     vosfs_wheel = _only_artifact(vosfs_dist, "vosfs-*.whl")
     _run(
         [
@@ -157,7 +157,7 @@ def _build_artifacts(
         cwd=root,
         environment=environment,
     )
-    _only_artifact(rebuilt_dist, "fsspec_cli-*.whl")
+    _only_artifact(rebuilt_dist, "fss_cli-*.whl")
     return cli_wheel, cli_sdist, vosfs_wheel
 
 
@@ -197,7 +197,7 @@ def main() -> None:
         message = "installed-wheel gate requires uv on PATH"
         raise RuntimeError(message)
 
-    with tempfile.TemporaryDirectory(prefix="fsspec-cli-wheel-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="fss-cli-wheel-") as temporary:
         root = Path(temporary).resolve()
         if root.is_relative_to(_REPOSITORY_ROOT):
             message = f"gate root must be outside repository: {root}"
@@ -212,10 +212,10 @@ def main() -> None:
         tests = _extract_tests(cli_sdist, root)
         environment.update(
             {
-                "FSSPEC_CLI_INSTALLED_WHEEL_GATE": "1",
-                "FSSPEC_CLI_REPOSITORY_ROOT": str(_REPOSITORY_ROOT),
-                "FSSPEC_CLI_SDIST": str(cli_sdist),
-                "FSSPEC_CLI_WHEEL": str(cli_wheel),
+                "FSS_CLI_INSTALLED_WHEEL_GATE": "1",
+                "FSS_CLI_REPOSITORY_ROOT": str(_REPOSITORY_ROOT),
+                "FSS_CLI_SDIST": str(cli_sdist),
+                "FSS_CLI_WHEEL": str(cli_wheel),
             }
         )
 
@@ -259,7 +259,7 @@ def main() -> None:
         )
         vosfs_environment = {
             **environment,
-            "FSSPEC_CLI_VOSFS_WHEEL": str(vosfs_wheel),
+            "FSS_CLI_VOSFS_WHEEL": str(vosfs_wheel),
         }
         _run_pytest(
             vosfs_python,

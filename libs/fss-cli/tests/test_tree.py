@@ -14,7 +14,7 @@ import typer
 from fsspec.asyn import AsyncFileSystem
 from typer.main import get_command
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._ansi import strip_ansi
 from ._support import _invoke

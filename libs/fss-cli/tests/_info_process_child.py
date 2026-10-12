@@ -9,7 +9,7 @@ from types import MappingProxyType
 from fsspec.asyn import AsyncFileSystem
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 
 class _InfoFileSystem(AsyncFileSystem):

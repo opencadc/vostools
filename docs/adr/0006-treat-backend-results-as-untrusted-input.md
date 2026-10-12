@@ -61,7 +61,7 @@ clear diagnostic instead of a traceback or a wrong deletion.
   Missing optional metadata is normalized to `None` and displayed as unknown
   in the stable shell columns defined by [ADR 0008](0008-render-shell-shaped-long-listings.md);
   only a value of the wrong *shape* is an incompatible result. See
-  [`libs/vosfs/docs/design/fsspec-cli/contract.md` §10](../../libs/vosfs/docs/design/fsspec-cli/contract.md#10-metadata-normalization).
+  [`libs/vosfs/docs/design/fss-cli/contract.md` §10](../../libs/vosfs/docs/design/fss-cli/contract.md#10-metadata-normalization).
 - The CLI cannot accept a backend-declared capability registry: that would mean
   believing a backend's self-description instead of validating what it returns.
 - The cost is real — validation is a visible share of the recursive-copy module

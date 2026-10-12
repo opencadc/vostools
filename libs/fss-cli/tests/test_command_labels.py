@@ -7,12 +7,12 @@ from typing import NoReturn
 import pytest
 import typer
 
-import fsspec_cli._app as app_module
-from fsspec_cli._cat import _run_cat
-from fsspec_cli._command import _MappedOperand, _parse_mapped_operand
-from fsspec_cli._ls import _LsRequest, _run_ls
-from fsspec_cli._sources import _SourceInvocation
-from fsspec_cli._stat import _run_stat
+import fss_cli._app as app_module
+from fss_cli._cat import _run_cat
+from fss_cli._command import _MappedOperand, _parse_mapped_operand
+from fss_cli._ls import _LsRequest, _run_ls
+from fss_cli._sources import _SourceInvocation
+from fss_cli._stat import _run_stat
 
 from ._support import _RecordingSource
 
@@ -172,7 +172,7 @@ def test_cat_output_failure_diagnostic_uses_concrete_command_label(
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdout", _FailStdout)
+    monkeypatch.setattr("fss_cli._cat._binary_stdout", _FailStdout)
 
     with pytest.raises(typer.Exit) as caught:
         asyncio.run(
@@ -211,7 +211,7 @@ def test_stat_output_failure_diagnostic_uses_concrete_command_label(
         del line
         raise output_error
 
-    monkeypatch.setattr("fsspec_cli._stat._write_line", fail_stdout)
+    monkeypatch.setattr("fss_cli._stat._write_line", fail_stdout)
 
     with pytest.raises(typer.Exit) as caught:
         asyncio.run(

@@ -110,8 +110,8 @@ def _pin_stat_rendering(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     def missing(identifier: int) -> NoReturn:
         raise KeyError(identifier)
 
-    monkeypatch.setattr("fsspec_cli._accounts.pwd.getpwuid", missing)
-    monkeypatch.setattr("fsspec_cli._accounts.grp.getgrgid", missing)
+    monkeypatch.setattr("fss_cli._accounts.pwd.getpwuid", missing)
+    monkeypatch.setattr("fss_cli._accounts.grp.getgrgid", missing)
     yield
     monkeypatch.undo()
     time.tzset()

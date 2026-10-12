@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 import typer.main
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._support import _source_must_not_run
 

@@ -268,7 +268,7 @@ def test_recursive_cp_reports_staging_creation_failure(
         message = "staging"
         raise OSError(message)
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.tempfile.mkstemp", fail_mkstemp)
+    monkeypatch.setattr("fss_cli._recursive_cp.tempfile.mkstemp", fail_mkstemp)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {
@@ -296,12 +296,12 @@ def test_recursive_cp_reports_staging_stat_failure(
     real_stat = Path.stat
 
     def fail_temporary_stat(path: Path, *args: object, **kwargs: object):
-        if path.name.startswith("fsspec-cli-cp-recursive-"):
+        if path.name.startswith("fss-cli-cp-recursive-"):
             message = "stat"
             raise OSError(message)
         return real_stat(path, *args, **kwargs)
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.Path.stat", fail_temporary_stat)
+    monkeypatch.setattr("fss_cli._recursive_cp.Path.stat", fail_temporary_stat)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {
@@ -345,10 +345,10 @@ def test_recursive_cp_reports_staging_descriptor_close_failure(
         real_close(descriptor)
 
     monkeypatch.setattr(
-        "fsspec_cli._recursive_cp.tempfile.mkstemp",
+        "fss_cli._recursive_cp.tempfile.mkstemp",
         capture_mkstemp,
     )
-    monkeypatch.setattr("fsspec_cli._recursive_cp.os.close", fail_staging_close)
+    monkeypatch.setattr("fss_cli._recursive_cp.os.close", fail_staging_close)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {
@@ -414,13 +414,13 @@ def test_recursive_cp_reports_cleanup_failure_after_success(
     real_unlink = Path.unlink
 
     def fail_temporary_unlink(path: Path, missing_ok: bool = False) -> None:  # noqa: FBT002
-        if path.name.startswith("fsspec-cli-cp-recursive-"):
+        if path.name.startswith("fss-cli-cp-recursive-"):
             temporary_paths.append(path)
             message = "cleanup"
             raise OSError(message)
         real_unlink(path, missing_ok=missing_ok)
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.Path.unlink", fail_temporary_unlink)
+    monkeypatch.setattr("fss_cli._recursive_cp.Path.unlink", fail_temporary_unlink)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {
@@ -471,7 +471,7 @@ def test_recursive_cp_preserves_control_over_cleanup_base_exception(
         del args, kwargs
         raise cleanup
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.Path.unlink", fail_unlink)
+    monkeypatch.setattr("fss_cli._recursive_cp.Path.unlink", fail_unlink)
     with pytest.raises(Stop) as caught:
         _invoke(
             ["-R", "source:/docs", "destination:/out/copy"],
@@ -505,7 +505,7 @@ def test_recursive_cp_propagates_cleanup_base_exception_after_success(
         temporary_paths.append(path)
         raise control
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.Path.unlink", fail_unlink)
+    monkeypatch.setattr("fss_cli._recursive_cp.Path.unlink", fail_unlink)
     with pytest.raises(Stop) as caught:
         _invoke(
             ["-R", "source:/docs", "destination:/out/copy"],

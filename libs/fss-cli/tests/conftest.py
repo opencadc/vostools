@@ -1,4 +1,4 @@
-"""Suite-wide fixtures for the packaged fsspec-cli tests."""
+"""Suite-wide fixtures for the packaged fss-cli tests."""
 
 import pytest
 

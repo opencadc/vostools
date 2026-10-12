@@ -442,7 +442,7 @@ class _RecursiveCopy:
             return _TransferResult(skipped=existing)
         temporary = None
         try:
-            descriptor, temporary = tempfile.mkstemp(prefix="fsspec-cli-cp-recursive-")
+            descriptor, temporary = tempfile.mkstemp(prefix="fss-cli-cp-recursive-")
         except Exception as error:  # noqa: BLE001 - staging creation boundary.
             return _TransferResult(_staging_failure(self.source, error))
         _LOGGER.debug("staging %s through %s", source_location, _redact(temporary))

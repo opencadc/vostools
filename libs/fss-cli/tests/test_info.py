@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from typer.main import get_command
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._support import _invoke, _RecordingSource
 
@@ -506,7 +506,7 @@ def test_info_writes_and_flushes_one_complete_binary_payload(
         def flush(self) -> None:
             calls.append(("flush", None))
 
-    monkeypatch.setattr("fsspec_cli._info._binary_stdout", _Stdout)
+    monkeypatch.setattr("fss_cli._info._binary_stdout", _Stdout)
 
     result = _invoke("info", ["memory:/docs/report.txt"], sources={"memory": source})
 
@@ -527,7 +527,7 @@ def test_info_reports_a_short_write_and_still_cleans_up(
             message = "short writes must not flush"
             raise AssertionError(message)
 
-    monkeypatch.setattr("fsspec_cli._info._binary_stdout", _ShortStdout)
+    monkeypatch.setattr("fss_cli._info._binary_stdout", _ShortStdout)
 
     result = _invoke("info", ["memory:/docs/report.txt"], sources={"memory": source})
 
@@ -554,7 +554,7 @@ def test_info_keeps_broken_pipe_silent_but_reports_cleanup_failure(
             message = "broken writes must not flush"
             raise AssertionError(message)
 
-    monkeypatch.setattr("fsspec_cli._info._binary_stdout", _BrokenStdout)
+    monkeypatch.setattr("fss_cli._info._binary_stdout", _BrokenStdout)
 
     result = _invoke("info", ["memory:/docs/report.txt"], sources={"memory": source})
 

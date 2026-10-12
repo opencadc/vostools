@@ -11,8 +11,8 @@ import pytest
 from fsspec.asyn import AsyncFileSystem
 from typer.testing import CliRunner
 
-from fsspec_cli import App
-from fsspec_cli._concurrent import _CONCURRENCY, _gather_bounded, _run_bounded
+from fss_cli import App
+from fss_cli._concurrent import _CONCURRENCY, _gather_bounded, _run_bounded
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -195,7 +195,7 @@ def test_recursive_rm_removes_siblings_concurrently_and_directories_last() -> No
 
 @pytest.mark.parametrize("name", ["/docs/.", "/docs/.."])
 def test_walk_rejects_dot_segment_listing_entries(name: str) -> None:
-    from fsspec_cli._walk import _IncompatibleListingError, _walk
+    from fss_cli._walk import _IncompatibleListingError, _walk
 
     class _DotFileSystem(AsyncFileSystem):
         cachable = False

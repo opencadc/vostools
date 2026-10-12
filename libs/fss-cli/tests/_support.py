@@ -9,7 +9,7 @@ from typing import NoReturn
 from fsspec.asyn import AsyncFileSystem
 from typer.testing import CliRunner, Result
 
-from fsspec_cli import App, AsyncFilesystemSource
+from fss_cli import App, AsyncFilesystemSource
 
 
 def _source_must_not_run() -> NoReturn:

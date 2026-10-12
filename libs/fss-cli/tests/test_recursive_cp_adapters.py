@@ -15,7 +15,7 @@ from fsspec.asyn import AsyncFileSystem
 from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -505,7 +505,7 @@ def test_backend_neutral_read_phase_failures_are_stable_and_pre_mutation(
 
 
 def test_recursive_copy_production_has_no_backend_dispatch_or_sync_facades() -> None:
-    from fsspec_cli import _recursive_cp
+    from fss_cli import _recursive_cp
 
     source = Path(_recursive_cp.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)

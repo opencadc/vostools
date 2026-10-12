@@ -2,7 +2,7 @@
 
 import pytest
 
-from fsspec_cli._path import (
+from fss_cli._path import (
     _has_dot_segment,
     _has_final_dot_segment,
     _is_root,

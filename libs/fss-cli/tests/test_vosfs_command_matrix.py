@@ -9,7 +9,7 @@ import httpx
 import pytest
 from vosfs import VOSpaceFileSystem
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._matrix_support import (
     _exercise_cat_profile,
@@ -333,7 +333,7 @@ def test_native_vosfs_long_listing_profile_is_remote_and_uses_detail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "fsspec_cli._listing.time.localtime",
+        "fss_cli._listing.time.localtime",
         time.gmtime,
     )
     source, transports = _vosfs_source(_LONG_RESPONSES)

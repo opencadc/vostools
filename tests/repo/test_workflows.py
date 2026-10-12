@@ -99,7 +99,7 @@ def test_quality_runs_contract_tests_and_docs() -> None:
 @pytest.mark.parametrize(("package", "path"), PACKAGE_WORKFLOWS.items())
 def test_package_workflow_uses_path_filters(package: str, path: Path) -> None:
     on = triggers(load(path))
-    distribution = "fsspec-cli" if package == "fss-cli" else package
+    distribution = package
 
     for event in ("pull_request", "push"):
         paths = set(on[event]["paths"])

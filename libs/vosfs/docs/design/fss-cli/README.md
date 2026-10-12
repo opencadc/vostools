@@ -1,6 +1,6 @@
-# `fsspec-cli` design documentation
+# `fss-cli` design documentation
 
-`fsspec-cli` turns host-configured async [fsspec](https://filesystem-spec.readthedocs.io/)
+`fss-cli` turns host-configured async [fsspec](https://filesystem-spec.readthedocs.io/)
 filesystems into POSIX-shaped [Typer](https://typer.tiangolo.com/) commands a
 host embeds in its own CLI.
 
@@ -28,7 +28,7 @@ operands work, then the command you care about in
 The **tests are the executable evidence.** These documents describe the
 contract the tests enforce; where prose and a passing gate disagree, the gate
 wins and the prose is the bug. Per-command tests live in
-`src/fsspec-cli/tests/`.
+`src/fss-cli/tests/`.
 
 ## History
 

@@ -4,7 +4,7 @@ from types import MappingProxyType
 
 import pytest
 
-from fsspec_cli._listing import to_listing as normalize_listing
+from fss_cli._listing import to_listing as normalize_listing
 
 from ._support import _invoke, _RecordingSource
 
@@ -161,7 +161,7 @@ def test_long_listing_does_not_normalize_omitted_hidden_rows(monkeypatch) -> Non
             raise AssertionError(msg)
         return normalize_listing(info)
 
-    monkeypatch.setattr("fsspec_cli._ls.to_listing", normalize_visible)
+    monkeypatch.setattr("fss_cli._ls.to_listing", normalize_visible)
     source = _RecordingSource(
         [],
         {"name": "/docs", "type": "directory"},
@@ -189,7 +189,7 @@ def test_long_listing_selected_normalization_failure_is_atomic(monkeypatch) -> N
             raise ValueError(msg)
         return normalize_listing(info)
 
-    monkeypatch.setattr("fsspec_cli._ls.to_listing", reject_selected)
+    monkeypatch.setattr("fss_cli._ls.to_listing", reject_selected)
     source = _RecordingSource(
         [],
         {"name": "/docs", "type": "directory"},

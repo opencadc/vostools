@@ -51,7 +51,7 @@ finally:
   a directory, open a FITS file, checkpoint to Zarr.
 - [Troubleshooting](troubleshooting.md) is organized by the error you saw.
 - The [API Reference](api-reference.md) documents the public interface.
-- [fsspec-cli](cli/index.md) turns this (or any async fsspec filesystem) into
+- [fss-cli](cli/index.md) turns this (or any async fsspec filesystem) into
   shell-shaped commands inside your own CLI.
 - The normative surface is the capability contract in
   [`libs/vosfs/docs/design/trd.md`](https://github.com/opencadc/vostools/blob/main/libs/vosfs/docs/design/trd.md).

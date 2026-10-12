@@ -1,5 +1,5 @@
 [project]
-name = "fsspec-cli"
+name = "fss-cli"
 version = "0.10.0"
 description = "Library-only POSIX-shaped commands for async fsspec filesystems"
 readme = "README.md"
@@ -61,7 +61,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["fsspec_cli"]
+source = ["fss_cli"]
 
 [tool.ruff]
 extend = "../../pyproject.toml"
@@ -75,7 +75,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"src/fsspec_cli/*.py" = [
+"src/fss_cli/*.py" = [
     # fsspec's async filesystem API is underscore-prefixed by convention
     # (`_info`, `_ls`, `_cat_file`, ...). Awaiting those hooks is the documented
     # way to drive an AsyncFileSystem, not private-member access.

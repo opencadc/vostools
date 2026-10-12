@@ -6,7 +6,7 @@ checks are the executable enforcement of this policy. If they disagree, fix
 the policy and configuration together in the same pull request.
 
 The repository is a uv workspace with three packages under `libs/`: `vos`,
-`vosfs` and `fsspec-cli` (directory `libs/fss-cli`).
+`vosfs` and `fss-cli`.
 
 ## Ground rules
 
@@ -76,7 +76,7 @@ uv run pytest tests/repo
 uv run --all-packages zensical build --strict --clean
 uv run --package vos pytest libs/vos/tests
 uv run --package vosfs pytest libs/vosfs/tests
-uv run --package fsspec-cli pytest libs/fss-cli/tests
+uv run --package fss-cli pytest libs/fss-cli/tests
 uv build --no-sources --all-packages
 ```
 

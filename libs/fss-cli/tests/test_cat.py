@@ -252,7 +252,7 @@ def test_cat_stops_on_stdout_failure_and_preserves_accepted_bytes(
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdout", _PrefixStdout)
+    monkeypatch.setattr("fss_cli._cat._binary_stdout", _PrefixStdout)
     result = _invoke(
         "cat",
         ["memory:/one", "memory:/two"],
@@ -284,7 +284,7 @@ def test_cat_keeps_broken_pipe_silent_but_reports_exit_failure(
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdout", _BrokenStdout)
+    monkeypatch.setattr("fss_cli._cat._binary_stdout", _BrokenStdout)
     result = _invoke("cat", ["memory:/blob"], sources={"memory": source})
 
     assert result.exit_code == 1
@@ -543,7 +543,7 @@ def test_cat_retries_temporary_cleanup_after_get_file_cancellation(
 
     source.get_file_hook = tracking_hook
     monkeypatch.setattr(Path, "unlink", fail_unlink)
-    monkeypatch.setattr("fsspec_cli._cat._render_staging_failure", capture_render)
+    monkeypatch.setattr("fss_cli._cat._render_staging_failure", capture_render)
 
     with pytest.raises(type(control)) as caught:
         _invoke("cat", ["memory:/blob"], sources={"memory": source})
@@ -567,7 +567,7 @@ def test_cat_continues_after_temporary_open_failure(monkeypatch) -> None:
 
     def fail_open(self: Path, *args: object, **kwargs: object):
         nonlocal failed
-        if not failed and self.name.startswith("fsspec-cli-cat-") and "rb" in args:
+        if not failed and self.name.startswith("fss-cli-cat-") and "rb" in args:
             failed = True
             message = "open-denied"
             raise OSError(message)
@@ -606,7 +606,7 @@ def test_cat_continues_after_temporary_read_failure(monkeypatch) -> None:
 
     def fail_read_open(self: Path, *args: object, **kwargs: object):
         nonlocal failed
-        if not failed and self.name.startswith("fsspec-cli-cat-") and "rb" in args:
+        if not failed and self.name.startswith("fss-cli-cat-") and "rb" in args:
             failed = True
             return _FailingHandle()
         return real_open(self, *args, **kwargs)
@@ -650,7 +650,7 @@ def test_cat_continues_after_temporary_close_failure(monkeypatch) -> None:
     def wrap_open(self: Path, *args: object, **kwargs: object):
         nonlocal failed
         handle = real_open(self, *args, **kwargs)
-        if not failed and self.name.startswith("fsspec-cli-cat-") and "rb" in args:
+        if not failed and self.name.startswith("fss-cli-cat-") and "rb" in args:
             failed = True
             return _CloseFailHandle(handle)
         return handle
@@ -696,7 +696,7 @@ def test_cat_stops_after_delayed_temporary_read_failure_emitting_partial(
 
     def fail_late_read_open(self: Path, *args: object, **kwargs: object):
         nonlocal failed
-        if not failed and self.name.startswith("fsspec-cli-cat-") and "rb" in args:
+        if not failed and self.name.startswith("fss-cli-cat-") and "rb" in args:
             failed = True
             return _DelayedFailHandle()
         return real_open(self, *args, **kwargs)
@@ -745,7 +745,7 @@ def test_cat_stops_when_single_handle_read_fails_after_first_output(
 
     def fail_after_output_open(self: Path, *args: object, **kwargs: object):
         nonlocal open_calls
-        if self.name.startswith("fsspec-cli-cat-") and "rb" in args:
+        if self.name.startswith("fss-cli-cat-") and "rb" in args:
             open_calls += 1
             if open_calls == 1:
                 return _PostOutputFailHandle()
@@ -833,7 +833,7 @@ def test_cat_finally_closes_descriptor_after_two_os_close_failures(monkeypatch) 
 
 
 def _install_stdin(monkeypatch, handle: object) -> None:
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdin", lambda: handle)
+    monkeypatch.setattr("fss_cli._cat._binary_stdin", lambda: handle)
 
 
 class _ShortReadStdin(io.RawIOBase):
@@ -1252,7 +1252,7 @@ def test_cat_stops_on_stdout_failure_during_stdin_at_each_position(
             return None
 
     prefix_stdout = _PrefixStdout(accepted_prefix)
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdout", lambda: prefix_stdout)
+    monkeypatch.setattr("fss_cli._cat._binary_stdout", lambda: prefix_stdout)
     result = _invoke("cat", arguments, sources={"memory": source})
 
     assert result.exit_code == 1
@@ -1318,7 +1318,7 @@ def test_cat_stops_on_stdout_failure_during_stdin(monkeypatch) -> None:
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._cat._binary_stdout", _PrefixStdout)
+    monkeypatch.setattr("fss_cli._cat._binary_stdout", _PrefixStdout)
     result = _invoke(
         "cat",
         ["-", "memory:/blob"],

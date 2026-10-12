@@ -13,7 +13,7 @@ from fsspec.implementations.local import LocalFileSystem
 from fsspec.implementations.memory import MemoryFileSystem
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._ansi import strip_ansi
 from ._matrix_support import (
@@ -109,7 +109,7 @@ def test_adapted_local_long_listing_profile_is_rich_and_uses_detail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "fsspec_cli._listing.time.localtime",
+        "fss_cli._listing.time.localtime",
         time.gmtime,
     )
     root = tmp_path / "docs"

@@ -12,12 +12,12 @@ from typing import TYPE_CHECKING, BinaryIO
 
 from fsspec.asyn import AsyncFileSystem
 
-from fsspec_cli import App
+from fss_cli import App
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-_TRACKING_PATH = os.environ.get("FSSPEC_CLI_CAT_PROCESS_TRACKING")
+_TRACKING_PATH = os.environ.get("FSS_CLI_CAT_PROCESS_TRACKING")
 
 
 def _track(event: str) -> None:

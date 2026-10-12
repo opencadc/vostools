@@ -1,8 +1,8 @@
-# `fsspec-cli` tested command matrix
+# `fss-cli` tested command matrix
 
 Status: **Evidence record.** Records which command-and-source-form
 combinations have qualifying evidence. This is a narrow compatibility claim,
-not a statement that `fsspec-cli` works with every fsspec backend.
+not a statement that `fss-cli` works with every fsspec backend.
 
 Evidence rules, the three tested source forms, and the hermetic gate are
 defined in [`contract.md` §14](contract.md#14-evidence-rules).

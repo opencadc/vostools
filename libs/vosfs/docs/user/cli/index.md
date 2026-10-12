@@ -1,16 +1,16 @@
-# fsspec-cli
+# fss-cli
 
-`fsspec-cli` turns filesystems you already use in Python into shell-shaped
+`fss-cli` turns filesystems you already use in Python into shell-shaped
 commands inside **your own** command-line tool.
 
 If you have an [fsspec](https://filesystem-spec.readthedocs.io/) filesystem —
-`vosfs`, S3, GCS, local disk, or anything else — `fsspec-cli` gives you `ls`,
+`vosfs`, S3, GCS, local disk, or anything else — `fss-cli` gives you `ls`,
 `cp`, `rm`, `du`, `find`, `cat`, and more against it, without writing any of
 them yourself.
 
 !!! info "It is a library, not a program"
 
-    `fsspec-cli` installs no `fsspec-cli` executable. It hands your application
+    `fss-cli` installs no `fss-cli` executable. It hands your application
     a [Typer](https://typer.tiangolo.com/) app that you mount into your own CLI.
     You decide which filesystems are reachable and what they are called.
 
@@ -28,7 +28,7 @@ from contextlib import asynccontextmanager
 import fsspec
 import typer
 from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
-from fsspec_cli import App
+from fss_cli import App
 
 
 @asynccontextmanager
@@ -71,7 +71,7 @@ from contextlib import asynccontextmanager
 import fsspec
 import typer
 from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
-from fsspec_cli import App
+from fss_cli import App
 from vosfs import VOSpaceFileSystem
 
 
@@ -106,7 +106,7 @@ python app.py fs cp local:/reduced.fits archive:/project/reduced.fits
 python app.py fs du -sh archive:/project
 ```
 
-Credentials come from the backend, not from `fsspec-cli` — `vosfs` picks up
+Credentials come from the backend, not from `fss-cli` — `vosfs` picks up
 `VOSFS_CERT_FILE` or `VOSFS_TOKEN_FILE` as usual. See
 [Integration](integration.md#sources) for why each source is a *fresh*
 filesystem per invocation.
@@ -140,11 +140,11 @@ filesystem per invocation.
 
 ## What it does not claim
 
-`fsspec-cli` is not POSIX, GNU, or BSD compatible, and does not work with every
+`fss-cli` is not POSIX, GNU, or BSD compatible, and does not work with every
 fsspec backend. It provides a shell-compatible *experience*: it renders what a
 backend can actually supply, in the shape a shell user expects, and omits the
 rest rather than inventing values.
 
 Supported host platforms are Linux and macOS. The commands and source forms
 with test evidence behind them are listed in the
-[tested command matrix](https://github.com/opencadc/vostools/blob/main/libs/vosfs/docs/design/fsspec-cli/matrix.md).
+[tested command matrix](https://github.com/opencadc/vostools/blob/main/libs/vosfs/docs/design/fss-cli/matrix.md).

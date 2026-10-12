@@ -64,7 +64,7 @@ def _digest(path: str) -> bytes:
 
 async def same_contents(filesystem: AsyncFileSystem, destination: str, staged_source: str) -> bool:
     """Compare staged bytes without keeping object contents in memory."""
-    directory = tempfile.TemporaryDirectory(prefix="fsspec-cli-compare-")
+    directory = tempfile.TemporaryDirectory(prefix="fss-cli-compare-")
     try:
         local = str(Path(directory.name) / "destination")
         await _call(filesystem, "_get_file", destination, local)

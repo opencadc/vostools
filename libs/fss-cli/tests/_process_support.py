@@ -27,7 +27,7 @@ def _environment(
         }
     )
     if tracking_path is not None:
-        environment["FSSPEC_CLI_CAT_PROCESS_TRACKING"] = str(tracking_path)
+        environment["FSS_CLI_CAT_PROCESS_TRACKING"] = str(tracking_path)
     if tmpdir is not None:
         environment["TMPDIR"] = str(tmpdir)
         environment["TEMP"] = str(tmpdir)

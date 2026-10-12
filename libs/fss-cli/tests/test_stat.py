@@ -8,7 +8,7 @@ import math
 import pytest
 import typer
 
-from fsspec_cli._stat import _format_mtime, _write_line
+from fss_cli._stat import _format_mtime, _write_line
 
 from ._support import _invoke, _RecordingSource, _source_must_not_run
 
@@ -40,8 +40,8 @@ def _unresolvable_owner_group(monkeypatch: pytest.MonkeyPatch) -> None:
     def missing_group(gid: int) -> None:
         raise KeyError(gid)
 
-    monkeypatch.setattr("fsspec_cli._accounts.pwd.getpwuid", missing_user)
-    monkeypatch.setattr("fsspec_cli._accounts.grp.getgrgid", missing_group)
+    monkeypatch.setattr("fss_cli._accounts.pwd.getpwuid", missing_user)
+    monkeypatch.setattr("fss_cli._accounts.grp.getgrgid", missing_group)
 
 
 # Goldens use unresolvable uid/gid (see _unresolvable_owner_group).
@@ -230,8 +230,8 @@ def test_stat_falls_back_to_decimal_when_owner_lookup_overflows(
     def overflow_group(gid: int) -> None:
         raise OverflowError(gid)
 
-    monkeypatch.setattr("fsspec_cli._accounts.pwd.getpwuid", overflow_user)
-    monkeypatch.setattr("fsspec_cli._accounts.grp.getgrgid", overflow_group)
+    monkeypatch.setattr("fss_cli._accounts.pwd.getpwuid", overflow_user)
+    monkeypatch.setattr("fss_cli._accounts.grp.getgrgid", overflow_group)
     source = _RecordingSource([], info_result=_RICH_FILE)
 
     result = _invoke("stat", ["memory:/stat-file"], sources={"memory": source})
@@ -389,7 +389,7 @@ def test_stat_stops_after_stdout_short_write(
         def flush(self) -> None:
             return None
 
-    monkeypatch.setattr("fsspec_cli._stat._binary_stdout", _Stdout)
+    monkeypatch.setattr("fss_cli._stat._binary_stdout", _Stdout)
 
     result = _invoke(
         "stat",
@@ -423,8 +423,8 @@ def test_stat_line_uses_shared_binary_writer(
     def write_binary(writer: object, payload: bytes) -> None:
         events.append(("write", writer, payload))
 
-    monkeypatch.setattr("fsspec_cli._stat._binary_stdout", lambda: stdout)
-    monkeypatch.setattr("fsspec_cli._stat._write_binary", write_binary)
+    monkeypatch.setattr("fss_cli._stat._binary_stdout", lambda: stdout)
+    monkeypatch.setattr("fss_cli._stat._write_binary", write_binary)
 
     _write_line(b"stat output\n")
 
@@ -444,7 +444,7 @@ def test_stat_keeps_broken_pipe_silent_but_reports_exit_failure(
         del line
         raise broken_pipe
 
-    monkeypatch.setattr("fsspec_cli._stat._write_line", break_stdout)
+    monkeypatch.setattr("fss_cli._stat._write_line", break_stdout)
     result = _invoke("stat", ["memory:/stat-file"], sources={"memory": source})
 
     assert result.exit_code == 1

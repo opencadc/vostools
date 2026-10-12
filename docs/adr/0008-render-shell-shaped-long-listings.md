@@ -40,5 +40,5 @@ return characters cannot create or overwrite records.
 - No new command, formatter registry, backend-class dispatch, or capability
   setting is introduced.
 
-Normative detail belongs in `libs/vosfs/docs/design/fsspec-cli/contract.md` and
-`libs/vosfs/docs/design/fsspec-cli/commands.md`.
+Normative detail belongs in `libs/vosfs/docs/design/fss-cli/contract.md` and
+`libs/vosfs/docs/design/fss-cli/commands.md`.

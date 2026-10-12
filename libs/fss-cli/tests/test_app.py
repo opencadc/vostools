@@ -10,7 +10,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from fsspec_cli import (
+from fss_cli import (
     App,
     AppCapabilities,
     AsyncFilesystemSource,
@@ -58,7 +58,7 @@ def test_public_exports_include_application_capability_types() -> None:
     assert capabilities == {"recursion": {"copy": True, "remove": False}}
     assert AsyncFilesystemSource is not None
     assert typed_callback() is None
-    assert __import__("fsspec_cli").__all__ == [
+    assert __import__("fss_cli").__all__ == [
         "App",
         "AppCapabilities",
         "AsyncFilesystemSource",

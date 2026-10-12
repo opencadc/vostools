@@ -1,6 +1,6 @@
 """Standard-library transfer records for embedding hosts.
 
-Commands log under the ``fsspec_cli`` logger hierarchy so a host can route
+Commands log under the ``fss_cli`` logger hierarchy so a host can route
 them through its own handlers; the library itself installs only a
 ``NullHandler`` and never prints a record. One INFO record describes each file
 operation; DEBUG records describe content-identity decisions and staging.

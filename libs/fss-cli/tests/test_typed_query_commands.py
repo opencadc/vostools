@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._support import _source_must_not_run
 

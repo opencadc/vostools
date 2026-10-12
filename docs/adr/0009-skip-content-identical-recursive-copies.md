@@ -39,4 +39,4 @@ precedes validation of child values in that collection.
 - This changes recursive copying only. The existing non-recursive file-copy
   metadata proof and overwrite behavior remain separate.
 
-Normative detail belongs in `libs/vosfs/docs/design/fsspec-cli/commands.md`.
+Normative detail belongs in `libs/vosfs/docs/design/fss-cli/commands.md`.

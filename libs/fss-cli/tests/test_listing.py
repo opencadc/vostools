@@ -7,7 +7,7 @@ from types import MappingProxyType
 
 import pytest
 
-from fsspec_cli._listing import ListingRow, format_size, render_listing, to_listing
+from fss_cli._listing import ListingRow, format_size, render_listing, to_listing
 
 
 def test_to_listing_normalizes_a_local_rich_row_and_backend_extra() -> None:
@@ -221,7 +221,7 @@ def test_render_listing_uses_union_columns_and_neutral_per_row_gaps(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "fsspec_cli._listing.time.localtime",
+        "fss_cli._listing.time.localtime",
         lambda _value: datetime(2026, 7, 17, 22, 6, tzinfo=timezone.utc).timetuple(),
     )
     rows = [

@@ -167,7 +167,7 @@ async def _stage_operand(
         return _Failure(operand)
 
     try:
-        descriptor, temporary = tempfile.mkstemp(prefix="fsspec-cli-cat-")
+        descriptor, temporary = tempfile.mkstemp(prefix="fss-cli-cat-")
     except Exception as error:  # noqa: BLE001 - local staging creation boundary.
         return _StagingFailure(operand, error)
 

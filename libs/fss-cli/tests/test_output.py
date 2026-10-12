@@ -6,7 +6,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._support import _invoke, _RecordingSource
 

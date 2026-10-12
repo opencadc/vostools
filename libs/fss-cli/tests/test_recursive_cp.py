@@ -15,7 +15,7 @@ import typer
 from fsspec.asyn import AsyncFileSystem
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -1071,12 +1071,12 @@ def test_recursive_cp_orders_transfer_and_staging_cleanup_failures(
     real_unlink = Path.unlink
 
     def fail_temporary_unlink(path: Path, missing_ok: bool = False) -> None:  # noqa: FBT002
-        if path.name.startswith("fsspec-cli-cp-recursive-"):
+        if path.name.startswith("fss-cli-cp-recursive-"):
             message = "cleanup failed"
             raise OSError(message)
         real_unlink(path, missing_ok=missing_ok)
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp.Path.unlink", fail_temporary_unlink)
+    monkeypatch.setattr("fss_cli._recursive_cp.Path.unlink", fail_temporary_unlink)
     result = _invoke(
         ["-R", "source:/source", "destination:/out/copy"],
         {

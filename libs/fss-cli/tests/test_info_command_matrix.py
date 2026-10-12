@@ -14,7 +14,7 @@ from fsspec.implementations.memory import MemoryFileSystem
 from typer.testing import CliRunner
 from vosfs import VOSpaceFileSystem
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._matrix_support import (
     _ProbedSource,

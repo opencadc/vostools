@@ -15,7 +15,7 @@ See `docs/agents/domain.md`.
 ## Cursor Cloud specific instructions
 
 This repo is a `uv` workspace with three library packages under `libs/`: `vos`
-(`libs/vos`), `vosfs` (`libs/vosfs`) and `fsspec-cli` (`libs/fss-cli`). There
+(`libs/vos`), `vosfs` (`libs/vosfs`) and `fss-cli` (`libs/fss-cli`). There
 are no long-running services, servers, or databases; "running" the products
 means exercising the libraries and the `vcp`/`vls`/... commands from `vos`.
 

@@ -1,4 +1,4 @@
-# `fsspec-cli` shared command contract
+# `fss-cli` shared command contract
 
 Status: **Normative.** Every command in
 [`commands.md`](commands.md) inherits this document. A command section states
@@ -11,9 +11,9 @@ and **MAY** are interpreted as described by
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and
 [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) only when capitalized.
 
-## 1. What `fsspec-cli` claims
+## 1. What `fss-cli` claims
 
-`fsspec-cli` provides a shell-compatible *experience*: the useful subset of a
+`fss-cli` provides a shell-compatible *experience*: the useful subset of a
 file utility, honestly rendered. It does **not** claim POSIX, GNU, BSD/macOS,
 or all-fsspec compatibility. Supported host platforms are Linux and macOS.
 

@@ -1,4 +1,4 @@
-# Test fsspec-cli when its tree, vosfs (a test dependency), or shared files change.
+# Test fss-cli when its tree, vosfs (a test dependency), or shared files change.
 name: fss-cli
 
 on:
@@ -39,6 +39,6 @@ jobs:
     uses: ./.github/workflows/reusable-package.yml
     with:
       package: fss-cli
-      distribution: fsspec-cli
+      distribution: fss-cli
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

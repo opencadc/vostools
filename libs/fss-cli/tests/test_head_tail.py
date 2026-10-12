@@ -344,7 +344,7 @@ def test_mapped_validation_precedes_event_loop_check_and_source_acquisition(
         raise AssertionError
 
     monkeypatch.setattr(
-        "fsspec_cli._app._ensure_no_active_event_loop",
+        "fss_cli._app._ensure_no_active_event_loop",
         event_loop_check_must_not_run,
     )
 
@@ -549,7 +549,7 @@ def test_head_reports_short_binary_write_and_cleans_up(
         def flush(self) -> None:
             raise AssertionError
 
-    monkeypatch.setattr("fsspec_cli._head_tail._binary_stdout", _ShortStdout)
+    monkeypatch.setattr("fss_cli._head_tail._binary_stdout", _ShortStdout)
     result = _invoke("head", ["-c", "3", "memory:/a"], sources={"memory": source})
 
     assert (result.exit_code, result.stderr) == (
@@ -572,7 +572,7 @@ def test_head_reports_binary_flush_failure_and_cleans_up(
         def flush(self) -> NoReturn:
             raise flush_error
 
-    monkeypatch.setattr("fsspec_cli._head_tail._binary_stdout", _FlushFailingStdout)
+    monkeypatch.setattr("fss_cli._head_tail._binary_stdout", _FlushFailingStdout)
     result = _invoke("head", ["-c", "3", "memory:/a"], sources={"memory": source})
 
     assert (result.exit_code, result.stderr) == (
@@ -596,7 +596,7 @@ def test_tail_uses_cat_broken_pipe_status_when_it_is_the_only_failure(
         def flush(self) -> None:
             raise AssertionError
 
-    monkeypatch.setattr("fsspec_cli._head_tail._binary_stdout", _BrokenStdout)
+    monkeypatch.setattr("fss_cli._head_tail._binary_stdout", _BrokenStdout)
     result = _invoke("tail", ["-c", "2", "memory:/a"], sources={"memory": source})
 
     assert (result.exit_code, result.stdout_bytes, result.stderr) == (141, b"", "")
@@ -616,7 +616,7 @@ def test_tail_cleanup_failure_overrides_broken_pipe_status(
         def flush(self) -> None:
             raise AssertionError
 
-    monkeypatch.setattr("fsspec_cli._head_tail._binary_stdout", _BrokenStdout)
+    monkeypatch.setattr("fss_cli._head_tail._binary_stdout", _BrokenStdout)
     result = _invoke("tail", ["-c", "2", "memory:/a"], sources={"memory": source})
 
     assert (result.exit_code, result.stdout_bytes, result.stderr) == (

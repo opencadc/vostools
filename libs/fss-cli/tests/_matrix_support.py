@@ -14,7 +14,7 @@ from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from fsspec.implementations.memory import MemoryFileSystem
 from typer.testing import CliRunner, Result
 
-from fsspec_cli import App
+from fss_cli import App
 
 if TYPE_CHECKING:
     from types import TracebackType

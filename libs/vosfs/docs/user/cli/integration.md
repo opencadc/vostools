@@ -1,6 +1,6 @@
-# Integrating fsspec-cli
+# Integrating fss-cli
 
-This page covers what you need to embed `fsspec-cli` correctly: the seam, the
+This page covers what you need to embed `fss-cli` correctly: the seam, the
 source contract, lifecycle ownership, capability policy, extensions, and the
 exit statuses your callers will see.
 
@@ -44,7 +44,7 @@ async def archive_source():
 
     The callable is invoked **per command run**, and the library owns the
     yielded filesystem for exactly that run. Do not close over one long-lived
-    instance: `fsspec-cli` acquires and releases on the invocation's own event
+    instance: `fss-cli` acquires and releases on the invocation's own event
     loop, and a filesystem bound to a different loop will fail.
 
     This is also why `skip_instance_cache=True` matters — without it fsspec may
@@ -106,7 +106,7 @@ annotations define the command through Typer:
 
 ```python
 import typer
-from fsspec_cli import CommandCallback, CommandContext
+from fss_cli import CommandCallback, CommandContext
 
 
 def about() -> None:
@@ -192,15 +192,15 @@ hostile or malformed path cannot inject terminal escapes.
 
 ## Logging
 
-Commands emit standard-library log records under the `fsspec_cli` logger
+Commands emit standard-library log records under the `fss_cli` logger
 hierarchy. The library installs only a `NullHandler`, so nothing is printed
 unless your host configures a handler:
 
 ```python
 import logging
 
-logging.getLogger("fsspec_cli").setLevel(logging.INFO)  # or DEBUG
-logging.getLogger("fsspec_cli").addHandler(logging.StreamHandler())
+logging.getLogger("fss_cli").setLevel(logging.INFO)  # or DEBUG
+logging.getLogger("fss_cli").addHandler(logging.StreamHandler())
 ```
 
 At **INFO**, `cp`, `cp -R`, and `mv` emit one record per file with the source
@@ -238,6 +238,6 @@ app.add_typer(App(sources).typer_app, name="fs")
 ## Reference
 
 The full normative contract lives in
-[`libs/vosfs/docs/design/fsspec-cli/`](https://github.com/opencadc/vostools/blob/main/libs/vosfs/docs/design/fsspec-cli/),
+[`libs/vosfs/docs/design/fss-cli/`](https://github.com/opencadc/vostools/blob/main/libs/vosfs/docs/design/fss-cli/),
 with architecture decisions in
 [`docs/adr/`](https://github.com/opencadc/vostools/blob/main/docs/adr/).

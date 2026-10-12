@@ -371,7 +371,7 @@ async def _confirmed_cross_source_cp_file(  # noqa: C901 - explicit copy outcome
     temporary, staging_error = await _stage_remote(
         source_filesystem,
         request.source.path,
-        "fsspec-cli-cp-",
+        "fss-cli-cp-",
     )
     if staging_error is not None or temporary is None:
         return _CpFailure(

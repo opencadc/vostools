@@ -152,7 +152,7 @@ def test_recursive_cp_cleans_staging_when_primary_rendering_escapes(
         del args, kwargs
         raise control
 
-    monkeypatch.setattr("fsspec_cli._recursive_cp._render_failure", fail_render)
+    monkeypatch.setattr("fss_cli._recursive_cp._render_failure", fail_render)
     with pytest.raises(Stop) as caught:
         _invoke(
             ["-R", "source:/docs", "destination:/out/copy"],
@@ -218,7 +218,7 @@ def test_recursive_cp_cleans_staging_before_reverse_exits_during_control_flow(
     real_unlink = Path.unlink
 
     def recording_unlink(path: Path, *args: object, **kwargs: object) -> None:
-        if "fsspec-cli-cp-recursive-" in path.name:
+        if "fss-cli-cp-recursive-" in path.name:
             events.append("staging cleanup")
         real_unlink(path, *args, **kwargs)
 
@@ -293,7 +293,7 @@ def test_recursive_cp_passes_operation_failure_to_reverse_exits_after_cleanup(
     real_unlink = Path.unlink
 
     def recording_unlink(path: Path, *args: object, **kwargs: object) -> None:
-        if "fsspec-cli-cp-recursive-" in path.name:
+        if "fss-cli-cp-recursive-" in path.name:
             events.append("staging cleanup")
         real_unlink(path, *args, **kwargs)
 

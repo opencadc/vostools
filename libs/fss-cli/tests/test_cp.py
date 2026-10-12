@@ -12,7 +12,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from fsspec_cli import App
+from fss_cli import App
 
 from ._support import (
     _invoke,
@@ -1541,7 +1541,7 @@ def test_cp_reports_cross_source_temporary_cleanup_failure(monkeypatch) -> None:
         Path(path).unlink(missing_ok=True)
         return OSError("unlink-denied")
 
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     result = _invoke(
         "cp",
@@ -1584,7 +1584,7 @@ def test_cp_cleanup_failure_does_not_mask_verification_failure(
         Path(path).unlink(missing_ok=True)
         return OSError("unlink-denied")
 
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     result = _invoke(
         "cp",
@@ -1630,8 +1630,8 @@ def test_cp_propagates_cleanup_control_flow_after_descriptor_close_error(
         Path(path).unlink(missing_ok=True)
         raise cleanup_control
 
-    monkeypatch.setattr("fsspec_cli._cp.os.close", fail_close)
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp.os.close", fail_close)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     with pytest.raises(_SecondaryControlFlow) as caught:
         _invoke(
@@ -1667,7 +1667,7 @@ def test_cp_propagates_cleanup_control_flow_after_staging_download_error(
         parent="/out",
         directories={"/", "/out"},
     )
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     with pytest.raises(_SecondaryControlFlow) as caught:
         _invoke(
@@ -1708,8 +1708,8 @@ def test_cp_preserves_descriptor_close_control_flow_over_cleanup_failure(
         Path(path).unlink(missing_ok=True)
         raise secondary
 
-    monkeypatch.setattr("fsspec_cli._cp.os", SimpleNamespace(close=fail_close))
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp.os", SimpleNamespace(close=fail_close))
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(
@@ -1745,7 +1745,7 @@ def test_cp_preserves_staging_download_control_flow_over_cleanup_failure(
         parent="/out",
         directories={"/", "/out"},
     )
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(
@@ -1782,7 +1782,7 @@ def test_cp_preserves_post_staging_control_flow_over_cleanup_failure(
         put_file_by_path=({"/out/copy.txt": primary} if boundary == "upload" else None),
         post_info_by_path=({"/out/copy.txt": primary} if boundary == "verification" else None),
     )
-    monkeypatch.setattr("fsspec_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(

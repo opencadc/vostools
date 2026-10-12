@@ -1,4 +1,4 @@
-# `fsspec-cli` implementation lessons
+# `fss-cli` implementation lessons
 
 Status: **Durable rationale.** These are the findings that cost real
 investigation, stated once and independently of any single command. They
@@ -146,14 +146,14 @@ containment assumptions.
 
 ## 12. Strict POSIX was the wrong bar
 
-`fsspec-cli` originally rejected anything it could not implement completely —
+`fss-cli` originally rejected anything it could not implement completely —
 `ls -l` was refused outright, because no single backend supplies every POSIX
 column.
 
 That produced a CLI that said "no" to the things users most wanted. The bar is
 now a shell-compatible *experience*: render what the backend actually supplies,
 in the shape a shell user expects, with unknown markers for missing fields. The two safety rules in
-[`contract.md` §1](contract.md#1-what-fsspec-cli-claims) — never fabricate,
+[`contract.md` §1](contract.md#1-what-fss-cli-claims) — never fabricate,
 adaptive richness — are what make "best effort" honest rather than sloppy.
 
 The cost of getting this wrong in either direction is real: fabricating a `0`

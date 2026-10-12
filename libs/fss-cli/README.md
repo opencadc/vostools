@@ -1,13 +1,16 @@
-# fsspec-cli
+# fss-cli
 
 [![CI](https://github.com/opencadc/vostools/actions/workflows/quality.yml/badge.svg)](https://github.com/opencadc/vostools/actions/workflows/quality.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](LICENSE)
 
-`fsspec-cli` is a **library-only** package that turns host-configured async
+`fss-cli` is a **library-only** package that turns host-configured async
 [`fsspec`](https://github.com/fsspec/filesystem_spec) filesystems into
 POSIX-shaped [Typer](https://typer.tiangolo.com/) commands you embed in your own
 CLI. It installs no executable and no module entry point.
+
+Releases up to 0.10.0 were named `fsspec-cli`, imported as `fsspec_cli`. See
+[ADR 0010](../../docs/adr/0010-rename-fsspec-cli-to-fss-cli.md).
 
 ## Install
 
@@ -23,7 +26,7 @@ from contextlib import asynccontextmanager
 import fsspec
 import typer
 from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
-from fsspec_cli import App
+from fss_cli import App
 
 
 @asynccontextmanager
@@ -75,12 +78,12 @@ App({"data": data_source}, capabilities={"recursion": {"remove": True}})
 | Embedding it: sources, lifecycle, capabilities, exit statuses | [Integration guide](https://opencadc.github.io/vostools/cli/integration/) |
 | What each command does | [Command reference](https://opencadc.github.io/vostools/cli/commands/) |
 | The public API | [API reference](https://opencadc.github.io/vostools/cli/api-reference/) |
-| The normative contract and its rationale | [`docs/design/fsspec-cli/`](../vosfs/docs/design/fsspec-cli/) |
+| The normative contract and its rationale | [`docs/design/fss-cli/`](../vosfs/docs/design/fss-cli/) |
 | Architecture decisions | [`docs/adr/`](../../docs/adr/) |
 
 ## Scope
 
-`fsspec-cli` provides a shell-compatible *experience*: it renders what a backend
+`fss-cli` provides a shell-compatible *experience*: it renders what a backend
 can actually supply, in the shape a shell user expects, and omits the rest
 rather than inventing values. It does **not** claim POSIX, GNU, BSD/macOS, or
 all-fsspec compatibility. Supported host platforms are Linux and macOS.
@@ -89,9 +92,9 @@ all-fsspec compatibility. Supported host platforms are Linux and macOS.
 
 Copyright (c) 2026 National Research Council of Canada / Government of Canada.
 
-`fsspec-cli` is distributed under the terms of the
+`fss-cli` is distributed under the terms of the
 [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
-`fsspec-cli` 0.10.0 and earlier releases were published under the BSD 3-Clause
+`fss-cli` 0.10.0 and earlier releases were published under the BSD 3-Clause
 License.
 
 ## Long listings and repeated copies

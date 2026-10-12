@@ -41,8 +41,8 @@ registry or configuration loader supplies these values.
 _Avoid_: Backend capability, protocol discovery
 
 **Embedded command library**:
-The separately installable, library-only `fsspec-cli` uv workspace member at
-`src/fsspec-cli`, with its Python package at `src/fsspec-cli/src/fsspec_cli`,
+The separately installable, library-only `fss-cli` uv workspace member at
+`src/fss-cli`, with its Python package at `src/fss-cli/src/fss_cli`,
 that turns named async filesystem sources into POSIX-shaped Typer commands. Its
 sole stable v1 seam for host tools is
 `App(sources, *, capabilities=None, extensions=[...]).typer_app`; capabilities
@@ -51,7 +51,7 @@ opt-in commands without receiving that policy or changing the core surface
 when omitted. The embedded command library owns each yielded filesystem only
 for one command invocation, while hosts own source configuration and cleanup
 declaration.
-_Avoid_: vosfs CLI, fsspec-cli executable
+_Avoid_: vosfs CLI, fss-cli executable
 
 **Async filesystem source**:
 A host-configured async context-manager factory that yields one
