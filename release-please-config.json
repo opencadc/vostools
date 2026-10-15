@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "draft": true,
+  "force-tag-creation": true,
+  "last-release-sha": "e96b7630e1af4286afd7b57ff14ed34ea4b8e3a7",
+  "packages": {
+    "libs/vos": {
+      "release-type": "python",
+      "package-name": "vos",
+      "component": "vos",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "/uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='vos')].version"
+        }
+      ]
+    },
+    "libs/vosfs": {
+      "release-type": "python",
+      "package-name": "vosfs",
+      "component": "vosfs",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "/uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='vosfs')].version"
+        }
+      ]
+    },
+    "libs/fss-cli": {
+      "release-type": "python",
+      "package-name": "fss-cli",
+      "component": "fss-cli",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "/uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='fss-cli')].version"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,48 @@
+# Builds the one repository documentation site after every push to main.
+# There is no per-package documentation workflow. Publishing the built site to
+# GitHub Pages is a later step, once the opencadc/vostools Pages environment exists.
+name: Documentation
+
+on:
+  repository_dispatch:
+    types: [docs-publish]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.client_payload.sha }}
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    name: Build documentation
+    if: github.repository == 'opencadc/vostools'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the dispatched commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.client_payload.sha }}
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.12"
+
+      - name: Build the single site
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then
+            echo "refusing to build docs from $GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ || "$SHA" != "$(git rev-parse HEAD)" ]]; then
+            echo "payload sha $SHA does not match HEAD $(git rev-parse HEAD)" >&2
+            exit 1
+          fi
+          uv run --locked --all-packages zensical build --strict --clean

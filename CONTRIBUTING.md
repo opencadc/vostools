@@ -107,6 +107,23 @@ Agents and other non-interactive automation may create the message directly;
 the `commit-msg` hook must still validate it. Keep commits small and logical,
 and do not mix unrelated changes.
 
+## Releases
+
+Release Please opens one pull request per package (`libs/vos`, `libs/vosfs`,
+`libs/fss-cli`). Merging that pull request tags `<package>-vX.Y.Z` and opens a
+draft GitHub Release. On `opencadc/vostools` only, the Release workflow then
+dispatches publication of that package path and a build of the single
+documentation site. Forks never run those jobs.
+
+`cibuild.yml` still publishes a legacy `vos=<version>` tag. It stays until the
+vos PyPI trusted publisher is moved to `pypi.yml`.
+
+Do not push the historical `vosfs-v*` or `fsspec-cli-v*` tags. An annotated
+`vos-v3.7.0` tag, if you want one, belongs on `e96b7630` (the release-please
+baseline), not on the older `vos=3.7` commit `b74878d8`. Pushing it onto the
+old commit would make the next vos release include the entire modernization
+history.
+
 ## Open the pull request
 
 The pull request description must explain what changed, why it changed, and how

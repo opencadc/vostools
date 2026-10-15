@@ -1,0 +1,75 @@
+# Opens one release pull request per package and, after that pull request merges,
+# tags a draft GitHub Release. Publication and the documentation site are separate
+# workflows. This job does not run on forks.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release Please
+    if: github.repository == 'opencadc/vostools'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Open release pull requests and cut releases
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Dispatch publication and documentation
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUTS: ${{ toJson(steps.release.outputs) }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then
+            echo "refusing to dispatch from $GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          releases_created=$(jq -r '.releases_created // false' <<<"$OUTPUTS")
+          jq -n --arg sha "$SHA" --arg releases "$releases_created" \
+            '{event_type:"docs-publish", client_payload:{sha:$sha, releases_created:$releases}}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/dispatches" --input -
+          if [[ "$releases_created" != "true" ]]; then
+            exit 0
+          fi
+          mapfile -t paths < <(jq -r '
+            if (.paths_released | type) == "string" then .paths_released | fromjson[]
+            elif .paths_released == null then empty
+            else .paths_released[] end
+          ' <<<"$OUTPUTS")
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo "release-please reported a release but no package paths" >&2
+            exit 1
+          fi
+          for path in "${paths[@]}"; do
+            tag=$(jq -r --arg key "${path}--tag_name" '.[$key] // empty' <<<"$OUTPUTS")
+            sha=$(jq -r --arg key "${path}--sha" '.[$key] // empty' <<<"$OUTPUTS")
+            package=${path#libs/}
+            if [[ ! "$path" =~ ^libs/(vos|vosfs|fss-cli)$ || ! "$tag" =~ ^${package}-v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "refusing to dispatch invalid release path=$path tag=$tag sha=$sha" >&2
+              exit 1
+            fi
+            jq -n --arg path "$path" --arg package "$package" --arg tag "$tag" --arg sha "$sha" \
+              '{event_type:"pypi-release", client_payload:{path:$path, package:$package, tag_name:$tag, sha:$sha}}' \
+              | gh api "repos/${GITHUB_REPOSITORY}/dispatches" --input -
+          done

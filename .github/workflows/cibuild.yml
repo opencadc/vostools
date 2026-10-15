@@ -1,5 +1,6 @@
-# Publishes vos to PyPI when a `vos=<version>` release is created. The PyPI trusted publisher is
-# bound to this file name, so it stays until the per-package release workflow replaces it.
+# Publishes vos to PyPI when a legacy `vos=<version>` release is created. The existing PyPI
+# trusted publisher is bound to this file name. pypi.yml publishes `<package>-vX.Y.Z` tags.
+# Keep this workflow until that publisher is re-bound and the first new vos release succeeds.
 name: Publish (legacy)
 
 on:
