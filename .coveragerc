@@ -1,5 +1,0 @@
-[run]
-omit = 
-    vos/test/* 
-    vos/__init__.py 
-    vos/__version__.py

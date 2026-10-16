@@ -1,0 +1,33 @@
+# Commit prefixes use the repo scope, the only commitizen scope that fits shared dependencies.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(repo)
+      prefix-development: build(repo)
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci(repo)
+    groups:
+      pre-commit-hooks:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci(repo)
+    groups:
+      github-actions:
+        patterns: ["*"]

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vos:node xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:type="vos:ContainerNode"
+          uri="vos://cadc.nrc.ca!vault/user"
+          version="2.1">
+  <vos:properties>
+    <vos:property uri="ivo://ivoa.net/vospace/core#date">2024-05-01T00:00:00.000</vos:property>
+    <vos:property uri="ivo://ivoa.net/vospace/core#groupread">ivo://cadc.nrc.ca/gms#collab</vos:property>
+  </vos:properties>
+  <vos:nodes>
+    <vos:node xsi:type="vos:DataNode" uri="vos://cadc.nrc.ca!vault/user/report.fits">
+      <vos:properties>
+        <vos:property uri="ivo://ivoa.net/vospace/core#length">10485760</vos:property>
+        <vos:property uri="ivo://ivoa.net/vospace/core#contenttype">application/fits</vos:property>
+      </vos:properties>
+    </vos:node>
+    <vos:node xsi:type="vos:StructuredDataNode" uri="vos://cadc.nrc.ca!vault/user/catalog.vot">
+      <vos:properties>
+        <vos:property uri="ivo://ivoa.net/vospace/core#length">2048</vos:property>
+      </vos:properties>
+    </vos:node>
+    <vos:node xsi:type="vos:UnstructuredDataNode" uri="vos://cadc.nrc.ca!vault/user/blob.bin">
+      <vos:properties>
+        <vos:property uri="ivo://ivoa.net/vospace/core#length">512</vos:property>
+      </vos:properties>
+    </vos:node>
+    <vos:node xsi:type="vos:ContainerNode" uri="vos://cadc.nrc.ca!vault/user/subdir">
+      <vos:nodes/>
+    </vos:node>
+    <vos:node xsi:type="vos:LinkNode" uri="vos://cadc.nrc.ca!vault/user/shortcut">
+      <vos:target>vos://cadc.nrc.ca!vault/user/report.fits</vos:target>
+    </vos:node>
+  </vos:nodes>
+</vos:node>

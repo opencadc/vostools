@@ -1,0 +1,151 @@
+# Publishes one package after release-please cuts its draft release.
+# The trusted publisher for each project is bound to this file and environment pypi-<package>.
+# Every job refuses a repository other than opencadc/vostools, including shinybrar/vostools.
+# Legacy vos=<version> tags still publish through cibuild.yml until that publisher is re-bound.
+name: Publish to PyPI
+
+on:
+  repository_dispatch:
+    types: [pypi-release]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-${{ github.event.client_payload.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ github.event.client_payload.package }}
+    if: github.repository == 'opencadc/vostools'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    outputs:
+      package: ${{ steps.release.outputs.package }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - name: Check out the released commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.client_payload.sha }}
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.12"
+
+      - name: Validate the release and build that package only
+        id: release
+        env:
+          PACKAGE_PATH: ${{ github.event.client_payload.path }}
+          PACKAGE: ${{ github.event.client_payload.package }}
+          TAG: ${{ github.event.client_payload.tag_name }}
+          SHA: ${{ github.event.client_payload.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then
+            echo "refusing to publish from $GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          if [[ "$PACKAGE_PATH" != "libs/$PACKAGE" || ! "$PACKAGE" =~ ^(vos|vosfs|fss-cli)$ ]]; then
+            echo "invalid package path $PACKAGE_PATH ($PACKAGE)" >&2
+            exit 1
+          fi
+          if [[ ! "$TAG" =~ ^${PACKAGE}-v[0-9]+\.[0-9]+\.[0-9]+$ || ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "invalid tag $TAG or sha $SHA" >&2
+            exit 1
+          fi
+          version=${TAG#"${PACKAGE}-v"}
+          git fetch --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          tagged=$(git rev-parse "${TAG}^{commit}")
+          if [[ "$tagged" != "$SHA" || "$SHA" != "$(git rev-parse HEAD)" ]]; then
+            echo "tag $TAG points at $tagged, payload sha is $SHA, HEAD is $(git rev-parse HEAD)" >&2
+            exit 1
+          fi
+          actual=$(uv version --package "$PACKAGE" --short)
+          if [[ "$actual" != "$version" ]]; then
+            echo "tag version $version does not match $actual in libs/$PACKAGE" >&2
+            exit 1
+          fi
+          uv build --no-sources --package "$PACKAGE" --out-dir dist
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 ]]; then
+            echo "expected one wheel and one sdist, found ${wheels[*]} ${sdists[*]}" >&2
+            exit 1
+          fi
+          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-${{ steps.release.outputs.package }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish ${{ needs.build.outputs.package }} to PyPI
+    needs: build
+    if: github.repository == 'opencadc/vostools' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: pypi-${{ needs.build.outputs.package }}
+      url: https://pypi.org/project/${{ needs.build.outputs.package }}/
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist-${{ needs.build.outputs.package }}
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+
+  github-release:
+    name: Attach ${{ needs.build.outputs.package }} assets
+    needs: [build, publish]
+    if: github.repository == 'opencadc/vostools' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist-${{ needs.build.outputs.package }}
+          path: dist
+
+      - name: Upload the assets and publish the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then
+            echo "refusing to edit releases on $GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 ]]; then
+            echo "expected one wheel and one sdist" >&2
+            exit 1
+          fi
+          gh release upload "$TAG" "${wheels[0]}" "${sdists[0]}" --clobber
+          gh release edit "$TAG" --draft=false

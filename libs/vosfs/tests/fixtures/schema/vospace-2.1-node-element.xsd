@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Test-only wrapper around the pinned, unmodified VOSpace 2.1 schema
+  (VOSpace-2.1.xsd, from opencadc/vos at commit
+  cf976ce8141dd3341631b7f3e07aa38443d42f58).
+
+  The official schema declares node kinds only as complexTypes and never as a
+  global <node> element, so a standalone <node> document (a node PUT/POST body
+  or a container listing response) has no matching global declaration to
+  validate against. This wrapper includes the pinned schema verbatim and adds
+  the single missing global element declaration, typed as the base vos:Node so
+  that xsi:type derivations (ContainerNode, DataNode, LinkNode, ...) validate.
+  The pinned schema itself is not altered.
+-->
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+    targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0"
+    elementFormDefault="qualified"
+    version="2.1">
+  <xs:include schemaLocation="VOSpace-2.1.xsd"/>
+  <xs:element name="node" type="vos:Node"/>
+</xs:schema>

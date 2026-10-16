@@ -1,0 +1,67 @@
+# Runs the deterministic offline test matrix for one workspace package.
+name: Package tests
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Directory name under libs/
+        type: string
+        required: true
+      distribution:
+        description: Distribution name for uv --package (defaults to package)
+        type: string
+        required: false
+        default: ""
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.10" }
+          - { os: ubuntu-latest, python: "3.11" }
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: ubuntu-latest, python: "3.14" }
+          - { os: macos-latest, python: "3.12" }
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-suffix: ${{ inputs.package }}-py${{ matrix.python }}
+          python-version: ${{ matrix.python }}
+
+      - name: Run tests
+        env:
+          PACKAGE: ${{ inputs.package }}
+          DISTRIBUTION: ${{ inputs.distribution != '' && inputs.distribution || inputs.package }}
+        run: >-
+          uv run --locked --package "$DISTRIBUTION" pytest "libs/$PACKAGE/tests"
+          --cov --cov-config "libs/$PACKAGE/pyproject.toml"
+          --cov-report "xml:coverage-$PACKAGE.xml"
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage-${{ inputs.package }}.xml
+          flags: ${{ inputs.package }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

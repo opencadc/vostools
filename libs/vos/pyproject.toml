@@ -1,0 +1,104 @@
+[build-system]
+requires = ["uv_build>=0.11.29,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "vos"
+version = "3.7"
+description = "CADC VOS Class Libraries"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "JJ Kavelaars, Canadian Astronomy Data Centre", email = "cadc@nrc-cnrc.gc.ca" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "cadcutils>=1.6.1",
+    "html2text>=2016.5.29",
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://www.canfar.net/en/docs/storage"
+Source = "https://github.com/opencadc/vostools"
+Issues = "https://github.com/opencadc/vostools/issues"
+"VOSpace Standard" = "http://www.ivoa.net/documents/VOSpace/"
+
+[project.scripts]
+vcat = "vos.commands.vcat:vcat"
+vchmod = "vos.commands.vchmod:vchmod"
+vcp = "vos.commands.vcp:vcp"
+vln = "vos.commands.vln:vln"
+vlock = "vos.commands.vlock:vlock"
+vls = "vos.commands.vls:vls"
+vmkdir = "vos.commands.vmkdir:vmkdir"
+vmv = "vos.commands.vmv:vmv"
+vrm = "vos.commands.vrm:vrm"
+vrmdir = "vos.commands.vrmdir:vrmdir"
+vsync = "vos.commands.vsync:vsync"
+vtag = "vos.commands.vtag:vtag"
+vos-config = "vos.vosconfig:vos_config_main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-cov>=6",
+]
+
+[tool.uv.build-backend]
+source-include = ["tests/**"]
+source-exclude = ["**/__pycache__/**"]
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+norecursedirs = ["integration", "acceptance"]
+markers = [
+    "integration: live tests against CADC services; run explicitly with pytest tests/integration",
+]
+
+[tool.coverage.run]
+source = ["vos"]
+
+# Ratchet towards the root policy: each refactor(vos) PR fixes one or more of the ignored rules and
+# removes them here, then widens select, until this table holds only `extend` and vos inherits the
+# root policy unchanged.
+[tool.ruff]
+extend = "../../pyproject.toml"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP", "B"]
+ignore = [
+    "B007",
+    "B009",
+    "B023",
+    "B028",
+    "B904",
+    "F401",
+    "F523",
+    "F841",
+    "I001",
+    "UP004",
+    "UP008",
+    "UP010",
+    "UP012",
+    "UP015",
+    "UP018",
+    "UP024",
+    "UP028",
+    "UP030",
+    "UP031",
+    "UP032",
+    "UP034",
+    "UP039",
+]

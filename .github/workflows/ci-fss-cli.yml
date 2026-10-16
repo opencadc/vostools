@@ -1,0 +1,44 @@
+# Test fss-cli when its tree, vosfs (a test dependency), or shared files change.
+name: fss-cli
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "libs/fss-cli/**"
+      - "libs/vosfs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".pre-commit-config.yaml"
+      - ".github/**"
+      - "tests/repo/**"
+  push:
+    branches: [main]
+    paths:
+      - "libs/fss-cli/**"
+      - "libs/vosfs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".pre-commit-config.yaml"
+      - ".github/**"
+      - "tests/repo/**"
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fss-cli-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Tests
+    uses: ./.github/workflows/reusable-package.yml
+    with:
+      package: fss-cli
+      distribution: fss-cli
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

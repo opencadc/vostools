@@ -1,0 +1,56 @@
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: mixed-line-ending
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint
+        entry: uv run --locked ruff check --force-exclude --fix --exit-non-zero-on-fix
+        language: unsupported
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: Ruff format
+        entry: uv run --locked ruff format --force-exclude
+        language: unsupported
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ty
+        name: ty
+        entry: uv run --locked ty check
+        language: unsupported
+        pass_filenames: false
+        always_run: true
+
+      - id: pymarkdown
+        name: PyMarkdown
+        # MD013 line length is handled by the editor. MD030/MD033/MD046/MD050 conflict
+        # with the MkDocs/Material authoring model the user docs use (grid cards and their
+        # __Title__ markers). MD051 cannot resolve attr_list heading anchors such as {#ls}.
+        entry: uv run --locked pymarkdown --disable-rules MD013,MD030,MD033,MD046,MD050,MD051 scan
+        language: unsupported
+        types: [markdown]
+        exclude: (^|/)CHANGELOG\.md$
+
+      - id: commitizen
+        name: Commitizen message
+        entry: uv run --locked cz check --allow-abort --commit-msg-file
+        language: unsupported
+        stages: [commit-msg]

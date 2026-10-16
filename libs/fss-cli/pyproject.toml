@@ -1,0 +1,84 @@
+[project]
+name = "fss-cli"
+version = "0.10.0"
+description = "Library-only POSIX-shaped commands for async fsspec filesystems"
+readme = "README.md"
+authors = [
+    { name = "Shiny Brar  (he/il)", email = "charanjotbrar@gmail.com" }
+]
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+keywords = ["fsspec", "cli", "posix", "typer", "filesystem"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "fsspec>=2026.6.0",
+    "rich>=13.8.0",
+    "typer>=0.27.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/opencadc/vostools"
+Documentation = "https://opencadc.github.io/vostools/"
+Repository = "https://github.com/opencadc/vostools"
+Issues = "https://github.com/opencadc/vostools/issues"
+Changelog = "https://github.com/opencadc/vostools/blob/main/libs/fss-cli/CHANGELOG.md"
+
+[build-system]
+requires = ["uv_build>=0.11.29,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+source-include = ["CHANGELOG.md", "tests/**"]
+
+[dependency-groups]
+dev = [
+    "click>=8.1",
+    "httpx>=0.27",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "vosfs",
+]
+
+[tool.uv.sources]
+vosfs = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["fss_cli"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+# Lint ratchet: rules that are new since the import and not yet fixed here. Remove a
+# code once the package is clean for it.
+[tool.ruff.lint]
+ignore = [
+    "ISC004",  # Implicit concatenation in test collections; needs parentheses.
+    "PLR0917", # Positional internal helpers; needs keyword-only parameters.
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"src/fss_cli/*.py" = [
+    # fsspec's async filesystem API is underscore-prefixed by convention
+    # (`_info`, `_ls`, `_cat_file`, ...). Awaiting those hooks is the documented
+    # way to drive an AsyncFileSystem, not private-member access.
+    "SLF001",
+]

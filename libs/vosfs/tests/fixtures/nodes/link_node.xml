@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vos:node xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:type="vos:LinkNode"
+          uri="vos://cadc.nrc.ca!vault/user/shortcut"
+          version="2.1">
+  <vos:target>vos://cadc.nrc.ca!vault/user/report.fits</vos:target>
+</vos:node>
