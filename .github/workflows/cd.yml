@@ -1,6 +1,7 @@
 # Opens one release pull request per package and, after that pull request merges,
-# tags a draft GitHub Release. Publication and the documentation site are separate
-# workflows. This job does not run on forks.
+# tags a draft GitHub Release. This job runs on shinybrar/vostools and
+# opencadc/vostools. Publication and the documentation site are separate workflows
+# and are dispatched only from opencadc/vostools.
 name: Release
 
 on:
@@ -17,7 +18,7 @@ concurrency:
 jobs:
   release-please:
     name: Release Please
-    if: github.repository == 'opencadc/vostools'
+    if: "github.repository == 'shinybrar/vostools' || github.repository == 'opencadc/vostools'"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -34,7 +35,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Dispatch publication and documentation
-        if: success()
+        if: "success() && github.repository == 'opencadc/vostools'"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OUTPUTS: ${{ toJson(steps.release.outputs) }}

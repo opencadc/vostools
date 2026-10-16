@@ -1,5 +1,6 @@
 # Publishes one package after release-please cuts its draft release.
 # The trusted publisher for each project is bound to this file and environment pypi-<package>.
+# Every job refuses a repository other than opencadc/vostools, including shinybrar/vostools.
 # Legacy vos=<version> tags still publish through cibuild.yml until that publisher is re-bound.
 name: Publish to PyPI
 

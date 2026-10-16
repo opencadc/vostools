@@ -110,10 +110,10 @@ and do not mix unrelated changes.
 ## Releases
 
 Release Please opens one pull request per package (`libs/vos`, `libs/vosfs`,
-`libs/fss-cli`). Merging that pull request tags `<package>-vX.Y.Z` and opens a
-draft GitHub Release. On `opencadc/vostools` only, the Release workflow then
-dispatches publication of that package path and a build of the single
-documentation site. Forks never run those jobs.
+`libs/fss-cli`) on `shinybrar/vostools` and `opencadc/vostools`. Merging that
+pull request tags `<package>-vX.Y.Z` and opens a draft GitHub Release. Only
+`opencadc/vostools` then dispatches publication of that package path and a
+build of the single documentation site.
 
 `cibuild.yml` still publishes a legacy `vos=<version>` tag. It stays until the
 vos PyPI trusted publisher is moved to `pypi.yml`.

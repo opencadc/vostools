@@ -71,6 +71,7 @@ def test_publishing_runs_only_on_the_upstream_repository(path: Path) -> None:
         )
         if publishes:
             assert UPSTREAM_GUARD in job.get("if", ""), name
+            assert "shinybrar/vostools" not in job["if"]
 
 
 def test_quality_always_runs_and_exposes_required() -> None:

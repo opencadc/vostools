@@ -1,7 +1,6 @@
 """Contracts for release-please and the guarded publication workflows."""
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -12,6 +11,7 @@ CONFIG = json.loads((ROOT / "release-please-config.json").read_text())
 MANIFEST = json.loads((ROOT / ".release-please-manifest.json").read_text())
 PACKAGES = {"libs/vos": "vos", "libs/vosfs": "vosfs", "libs/fss-cli": "fss-cli"}
 UPSTREAM_GUARD = "github.repository == 'opencadc/vostools'"
+RELEASE_GUARD = "github.repository == 'shinybrar/vostools' || github.repository == 'opencadc/vostools'"
 BASELINE = "e96b7630e1af4286afd7b57ff14ed34ea4b8e3a7"
 
 
@@ -67,9 +67,14 @@ def test_release_workflow_dispatches_one_package_path_and_one_docs_event() -> No
     text = (ROOT / ".github" / "workflows" / "cd.yml").read_text()
     loaded = workflow("cd.yml")
     job = loaded["jobs"]["release-please"]
+    dispatch = next(step for step in job["steps"] if step.get("run"))
 
     assert triggers(loaded)["push"]["branches"] == ["main"]
-    assert UPSTREAM_GUARD in job["if"]
+    assert job["if"] == RELEASE_GUARD
+    assert dispatch["if"] == f"success() && {UPSTREAM_GUARD}"
+    assert 'if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then' in dispatch["run"]
+    assert "exit 1" in dispatch["run"].split("pypi-release", 1)[0]
+    assert "shinybrar/vostools" not in dispatch["run"]
     assert "pypi-release" in text
     assert "docs-publish" in text
     assert "client_payload:{path:$path, package:$package, tag_name:$tag, sha:$sha}" in text
@@ -91,6 +96,8 @@ def test_pypi_workflow_publishes_only_the_dispatched_package() -> None:
     assert text.index("gh-action-pypi-publish@") < text.index("--draft=false")
     for name, job in jobs.items():
         assert UPSTREAM_GUARD in job["if"], name
+        assert "shinybrar/vostools" not in job["if"]
+    assert 'echo "refusing to publish from $GITHUB_REPOSITORY"' in text
 
 
 def test_docs_workflow_builds_one_site() -> None:
@@ -100,7 +107,7 @@ def test_docs_workflow_builds_one_site() -> None:
     assert names == ["docs.yml"]
     assert triggers(workflow("docs.yml"))["repository_dispatch"]["types"] == ["docs-publish"]
     assert "zensical build --strict" in text
-    assert UPSTREAM_GUARD in workflow("docs.yml")["jobs"]["docs"]["if"]
+    assert workflow("docs.yml")["jobs"]["docs"]["if"] == UPSTREAM_GUARD
     assert "libs/vos" not in text
     assert "libs/fss-cli" not in text
 
@@ -111,11 +118,12 @@ def test_legacy_vos_publisher_stays_until_cutover() -> None:
 
     assert "vos=<version>" in text
     assert "pypi.yml" in text
-    assert UPSTREAM_GUARD in loaded["jobs"]["build-n-publish"]["if"]
-    assert "contains(github.ref, '=')" in loaded["jobs"]["build-n-publish"]["if"]
+    publish_if = loaded["jobs"]["build-n-publish"]["if"]
+    assert publish_if == f"{UPSTREAM_GUARD} && contains(github.ref, '=')"
+    assert "shinybrar/vostools" not in publish_if
 
 
-def test_privileged_jobs_run_only_on_the_upstream_repository() -> None:
+def test_privileged_jobs_stay_on_upstream_except_release_please() -> None:
     for path in (ROOT / ".github" / "workflows").glob("*.yml"):
         for name, job in workflow(path.name)["jobs"].items():
             permissions = job.get("permissions", {})
@@ -130,6 +138,11 @@ def test_privileged_jobs_run_only_on_the_upstream_repository() -> None:
                     for step in steps
                 )
             )
-            if privileged:
-                assert UPSTREAM_GUARD in job.get("if", ""), f"{path.name}:{name}"
-                assert re.search(r"opencadc/vostools", job["if"])
+            if not privileged:
+                continue
+            condition = job.get("if", "")
+            if path.name == "cd.yml" and name == "release-please":
+                assert condition == RELEASE_GUARD
+                continue
+            assert condition == UPSTREAM_GUARD or condition.startswith(f"{UPSTREAM_GUARD} && "), f"{path.name}:{name}"
+            assert "shinybrar/vostools" not in condition
