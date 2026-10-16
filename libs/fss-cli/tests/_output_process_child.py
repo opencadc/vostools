@@ -40,11 +40,15 @@ class _FileSystem(AsyncFileSystem):
         path: str,
         detail: bool = True,  # noqa: FBT002 - matches the fsspec hook signature.
         **kwargs: object,
-    ) -> list[str]:
+    ) -> list[dict[str, object]]:
         del path, detail, kwargs
         if self._mode == "tty":
-            return ["/docs/\x1b[31mred\x1b[0m"]
-        return ["/docs/z.txt", "/docs/a.txt"]
+            return [
+                {"name": "/docs/\x1b[31mred\x1b[0m", "type": "directory"},
+                {"name": "/docs/a.txt", "type": "file"},
+                {"name": "/docs/link", "type": "directory", "islink": True},
+            ]
+        return [{"name": "/docs/z.txt", "type": "file"}, {"name": "/docs/a.txt", "type": "file"}]
 
 
 @asynccontextmanager

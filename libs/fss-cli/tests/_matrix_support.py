@@ -414,7 +414,7 @@ def _exercise_locked_profile(
         path,
         f"{path}/missing",
     ]
-    assert [call.detail for call in source.calls] == [None, False, None, False, None]
+    assert [call.detail for call in source.calls] == [None, True, None, True, None]
     assert all(not call.kwargs for call in source.calls)
     assert [source_id for source_id, _result in source.info_results] == [1, 2]
     assert [source_id for source_id, _result in source.ls_results] == [1, 2]
@@ -422,7 +422,9 @@ def _exercise_locked_profile(
         isinstance(result, Mapping) and result.get("type") == "directory" for _source_id, result in source.info_results
     )
     assert all(
-        isinstance(result, list) and set(result) == {f"{path}/.hidden", f"{path}/guide.md", f"{path}/notes.txt"}
+        isinstance(result, list)
+        and all(isinstance(entry, Mapping) and entry.get("type") == "file" for entry in result)
+        and {entry["name"] for entry in result} == {f"{path}/.hidden", f"{path}/guide.md", f"{path}/notes.txt"}
         for _source_id, result in source.ls_results
     )
     assert len(source.errors) == 1

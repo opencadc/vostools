@@ -13,7 +13,7 @@ the gate wins.
 
 | Command | Form | Backend hooks awaited |
 | --- | --- | --- |
-| `ls` | `ls [-A] [--] name:/path...` | `_info`, `_ls` |
+| `ls` | `ls [-A] [--] name:/path...` | `_info`, `_ls(detail=True)` |
 | `ls -l` | `ls [-Alh] [--] name:/path...` | `_info`, `_ls(detail=True)` |
 | `du` | `du [-sh] [--] name:/path` | `_ls(detail=True)` |
 | `find` | `find [--maxdepth N] [--type f\|d] [--] name:/path` | `_ls(detail=True)`; `--type d` also `_info` |
@@ -55,6 +55,13 @@ guide.md
 ```
 
 `-A` includes entries beginning with a dot, excluding `.` and `..`.
+
+The detailed listing is read for each child's `name`, `type`, and `islink`
+only; metadata that plain `ls` does not print is not validated. A names-only
+list is an incompatible result. With [`contract.md`](contract.md) §6 emphasis
+on, directory children and the operand spelling of each directory block header
+(not its `:`) are bold. In `ls -l` the name cell is the only styled cell of a
+row; a link's `name -> target` stays plain.
 
 ### `ls -l` / `ls -lh`
 

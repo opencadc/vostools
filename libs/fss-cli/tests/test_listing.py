@@ -278,3 +278,22 @@ def test_render_listing_uses_kind_when_link_and_mode_type_disagree(
 
 def test_render_listing_empty_rows_is_empty() -> None:
     assert render_listing([]) == ""
+
+
+def test_render_listing_emphasizes_only_directory_names_after_measuring_widths() -> None:
+    rows = [
+        to_listing({"name": "/sub", "type": "directory", "size": 0}),
+        to_listing({"name": "/report.txt", "type": "file", "size": 123456}),
+        to_listing({"name": "/shortcut", "type": "directory", "islink": True, "target": "/sub"}),
+    ]
+
+    plain = render_listing(rows)
+    emphasized = render_listing(rows, emphasize_directories=True)
+
+    assert plain == (
+        "d?????????  -  -  -       0  -  sub\n"
+        "-?????????  -  -  -  123456  -  report.txt\n"
+        "l?????????  -  -  -       -  -  shortcut -> /sub\n"
+    )
+    assert emphasized == plain.replace("  sub\n", "  \x1b[1msub\x1b[22m\n", 1)
+    assert emphasized.replace("\x1b[1m", "").replace("\x1b[22m", "") == plain

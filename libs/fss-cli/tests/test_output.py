@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from fss_cli import App
 
-from ._support import _invoke, _RecordingSource
+from ._support import _files, _invoke, _RecordingSource
 
 
 def test_ls_processes_operands_in_order_then_renders_sorted_output_blocks() -> None:
@@ -22,7 +22,7 @@ def test_ls_processes_operands_in_order_then_renders_sorted_output_blocks() -> N
             "/empty": {"type": "directory"},
         },
         ls_by_path={
-            "/z-dir": ["/z-dir/second", "/z-dir/first"],
+            "/z-dir": _files("/z-dir/second", "/z-dir/first"),
             "/empty": [],
         },
     )
@@ -79,8 +79,8 @@ def test_ls_keeps_duplicates_and_successes_while_reporting_every_failure(
             "/ok-dir": {"type": "directory"},
         },
         ls_by_path={
-            "/bad-dir": ["/bad-dir/accepted", "/bad-dir/nested/rejected"],
-            "/ok-dir": ["/ok-dir/z", "/ok-dir/a"],
+            "/bad-dir": _files("/bad-dir/accepted", "/bad-dir/nested/rejected"),
+            "/ok-dir": _files("/ok-dir/z", "/ok-dir/a"),
         },
     )
 
@@ -288,7 +288,7 @@ def test_ls_sorts_repeated_directory_blocks_with_raw_string_ties(
             "/a": {"type": "directory"},
         },
         ls_by_path={
-            "/z": ["/z/second", "/z/first"],
+            "/z": _files("/z/second", "/z/first"),
             "/a": [],
         },
     )
@@ -412,7 +412,7 @@ def test_ls_preserves_successful_rendering_below_a_parent_typer_app() -> None:
             "/a-file": {"type": "file"},
         },
         ls_by_path={
-            "/z-dir": ["/z-dir/z.txt", "/z-dir/a.txt"],
+            "/z-dir": _files("/z-dir/z.txt", "/z-dir/a.txt"),
         },
     )
     parent = typer.Typer(add_completion=False)

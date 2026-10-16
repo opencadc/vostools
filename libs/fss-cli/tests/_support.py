@@ -43,6 +43,11 @@ def _verified_uploads(stderr: str) -> dict[str, int]:
     return sizes
 
 
+def _files(*names: str) -> list[dict[str, str]]:
+    """Return fsspec ``ls(detail=True)`` records for plain files."""
+    return [{"name": name, "type": "file"} for name in names]
+
+
 def _invoke(
     command: str,
     arguments: list[str],

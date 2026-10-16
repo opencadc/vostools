@@ -39,6 +39,9 @@ _MTIME_FIELDS = ("mtime", "LastModified", "last_modified")
 _SIZE_UNITS = ("K", "M", "G", "T", "P", "E", "Z", "Y")
 _SIZE_BASE = 1024
 _SINGLE_DECIMAL_LIMIT = 100
+# SGR 22 ends bold without resetting colors a name may carry; SGR 0 would.
+_BOLD = "\x1b[1m"
+_NORMAL_INTENSITY = "\x1b[22m"
 
 ListingKind = Literal["file", "dir", "link", "other"]
 _MODE_KIND_BY_TYPE: dict[int, ListingKind] = {
@@ -256,6 +259,11 @@ def _type_indicator(row: ListingRow) -> str:
     return stat.filemode(row.mode)
 
 
+def emphasize(text: str) -> str:
+    """Wrap text in bold, leaving every character of it untouched."""
+    return f"{_BOLD}{text}{_NORMAL_INTENSITY}"
+
+
 def _display_name(row: ListingRow) -> str:
     if row.kind == "link" and row.link_target is not None:
         return f"{row.name} -> {row.link_target}"
@@ -266,8 +274,13 @@ def render_listing(
     rows: Sequence[ListingRow],
     *,
     human_readable: bool = False,
+    emphasize_directories: bool = False,
 ) -> str:
-    """Render stable shell columns with explicit gaps for unknown metadata."""
+    """Render stable shell columns with explicit gaps for unknown metadata.
+
+    With ``emphasize_directories``, directory names are bold; column widths are
+    still measured on the unstyled text.
+    """
     if not rows:
         return ""
 
@@ -307,7 +320,7 @@ def render_listing(
         for column_index, (right_aligned, column) in enumerate(rendered_columns):
             cell = column[index]
             if column_index == len(rendered_columns) - 1:
-                cells.append(cell)
+                cells.append(emphasize(cell) if emphasize_directories and rows[index].kind == "dir" else cell)
             elif right_aligned:
                 cells.append(cell.rjust(widths[column_index]))
             else:

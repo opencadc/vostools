@@ -1,22 +1,29 @@
 """Directory listing tests through the public embedded-command seam."""
 
 import asyncio
+import io
 import locale
+import sys
 import threading
 from collections.abc import Callable, Coroutine
 
 import pytest
 import typer
 
-from ._support import _invoke, _RecordingFileSystem, _RecordingSource
+from fss_cli import _ls
+
+from ._support import _files, _invoke, _RecordingFileSystem, _RecordingSource
+
+_BOLD = "\x1b[1m"
+_NORMAL = "\x1b[22m"
 
 
-def test_ls_lists_one_directory_through_names_only_async_operations() -> None:
+def test_ls_lists_one_directory_through_detail_async_operations() -> None:
     events: list[tuple[object, ...]] = []
     source = _RecordingSource(
         events,
         {"type": "directory"},
-        ls_result=["/docs/notes.txt", "/docs/guide.md"],
+        ls_result=_files("/docs/notes.txt", "/docs/guide.md"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -28,7 +35,7 @@ def test_ls_lists_one_directory_through_names_only_async_operations() -> None:
         ("factory",),
         ("enter",),
         ("info", "/docs"),
-        ("ls", "/docs", False),
+        ("ls", "/docs", True),
         ("exit",),
     ]
 
@@ -53,12 +60,15 @@ def test_ls_writes_nothing_for_an_empty_directory() -> None:
         None,
         "/docs/guide.md",
         {"name": "/docs/guide.md"},
-        ("/docs/guide.md",),
+        (_files("/docs/guide.md")[0],),
         [1],
-        ["/docs/guide.md", None],
+        ["/docs/guide.md"],
+        [*_files("/docs/guide.md"), None],
+        [{"name": 1, "type": "file"}],
+        [{"type": "file"}],
     ],
 )
-def test_ls_rejects_non_concrete_names_lists(listing: object) -> None:
+def test_ls_rejects_non_concrete_detail_lists(listing: object) -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
@@ -87,7 +97,7 @@ def test_ls_rejects_non_immediate_lexical_children(child: str) -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=[child],
+        ls_result=_files(child),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -100,21 +110,21 @@ def test_ls_rejects_non_immediate_lexical_children(child: str) -> None:
 @pytest.mark.parametrize(
     ("path", "listing", "stdout"),
     [
-        ("/docs/", ["/docs/guide.md"], "guide.md\n"),
-        ("/docs///", ["/docs/guide.md"], "guide.md\n"),
-        ("/", ["/guide.md"], "guide.md\n"),
+        ("/docs/", "/docs/guide.md", "guide.md\n"),
+        ("/docs///", "/docs/guide.md", "guide.md\n"),
+        ("/", "/guide.md", "guide.md\n"),
     ],
 )
 def test_ls_validates_root_and_trailing_slash_children(
     path: str,
-    listing: list[str],
+    listing: str,
     stdout: str,
 ) -> None:
     events: list[tuple[object, ...]] = []
     source = _RecordingSource(
         events,
         {"type": "directory"},
-        ls_result=listing,
+        ls_result=_files(listing),
     )
 
     result = _invoke("ls", [f"memory:{path}"], sources={"memory": source})
@@ -132,12 +142,12 @@ def test_ls_omits_dot_prefixed_directory_children_by_default() -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=[
+        ls_result=_files(
             "/docs/.hidden",
             "/docs/visible",
             "/docs/.",
             "/docs/..",
-        ],
+        ),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -151,12 +161,12 @@ def test_ls_almost_all_includes_hidden_children_but_not_dot_entries() -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=[
+        ls_result=_files(
             "/docs/visible",
             "/docs/..",
             "/docs/.hidden",
             "/docs/.",
-        ],
+        ),
     )
 
     result = _invoke("ls", ["-A", "memory:/docs"], sources={"memory": source})
@@ -170,7 +180,7 @@ def test_ls_preserves_duplicate_directory_children() -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=["/docs/guide.md", "/docs/guide.md"],
+        ls_result=_files("/docs/guide.md", "/docs/guide.md"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -184,7 +194,7 @@ def test_ls_validates_hidden_children_before_filtering() -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=["/docs/visible", "/docs/.nested/bad"],
+        ls_result=_files("/docs/visible", "/docs/.nested/bad"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -210,7 +220,7 @@ def test_ls_uses_current_collation_with_raw_string_ties(monkeypatch) -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=["/docs/beta", "/docs/zeta", "/docs/alpha"],
+        ls_result=_files("/docs/beta", "/docs/zeta", "/docs/alpha"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -232,7 +242,7 @@ def test_ls_preserves_a_collation_failure_without_a_backend_diagnostic(
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=["/docs/guide.md"],
+        ls_result=_files("/docs/guide.md"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -322,7 +332,7 @@ def test_ls_buffers_a_whole_directory_before_writing_stdout() -> None:
     source = _RecordingSource(
         [],
         {"type": "directory"},
-        ls_result=["/docs/accepted.txt", "/docs/nested/rejected.txt"],
+        ls_result=_files("/docs/accepted.txt", "/docs/nested/rejected.txt"),
     )
 
     result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
@@ -420,3 +430,142 @@ def test_ls_drains_started_operations_then_stops_on_cancellation(
         ("exit",),
         ("exit",),
     ]
+
+
+def test_ls_ignores_metadata_that_only_a_long_listing_prints() -> None:
+    source = _RecordingSource(
+        [],
+        {"type": "directory"},
+        ls_result=[
+            {"name": "/docs/guide.md", "type": "file", "owner": "bad\nowner", "permissions": "nonsense"},
+        ],
+    )
+
+    result = _invoke("ls", ["memory:/docs"], sources={"memory": source})
+
+    assert (result.exit_code, result.stdout, result.stderr) == (0, "guide.md\n", "")
+
+
+def _emphasis_fixture() -> _RecordingSource:
+    return _RecordingSource(
+        [],
+        info_by_path={
+            "/docs": {"type": "directory"},
+            "/file": {"type": "file"},
+            "/linked": {"type": "directory", "islink": True},
+        },
+        ls_by_path={
+            "/docs": [
+                {"name": "/docs/sub", "type": "directory"},
+                {"name": "/docs/bucket", "type": "dir"},
+                {"name": "/docs/link", "type": "directory", "islink": True},
+                {"name": "/docs/odd", "type": ["directory"]},
+                {"name": "/docs/a.txt", "type": "file"},
+                {"name": "/docs/\x1b[31mred\x1b[0m", "type": "directory"},
+            ],
+        },
+    )
+
+
+def test_ls_bolds_directory_children_and_headers_when_emphasis_is_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(_ls, "_emphasis_enabled", lambda: True)
+
+    result = _invoke(
+        "ls",
+        ["memory:/docs", "memory:/file", "memory:/linked"],
+        sources={"memory": _emphasis_fixture()},
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == (
+        "memory:/file\nmemory:/linked\n\n"
+        f"{_BOLD}memory:/docs{_NORMAL}:\n"
+        f"{_BOLD}\x1b[31mred\x1b[0m{_NORMAL}\n"
+        "a.txt\n"
+        f"{_BOLD}bucket{_NORMAL}\n"
+        "link\n"
+        "odd\n"
+        f"{_BOLD}sub{_NORMAL}\n"
+    )
+    assert result.stderr == ""
+
+
+def test_ls_output_is_unstyled_when_emphasis_is_off() -> None:
+    result = _invoke(
+        "ls",
+        ["memory:/docs", "memory:/file", "memory:/linked"],
+        sources={"memory": _emphasis_fixture()},
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == (
+        "memory:/file\nmemory:/linked\n\nmemory:/docs:\n\x1b[31mred\x1b[0m\na.txt\nbucket\nlink\nodd\nsub\n"
+    )
+
+
+def test_long_ls_bolds_only_directory_name_cells_when_emphasis_is_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(_ls, "_emphasis_enabled", lambda: True)
+    source = _RecordingSource(
+        [],
+        {"type": "directory"},
+        ls_result=[
+            {"name": "/docs/sub", "type": "directory", "size": 0},
+            {"name": "/docs/a.txt", "type": "file", "size": 12},
+        ],
+    )
+
+    result = _invoke("ls", ["-l", "memory:/docs"], sources={"memory": source})
+
+    assert result.exit_code == 0
+    assert result.stdout == (f"-?????????  -  -  -  12  -  a.txt\nd?????????  -  -  -   0  -  {_BOLD}sub{_NORMAL}\n")
+
+
+class _Stdout(io.StringIO):
+    def __init__(self, *, tty: bool) -> None:
+        super().__init__()
+        self._tty = tty
+
+    def isatty(self) -> bool:
+        super().isatty()
+        return self._tty
+
+
+@pytest.mark.parametrize(
+    ("tty", "environment", "enabled"),
+    [
+        pytest.param(True, {"TERM": "xterm-256color"}, True, id="tty"),
+        pytest.param(True, {}, True, id="tty-without-term"),
+        pytest.param(True, {"TERM": "xterm", "NO_COLOR": ""}, True, id="empty-no-color"),
+        pytest.param(False, {"TERM": "xterm"}, False, id="pipe"),
+        pytest.param(True, {"TERM": "xterm", "NO_COLOR": "1"}, False, id="no-color"),
+        pytest.param(True, {"TERM": "dumb"}, False, id="dumb-term"),
+        pytest.param(True, {"TERM": "unknown"}, False, id="unknown-term"),
+    ],
+)
+def test_emphasis_requires_a_tty_without_no_color_or_a_dumb_term(
+    monkeypatch: pytest.MonkeyPatch,
+    tty: bool,
+    environment: dict[str, str],
+    enabled: bool,
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("TERM", raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(sys, "stdout", _Stdout(tty=tty))
+
+    assert _ls._emphasis_enabled() is enabled
+
+
+def test_emphasis_is_off_for_a_missing_or_closed_stdout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "stdout", None)
+    assert _ls._emphasis_enabled() is False
+
+    closed = _Stdout(tty=True)
+    closed.close()
+    monkeypatch.setattr(sys, "stdout", closed)
+    assert _ls._emphasis_enabled() is False

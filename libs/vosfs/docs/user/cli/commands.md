@@ -42,6 +42,11 @@ myapp fs ls -lh data:/project         # long form, human-readable sizes
 A file operand prints itself; a directory prints its sorted children. With
 several operands, files come first, then one headed block per directory.
 
+On a terminal, directory names are bold, including VOSpace containers and
+object-store buckets. Links and files stay plain. Piped or redirected output is
+never styled, and `NO_COLOR=1` or `TERM=dumb` turns the bold off on a terminal
+too. Only bold is added; the names themselves never change.
+
 Long listing keeps the shell order: permissions, link count, owner, group,
 size, modification time, and name. Missing values show `-`; missing permission
 bits show `?`, for example `-?????????` for a file without a mode. Recent dates

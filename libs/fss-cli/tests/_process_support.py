@@ -5,6 +5,7 @@ import os
 import pty
 import subprocess
 import termios
+from collections.abc import Mapping
 from contextlib import suppress
 from pathlib import Path
 
@@ -16,6 +17,7 @@ def _environment(
     *,
     tracking_path: Path | None = None,
     tmpdir: Path | None = None,
+    overrides: Mapping[str, str | None] | None = None,
 ) -> dict[str, str]:
     environment = os.environ.copy()
     environment.update(
@@ -26,6 +28,11 @@ def _environment(
             "PYTHONUNBUFFERED": "1",
         }
     )
+    for name, value in (overrides or {}).items():
+        if value is None:
+            environment.pop(name, None)
+        else:
+            environment[name] = value
     if tracking_path is not None:
         environment["FSS_CLI_CAT_PROCESS_TRACKING"] = str(tracking_path)
     if tmpdir is not None:
@@ -41,8 +48,9 @@ def _run_redirected(
     stdin: bytes | None = None,
     tracking_path: Path | None = None,
     tmpdir: Path | None = None,
+    overrides: Mapping[str, str | None] | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    environment = _environment(tracking_path=tracking_path, tmpdir=tmpdir)
+    environment = _environment(tracking_path=tracking_path, tmpdir=tmpdir, overrides=overrides)
     if stdin is None:
         return subprocess.run(  # noqa: S603 - fixed interpreter and child source.
             command,
@@ -64,7 +72,11 @@ def _run_redirected(
     )
 
 
-def _run_pty(command: list[str]) -> tuple[int, bytes, bytes]:
+def _run_pty(
+    command: list[str],
+    *,
+    overrides: Mapping[str, str | None] | None = None,
+) -> tuple[int, bytes, bytes]:
     master_fd, slave_fd = pty.openpty()
     try:
         attributes = termios.tcgetattr(slave_fd)
@@ -75,7 +87,7 @@ def _run_pty(command: list[str]) -> tuple[int, bytes, bytes]:
         result = subprocess.run(  # noqa: S603 - fixed child command.
             command,
             cwd=_REPO_ROOT,
-            env=_environment(),
+            env=_environment(overrides=overrides),
             stdin=subprocess.DEVNULL,
             stdout=slave_fd,
             stderr=subprocess.PIPE,

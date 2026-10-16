@@ -16,7 +16,12 @@ from ._process_support import (
 )
 
 _NATIVE_NEWLINE = os.linesep.encode()
-_EXPECTED_TTY_STDOUT = b"\x1b[31mred\x1b[0m" + _NATIVE_NEWLINE
+_BOLD = b"\x1b[1m"
+_NORMAL = b"\x1b[22m"
+_RED_NAME = b"\x1b[31mred\x1b[0m"
+_COLOR_TERMINAL: dict[str, str | None] = {"TERM": "xterm-256color", "NO_COLOR": None}
+_EXPECTED_REDIRECTED_STDOUT = _NATIVE_NEWLINE.join([_RED_NAME, b"a.txt", b"link", b""])
+_EXPECTED_TTY_STDOUT = _NATIVE_NEWLINE.join([_BOLD + _RED_NAME + _NORMAL, b"a.txt", b"link", b""])
 _OUTPUT_ERROR = b"ls: output: output failure (OSError): disk\\\\bad\\x0aline" + _NATIVE_NEWLINE
 _CHILD_PATH = Path(__file__).with_name("_output_process_child.py")
 
@@ -49,12 +54,47 @@ def test_public_seam_broken_pipe_is_silent_runtime_failure() -> None:
     assert result.stderr == b""
 
 
-def test_public_seam_tty_matches_redirected_output_verbatim() -> None:
-    redirected = _run_redirected(_command("tty"))
-    returncode, stdout, stderr = _run_pty(_command("tty"))
+def test_public_seam_redirected_output_stays_verbatim_on_a_color_terminal() -> None:
+    redirected = _run_redirected(_command("tty"), overrides=_COLOR_TERMINAL)
+
+    assert redirected.returncode == 0
+    assert redirected.stdout == _EXPECTED_REDIRECTED_STDOUT
+    assert redirected.stderr == b""
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param(_COLOR_TERMINAL, id="color-terminal"),
+        pytest.param({**_COLOR_TERMINAL, "NO_COLOR": ""}, id="empty-no-color"),
+    ],
+)
+def test_public_seam_tty_adds_only_bold_around_directory_names(
+    overrides: dict[str, str | None],
+) -> None:
+    returncode, stdout, stderr = _run_pty(_command("tty"), overrides=overrides)
+
+    assert returncode == 0
+    assert stdout == _EXPECTED_TTY_STDOUT
+    assert stdout.replace(_BOLD, b"").replace(_NORMAL, b"") == _EXPECTED_REDIRECTED_STDOUT
+    assert stderr == b""
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({**_COLOR_TERMINAL, "NO_COLOR": "1"}, id="no-color"),
+        pytest.param({"TERM": "dumb", "NO_COLOR": None}, id="dumb-term"),
+    ],
+)
+def test_public_seam_tty_matches_redirected_output_when_emphasis_is_off(
+    overrides: dict[str, str | None],
+) -> None:
+    redirected = _run_redirected(_command("tty"), overrides=overrides)
+    returncode, stdout, stderr = _run_pty(_command("tty"), overrides=overrides)
 
     assert returncode == redirected.returncode == 0
-    assert stdout == redirected.stdout == _EXPECTED_TTY_STDOUT
+    assert stdout == redirected.stdout == _EXPECTED_REDIRECTED_STDOUT
     assert stderr == redirected.stderr == b""
 
 

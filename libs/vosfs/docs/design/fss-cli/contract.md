@@ -125,14 +125,25 @@ size 1. No value is ever coerced, defaulted, dropped, or partially emitted.
 All output for one command is formatted and buffered before its first stdout
 write, so a validation failure never leaves a partial record. TTY and
 redirected invocations MUST produce byte-equivalent content for the same
-locale and backend results.
+locale and backend results whenever emphasis is off.
+
+Emphasis is on only when stdout is a TTY, `NO_COLOR` is unset or empty, and
+`TERM` is neither `dumb` nor `unknown`. It is decided once per invocation. When
+it is on, `ls` MAY wrap a directory name in SGR 1 (`ESC [1m`) before it and
+SGR 22 (`ESC [22m`) after it. Those two codes are the only added bytes: order,
+columns, headers, and every character of each path stay the same, and column
+widths are measured on the unstyled text. A directory is an fsspec entry whose
+`type` is `directory` or `dir` and whose `islink` is not true; links, files,
+and unknown types stay plain. Pipes and redirects never carry emphasis, so they
+stay machine-readable without an ANSI stripper.
 
 Ordered listings sort by locale collation with the raw string as a
 deterministic tie-break.
 
-Commands MUST NOT quote, escape, color, or decorate paths, and MUST NOT add
-the mapped source name to a backend-returned path unless a command section
-says otherwise.
+Apart from that emphasis, commands MUST NOT quote, escape, color, or decorate
+paths, and MUST NOT add the mapped source name to a backend-returned path
+unless a command section says otherwise. Escape bytes inside a path are path
+data and are written unchanged on every destination.
 
 ## 7. Exit status
 

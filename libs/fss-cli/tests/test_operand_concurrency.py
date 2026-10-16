@@ -76,9 +76,9 @@ class _OverlapFileSystem(AsyncFileSystem):
         detail: bool = True,  # noqa: FBT002 - matches the fsspec hook signature.
         **kwargs: object,
     ) -> object:
-        assert not detail
+        assert detail
         assert not kwargs
-        return [f"{path}/child"]
+        return [{"name": f"{path}/child", "type": "file"}]
 
 
 def _source(

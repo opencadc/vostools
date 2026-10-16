@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import partial
@@ -21,7 +23,7 @@ from ._command import (
     _run_mapped_command,
 )
 from ._concurrent import _gather_bounded
-from ._listing import ListingRow, render_listing, to_listing
+from ._listing import ListingRow, emphasize, render_listing, to_listing
 from ._metadata import valid_display_text
 
 if TYPE_CHECKING:
@@ -55,8 +57,24 @@ class _DirectoryResult(Generic[_PayloadT]):
     values: tuple[_PayloadT, ...]
 
 
-_PlainResult: TypeAlias = _FileResult[str] | _DirectoryResult[str]
+@dataclass(frozen=True)
+class _PlainName:
+    text: str
+    directory: bool = False
+
+
+_PlainResult: TypeAlias = _FileResult[_PlainName] | _DirectoryResult[_PlainName]
 _LongResult: TypeAlias = _FileResult[ListingRow] | _DirectoryResult[ListingRow]
+
+
+def _emphasis_enabled() -> bool:
+    """Decide once per invocation whether directory names may be bold."""
+    stdout = sys.stdout
+    try:
+        interactive = stdout is not None and stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+    return interactive and not os.environ.get("NO_COLOR") and os.environ.get("TERM") not in {"dumb", "unknown"}
 
 
 async def _run_ls(
@@ -64,8 +82,10 @@ async def _run_ls(
     request: _LsRequest,
     sources: Mapping[str, AsyncFilesystemSource],
 ) -> None:
+    emphasis = _emphasis_enabled()
+
     async def execute(filesystems: Mapping[str, AsyncFileSystem]) -> None:
-        failures, format_output = await _trace_and_prepare(request, filesystems)
+        failures, format_output = await _trace_and_prepare(request, filesystems, emphasis=emphasis)
         backend_error = _first_backend_error(failures)
         output_error = None
         try:
@@ -107,6 +127,8 @@ async def _run_ls(
 async def _trace_and_prepare(
     request: _LsRequest,
     filesystems: Mapping[str, AsyncFileSystem],
+    *,
+    emphasis: bool,
 ) -> tuple[tuple[_Failure, ...], Callable[[], str]]:
     # The reader/renderer pairing is fixed per mode; branching keeps each pair
     # monomorphic while the deferred formatter preserves the caller's error
@@ -118,6 +140,7 @@ async def _trace_and_prepare(
             return render_listing(
                 rows,
                 human_readable=request.human_readable,
+                emphasize_directories=emphasis,
             ).removesuffix("\n")
 
         long_successes, failures = await _trace_operands(request, filesystems, _read_long_operand)
@@ -126,13 +149,19 @@ async def _trace_and_prepare(
             long_successes,
             render_long,
             multiple_operands=multiple_operands,
+            emphasis=emphasis,
         )
+
+    def render_plain(names: tuple[_PlainName, ...]) -> str:
+        return "\n".join(emphasize(name.text) if emphasis and name.directory else name.text for name in names)
+
     plain_successes, failures = await _trace_operands(request, filesystems, _read_plain_operand)
     return failures, partial(
         _format_successes,
         plain_successes,
-        "\n".join,
+        render_plain,
         multiple_operands=multiple_operands,
+        emphasis=emphasis,
     )
 
 
@@ -199,9 +228,9 @@ async def _read_plain_operand(
     if isinstance(info, _Failure):
         return info
     if info["type"] != "directory" or info.get("islink") is True:
-        return _FileResult(operand=operand, value=operand.spelling)
+        return _FileResult(operand=operand, value=_PlainName(operand.spelling))
 
-    listing = await _list_directory(operand, filesystem, detail=False)
+    listing = await _list_directory(operand, filesystem, detail=True)
     if isinstance(listing, _Failure):
         return listing
     children = _directory_lines(
@@ -277,6 +306,7 @@ def _format_successes(
     render: Callable[[tuple[_PayloadT, ...]], str],
     *,
     multiple_operands: bool,
+    emphasis: bool,
 ) -> str:
     if not successes:
         return ""
@@ -300,7 +330,8 @@ def _format_successes(
         blocks.append(render(file_values))
     for result in directories:
         rendered = render(result.values)
-        header = f"{result.operand.spelling}:"
+        spelling = result.operand.spelling
+        header = f"{emphasize(spelling) if emphasis else spelling}:"
         blocks.append(f"{header}\n{rendered}" if rendered else header)
     return _join_blocks(blocks)
 
@@ -328,22 +359,29 @@ def _directory_lines(
     listing: object,
     *,
     include_almost_all: bool,
-) -> tuple[str, ...] | None:
+) -> tuple[_PlainName, ...] | None:
+    # Plain names print no metadata, so only name, type and islink are read;
+    # the rest of each record is deliberately left unvalidated.
     if not isinstance(listing, list):
         return None
 
-    basenames = []
-    for child in listing:
-        basename = _directory_basename(path, child)
+    names = []
+    for info in listing:
+        if not isinstance(info, Mapping):
+            return None
+        typed_info = cast("Mapping[str, object]", info)
+        basename = _directory_basename(path, typed_info.get("name"))
         if basename is None:
             return None
-        basenames.append(basename)
+        kind = typed_info.get("type")
+        directory = type(kind) is str and kind in {"directory", "dir"} and typed_info.get("islink") is not True
+        names.append(_PlainName(basename, directory=directory))
 
     if include_almost_all:
-        selected = (name for name in basenames if name not in {".", ".."})
+        selected = (name for name in names if name.text not in {".", ".."})
     else:
-        selected = (name for name in basenames if not name.startswith("."))
-    return tuple(sorted(selected, key=_collate))
+        selected = (name for name in names if not name.text.startswith("."))
+    return tuple(sorted(selected, key=lambda name: _collate(name.text)))
 
 
 def _directory_rows(
