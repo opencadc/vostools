@@ -16,8 +16,7 @@ BASELINE = "e96b7630e1af4286afd7b57ff14ed34ea4b8e3a7"
 
 
 def workflow(name: str) -> dict:
-    loaded = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text())
-    return loaded
+    return yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text())
 
 
 def triggers(loaded: dict) -> dict:
