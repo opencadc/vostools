@@ -78,7 +78,12 @@ class _OverlapFileSystem(AsyncFileSystem):
     ) -> object:
         assert detail
         assert not kwargs
-        return [{"name": f"{path}/child", "type": "file"}]
+        result = await self._info(path)
+        if isinstance(result, dict) and result.get("type") == "directory":
+            return [{"name": f"{path}/child", "type": "file"}]
+        if isinstance(result, dict):
+            return [{"name": path, "type": "file"}]
+        return result
 
 
 def _source(
@@ -105,7 +110,8 @@ def _stat_line(path: str) -> str:
 @pytest.fixture(autouse=True)
 def _pin_stat_rendering(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("TZ", "UTC")
-    time.tzset()
+    if hasattr(time, "tzset"):
+        time.tzset()
 
     def missing(identifier: int) -> NoReturn:
         raise KeyError(identifier)
@@ -114,7 +120,8 @@ def _pin_stat_rendering(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr("fss_cli._accounts.grp.getgrgid", missing)
     yield
     monkeypatch.undo()
-    time.tzset()
+    if hasattr(time, "tzset"):
+        time.tzset()
 
 
 def test_stat_overlaps_reads_but_writes_in_operand_order() -> None:
@@ -164,5 +171,5 @@ def test_ls_overlaps_reads_but_renders_blocks_and_diagnostics_in_order() -> None
     assert result.exit_code == 1
     assert result.stdout == ("memory:/b-file\n\nmemory:/a-dir:\nchild\n\nmemory:/z-dir:\nchild\n")
     assert result.stderr == ("ls: memory:/missing: not found\nls: memory:/denied: permission denied\n")
-    assert filesystem.started == list(info)
-    assert filesystem.completed == list(reversed(info))
+    assert filesystem.started[: len(info)] == list(info)
+    assert filesystem.completed[: len(info)] == list(reversed(info))

@@ -219,6 +219,16 @@ async def test_cat_file_slicing(router: respx.Router, start: int | None, end: in
     await fs.aclose()
 
 
+async def test_negative_slice_uses_size_and_absolute_range(router: respx.Router) -> None:
+    mock_transfers(router, {"/f": b"abcdef"}, honour_range=True)
+    fs = make_fs(router, asynchronous=True)
+    assert await fs._cat_file("/f", -4, -1) == b"cde"
+    byte_calls = [call for call in router.calls if "/files" in str(call.request.url)]
+    assert len(byte_calls) == 1
+    assert byte_calls[0].request.headers["range"] == "bytes=2-4"
+    await fs.aclose()
+
+
 async def test_cat_file_uses_206_partial_body(router: respx.Router) -> None:
     mock_transfers(router, {"/f": b"abcdefghij"}, honour_range=True)
     fs = make_fs(router, asynchronous=True)
@@ -484,21 +494,22 @@ def test_cat_head_tail(router: respx.Router) -> None:
 def test_literal_percent_targets_survive_scalar_list_and_bulk_coordinators(
     router: respx.Router,
 ) -> None:
-    from conftest import BASE_URL, SYNC_URL, call_urls, target_path
+    from conftest import AUTHORITY, BASE_URL, SYNC_URL, call_urls
 
     internal = "/authority/dir/100%41"
     mock_transfers(router, {internal: b"literal-percent"})
     fs = make_fs(router)
 
-    assert fs.cat("vos://authority/dir/100%2541") == b"literal-percent"
-    assert fs.cat(["vos://authority/dir/100%2541"]) == {internal: b"literal-percent"}
-    assert fs.cat_ranges(["vos://authority/dir/100%2541"], [0], [7]) == [b"literal"]
+    assert fs.cat("vos://authority/dir/100%41") == b"literal-percent"
+    assert fs.cat(["vos://authority/dir/100%41"]) == {internal: b"literal-percent"}
+    assert fs.cat_ranges(["vos://authority/dir/100%41"], [0], [7]) == [b"literal"]
 
-    assert [
-        target_path(call.request.content)
+    posts = [
+        call.request.url.params["TARGET"]
         for call in router.calls
-        if call.request.method == "POST" and str(call.request.url) == SYNC_URL
-    ] == [internal, internal, internal]
+        if call.request.method == "POST" and str(call.request.url).startswith(SYNC_URL)
+    ]
+    assert posts == [f"vos://{AUTHORITY}{internal}"] * 3
     assert [
         call.request.url.params["p"]
         for call in router.calls
@@ -616,7 +627,7 @@ def test_literal_percent_directory_survives_recursive_get(
         "**": ["/root/100%41", "/root/100%41/child"],
     }
     for pattern, expected in expected_globs.items():
-        assert fs.glob(f"vos://root/100%2541/{pattern}") == expected
+        assert fs.glob(f"vos://root/100%41/{pattern}") == expected
     assert fs.expand_path("vos://root", recursive=True) == [
         "/root",
         "/root/100%41",
@@ -679,6 +690,34 @@ def test_direct_byte_endpoint_303_is_consumed_once_without_credentials(
     fs.close()
 
 
+def test_open_block_size_reuses_one_ranged_endpoint(router: respx.Router) -> None:
+    mock_transfers(router, {"/f": b"abcdefghij"}, honour_range=True)
+    fs = make_fs(router)
+    with fs.open("/f", "rb", block_size=4) as handle:
+        assert handle.read(4) == b"abcd"
+        assert handle.read(4) == b"efgh"
+    posts = [call for call in router.calls if call.request.method == "POST"]
+    ranged = [
+        call.request.headers.get("range")
+        for call in router.calls
+        if call.request.method == "GET" and "/files" in str(call.request.url)
+    ]
+    assert len(posts) == 1
+    assert ranged
+    assert all(value is not None and value.startswith("bytes=") for value in ranged)
+    fs.close()
+
+
+def test_open_block_size_stages_a_200_body(router: respx.Router) -> None:
+    mock_transfers(router, {"/f": b"abcdefghij"}, honour_range=False)
+    fs = make_fs(router)
+    with fs.open("/f", "rb", block_size=4) as handle:
+        assert handle.read() == b"abcdefghij"
+    byte_gets = [call for call in router.calls if call.request.method == "GET" and "/files" in str(call.request.url)]
+    assert len(byte_gets) == 1
+    fs.close()
+
+
 def test_failed_staged_read_removes_temporary_file(
     router: respx.Router,
     tmp_path: Path,
@@ -713,3 +752,22 @@ def test_error_response_carries_retry_after_and_fault(router: respx.Router) -> N
     assert excinfo.value.fault == "ServiceBusy"
     assert excinfo.value.status == 503
     fs.close()
+
+
+async def test_cat_after_listing_does_not_fetch_the_node_again(router: respx.Router) -> None:
+    from conftest import NODES_URL, make_sim_fs
+
+    sim = VOSpaceSim().add_container("/d").add_file("/d/f", b"abc")
+    fs = make_sim_fs(router, sim)
+    listing = await fs._ls("/d")
+    assert listing
+    assert fs._cached_info("/d/f") is not None
+    node_gets = [
+        call for call in router.calls if call.request.method == "GET" and str(call.request.url).startswith(NODES_URL)
+    ]
+    await fs._cat_file("/d/f")
+    later = [
+        call for call in router.calls if call.request.method == "GET" and str(call.request.url).startswith(NODES_URL)
+    ]
+    assert [str(call.request.url) for call in later] == [str(call.request.url) for call in node_gets]
+    await fs.aclose()

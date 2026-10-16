@@ -4,6 +4,24 @@
 
 ### Features
 
+* `mv` calls `_mv_file` when the backend overrides it, and otherwise a
+  class-declared `_mv`.
+* `stat` accepts an integer, float, datetime, or ISO-8601 `mtime`, using the
+  same UTC normalization as listings for values without a timezone.
+* `tail` requests the suffix with `start=-n`.
+* A recursive copy skips the SHA-256 download when both sides have an MD5
+  and the digests differ.
+* Same-source `cp -R` copies each file with `_cp_file` unless the sizes match
+  and an MD5 is missing, in which case it still stages to compare bytes.
+  An unsupported copy hook falls back to client download and upload.
+  Cross-source copies still stage. Destination listing is optional when
+  direct metadata queries are available; sparse lookups remain concurrent.
+* Multi-source `cp` runs under the shared concurrency limit and prints
+  outcomes in operand order.
+* `ls` preserves direct link identity before listing directory children.
+  Shared listing validation rejects duplicate lexical paths and accepts
+  backend names with or without a leading slash.
+
 * **fsspec-cli:** add source-free `basename string` lexical command (#123)
 * **fsspec-cli:** add optional `basename` suffix operand ([#124](https://github.com/shinybrar/vosfs/issues/124))
 * **fsspec-cli:** add source-free `dirname string` lexical command (#125)
@@ -28,8 +46,9 @@
   and partial state only — not POSIX mode, ownership, link identity, or timestamps.
 * **fsspec-cli:** add verified two-operand recursive `cp -R` / `cp -r`
   ([#286](https://github.com/shinybrar/vosfs/issues/286)).
-  All admitted routes use a bounded manifest, one-file host-local staging, and
-  complete source and destination metadata verification.
+  All admitted routes use a bounded manifest and complete source and
+  destination metadata verification. Same-source files use `_cp_file` when a
+  local byte compare is unnecessary; every other file is staged on the host.
 * **fsspec-cli:** add snapshotted application recursion capabilities. Recursive
   copy defaults on; recursive removal defaults off. Capability policy is
   explicit constructor input, not backend discovery or loaded configuration.

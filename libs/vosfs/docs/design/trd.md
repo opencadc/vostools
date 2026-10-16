@@ -144,17 +144,21 @@ These inputs **MUST** normalize to the same internal path `/a/b`:
 
 `vos://`, `vos:///`, `/`, and the empty path represent root.
 
-Path parsing **MUST**:
+User paths are literal. Path parsing **MUST NOT** percent-decode them, so
+fsspec may apply `_strip_protocol` more than once without changing the name.
+`?` and `#` are allowed in a name. Parsing **MUST**:
 
-- decode percent escapes exactly once;
-- reject a query, fragment, userinfo, NUL, encoded path separator, and any
-  `..` segment that could escape root;
-- preserve Unicode path content; and
+- reject userinfo, NUL, an encoded path separator, and any `.` or `..`
+  segment;
+- preserve Unicode and literal percent characters; and
 - percent-encode individual path segments when constructing HTTP URLs.
 
-Because `?` starts a query under this path grammar, a question-mark glob pattern
-cannot be expressed as a filesystem path. Question-mark glob paths are
-Unsupported; the contract does not add an alternate escaping or path grammar.
+A node URI returned by the service **MUST** be decoded exactly once when it
+is turned into an internal path. That decode is not applied to user input.
+
+A `?` that fsspec treats as a single-character glob remains a glob metacharacter
+at the fsspec layer. Abstract glob edge cases that use `?` stay outside this
+contract, because that character is a literal name character here.
 
 The logical VOSpace authority used inside XML documents **MUST** be discovered
 from the URI returned by the root node. It **MUST** be cached per filesystem
@@ -213,13 +217,13 @@ The client **MUST NOT** construct a `/files` URL directly.
 The following resources and behaviors are unsupported in v0.3.0, including
 when OpenCADC implements them:
 
-- asynchronous `/transfers` jobs and native server-side move;
+- asynchronous `/transfers` jobs other than a same-service `moveNode`
+  (`keepBytes=false`), including its UWS wait and `PHASE=ABORT` lifecycle;
 - `/async-delete` and `/async-setprops` jobs;
 - `/pkg` package downloads;
 - `/protocols`, `/views`, and `/properties` metadata resources;
 - search and server-side sort;
-- `copyNode`, `pullToVoSpace`, `pushFromVoSpace`, and bidirectional mounts; and
-- every UWS phase-start, poll, abort, or cleanup lifecycle.
+- `copyNode`, `pullToVoSpace`, `pushFromVoSpace`, and bidirectional mounts.
 
 `/synctrans` is retained as synchronous negotiation even though Cavern uses
 UWS components internally. From the `vosfs` perspective it is only a POST,
@@ -286,7 +290,13 @@ primitive: property writes of any kind are outside the capability contract.
 
 ## 7. Synchronous byte negotiation
 
-Every logical byte read or write **MUST** perform synchronous negotiation:
+Every logical byte read or write **MUST** perform synchronous negotiation.
+A push **MUST** POST a VOSpace 2.1 transfer document. A pull **MUST** try the
+URL-parameter form first (`TARGET`, `DIRECTION=pullFromVoSpace`, `PROTOCOL`,
+`SECURITYMETHOD`, `REQUEST=redirect`). A direct `303` to a byte URL completes
+the pull. A `4xx`, a `200` XML body, or a `303` to transfer details means the
+service does not support that form; the instance remembers that and later
+pulls use the XML document. The XML path is:
 
 1. construct a VOSpace 2.1 transfer document with one authority-qualified
    target;
@@ -299,8 +309,10 @@ Every logical byte read or write **MUST** perform synchronous negotiation:
    protocol; and
 6. perform the one byte GET, HEAD, or PUT against the negotiated endpoint.
 
-A negotiation POST **MUST NOT** be replayed automatically. A negotiated
-endpoint **MUST NOT** be cached for another logical transfer.
+A negotiation POST **MUST NOT** be replayed for a different logical transfer.
+One open file **MAY** reuse the endpoint negotiated for that file, and
+**MUST** negotiate again after `401`, `403`, or expiry. A negotiated endpoint
+**MUST NOT** be reused for a different path.
 
 Every HTTP redirect outside this approved synchronous-transfer 303 chain
 **MUST** fail without following it.
@@ -349,8 +361,14 @@ Some OpenCADC byte backends honour HTTP byte ranges (for example minoc behind
   rules.
 - `open("rb")` **MUST** download once into a disk-backed temporary file and
   then provide local `read`, `readinto`, `readline`, iteration, `tell`, and
-  `seek(0/1/2)` semantics. Staged `open` remains whole-object; it does not
-  claim network-efficient random access.
+  `seek(0/1/2)` semantics. That default stays whole-object. When the caller
+  passes `block_size` or `cache_type`, `open("rb")` **MUST** use a buffered
+  file that negotiates once and sends ranged GETs. A `200` on any of those
+  reads **MUST** stage the body of that same response, and later reads of
+  that file **MUST** stay local. Buffered reads **MUST** use the same `206`
+  validation and EOF rules as `cat_file`. If the data length is unknown,
+  buffered open **MUST** stage the object to determine its length. A
+  LinkNode's metadata size **MUST NOT** be used as its target's byte length.
 - `open("r")` **MUST** use fsspec text wrapping over that staged binary file.
 - Empty files returned as HTTP 204 **MUST** read as `b""`.
 
@@ -367,9 +385,9 @@ exactly matching closed intervals. A 416 yields an empty slice only when its
 `Content-Range: bytes */TOTAL` proves the object empty or start beyond EOF.
 Malformed or inconsistent responses fail without returning unvalidated bytes.
 
-`block_size`, `cache_type`, and `cache_options` are accepted for call
-compatibility. They do not turn staged `open` into a ranged transport, and
-`vosfs` **MUST NOT** advertise `blockcache::` / `cached::` support.
+`block_size`, `cache_type`, and `cache_options` configure the opt-in buffered
+file. They do not guarantee partial network reads when the endpoint ignores
+ranges. `vosfs` **MUST NOT** advertise `blockcache::` / `cached::` support.
 
 `open_async` and memory mapping are unsupported.
 
@@ -429,14 +447,29 @@ these ownership guarantees.
   deleted only after every child is confirmed deleted, and no new request may
   start after a failure.
 - `rm(..., maxdepth=<number>)` is unsupported.
-- `_cp_file` **MUST** use a bounded read-to-write relay. It MAY overwrite an
-  existing DataNode, preserves bytes only, and does not copy server-only
-  properties.
+- `_cp_file` **MUST** stream a negotiated GET into a negotiated PUT when the
+  source size is known and the connection budget permits two slots, taking
+  both connection slots only after both
+  endpoints exist. It **MUST** check the streamed MD5 against a source
+  `contentMD5` when one is present and against a digest the server returns.
+  If the copy fails, a destination node this call created **MUST** be
+  deleted after releasing the transfer's connections. An unknown source size
+  or a one-connection budget **MUST** fall back to a temporary file.
+  It MAY overwrite an existing DataNode, preserves bytes only, and does not
+  copy server-only properties.
 - Recursive copy **MUST** create containers and relay files client-side. It is
   non-atomic.
-- Move of a DataNode or ContainerNode **MUST** require an absent destination,
-  copy or recreate the source, and delete the source only after destination
-  success. It **MUST NOT** call `/transfers`.
+- Move of a DataNode or ContainerNode **MUST** require an absent destination.
+  When `maxdepth` is unset and the service advertises `/transfers`, the
+  client **MUST** try a `moveNode` job with the destination URI as `direction`
+  and `keepBytes=false`. It **MUST** start the job with `PHASE=RUN` on its
+  `/phase` resource and request `PHASE=ABORT` there on cancellation or timeout.
+  Otherwise it **MUST** copy or recreate the
+  source and delete the source only after destination success. A missing
+  `/transfers` binding, a cross-service move, or a job rejected as
+  unsupported, including a terminal unsupported-operation error, **MUST** use
+  that client-side move. Permission errors and uncertain job outcomes **MUST
+  NOT** trigger a competing client transfer.
 - Move of a LinkNode is unsupported and **MUST** raise `NotImplementedError`
   after resolving source metadata but before copy or delete mutation.
 - `touch(truncate=True)` **MUST** PUT zero bytes. `touch(truncate=False)` is
@@ -465,7 +498,7 @@ the directory cache.
 | `modified` | Client-derived | Return the OpenCADC modification date. |
 | `created` | Unsupported | Raise `NotImplementedError`; no creation timestamp is fabricated. |
 | `walk`, `find`, `glob`, `expand_path` | Client-derived | Client traversal with fsspec `maxdepth`, detail, and error semantics. Glob supports `*`, `[]`, and `**`. Traversal never follows links. |
-| Question-mark glob paths | Unsupported | `?` is the existing path grammar's query delimiter, so these patterns cannot be expressed without a new grammar. |
+| Question-mark glob paths | Unsupported | `?` is a literal name character, so a single-character `?` glob is not a path this filesystem can name. |
 | `du`, `disk_usage`, `tree` | Client-derived | Client traversal over paged listings; potentially expensive. |
 | `checksum`, `ukey` | Client-derived | fsspec metadata token; no separate public content-checksum API. |
 | `cat_file` | Client-derived | Ranged GET when bounds allow; `206` returns the partial body, `200`/`204` whole-object slice locally. |
@@ -628,9 +661,9 @@ six skips belong to the reusable-suite ledger below, which is exact for fsspec
 | --- | ---: | ---: | --- |
 | open | 1 | 0 | — |
 | pipe | 1 | 0 | — |
-| copy | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is the path grammar's query delimiter. |
-| get | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is the path grammar's query delimiter. |
-| put | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is the path grammar's query delimiter. |
+| copy | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is a literal name character, not a glob. |
+| get | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is a literal name character, not a glob. |
+| put | 43 | 2 | `fil?1`, non-recursive and recursive: `?` is a literal name character, not a glob. |
 | **Total** | **131** | **6** | One Unsupported question-mark glob capability; no other reusable-suite skip. |
 
 The supported get count includes the list-source hashed-name case; its earlier

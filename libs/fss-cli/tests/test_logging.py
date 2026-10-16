@@ -163,8 +163,8 @@ def test_recursive_copy_rerun_logs_skipped_identical_files(
     assert first.exit_code == 0
     assert _verified_uploads(first.stderr) == {"memory:/out/docs/a.txt": 3, "memory:/out/docs/sub/b.txt": 5}
     assert sorted(_summary(record) for record in _info_records(caplog)) == [
-        ("staged", "memory:/docs/a.txt", "memory:/out/docs/a.txt", 3),
-        ("staged", "memory:/docs/sub/b.txt", "memory:/out/docs/sub/b.txt", 5),
+        ("copied", "memory:/docs/a.txt", "memory:/out/docs/a.txt", 3),
+        ("copied", "memory:/docs/sub/b.txt", "memory:/out/docs/sub/b.txt", 5),
         ("verified", "memory:/docs", "memory:/out/docs", 8),
     ]
     assert _info_records(caplog)[-1].__dict__["outcome"] == "verified"
@@ -234,6 +234,6 @@ def test_no_handler_means_nothing_is_printed(
     assert (result.exit_code, result.stdout, result.stderr) == (
         0,
         "",
-        _cp_verified("memory:/out/docs/a.txt", "uploaded", 3),
+        _cp_verified("memory:/out/docs/a.txt", "copied", 3),
     )
     assert capfd.readouterr() == ("", "")

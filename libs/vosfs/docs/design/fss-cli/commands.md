@@ -27,7 +27,7 @@ the gate wins.
 | `cat` | `cat [--] name:/path\|-...` | `_info`, `_get_file` |
 | `cp` | `cp [--] SOURCE... DESTINATION` | `_info`, `_cp_file` or `_get_file`+`_put_file` |
 | `cp -R` | `cp -R\|-r [--] name:/dir name:/target` | `_info`, `_ls(detail=True)`, transfer hooks |
-| `mv` | `mv [--] name:/path... name:/path` | `_info`, `_mv` |
+| `mv` | `mv [--] name:/path... name:/path` | `_info`, `_mv_file` or `_mv` |
 | `mkdir` | `mkdir [-p] [--] name:/path...` | `_mkdir` or `_makedirs`, `_info` |
 | `rmdir` | `rmdir [--] name:/path...` | `_info`, `_rmdir` |
 | `unlink` | `unlink [--] name:/path` | `_info`, `_rm_file` |
@@ -234,8 +234,9 @@ diagnostics.
 
 ### `cp` (files)
 
-Metadata-verified file copy. Same-source copies await `_cp_file`; cross-source
-copies stage through one host-local temporary and await `_get_file` then
+Metadata-verified file copy. Same-source copies try `_cp_file`. If that hook
+raises `NotImplementedError`, they use the same client transfer as cross-source
+copies: stage through one host-local temporary and await `_get_file` then
 `_put_file(..., mode="overwrite")`. Multiple sources require an existing
 destination directory.
 
@@ -315,11 +316,17 @@ The second line is the verification outcome:
 | Not a file | `1` | `not a file after upload` (cross-source) or `not a file after copy` (same-source), then `; destination residue may remain` |
 | Not a mapping, no string `type`, or an invalid `size` | `1` | `verification failure; destination residue may remain` |
 
-`cp -R` writes the same two lines for every file it uploads. The first is
-always `uploaded`, because each recursive write is `_put_file`. A file's lines
+`cp -R` writes the same two lines for every transferred file. The first is
+`copied` for a backend copy and `uploaded` for a staged client transfer. A file's lines
 print as soon as its own write and wait finish, so the lines of parallel files
 interleave while each file's two lines stay in order. A skipped identical file
 prints nothing.
+
+Destination metadata may come from validated parent listings. Unsupported or
+denied listings fall back to direct `_info` calls; missing or sparse rows are
+also queried directly under the shared concurrency limit. Duplicate lexical
+paths and malformed listing rows fail validation. Backend paths may include
+or omit the leading slash, without changing which parent they belong to.
 
 `<token>` is the normalized name that differed: `etag`, `md5`, `content-md5`,
 or `checksum`. A raising write hook prints neither line and keeps

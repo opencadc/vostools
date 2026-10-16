@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 _DEFAULT_METADATA_WAIT_SECONDS = 60
 _METADATA_POLL_SECONDS = 5
+_report_gate: ContextVar[asyncio.Event | None] = ContextVar("fss_cli_report_gate", default=None)
+_report_ready: ContextVar[bool] = ContextVar("fss_cli_report_ready", default=False)
 
 
 @dataclass(frozen=True)
@@ -138,12 +141,46 @@ async def _await_verified(  # noqa: PLR0913 - one explicit post-copy proof bound
         await asyncio.sleep(min(_METADATA_POLL_SECONDS, remaining))
 
 
+async def report_verified(  # noqa: PLR0913 - shared per-file outcome and verification contract.
+    command: str,
+    filesystem: AsyncFileSystem,
+    target: _MappedOperand,
+    proof: _TransferProof,
+    previous: _PreviousFile | None,
+    *,
+    mutation: str,
+    wait: int,
+) -> _Unverified | None:
+    """Report a completed transfer and its proof in this operand's output turn."""
+    await _await_report_turn()
+    verb = "copied" if mutation == "copy" else "uploaded"
+    _report(command, target, f"{verb} {proof.expected_size} bytes")
+    unverified = await _await_verified(filesystem, target.path, proof, previous, mutation=mutation, wait=wait)
+    if unverified is None:
+        _report(command, target, f"verified {proof.expected_size} bytes")
+    return unverified
+
+
 def _resolved_operand(destination: _MappedOperand, resolved: str) -> _MappedOperand:
     return _MappedOperand(
         spelling=f"{destination.name}:{resolved}",
         name=destination.name,
         path=resolved,
     )
+
+
+async def _await_report_turn() -> None:
+    """Let earlier multi-source copies finish printing before this one does.
+
+    The wait happens once per copy, immediately before its first outcome line,
+    so the byte transfer itself still overlaps and a failed write still aborts
+    the rest of that copy.
+    """
+    gate = _report_gate.get()
+    if gate is None or _report_ready.get():
+        return
+    await gate.wait()
+    _report_ready.set(True)
 
 
 def _report(command: str, operand: _MappedOperand, outcome: str) -> None:

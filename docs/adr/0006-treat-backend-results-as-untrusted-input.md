@@ -19,11 +19,13 @@ do.
 
 Every *result* crossing the hook boundary is validated before use:
 
-- exact type checks (`type(value) is int`), never `isinstance`, so `bool` cannot
-  pass as an integer;
+- exact type checks for integers (`type(value) is int`, so `bool` cannot pass);
+  `str`, `list`, and `Mapping` accept subclasses;
 - exact container types and lengths for batch results;
-- path shape checks (absolute, no NUL, newline, carriage return, or dot
-  segment) on values that will be joined, compared, or rendered;
+- path shape checks (consistent lexical parent, no NUL, newline, carriage
+  return, or dot segment) on values that will be joined, compared, or rendered;
+  backend-returned names may omit a leading slash, as S3-style names do, but
+  lexical aliases must not conceal duplicate entries;
 - mapping traversal through `for key in mapping` and `mapping[key]`, with a
   snapshot of `len(mapping)` compared against the number of entries actually
   enumerated.

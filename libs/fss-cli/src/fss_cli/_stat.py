@@ -8,7 +8,6 @@ the host lacks these POSIX-only modules.
 
 from __future__ import annotations
 
-import math
 import stat as stat_module
 import time
 from collections.abc import Mapping
@@ -29,6 +28,7 @@ from ._command import (
     _write_binary,
 )
 from ._concurrent import _run_bounded
+from ._metadata import normalize_time
 
 if TYPE_CHECKING:
     from fsspec.asyn import AsyncFileSystem
@@ -63,7 +63,7 @@ def _format_mtime(mtime: float) -> str:
     return f"{month} {local.tm_mday:2d} {local.tm_hour:02d}:{local.tm_min:02d}:{local.tm_sec:02d} {local.tm_year}"
 
 
-def _validate_info(  # noqa: C901, PLR0911, PLR0912 - locked Local-rich shape checks.
+def _validate_info(  # noqa: C901, PLR0911 - locked Local-rich shape checks.
     info: object,
 ) -> Mapping[str, object] | None:
     if not isinstance(info, Mapping):
@@ -94,14 +94,8 @@ def _validate_info(  # noqa: C901, PLR0911, PLR0912 - locked Local-rich shape ch
     gid = mapping.get("gid")
     if type(gid) is not int or gid < 0:
         return None
-    mtime = mapping.get("mtime")
-    if type(mtime) is int:
-        checked_mtime: float = float(mtime)
-    elif type(mtime) is float:
-        checked_mtime = mtime
-    else:
-        return None
-    if not math.isfinite(checked_mtime):
+    checked_mtime = normalize_time(mapping.get("mtime"))
+    if checked_mtime is None:
         return None
     try:
         time.localtime(checked_mtime)
@@ -116,7 +110,7 @@ def _render_line(operand: _MappedOperand, info: Mapping[str, object]) -> bytes:
     uid = cast("int", info["uid"])
     gid = cast("int", info["gid"])
     size = cast("int", info["size"])
-    mtime = cast("float", info["mtime"])
+    mtime = cast("float", normalize_time(info["mtime"]))
     line = (
         f"{stat_module.filemode(mode)} {nlink} {_owner_name(uid)} {_group_name(gid)} "
         f'{size} "{_format_mtime(mtime)}" {operand.path}\n'

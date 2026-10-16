@@ -27,9 +27,22 @@ def test_normalizes_equivalent_forms(raw: str, expected: str) -> None:
     assert paths.strip_protocol(raw) == expected
 
 
-def test_decodes_percent_escape_once() -> None:
-    assert paths.strip_protocol("vos://dir/file%20name") == "/dir/file name"
-    assert paths.strip_protocol("/a/%C3%A9") == "/a/é"
+def test_user_paths_keep_percent_escapes() -> None:
+    assert paths.strip_protocol("vos://dir/file%20name") == "/dir/file%20name"
+    assert paths.strip_protocol("/a/%C3%A9") == "/a/%C3%A9"
+    assert paths.strip_protocol("vos://dir/file%20name") == paths.strip_protocol("/dir/file%20name")
+
+
+def test_question_mark_and_hash_are_literal_name_characters() -> None:
+    assert paths.strip_protocol("a/b?x=1") == "/a/b?x=1"
+    assert paths.strip_protocol("a/b#frag") == "/a/b#frag"
+    assert paths.encode_url_path("/a/b?x=1") == "/a/b%3Fx%3D1"
+
+
+def test_wire_path_decodes_once() -> None:
+    assert paths.decode_url_path("/dir/file%20name") == "/dir/file name"
+    assert paths.decode_url_path("/a/%C3%A9") == "/a/é"
+    assert paths.decode_url_path("/dir/file%2520name") == "/dir/file%20name"
 
 
 def test_preserves_unicode() -> None:
@@ -45,8 +58,6 @@ def test_normalization_is_idempotent_for_ordinary_paths() -> None:
 @pytest.mark.parametrize(
     "bad",
     [
-        "a/b?x=1",
-        "a/b#frag",
         "vos://user@host/b",
         "a/\x00/b",
         "a/%2f/b",
@@ -92,34 +103,23 @@ def test_encode_url_path_reencodes_segments() -> None:
     assert paths.encode_url_path("/a/é") == "/a/%C3%A9"
 
 
-def test_helpers_do_not_decode_literal_percent() -> None:
-    # A name with a literal percent-escape decodes exactly once on strip, and the
-    # helpers must not decode it again, so the HTTP URL round-trips to the
-    # original object rather than a second-decoded one.
+def test_literal_percent_round_trips_onto_the_wire() -> None:
     once = paths.strip_protocol("vos://dir/100%2541")
-    assert once == "/dir/100%41"
+    assert once == "/dir/100%2541"
     assert type(once) is str
     assert paths.parent(once) == "/dir"
-    assert paths.encode_url_path(once) == "/dir/100%2541"
+    assert paths.encode_url_path(once) == "/dir/100%252541"
+    assert paths.decode_url_path(paths.encode_url_path("/dir/file name")) == "/dir/file name"
 
 
-def test_encode_url_path_reencodes_a_decoded_space() -> None:
-    # vos://dir/file%2520name normalizes once to the literal name "file%20name";
-    # encoding it for the URL must target that object, not a second-decoded space.
-    once = paths.strip_protocol("vos://dir/file%2520name")
-    assert once == "/dir/file%20name"
-    assert paths.encode_url_path(once) == "/dir/file%2520name"
+def test_encoded_separator_stays_rejected() -> None:
+    with pytest.raises(ValueError):  # noqa: PT011
+        paths.strip_protocol("vos://dir/data%2fpart")
+    with pytest.raises(ValueError):  # noqa: PT011
+        paths.decode_url_path("/dir/data%2fpart")
 
 
-def test_encoded_separator_in_decoded_name_is_addressable() -> None:
-    # data%2fpart decodes once to a segment containing "%2f"; encoding it for a
-    # URL must not raise the encoded-separator rejection a second time.
-    once = paths.strip_protocol("vos://dir/data%252fpart")
-    assert once == "/dir/data%2fpart"
-    assert paths.encode_url_path(once) == "/dir/data%252fpart"
-
-
-@pytest.mark.parametrize("bad", ["/dir/bad%2Fname", "/dir/bad?name"])
+@pytest.mark.parametrize("bad", ["/dir/bad%2Fname"])
 def test_public_assume_literal_still_validates_raw_paths(bad: str) -> None:
     from vosfs import VOSpaceFileSystem
 

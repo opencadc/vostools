@@ -1,5 +1,6 @@
 """Tests for the HTTPX client pool, lifecycle, and serialization (section 12)."""
 
+import asyncio
 import pickle
 
 import httpcore
@@ -9,7 +10,7 @@ import respx
 from conftest import BASE_URL, make_fs
 
 from vosfs import VOSpaceFileSystem
-from vosfs.transport import DEFAULT_TIMEOUTS, ClientPool, build_timeout
+from vosfs.transport import DEFAULT_TIMEOUTS, ClientPool, ConnectionBudget, build_timeout
 
 
 def _pool(**kwargs: object) -> ClientPool:
@@ -21,6 +22,22 @@ def _pool(**kwargs: object) -> ClientPool:
     }
     defaults.update(kwargs)
     return ClientPool(**defaults)  # type: ignore[arg-type]
+
+
+async def test_cancelled_budget_head_wakes_a_smaller_waiter() -> None:
+    budget = ConnectionBudget(2)
+    await budget.acquire()
+    copy = asyncio.create_task(budget.acquire(2))
+    await asyncio.sleep(0)
+    read = asyncio.create_task(budget.acquire())
+    await asyncio.sleep(0)
+    copy.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await copy
+    await asyncio.wait_for(read, timeout=1)
+    assert budget._available == 0
+    budget.release(2)
+    assert budget._available == 2
 
 
 # --- timeouts -------------------------------------------------------------------
@@ -193,6 +210,16 @@ def test_json_round_trip(router: respx.Router) -> None:
     assert restored.endpoint_url == fs.endpoint_url
 
 
+def test_redacted_json_omits_literal_token_and_pickle_keeps_it(router: respx.Router) -> None:
+    fs = make_fs(router, token="SECRET-TOKEN")
+    redacted = fs.to_json(include_password=False)
+    assert "SECRET-TOKEN" not in redacted
+    assert "token" not in fs.to_dict(include_password=False)
+    assert fs.to_dict()["token"] == "SECRET-TOKEN"
+    restored = pickle.loads(pickle.dumps(fs))  # noqa: S301 - trusted local round-trip
+    assert restored._credential.token_literal == "SECRET-TOKEN"
+
+
 # --- review-fix regression: close/build must be serialized ----------------------
 
 
@@ -220,3 +247,45 @@ async def test_build_and_close_race_leaves_no_open_client(router: respx.Router) 
     assert isinstance(result[1], ValueError)
     assert pool.closed is True
     assert pool._clients == {}
+
+
+def test_max_connections_is_serialized_and_rejected_when_invalid(router: respx.Router) -> None:
+    fs = make_fs(router, max_connections=4)
+    assert fs.to_dict()["max_connections"] == 4
+    with pytest.raises(ValueError, match="max_connections"):
+        make_fs(router, max_connections=0)
+
+
+async def test_streamed_response_holds_its_connection_until_close() -> None:
+    import asyncio
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        del request
+        started.set()
+        await release.wait()
+        return httpx.Response(200, content=b"ok")
+
+    pool = _pool(injected_transport=httpx.MockTransport(handler), max_connections=1)
+    first = asyncio.create_task(pool.send(httpx.Request("GET", "https://example.test/a"), stream=True))
+    await asyncio.wait_for(started.wait(), timeout=1)
+    second_done = False
+
+    async def second() -> None:
+        nonlocal second_done
+        await pool.send(httpx.Request("GET", "https://example.test/b"))
+        second_done = True
+
+    follower = asyncio.create_task(second())
+    await asyncio.sleep(0)
+    assert second_done is False
+    release.set()
+    response = await first
+    await asyncio.sleep(0)
+    assert second_done is False
+    await response.aclose()
+    await follower
+    assert second_done is True
+    await pool.aclose()

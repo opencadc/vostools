@@ -11,14 +11,16 @@ per-request headers, never pool keys.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ssl
-from typing import TYPE_CHECKING
+from collections import deque
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlsplit
 
 import httpx
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
 
 # Default HTTP timeouts in seconds, fixed by the contract (section 3).
 DEFAULT_TIMEOUTS: dict[str, float] = {
@@ -42,12 +44,8 @@ def build_timeout(overrides: Mapping[str, float] | None) -> httpx.Timeout:
     )
 
 
-#: Connection limits. httpx keeps only 20 idle connections by default, so a
-#: burst of concurrent transfers reconnects (and repeats TLS handshakes) for
-#: every request beyond 20; keeping as many idle as may be open avoids that.
-POOL_LIMITS = httpx.Limits(max_connections=100, max_keepalive_connections=100)
-
 HTTP_OK = 200
+HTTP_BAD_REQUEST = 400
 HTTP_CREATED = 201
 HTTP_NO_CONTENT = 204
 HTTP_PARTIAL_CONTENT = 206
@@ -68,6 +66,54 @@ def same_origin(a: str, b: str) -> bool:
     return origin(a) == origin(b)
 
 
+class ConnectionBudget:
+    """A FIFO weighted semaphore for in-flight HTTP requests.
+
+    Waiting for a slot does not time out. A caller that needs two connections
+    (a streamed copy) asks for both at once, so it cannot hold one while
+    waiting for the other.
+    """
+
+    def __init__(self, limit: int) -> None:
+        """Hold at most ``limit`` connection slots."""
+        self.limit = limit
+        self._available = limit
+        self._waiters: deque[tuple[int, asyncio.Future[None]]] = deque()
+
+    async def acquire(self, weight: int = 1) -> None:
+        """Take ``weight`` slots, waiting in arrival order until they are free."""
+        if weight < 1 or weight > self.limit:
+            msg = f"connection weight {weight} is outside 1..{self.limit}"
+            raise ValueError(msg)
+        if not self._waiters and self._available >= weight:
+            self._available -= weight
+            return
+        future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._waiters.append((weight, future))
+        try:
+            await future
+        except asyncio.CancelledError:
+            self._waiters = deque(item for item in self._waiters if item[1] is not future)
+            if future.done() and not future.cancelled():
+                self._available += weight
+            self._wake_waiters()
+            raise
+
+    def release(self, weight: int = 1) -> None:
+        """Return ``weight`` slots and wake the oldest waiter that now fits."""
+        self._available += weight
+        self._wake_waiters()
+
+    def _wake_waiters(self) -> None:
+        """Grant available slots after either a release or queue cancellation."""
+        while self._waiters and self._available >= self._waiters[0][0]:
+            needed, future = self._waiters.popleft()
+            if future.done():
+                continue
+            self._available -= needed
+            future.set_result(None)
+
+
 class ClientPool:
     """A lazily-populated, TLS-keyed pool of HTTPX async clients.
 
@@ -84,12 +130,15 @@ class ClientPool:
         trust_env: bool,
         timeout: httpx.Timeout,
         injected_transport: httpx.AsyncBaseTransport | None,
+        max_connections: int = 100,
     ) -> None:
         """Configure the pool; no client is built until first use."""
         self._certfile = certfile
         self._trust_env = trust_env
         self._timeout = timeout
         self._injected = injected_transport
+        self._max_connections = max_connections
+        self._budget = ConnectionBudget(max_connections)
         self._clients: dict[bool, httpx.AsyncClient] = {}
         self._lock = asyncio.Lock()
         self._closed = False
@@ -129,7 +178,10 @@ class ClientPool:
             follow_redirects=False,
             trust_env=self._trust_env,
             timeout=self._timeout,
-            limits=POOL_LIMITS,
+            limits=httpx.Limits(
+                max_connections=self._max_connections,
+                max_keepalive_connections=self._max_connections,
+            ),
             auth=None,
         )
 
@@ -143,12 +195,22 @@ class ClientPool:
         context.load_cert_chain(certfile)
         return context
 
+    @contextlib.asynccontextmanager
+    async def reserve(self, weight: int = 1) -> AsyncGenerator[None, None]:
+        """Hold ``weight`` connection slots until the block exits."""
+        await self._budget.acquire(weight)
+        try:
+            yield
+        finally:
+            self._budget.release(weight)
+
     async def send(
         self,
         request: httpx.Request,
         *,
         use_cert: bool = False,
         stream: bool = False,
+        accounted: bool = False,
     ) -> httpx.Response:
         """Send one request through the pooled client, holding no cookies.
 
@@ -156,8 +218,33 @@ class ClientPool:
         response can never cause a later request to carry a ``Cookie`` header.
         """
         client = await self.client(use_cert=use_cert)
-        response = await client.send(request, stream=stream)
+        if not accounted:
+            await self._budget.acquire()
+        try:
+            response = await client.send(request, stream=stream)
+        except BaseException:
+            if not accounted:
+                self._budget.release()
+            raise
         client.cookies.clear()
+        if not stream or accounted:
+            if not accounted:
+                self._budget.release()
+            return response
+        release = self._budget.release
+        original_aclose = response.aclose
+        released = False
+
+        async def aclose_and_release() -> None:
+            nonlocal released
+            try:
+                await original_aclose()
+            finally:
+                if not released:
+                    released = True
+                    release()
+
+        response.aclose = cast("Any", aclose_and_release)
         return response
 
     async def aclose(self) -> None:
@@ -178,3 +265,47 @@ class ClientPool:
     def closed(self) -> bool:
         """Whether the pool has been closed."""
         return self._closed
+
+
+class LoopRuntime:
+    """Loop-bound clients and locks for one filesystem.
+
+    Directory caches, discovered bindings, the authority and credentials stay
+    on the filesystem. This object is discarded, not closed, when a later call
+    runs on a different event loop: the previous loop is already dead, so
+    closing its sockets would raise.
+    """
+
+    def __init__(self, loop: asyncio.AbstractEventLoop | None, pool: ClientPool) -> None:
+        """Bind one pool and its locks to ``loop`` (``None`` until a loop runs)."""
+        self.loop = loop
+        self.pool = pool
+        self.bindings_lock = asyncio.Lock()
+        self.containers: dict[str, asyncio.Future[None]] = {}
+
+
+class LoopRuntimes:
+    """The single live :class:`LoopRuntime` for one filesystem."""
+
+    def __init__(self, pool_factory: Callable[[], ClientPool]) -> None:
+        """Store the factory used to build a pool for each loop."""
+        self._pool_factory = pool_factory
+        self._current: LoopRuntime | None = None
+
+    def current(self) -> LoopRuntime:
+        """Return the runtime for the running loop, rebuilding it when the loop changes."""
+        try:
+            loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        current = self._current
+        if current is None:
+            self._current = LoopRuntime(loop, self._pool_factory())
+            return self._current
+        if loop is None or current.loop is None or current.loop is loop:
+            if current.loop is None:
+                current.loop = loop
+            return current
+        # A different loop is running. Drop the old clients without closing them.
+        self._current = LoopRuntime(loop, self._pool_factory())
+        return self._current

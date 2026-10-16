@@ -806,6 +806,8 @@ def test_cp_draws_the_bar_and_prints_outcome_lines_above_it_on_a_terminal(
     terminal = _Terminal()
     monkeypatch.setattr("fss_cli._progress.sys", SimpleNamespace(stderr=terminal))
     monkeypatch.delenv("NO_COLOR", raising=False)
+    # Rich treats TERM=dumb as a terminal that must not receive a live bar.
+    monkeypatch.setenv("TERM", "xterm-256color")
     source = _SlowFileSystem(terminal, files={"/in/data.bin": _PAYLOAD})
     destination = _ScriptedFileSystem(files={"/out/keep": b""})
 

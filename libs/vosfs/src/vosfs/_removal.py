@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
+from vosfs import _coordination as coordination
 from vosfs import errors
 
 if TYPE_CHECKING:
@@ -59,7 +60,7 @@ class _TreeRemoval:
 
     def __init__(self, filesystem: VOSpaceFileSystem) -> None:
         self.filesystem = filesystem
-        self.semaphore = asyncio.Semaphore(REMOVAL_CONCURRENCY)
+        self.semaphore = asyncio.Semaphore(coordination.operation_limit(filesystem, REMOVAL_CONCURRENCY))
         self.completed: list[str] = []
         self.failure: tuple[str, Exception] | None = None
 

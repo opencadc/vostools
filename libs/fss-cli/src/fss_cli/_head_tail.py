@@ -87,14 +87,13 @@ async def _read_tail(
         info = await filesystem._info(request.operand.path)
     except Exception as error:
         raise _CommandFailureError(request.operand, error) from error
-    size = _size_from_info(request.operand, info)
+    _size_from_info(request.operand, info)
     if request.count == 0 and _is_file(request.operand, info):
         return b""
     try:
         result = await filesystem._cat_file(
             request.operand.path,
-            # A negative start is an fsspec suffix offset, not "from the start".
-            start=max(0, size - request.count),
+            start=-request.count,
             end=None,
         )
     except Exception as error:

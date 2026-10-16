@@ -7,15 +7,15 @@ filesystem sends, and the fsspec metadata mapping that turns a parsed
 :class:`Node` into an fsspec ``info`` dict.
 
 Parsing is deliberately defensive: input is bounded before it reaches the XML
-parser, and :mod:`defusedxml` rejects DTDs and external entities so that a
-hostile response cannot mount an XXE or entity-expansion attack. Runtime XSD
-validation is intentionally *not* performed; the pinned VOSpace 2.1 schema is
-exercised only by the test suite.
+parser, and a document type declaration is rejected before any entity is read,
+so a hostile response cannot mount an XXE or entity-expansion attack. Runtime
+XSD validation is intentionally *not* performed; the pinned VOSpace 2.1 schema
+is exercised only by the test suite.
 
 Generated documents use the ``http://www.ivoa.net/xml/VOSpace/v2.0`` namespace
-and carry ``version="2.1"`` on the document root, per the contract. The
-serializer relies on :mod:`xml.etree.ElementTree`, so no XML library beyond the
-standard library and :mod:`defusedxml` is required at runtime.
+and carry ``version="2.1"`` on the document root, per the contract. The reader
+and the serializer both use :mod:`xml.etree.ElementTree`, so no XML library
+beyond the standard library is required at runtime.
 """
 
 from __future__ import annotations
@@ -232,6 +232,15 @@ def build_transfer_document(
     ET.SubElement(root, _DIRECTION_TAG).text = direction
     for protocol in protocols:
         ET.SubElement(root, _PROTOCOL_TAG).set("uri", protocol)
+    return _serialize(root)
+
+
+def build_move_document(source_uri: str, destination_uri: str) -> bytes:
+    """Build an internal move with a destination URI as its transfer direction."""
+    root = ET.Element(_TRANSFER_TAG, version=VOSPACE_VERSION)
+    ET.SubElement(root, _TARGET_TAG).text = source_uri
+    ET.SubElement(root, _DIRECTION_TAG).text = destination_uri
+    ET.SubElement(root, f"{{{VOSPACE_NS}}}keepBytes").text = "false"
     return _serialize(root)
 
 

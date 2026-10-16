@@ -9,8 +9,8 @@ filesystem, so state persists in the in-memory simulator.
 The pinned fsspec 2026.6.0 suites collect 137 cases: 131 supported cases run and
 six question-mark glob cases are skipped as one explicit Unsupported capability.
 The six skips are the ``fil?1`` non-recursive and recursive rows in copy, get,
-and put. The current path grammar treats ``?`` as a URL query delimiter, so it
-cannot express those glob paths without widening the public path contract.
+and put. ``?`` is a literal name character, so those glob paths are outside
+the contract.
 
 List-source get, including the hashed-name fixture, runs as supported evidence;
 its former failure was fixture teardown, not a backend capability gap. All

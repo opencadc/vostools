@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import inspect
+import asyncio
 import logging
-import os
-import tempfile
 import time
 from collections.abc import Mapping
-from contextlib import suppress
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from . import _copy_file
 from ._command import (
     _CommandFailureError,
     _drain_current_operation,
@@ -24,25 +23,28 @@ from ._command import (
     _run_mapped_command,
     _usage_error,
 )
+from ._concurrent import _run_bounded
+from ._copy_file import copy_on_backend, create_staging, discard_staging
 from ._diagnostics import _render_diagnostic_value
 from ._logging import _location, _log_file_operation, _redact
 from ._manifest import _shared_tokens_match
 from ._path import _lexical_basename, _lexical_join, _lexical_parent
 from ._post_copy import (
     _DEFAULT_METADATA_WAIT_SECONDS,
-    _await_verified,
     _PreviousFile,
-    _report,
+    _report_gate,
+    _report_ready,
     _require_file_size,
     _resolved_operand,
     _TransferProof,
     _verification_tokens,
+    report_verified,
 )
 from ._progress import _transfer_display
 from ._recursive_cp import _canonical_operand, _run_recursive_cp
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection
+    from collections.abc import Collection
 
     from fsspec.asyn import AsyncFileSystem
     from fsspec.callbacks import Callback
@@ -259,42 +261,18 @@ async def _stage_remote(
     callback: Callback,
 ) -> tuple[str | None, Exception | None]:
     try:
-        descriptor, temporary = tempfile.mkstemp(prefix=prefix)
+        temporary = create_staging(prefix)
     except Exception as error:  # noqa: BLE001 - local staging creation boundary.
         return None, error
     try:
-        os.close(descriptor)
-    except Exception as error:  # noqa: BLE001 - local staging descriptor boundary.
-        _remove_temporary(temporary)
-        return None, error
-    except BaseException:
-        _discard_temporary(temporary)
-        raise
-
-    try:
         await _drain_current_operation(filesystem._get_file(remote, temporary, callback=callback))
     except Exception as error:  # noqa: BLE001 - staging download boundary.
-        _remove_temporary(temporary)
+        _copy_file.remove_staging(temporary)
         return None, error
     except BaseException:
-        _discard_temporary(temporary)
+        discard_staging(temporary)
         raise
     return temporary, None
-
-
-def _remove_temporary(path: str) -> Exception | None:
-    try:
-        Path(path).unlink()
-    except FileNotFoundError:
-        return None
-    except Exception as error:  # noqa: BLE001 - local staging cleanup boundary.
-        return error
-    return None
-
-
-def _discard_temporary(path: str) -> None:
-    with suppress(BaseException):
-        _remove_temporary(path)
 
 
 def _freeze_transfer_proof(
@@ -359,7 +337,8 @@ async def _verify_transfer(  # noqa: PLR0913 - one explicit transfer-proof bound
     return None
 
 
-async def _await_verified_copy(
+async def _await_verified_copy(  # noqa: PLR0913 - maps the common verification result to command diagnostics.
+    command: str,
     filesystem: AsyncFileSystem,
     prepared: _PreparedTransfer,
     destination: _MappedOperand,
@@ -367,9 +346,10 @@ async def _await_verified_copy(
     mutation: str,
     wait: int,
 ) -> _CpFailure | None:
-    unverified = await _await_verified(
+    unverified = await report_verified(
+        command,
         filesystem,
-        prepared.resolved,
+        destination,
         prepared.proof,
         prepared.previous,
         mutation=mutation,
@@ -380,16 +360,7 @@ async def _await_verified_copy(
     return _CpFailure(destination, backend_error=unverified.error, residue=True, verdict=unverified.text)
 
 
-def _accepts_callback(hook: Callable[..., object]) -> bool:
-    """Report whether a copy hook declares fsspec's ``callback`` parameter by name."""
-    try:
-        parameters = inspect.signature(hook).parameters
-    except (TypeError, ValueError):
-        return False
-    return "callback" in parameters
-
-
-async def _confirmed_cross_source_cp_file(  # noqa: C901, PLR0912, PLR0913 - explicit copy outcomes.
+async def _confirmed_cross_source_cp_file(  # noqa: C901, PLR0913 - explicit copy outcomes.
     command: str,
     request: _CpRequest,
     source_filesystem: AsyncFileSystem,
@@ -467,21 +438,19 @@ async def _confirmed_cross_source_cp_file(  # noqa: C901, PLR0912, PLR0913 - exp
 
         transfer.finish()
         if primary_failure is None:
-            _report(command, target, f"uploaded {proof.expected_size} bytes")
             primary_failure = await _await_verified_copy(
+                command,
                 destination_filesystem,
                 prepared,
                 target,
                 mutation="upload",
                 wait=metadata_wait,
             )
-            if primary_failure is None:
-                _report(command, target, f"verified {proof.expected_size} bytes")
     except BaseException:
-        _discard_temporary(temporary)
+        discard_staging(temporary)
         raise
 
-    cleanup_error = _remove_temporary(temporary)
+    cleanup_error = _copy_file.remove_staging(temporary)
     if primary_failure is not None:
         return primary_failure
     if cleanup_error is not None:
@@ -514,12 +483,9 @@ async def _confirmed_cp_file(
         return _CpFailure(request.source, incompatible="same_path")
 
     try:
-        if _accepts_callback(filesystem._cp_file):
-            await _drain_current_operation(
-                filesystem._cp_file(request.source.path, resolved, callback=transfer.phase("copy", target.spelling)),
-            )
-        else:
-            await _drain_current_operation(filesystem._cp_file(request.source.path, resolved))
+        copied = await copy_on_backend(
+            filesystem, request.source.path, resolved, partial(transfer.phase, "copy", target.spelling)
+        )
     except Exception as error:  # noqa: BLE001 - mutation may leave destination residue.
         return _CpFailure(
             request.destination,
@@ -528,9 +494,18 @@ async def _confirmed_cp_file(
             residue=True,
         )
 
+    if not copied:
+        return await _confirmed_cross_source_cp_file(
+            command,
+            request,
+            filesystem,
+            filesystem,
+            transfer=transfer,
+            metadata_wait=metadata_wait,
+        )
     transfer.finish()
-    _report(command, target, f"copied {proof.expected_size} bytes")
     failure = await _await_verified_copy(
+        command,
         filesystem,
         prepared,
         target,
@@ -539,7 +514,6 @@ async def _confirmed_cp_file(
     )
     if failure is not None:
         return failure
-    _report(command, target, f"verified {proof.expected_size} bytes")
     _log_verified_transfer("copied", request, resolved, proof, started)
     return None
 
@@ -613,6 +587,99 @@ def _render_failure(  # noqa: C901 - stable diagnostic categories.
         _render_backend_failure(command, failure.operand, failure.backend_error)
 
 
+async def _copy_one_request(
+    command: str,
+    request: _CpRequest,
+    filesystems: Mapping[str, AsyncFileSystem],
+    transfer: _Transfer,
+    metadata_wait: int,
+) -> _CpFailure | None:
+    """Copy one planned request on one backend or across two."""
+    if request.source.name == request.destination.name:
+        return await _confirmed_cp_file(
+            command,
+            request,
+            filesystems[request.source.name],
+            transfer=transfer,
+            metadata_wait=metadata_wait,
+        )
+    return await _confirmed_cross_source_cp_file(
+        command,
+        request,
+        filesystems[request.source.name],
+        filesystems[request.destination.name],
+        transfer=transfer,
+        metadata_wait=metadata_wait,
+    )
+
+
+def _copy_destination_key(request: _CpRequest, *, into_directory: bool) -> tuple[str, str]:
+    """The file path two copies must not write at the same time."""
+    path = request.destination.path
+    if into_directory:
+        path = _lexical_join(path, _lexical_basename(request.source.path))
+    return request.destination.name, path
+
+
+async def _copy_requests_concurrently(
+    command: str,
+    plan: _CpPlan,
+    filesystems: Mapping[str, AsyncFileSystem],
+    display: _TransferDisplay,
+) -> _CpFailure | None:
+    """Copy every planned file under the shared limit, printing in argv order.
+
+    Copies of the same destination path take a lock in submission order, so a
+    repeated basename still finishes as the last operand.
+    """
+    locks: dict[tuple[str, str], asyncio.Lock] = {}
+    keys: list[tuple[str, str]] = []
+    for request in plan.requests:
+        key = _copy_destination_key(request, into_directory=plan.require_directory)
+        keys.append(key)
+        locks.setdefault(key, asyncio.Lock())
+    # Copies of one destination path stay in argv order. Outcome lines are
+    # written as each copy produces them, so a failed write or an interrupt
+    # still lands inside that copy.
+    gates = [asyncio.Event() for _request in plan.requests]
+    if gates:
+        gates[0].set()
+
+    async def run_one(index: int, request: _CpRequest) -> _CpFailure | None:
+        gate_token = _report_gate.set(gates[index])
+        ready_token = _report_ready.set(False)
+        try:
+            async with locks[keys[index]]:
+                with display.transfer() as transfer:
+                    result = await _copy_one_request(
+                        command,
+                        request,
+                        filesystems,
+                        transfer,
+                        plan.metadata_wait,
+                    )
+            await gates[index].wait()
+            return result
+        finally:
+            _report_gate.reset(gate_token)
+            _report_ready.reset(ready_token)
+            if index + 1 < len(gates):
+                gates[index + 1].set()
+
+    outcomes = await _run_bounded(
+        [partial(run_one, index, request) for index, request in enumerate(plan.requests)],
+        stop=lambda result: result is not None,
+    )
+    for outcome in outcomes:
+        if outcome is None:
+            break
+        if outcome.error is not None:
+            raise outcome.error
+        if outcome.value is not None:
+            return outcome.value
+    return None
+
+
 async def _copy_requests(
     command: str,
     plan: _CpPlan,
@@ -636,27 +703,8 @@ async def _copy_requests(
             plan.requests[0].destination,
             filesystems[plan.requests[0].destination.name],
         )
-    for request in plan.requests if failure is None else ():
-        with display.transfer() as transfer:
-            if request.source.name == request.destination.name:
-                failure = await _confirmed_cp_file(
-                    command,
-                    request,
-                    filesystems[request.source.name],
-                    transfer=transfer,
-                    metadata_wait=plan.metadata_wait,
-                )
-            else:
-                failure = await _confirmed_cross_source_cp_file(
-                    command,
-                    request,
-                    filesystems[request.source.name],
-                    filesystems[request.destination.name],
-                    transfer=transfer,
-                    metadata_wait=plan.metadata_wait,
-                )
-        if failure is not None:
-            break
+    if failure is None and plan.requests:
+        failure = await _copy_requests_concurrently(command, plan, filesystems, display)
     if failure is not None:
         try:
             _render_failure(command, failure)

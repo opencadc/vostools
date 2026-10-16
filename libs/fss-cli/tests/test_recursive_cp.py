@@ -109,9 +109,11 @@ class _TreeFileSystem(AsyncFileSystem):
         self.entries[remote] = Path(local).read_bytes()  # noqa: ASYNC240
 
     async def _cp_file(self, path1: str, path2: str, **kwargs: object) -> None:
-        del path1, path2, kwargs
-        message = "recursive cp must not call _cp_file"
-        raise AssertionError(message)
+        del kwargs
+        self.calls.append(("cp_file", path1, path2))
+        payload = self.entries[path1]
+        assert isinstance(payload, bytes)
+        self.entries[path2] = payload
 
 
 def _source(
@@ -428,7 +430,7 @@ def test_recursive_cp_reports_source_exit_failure_after_verified_copy() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        _cp_verified("memory:/out/docs/notes.txt", "uploaded", 5)
+        _cp_verified("memory:/out/docs/notes.txt", "copied", 5)
         + "cp: memory: source exit failure (OSError): cleanup\n",
     )
     assert entries["/out/docs/notes.txt"] == b"notes"
@@ -453,13 +455,13 @@ def test_recursive_cp_copies_nested_and_empty_directories_through_host_staging()
     assert (result.exit_code, result.stdout, result.stderr) == (
         0,
         "",
-        _cp_verified("memory:/target/docs/nested/notes.txt", "uploaded", 5),
+        _cp_verified("memory:/target/docs/nested/notes.txt", "copied", 5),
     )
     assert entries["/target/docs/empty"] is None
     assert entries["/target/docs/nested/notes.txt"] == b"notes"
-    # One breadth-first listing per directory, for the manifest and again for
-    # source revalidation.
-    assert sorted(call for call in calls if call[0] == "ls") == [
+    # One breadth-first listing per source directory, for the manifest and again
+    # for source revalidation. Destination proof lists the written tree too.
+    assert sorted(call for call in calls if call[0] == "ls" and str(call[1]).startswith("/docs")) == [
         ("ls", "/docs"),
         ("ls", "/docs"),
         ("ls", "/docs/empty"),
@@ -467,7 +469,8 @@ def test_recursive_cp_copies_nested_and_empty_directories_through_host_staging()
         ("ls", "/docs/nested"),
         ("ls", "/docs/nested"),
     ]
-    mutations = [call for call in calls if call[0] in {"mkdir", "get_file", "put_file"}]
+    assert ("ls", "/target/docs") in calls
+    mutations = [call for call in calls if call[0] in {"mkdir", "cp_file"}]
     # The root is created first; siblings at one depth are issued together.
     assert mutations[0] == ("mkdir", "/target/docs", False)
     assert sorted(mutations[1:3]) == [
@@ -475,10 +478,8 @@ def test_recursive_cp_copies_nested_and_empty_directories_through_host_staging()
         ("mkdir", "/target/docs/nested", False),
     ]
     assert mutations[3:] == [
-        ("get_file", "/docs/nested/notes.txt"),
-        ("put_file", "/target/docs/nested/notes.txt", "overwrite"),
+        ("cp_file", "/docs/nested/notes.txt", "/target/docs/nested/notes.txt"),
     ]
-    assert not [call for call in calls if call[0] == "cp_file"]
 
 
 def test_recursive_cp_supports_distinct_configured_sources() -> None:
@@ -777,19 +778,18 @@ def test_recursive_cp_reports_source_change_after_transfer() -> None:
     calls: list[tuple[object, ...]] = []
 
     def configure(filesystem: _TreeFileSystem) -> None:
-        original = filesystem._put_file
+        original = filesystem._cp_file
 
-        async def put_file(
+        async def cp_file(
             self: _TreeFileSystem,
-            local: str,
-            remote: str,
-            mode: str = "overwrite",
+            path1: str,
+            path2: str,
             **kwargs: object,
         ) -> None:
-            await original(local, remote, mode, **kwargs)
+            await original(path1, path2, **kwargs)
             self.entries["/docs/notes.txt"] = b"changed"
 
-        filesystem._put_file = MethodType(put_file, filesystem)  # type: ignore[method-assign]
+        filesystem._cp_file = MethodType(cp_file, filesystem)  # type: ignore[method-assign]
 
     result = _invoke(
         ["-R", "memory:/docs", "memory:/out/copy"],
@@ -799,7 +799,7 @@ def test_recursive_cp_reports_source_change_after_transfer() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        _cp_verified("memory:/out/copy/notes.txt", "uploaded", 5)
+        _cp_verified("memory:/out/copy/notes.txt", "copied", 5)
         + "cp: memory:/docs: source changed; destination residue may remain\n",
     )
     assert entries["/out/copy/notes.txt"] == b"notes"
@@ -957,14 +957,14 @@ def test_recursive_cp_propagates_non_cancel_control_flow() -> None:
     def configure(filesystem: _TreeFileSystem) -> None:
         async def fail(
             self: _TreeFileSystem,
-            remote: str,
-            local: str,
+            path1: str,
+            path2: str,
             **kwargs: object,
         ) -> NoReturn:
-            del self, remote, local, kwargs
+            del self, path1, path2, kwargs
             raise control
 
-        filesystem._get_file = MethodType(fail, filesystem)  # type: ignore[method-assign]
+        filesystem._cp_file = MethodType(fail, filesystem)  # type: ignore[method-assign]
 
     with pytest.raises(Stop) as caught:
         _invoke(
@@ -1152,13 +1152,11 @@ def test_recursive_cp_skips_entry_preflight_when_destination_root_is_missing() -
         call[1] for call in destination_calls if call[0] == "info" and str(call[1]).startswith("/out/copy")
     ) == [
         "/out/copy",
-        "/out/copy",
-        "/out/copy/nested",
         "/out/copy/nested/notes.txt",
-        "/out/copy/nested/notes.txt",
-        "/out/copy/top.txt",
         "/out/copy/top.txt",
     ]
+    assert ("ls", "/out/copy") in destination_calls
+    assert ("ls", "/out/copy/nested") in destination_calls
 
 
 def test_recursive_cp_overlaps_transfers_within_the_concurrency_bound() -> None:

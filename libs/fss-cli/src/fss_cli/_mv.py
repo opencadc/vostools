@@ -7,7 +7,10 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from fsspec.asyn import AsyncFileSystem
+
 from ._command import (
+    _call,
     _CommandFailureError,
     _MappedOperand,
     _run_mapped_command,
@@ -25,8 +28,6 @@ from ._cp import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping as MappingType
-
-    from fsspec.asyn import AsyncFileSystem
 
     from ._app import AsyncFilesystemSource
 
@@ -53,6 +54,24 @@ def _plan_mv(
     )
 
 
+def _declared_move(filesystem: AsyncFileSystem) -> str | None:
+    """Return the async move hook this filesystem actually implements.
+
+    ``_mv_file`` is fsspec's hook. ``getattr`` sees an override inherited from
+    a parent. The stock ``AsyncFileSystem._mv_file`` (copy, then delete) does
+    not count: a class that declares ``_mv`` keeps that operation, and a
+    filesystem with neither stays refused.
+    """
+    mv_file = getattr(filesystem, "_mv_file", None)
+    implementation = getattr(mv_file, "__func__", mv_file)
+    if inspect.iscoroutinefunction(mv_file) and implementation is not AsyncFileSystem._mv_file:
+        return "_mv_file"
+    declared = type(filesystem).__dict__.get("_mv")
+    if inspect.iscoroutinefunction(declared):
+        return "_mv"
+    return None
+
+
 async def _confirmed_mv_file(request: _CpRequest, filesystem: AsyncFileSystem) -> _CpFailure | None:
     started = time.monotonic()
     prepared = await _prepare_transfer(request, filesystem, filesystem)
@@ -61,15 +80,15 @@ async def _confirmed_mv_file(request: _CpRequest, filesystem: AsyncFileSystem) -
     proof, resolved = prepared.proof, prepared.resolved
     if request.source.path == resolved:
         return None
-    declared_operation = type(filesystem).__dict__.get("_mv")
-    if not inspect.iscoroutinefunction(declared_operation):
+    operation = _declared_move(filesystem)
+    if operation is None:
         return _CpFailure(
             request.destination,
-            backend_error=NotImplementedError("_mv must be configured by source form"),
+            backend_error=NotImplementedError("_mv_file or _mv must be configured by source form"),
         )
 
     try:
-        await declared_operation(filesystem, request.source.path, resolved)
+        await _call(filesystem, operation, request.source.path, resolved)
     except Exception as operation_error:  # noqa: BLE001
         return _CpFailure(
             request.destination,

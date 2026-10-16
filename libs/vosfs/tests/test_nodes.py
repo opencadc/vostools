@@ -203,8 +203,42 @@ def test_external_entity_is_rejected() -> None:
         b'<!DOCTYPE node [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
         b'<vos:node xmlns:vos="' + VOSPACE_NS.encode() + b'" uri="vos://x">&xxe;</vos:node>'
     )
-    with pytest.raises(ValueError):  # noqa: PT011 - defusedxml raises a ValueError subclass
+    with pytest.raises(ValueError, match="document type"):
         parse_node(payload)
+
+
+def test_internal_dtd_is_rejected() -> None:
+    payload = b'<?xml version="1.0"?><!DOCTYPE node [<!ENTITY a "x">]><node>&a;</node>'
+    with pytest.raises(ValueError, match="document type"):
+        safe_parse(payload)
+
+
+def test_external_system_dtd_is_rejected() -> None:
+    payload = b'<?xml version="1.0"?><!DOCTYPE node SYSTEM "http://example.invalid/x.dtd"><node/>'
+    with pytest.raises(ValueError, match="document type"):
+        safe_parse(payload)
+
+
+def test_entity_bomb_is_rejected() -> None:
+    payload = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE l [<!ENTITY a "aaaaaaaaaa">'
+        b'<!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
+        b'<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">'
+        b'<!ENTITY d "&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;">'
+        b'<!ENTITY e "&d;&d;&d;&d;&d;&d;&d;&d;&d;&d;">'
+        b'<!ENTITY f "&e;&e;&e;&e;&e;&e;&e;&e;&e;&e;">'
+        b'<!ENTITY g "&f;&f;&f;&f;&f;&f;&f;&f;&f;&f;">'
+        b'<!ENTITY h "&g;&g;&g;&g;&g;&g;&g;&g;&g;&g;">]>'
+        b"<l>&h;</l>"
+    )
+    with pytest.raises(ValueError, match="document type"):
+        safe_parse(payload)
+
+
+def test_cdata_may_contain_a_doctype_string() -> None:
+    root = safe_parse(b"<l><![CDATA[<!DOCTYPE x>]]></l>")
+    assert root.text == "<!DOCTYPE x>"
 
 
 def test_missing_xsi_type_is_rejected() -> None:

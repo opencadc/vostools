@@ -21,6 +21,8 @@ from vosfs.negotiate import NegotiatedEndpoint
 if TYPE_CHECKING:
     import respx
 
+    from vosfs.transport import ClientPool
+
 
 class _CountingTransport(httpx.AsyncBaseTransport):
     """Record whether a direct send reached the injected transport."""
@@ -220,6 +222,41 @@ async def test_closed_instance_fails_before_direct_send(kind: str) -> None:
     with pytest.raises(ValueError, match="closed"):
         await _direct_send(filesystem, kind)
     assert counter.value == 0
+
+
+def test_cached_instance_rebinds_runtime_on_a_new_event_loop(router: respx.Router) -> None:
+    """One cached filesystem must not keep the previous loop's clients."""
+    VOSpaceFileSystem.clear_instance_cache()
+    injected = httpx.MockTransport(router.async_handler)
+
+    async def open_client() -> tuple[VOSpaceFileSystem, ClientPool]:
+        filesystem = VOSpaceFileSystem(
+            BASE_URL,
+            transport=injected,
+            asynchronous=True,
+        )
+        filesystem.dircache["/kept"] = []
+        filesystem._authority = "example.test!vault"
+        pool = filesystem._pool
+        await pool.client()
+        return filesystem, pool
+
+    try:
+        filesystem, first_pool = asyncio.run(open_client())
+
+        async def reuse() -> ClientPool:
+            again = VOSpaceFileSystem(BASE_URL, transport=injected, asynchronous=True)
+            assert again is filesystem
+            second_pool = again._pool
+            assert second_pool is not first_pool
+            assert again.dircache["/kept"] == []
+            assert again._authority == "example.test!vault"
+            await second_pool.client()
+            return second_pool
+
+        asyncio.run(reuse())
+    finally:
+        VOSpaceFileSystem.clear_instance_cache()
 
 
 def test_dask_token_depends_only_on_constructor_state(router: respx.Router) -> None:

@@ -146,7 +146,7 @@ def test_byte_count_rejects_the_interpreter_configured_digit_limit(
 
 @pytest.mark.parametrize(
     ("count", "expected_start", "payload"),
-    [("2", 4, b"ef"), ("20", 0, b"abcdef"), ("0", 6, b"")],
+    [("2", -2, b"ef"), ("20", -20, b"abcdef"), ("0", 0, b"")],
 )
 def test_tail_reads_size_then_requests_exact_suffix_range(
     count: str,
@@ -212,7 +212,7 @@ def test_zero_count_on_a_non_file_keeps_the_backend_read_diagnostic(
         b"",
         f"{command}: memory:/a: is a directory\n",
     )
-    start = 0 if command == "head" else 6
+    start = 0
     end = 0 if command == "head" else None
     assert source.calls == [
         _ReadCall("info", "/a"),
@@ -386,7 +386,7 @@ def test_head_reports_source_acquisition_failure_without_filesystem_work() -> No
         (
             "tail",
             {"size": 9},
-            [_ReadCall("info", "/a"), _ReadCall("cat_file", "/a", 7, None)],
+            [_ReadCall("info", "/a"), _ReadCall("cat_file", "/a", -2, None)],
         ),
     ],
 )
@@ -491,7 +491,7 @@ def test_byte_range_commands_reject_incompatible_payloads_atomically(
             "tail",
             None,
             NotImplementedError(),
-            [_ReadCall("info", "/a"), _ReadCall("cat_file", "/a", 4, None)],
+            [_ReadCall("info", "/a"), _ReadCall("cat_file", "/a", -2, None)],
         ),
     ],
 )

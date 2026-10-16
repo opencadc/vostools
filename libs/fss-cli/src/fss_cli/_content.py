@@ -37,6 +37,23 @@ def _md5(tokens: tuple[tuple[str, object], ...]) -> bytes | None:
     return None
 
 
+def checksum_relation(
+    source: tuple[tuple[str, object], ...],
+    destination: tuple[tuple[str, object], ...],
+) -> bool | None:
+    """Return whether two MD5s match.
+
+    ``None`` means at least one side has no usable MD5, so the caller must
+    compare bytes. ``False`` means both sides have an MD5 and they differ, so
+    a byte download would not change the decision.
+    """
+    left = _md5(source)
+    right = _md5(destination)
+    if left is None or right is None:
+        return None
+    return left == right
+
+
 def matching_checksum(source: tuple[tuple[str, object], ...], destination: tuple[tuple[str, object], ...]) -> bool:
     """Accept compatible explicit MD5 values, never opaque ETags or sizes."""
     digest = _md5(source)

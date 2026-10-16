@@ -71,12 +71,6 @@ include = ["libs/*/src"]
 include = ["libs/vos/src/**"]
 rules = { invalid-argument-type = "warn", no-matching-overload = "warn", unresolved-attribute = "warn", unsupported-operator = "warn" }
 
-# vosfs ratchet: its _walk and _rm hooks do not yet match the signatures ty infers for
-# fsspec's AsyncFileSystem. Drop this override once they do.
-[[tool.ty.overrides]]
-include = ["libs/vosfs/src/**"]
-rules = { invalid-method-override = "warn" }
-
 [tool.ty.terminal]
 error-on-warning = false
 

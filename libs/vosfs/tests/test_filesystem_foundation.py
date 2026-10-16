@@ -21,6 +21,14 @@ def test_vos_protocol_resolves_through_entry_point() -> None:
     assert fsspec.get_filesystem_class("vos") is VOSpaceFileSystem
 
 
+def test_root_marker_matches_absolute_vos_paths() -> None:
+    assert VOSpaceFileSystem.root_marker == "/"
+    assert VOSpaceFileSystem._parent("/") == "/"
+    assert VOSpaceFileSystem._parent("/a") == "/"
+    assert VOSpaceFileSystem._parent("/a/b") == "/a"
+    assert VOSpaceFileSystem._strip_protocol("vos://") == "/"
+
+
 def test_strip_protocol_normalizes_on_the_class() -> None:
     assert VOSpaceFileSystem._strip_protocol("vos://a/b") == "/a/b"
     assert VOSpaceFileSystem._strip_protocol("vos:///a/b") == "/a/b"

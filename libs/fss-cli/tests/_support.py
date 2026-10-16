@@ -37,8 +37,10 @@ def _verified_uploads(stderr: str) -> dict[str, int]:
     """Map each ``cp -R`` file operand to its verified size; fail on any other outcome."""
     sizes: dict[str, int] = {}
     for operand, outcomes in _outcomes_by_file(stderr).items():
-        size = outcomes[0].removeprefix("uploaded ").removesuffix(" bytes")
-        assert outcomes == [f"uploaded {size} bytes", f"verified {size} bytes"], (operand, outcomes)
+        verb, _, rest = outcomes[0].partition(" ")
+        assert verb in {"uploaded", "copied"}, (operand, outcomes)
+        size = rest.removesuffix(" bytes")
+        assert outcomes == [f"{verb} {size} bytes", f"verified {size} bytes"], (operand, outcomes)
         sizes[operand] = int(size)
     return sizes
 

@@ -150,9 +150,26 @@ client-side traversal followed by leaves-first node DELETE requests.
 _Avoid_: `/async-delete`, implicit container deletion
 
 **Synchronous transfer negotiation**:
-One `/synctrans` POST followed through its 303 result to obtain a negotiated
-byte endpoint, without starting, polling, or aborting an asynchronous job.
+One `/synctrans` exchange that obtains a negotiated byte endpoint. A pull may
+use `REQUEST=redirect`. A push posts an XML transfer document. Neither form
+starts an asynchronous job.
 _Avoid_: Async transfer job, direct files URL construction
+
+**Read endpoint**:
+The byte URL negotiated for one logical read. One open file may reuse it.
+A different path must negotiate again.
+_Avoid_: Cached download URL, direct `/files` construction
+
+**Connection budget**:
+The per-event-loop limit on how many HTTP requests may hold a connection at
+once, including a streamed body. A streaming copy takes two slots together.
+_Avoid_: Per-call semaphore, unbounded connection pool
+
+**Move job**:
+A same-service `moveNode` UWS job (`keepBytes=false`) on `/transfers`. The
+client aborts it if the caller is cancelled, and falls back to a client-side
+copy when the service does not offer the job.
+_Avoid_: Client rename, `copyNode`
 
 **Internal LinkNode**:
 A VOSpace link whose target has the same discovered VOSpace authority and can

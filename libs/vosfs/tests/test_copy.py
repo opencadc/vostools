@@ -31,7 +31,7 @@ def test_copy_preserves_literal_percent_destination_and_parent(
     created, _deleted = _install_percent_mutation_routes(router, files)
     fs = make_fs(router)
 
-    fs.copy("/source", "vos://root/100%2541/copied")
+    fs.copy("/source", "vos://root/100%41/copied")
 
     assert files["/source"] == b"copy-me"
     assert files["/root/100%41/copied"] == b"copy-me"
@@ -57,8 +57,8 @@ def test_copy_raw_percent_urls_decode_source_and_destination_once(
     )
     fs = make_fs(router)
 
-    fs.copy("vos://src%2541/file", "vos://dest%2542/copied")
-    fs.copy("vos://src%2541", "vos://tree%2542", recursive=True)
+    fs.copy("vos://src%41/file", "vos://dest%42/copied")
+    fs.copy("vos://src%41", "vos://tree%42", recursive=True)
 
     assert files["/dest%42/copied"] == b"scalar"
     assert files["/tree%42/child"] == b"child"

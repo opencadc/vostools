@@ -20,8 +20,11 @@ closed interval. A 416 is an empty slice only when `bytes */TOTAL` proves the
 requested start is beyond EOF (or the object is empty); otherwise it fails.
 
 Do not treat `Accept-Ranges: bytes` as proof of support. Do not assume a `200`
-body is a partial. Staged `open` stays whole-object. `blockcache::` /
-`cached::` remain unsupported until a separate contract claims them.
+body is a partial. The default `open("rb")` stays whole-object. An opt-in
+buffered open (`block_size` or `cache_type`) may send `Range`; if a later
+read returns `200` instead of `206`, that response body is staged and the
+file stops sending ranges. `blockcache::` / `cached::` remain unsupported
+until a separate contract claims them.
 
 ## Consequences
 

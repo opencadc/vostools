@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, BinaryIO
 
 import typer
 
+from . import _copy_file
 from ._command import (
     _binary_stdout,
     _BinaryWriter,
@@ -23,7 +24,6 @@ from ._command import (
     _run_mapped_command,
     _write_binary,
 )
-from ._cp import _remove_temporary
 from ._diagnostics import _render_diagnostic_prefix, _render_diagnostic_value
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ def _remove_owned_temporary(
     if temporary in ownership.pending_descriptors.values():
         message = "temporary descriptor remains open"
         return OSError(message)
-    cleanup_error = _remove_temporary(temporary)
+    cleanup_error = _copy_file.remove_staging(temporary)
     if cleanup_error is None:
         ownership.pending_temporaries.remove(temporary)
         ownership.temporary_operands.pop(temporary)

@@ -1,4 +1,4 @@
-"""Inherited fsspec coordination over canonical VOSpace paths."""
+"""Inherited fsspec coordination for bulk reads and writes."""
 
 from __future__ import annotations
 
@@ -6,13 +6,9 @@ import asyncio
 import contextlib
 import contextvars
 from functools import partial
-from typing import TYPE_CHECKING, Any, TypeVar, overload
-from urllib.parse import unquote_to_bytes
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from fsspec.asyn import AsyncFileSystem
 from fsspec.utils import other_paths
-
-from vosfs import paths
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -29,6 +25,14 @@ _T = TypeVar("_T")
 
 #: Directory listings issued concurrently by one tree walk.
 LISTING_CONCURRENCY = 32
+
+
+def operation_limit(filesystem: Any, fallback: int) -> int:  # noqa: ANN401 - any async filesystem
+    """Return ``filesystem.batch_size`` when it is a positive int, else ``fallback``."""
+    batch_size = getattr(filesystem, "batch_size", None)
+    if type(batch_size) is int and batch_size > 0:
+        return batch_size
+    return fallback
 
 
 def effective_limit(batch_size: int | None, count: int) -> int:
@@ -100,13 +104,14 @@ async def find_concurrently(
     if withdirs and path != "" and await filesystem._isdir(path):  # noqa: SLF001
         out[path] = await filesystem._info(path)  # noqa: SLF001
 
-    listing = _listing_reader(filesystem, on_error, kwargs)
+    limit = operation_limit(filesystem, LISTING_CONCURRENCY)
+    listing = _listing_reader(filesystem, on_error, kwargs, limit)
     level = [path]
     depth = 1
     while level:
         listings = await run_bounded(
             [partial(listing, directory) for directory in level],
-            LISTING_CONCURRENCY,
+            limit,
         )
         level = _collect_level(level, listings, out, withdirs=withdirs)
         if maxdepth is not None and depth >= maxdepth:
@@ -121,33 +126,14 @@ async def find_concurrently(
     return {name: out[name] for name in names}
 
 
-class _CanonicalPath(str):
-    """A path already decoded at the inherited-fsspec seam."""
-
-    __slots__ = ()
-
-
-def canonical_path(path: str) -> str:
-    """Retain canonical-path provenance across a public fsspec result."""
-    if isinstance(path, _CanonicalPath) or unquote_to_bytes(path) == path.encode():
-        return path
-    return _CanonicalPath(path)
-
-
-def normalize_path(path: str) -> str:
-    """Normalize one user path unless it already crossed this seam."""
-    if isinstance(path, _CanonicalPath):
-        return path
-    return canonical_path(paths.strip_protocol(path))
-
-
 def _listing_reader(
-    filesystem: Any,  # noqa: ANN401 - the adapter or any fsspec async filesystem
+    filesystem: Any,  # noqa: ANN401 - any fsspec async filesystem
     on_error: Any,  # noqa: ANN401 - fsspec accepts "omit", "raise", or a callable
     kwargs: dict[str, Any],
+    limit: int,
 ) -> Callable[[str], Awaitable[list[dict[str, Any]]]]:
     """Return one container lister applying ``on_error`` like fsspec ``_walk``."""
-    semaphore = asyncio.Semaphore(LISTING_CONCURRENCY)
+    semaphore = asyncio.Semaphore(limit)
 
     async def listing(directory: str) -> list[dict[str, Any]]:
         async with semaphore:
@@ -193,9 +179,6 @@ class WriteState:
         self.owner_task = asyncio.current_task()
         self.active = True
         self.tasks: set[asyncio.Task[object]] = set()
-        self.lock = asyncio.Lock()
-        self.materialized: set[str] = set()
-        self.failure: Exception | None = None
 
 
 _WRITE_STATE: contextvars.ContextVar[WriteState | None] = contextvars.ContextVar(
@@ -266,6 +249,11 @@ async def _drain_write_tasks(state: WriteState) -> None:
             await asyncio.gather(*registered, return_exceptions=True)
 
 
+def defer(owner: object, factory: Callable[[], Awaitable[Any]]) -> _DeferredAwaitable:
+    """Return an awaitable that creates its coroutine only once awaited."""
+    return _DeferredAwaitable(owner, factory)
+
+
 class _DeferredAwaitable:
     """Create a callback coroutine only after fsspec schedules its task."""
 
@@ -320,172 +308,6 @@ class DeferredBranchCallback:
         return deferred
 
 
-def normalize_hook_path(path: str) -> str:
-    """Normalize one hook-entry path, preserving a trailing slash."""
-    normalized = normalize_path(path)
-    if path.endswith("/") and normalized != "/":
-        return f"{normalized}/"
-    return normalized
-
-
-@overload
-def normalize_hook_paths(value: str) -> str: ...
-
-
-@overload
-def normalize_hook_paths(value: list[str]) -> list[str]: ...
-
-
-def normalize_hook_paths(value: str | list[str]) -> str | list[str]:
-    """Normalize one hook-entry path, or each path in a list."""
-    if isinstance(value, list):
-        return [normalize_hook_path(path) for path in value]
-    return normalize_hook_path(value)
-
-
-def _forward(path: str) -> str:
-    """Encode a canonical path for one normal filesystem hook entry."""
-    return paths.encode_url_path(path) or "/"
-
-
-def canonical_info(info: dict[str, Any]) -> dict[str, Any]:
-    """Copy one info dict, retaining canonical-path provenance on its name."""
-    result = dict(info)
-    name = result.get("name")
-    if isinstance(name, str):
-        result["name"] = canonical_path(name)
-    return result
-
-
 def remap(source_paths: list[str], destination: str) -> list[str]:
-    """Map canonical source paths beneath one canonical destination."""
-    return [canonical_path(path) for path in other_paths(source_paths, normalize_hook_path(destination))]
-
-
-class FsspecAdapter:
-    """Run inherited coordinators with canonical paths inside their seam."""
-
-    _expand_path = AsyncFileSystem._expand_path  # noqa: SLF001 - inherited seam
-    _exists = AsyncFileSystem._exists  # noqa: SLF001 - inherited seam
-    _find = find_concurrently
-    _glob = AsyncFileSystem._glob  # noqa: SLF001 - inherited seam
-    _isdir = AsyncFileSystem._isdir  # noqa: SLF001 - inherited seam
-    _isfile = AsyncFileSystem._isfile  # noqa: SLF001 - inherited seam
-    _walk = AsyncFileSystem._walk  # noqa: SLF001 - inherited seam
-
-    def __init__(self, filesystem: AsyncFileSystem) -> None:
-        """Bind the adapter to the filesystem whose hooks it forwards to."""
-        self._filesystem = filesystem
-
-    def __getattr__(self, name: str) -> Any:  # noqa: ANN401 - fsspec hook surface
-        """Delegate every unpinned attribute to the wrapped filesystem."""
-        return getattr(self._filesystem, name)
-
-    @overload
-    @classmethod
-    def _strip_protocol(cls, path: str) -> str: ...
-
-    @overload
-    @classmethod
-    def _strip_protocol(cls, path: list[str]) -> list[str]: ...
-
-    @classmethod
-    def _strip_protocol(cls, path: str | list[str]) -> str | list[str]:
-        if isinstance(path, list):
-            return [cls._strip_protocol(item) for item in path]
-        segments = [segment for segment in path.split("/") if segment]
-        return canonical_path("/" + "/".join(segments)) if segments else "/"
-
-    async def _info(self, path: str, **kwargs: Any) -> dict[str, Any]:  # noqa: ANN401
-        return await self._filesystem._info(_forward(path), **kwargs)  # noqa: SLF001
-
-    async def _ls(
-        self,
-        path: str,
-        detail: bool = True,  # noqa: FBT001, FBT002 - fsspec hook signature
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> list[Any]:
-        return await self._filesystem._ls(  # noqa: SLF001
-            _forward(path),
-            detail=detail,
-            **kwargs,
-        )
-
-    async def _get_file(self, rpath: str, lpath: str, **kwargs: Any) -> None:  # noqa: ANN401
-        await self._filesystem._get_file(_forward(rpath), lpath, **kwargs)  # noqa: SLF001
-
-    async def _cat_file(
-        self,
-        path: str,
-        start: int | None = None,
-        end: int | None = None,
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> bytes:
-        return await self._filesystem._cat_file(  # noqa: SLF001
-            _forward(path),
-            start=start,
-            end=end,
-            **kwargs,
-        )
-
-    def _pipe_file(
-        self,
-        path: str,
-        value: bytes,
-        mode: str = "overwrite",
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> _DeferredAwaitable:
-        return _DeferredAwaitable(
-            self._filesystem,
-            partial(
-                self._filesystem._pipe_file,  # noqa: SLF001
-                _forward(path),
-                value,
-                mode=mode,
-                **kwargs,
-            ),
-        )
-
-    def _put_file(
-        self,
-        lpath: str,
-        rpath: str,
-        mode: str = "overwrite",
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> _DeferredAwaitable:
-        return _DeferredAwaitable(
-            self._filesystem,
-            partial(
-                self._filesystem._put_file,  # noqa: SLF001
-                lpath,
-                _forward(rpath),
-                mode=mode,
-                **kwargs,
-            ),
-        )
-
-    def _makedirs(
-        self,
-        path: str,
-        exist_ok: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
-    ) -> _DeferredAwaitable:
-        return _DeferredAwaitable(
-            self._filesystem,
-            partial(
-                self._filesystem._makedirs,  # noqa: SLF001
-                _forward(path),
-                exist_ok=exist_ok,
-            ),
-        )
-
-    async def _cp_file(
-        self,
-        path1: str,
-        path2: str,
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> None:
-        await self._filesystem._cp_file(  # noqa: SLF001
-            _forward(path1),
-            _forward(path2),
-            **kwargs,
-        )
+    """Map source paths beneath one destination."""
+    return list(other_paths(source_paths, destination))

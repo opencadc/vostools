@@ -372,7 +372,6 @@ def test_find_rejects_a_depth_too_large_for_the_runtime_deterministically() -> N
         {"/docs": ()},
         {"/docs": "docs/a.txt"},
         {"/docs": {"/docs/a.txt": {}}},
-        {"/docs": _ListSubclass([_entry("/docs/a.txt")])},
         {"/docs": [1]},
         {"/docs": [_entry(1)]},
         {"/docs": [_entry("/docs/a.txt", None)]},

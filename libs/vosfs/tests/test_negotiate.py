@@ -303,5 +303,34 @@ async def test_bearer_not_leaked_to_cross_origin_redirect(router: respx.Router) 
     await fs.aclose()
 
 
+async def test_redirect_read_is_remembered_unsupported_after_a_details_redirect(
+    router: respx.Router,
+) -> None:
+    mock_capabilities(router)
+    router.get(NODES_URL).mock(return_value=httpx.Response(200, content=ROOT))
+    router.post(url__regex=rf"^{SYNC_URL}").mock(
+        side_effect=lambda _request: httpx.Response(
+            303,
+            headers={"Location": f"{BASE_URL}/details?t=/file.txt"},
+        )
+    )
+    router.get(url__regex=rf"^{BASE_URL}/details").mock(
+        return_value=httpx.Response(200, content=_details(f"{BASE_URL}/files/x"))
+    )
+    fs = make_fs(router, asynchronous=True)
+    first = await _transfer.negotiate_endpoint(
+        fs, "/file.txt", direction=DIRECTION_PULL, protocol_uri=PROTOCOL_HTTPS_GET
+    )
+    assert first.url == f"{BASE_URL}/files/x"
+    assert fs._redirect_reads_unsupported is True
+    posts_after_first = [call for call in router.calls if call.request.method == "POST"]
+    await _transfer.negotiate_endpoint(fs, "/file.txt", direction=DIRECTION_PULL, protocol_uri=PROTOCOL_HTTPS_GET)
+    posts_after_second = [call for call in router.calls if call.request.method == "POST"]
+    assert len(posts_after_first) == 2
+    assert len(posts_after_second) == len(posts_after_first) + 1
+    assert "REQUEST" not in str(posts_after_second[-1].request.url)
+    await fs.aclose()
+
+
 def test_negotiate_module_exposes_directions() -> None:
     assert negotiate.DIRECTION_PUSH == "pushToVoSpace"

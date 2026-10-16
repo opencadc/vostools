@@ -28,6 +28,7 @@ from vosfs import (
     _coordination as coordination,
 )
 from vosfs import (
+    _file,
     _integrity,
     _moving,
     _removal,
@@ -40,12 +41,11 @@ from vosfs import (
     staging,
     transport,
 )
-from vosfs.transport import ClientPool, build_timeout
+from vosfs.transport import ClientPool, LoopRuntimes, build_timeout
 
 if TYPE_CHECKING:
     import io
     from collections.abc import (
-        AsyncIterator,
         Mapping,
         Sequence,
     )
@@ -110,6 +110,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
     """
 
     protocol = "vos"
+    root_marker = "/"
     async_impl = True
     cachable = True
     # ``transport`` is the single internal HTTP transport seam and ``loop`` is a
@@ -129,6 +130,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
         asynchronous: bool = False,
         loop: Any = None,  # noqa: ANN401 - fsspec passes an opaque event loop
         batch_size: int | None = None,
+        max_connections: int = 100,
         **storage_options: Any,  # noqa: ANN401 - fsspec passthrough options
     ) -> None:
         """Construct a filesystem bound to one OpenCADC VOSpace deployment.
@@ -146,10 +148,16 @@ class VOSpaceFileSystem(AsyncFileSystem):
             asynchronous: fsspec async-mode flag.
             loop: fsspec event loop handle; not serialized.
             batch_size: fsspec bulk-operation concurrency hint.
+            max_connections: How many HTTP connections one event loop may hold.
+                A streamed body holds its connection until the response is closed.
             storage_options: Remaining fsspec options (``skip_instance_cache``,
                 ``use_listings_cache``, ``listings_expiry_time``, ``max_paths``).
         """
         config.reject_forbidden_options(storage_options)
+        if type(max_connections) is not int or max_connections < 1:
+            msg = "max_connections must be a positive integer"
+            raise ValueError(msg)
+        self.max_connections = max_connections
         super().__init__(
             asynchronous=asynchronous,
             loop=loop,
@@ -170,16 +178,30 @@ class VOSpaceFileSystem(AsyncFileSystem):
         )
         self.timeouts = config.resolve_timeouts(timeouts)
         self.trust_env = trust_env
-        self._pool = ClientPool(
-            certfile=self._credential.certfile,
-            trust_env=trust_env,
-            timeout=build_timeout(self.timeouts),
-            injected_transport=transport,
+        self._closed = False
+        self._runtimes = LoopRuntimes(
+            lambda: ClientPool(
+                certfile=self._credential.certfile,
+                trust_env=trust_env,
+                timeout=build_timeout(self.timeouts),
+                injected_transport=transport,
+                max_connections=max_connections,
+            ),
         )
         self._bindings: ServiceBindings | None = None
-        self._bindings_lock = asyncio.Lock()
         self._authority: str | None = None
-        self._adapter = cast("AsyncFileSystem", coordination.FsspecAdapter(self))
+        self._listing_indexes: dict[str, tuple[int, dict[str, dict[str, Any]]]] = {}
+        self._redirect_reads_unsupported = False
+
+    @property
+    def _pool(self) -> ClientPool:
+        """Return the HTTP client pool for the running event loop."""
+        return self._runtimes.current().pool
+
+    @property
+    def _bindings_lock(self) -> asyncio.Lock:
+        """Return the bindings lock for the running event loop."""
+        return self._runtimes.current().bindings_lock
 
     def _ensure_usable(self) -> None:
         """Reject closed or fork-inherited runtime state before using it."""
@@ -189,7 +211,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
                 "in the child process from pickle or fsspec JSON"
             )
             raise RuntimeError(msg)
-        if self._pool.closed:
+        if self._closed or self._pool.closed:
             msg = "I/O operation on closed filesystem"
             raise ValueError(msg)
 
@@ -203,9 +225,18 @@ class VOSpaceFileSystem(AsyncFileSystem):
         return constructor, (cls, args, {**options, "skip_instance_cache": True})
 
     def to_dict(self, *, include_password: bool = True) -> dict[str, Any]:
-        """Serialize constructor state for fresh fsspec reconstruction."""
+        """Serialize constructor state for fresh fsspec reconstruction.
+
+        ``include_password=False`` drops a literal ``token``. fsspec only
+        removes the key ``password``, so a bearer token would otherwise be
+        written into catalogs and JSON dumps. Pickle and the default
+        ``include_password=True`` keep the token, so a reconstructed
+        filesystem can still authenticate.
+        """
         state = super().to_dict(include_password=include_password)
         state["skip_instance_cache"] = True
+        if not include_password:
+            state.pop("token", None)
         return state
 
     @overload
@@ -218,15 +249,16 @@ class VOSpaceFileSystem(AsyncFileSystem):
 
     @classmethod
     def _strip_protocol(cls, path: str | list[str]) -> str | list[str]:
-        """Normalize a user path, or a list of paths, to canonical VOSpace paths.
+        """Normalize a user path, or a list of paths, without percent-decoding.
 
         fsspec's bulk coordinators (for example ``get`` with a list of sources)
-        forward a list through this hook; each element is normalized
-        independently, matching fsspec's base ``_strip_protocol`` contract.
+        forward a list through this hook and may apply it more than once. Each
+        element is normalized independently, and a second call leaves the path
+        unchanged.
         """
         if isinstance(path, list):
-            return [coordination.normalize_path(item) for item in path]
-        return coordination.normalize_path(path)
+            return [paths.strip_protocol(item) for item in path]
+        return paths.strip_protocol(path)
 
     def _security_method(self) -> str:
         """Return the security-method identifier for the configured credential."""
@@ -364,30 +396,53 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """Return a copy of ``path``'s entry from its parent's cached listing."""
         if path == "/":
             return None
+        parent = paths.parent(path)
         try:
-            siblings = self.dircache[coordination.canonical_path(paths.parent(path))]
+            siblings = self.dircache[parent]
         except KeyError:
+            self._listing_indexes.pop(parent, None)
             return None
-        for entry in siblings:
-            if entry["name"] == path:
-                return dict(entry)
-        return None
+        entry = self._listing_index(parent, siblings).get(path)
+        if entry is None:
+            return None
+        return dict(entry)
 
-    async def _ls(self, path: str, detail: bool = True, **_kwargs: Any) -> list[Any]:  # noqa: ANN401, FBT001, FBT002 - fsspec hook signature
+    def _listing_index(self, parent: str, siblings: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Return a name-to-entry map for one cached listing, rebuilt when replaced."""
+        identity = id(siblings)
+        recorded = self._listing_indexes.get(parent)
+        if recorded is not None and recorded[0] == identity:
+            return recorded[1]
+        built = {str(entry["name"]): entry for entry in siblings}
+        self._listing_indexes[parent] = (identity, built)
+        return built
+
+    async def _ls(
+        self,
+        path: str,
+        detail: bool = True,  # noqa: FBT001, FBT002 - fsspec hook signature
+        refresh: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
+        **_kwargs: Any,  # noqa: ANN401 - fsspec hook signature
+    ) -> list[Any]:
         """List the immediate children of ``path`` (or the node itself if a file).
 
         Container listings are assembled from ``limit`` pages and then served
         from and stored in the standard fsspec directory cache; mutations
-        invalidate the affected entries.
+        invalidate the affected entries. ``refresh=True`` skips that cache.
+        The returned list and its dicts are copies, so a caller cannot mutate
+        the cache by editing the result.
         """
         self._ensure_usable()
         path = self._strip_protocol(path)
+        if refresh:
+            self.dircache.pop(path, None)
+            self._listing_indexes.pop(path, None)
         try:
             entries = self.dircache[path]
         except KeyError:
             entries = await self._fetch_listing(path)
         if detail:
-            return entries
+            return [dict(entry) for entry in entries]
         return [entry["name"] for entry in entries]
 
     async def _fetch_listing(self, path: str) -> list[dict[str, Any]]:
@@ -425,17 +480,23 @@ class VOSpaceFileSystem(AsyncFileSystem):
             if done:
                 return collected
 
-    async def _read_listing_page(self, path: str, *, resume: str | None) -> tuple[nodes.Node, list[nodes.Node]]:
+    async def _read_listing_page(
+        self,
+        path: str,
+        *,
+        resume: str | None,
+        limit: int = LISTING_PAGE_SIZE,
+    ) -> tuple[nodes.Node, list[nodes.Node]]:
         """GET and parse one listing page, recording its VOSpace authority."""
-        node, children = nodes.parse_container(await self._get_listing_page(path, resume=resume))
+        node, children = nodes.parse_container(await self._get_listing_page(path, resume=resume, limit=limit))
         self._note_authority(node.uri)
         return node, children
 
-    async def _get_listing_page(self, path: str, *, resume: str | None) -> bytes:
+    async def _get_listing_page(self, path: str, *, resume: str | None, limit: int = LISTING_PAGE_SIZE) -> bytes:
         """GET one bounded container page, resuming at ``resume`` when given."""
         bindings = await self._get_bindings()
         url = bindings.require_nodes() + paths.encode_url_path(path)
-        params = {"limit": str(LISTING_PAGE_SIZE)}
+        params = {"limit": str(limit)}
         if resume is not None:
             params["uri"] = resume
         url += "?" + _query(params)
@@ -466,14 +527,14 @@ class VOSpaceFileSystem(AsyncFileSystem):
             raise errors.VOSpaceError(msg)
         self._note_authority(uri)
         try:
-            child_path = paths.strip_protocol(parts.path)
+            child_path = paths.decode_url_path(parts.path)
         except ValueError as exc:
             msg = f"listed child URI is not canonical: {uri!r}"
             raise errors.VOSpaceError(msg) from exc
         if child_path == "/" or paths.parent(child_path) != parent:
             msg = f"listed child is not an immediate descendant of {parent}: {uri!r}"
             raise errors.VOSpaceError(msg)
-        return coordination.canonical_path(child_path)
+        return child_path
 
     async def _modified(self, path: str) -> datetime.datetime:
         """Return the OpenCADC modification date for ``path``."""
@@ -507,31 +568,14 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """Use fsspec's coordinator while marking entries for container handling."""
         kwargs[_GET_CONTAINER_MARKER] = True
         return await AsyncFileSystem._get(  # noqa: SLF001 - inherited seam
-            self._adapter,
-            coordination.normalize_hook_paths(rpath),
+            self,
+            rpath,
             lpath,
             recursive=recursive,
             callback=callback,
             maxdepth=maxdepth,
             **kwargs,
         )
-
-    async def _expand_path(
-        self,
-        path: str | list[str],
-        recursive: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
-        maxdepth: int | None = None,
-        assume_literal: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
-    ) -> list[str]:
-        """Expand paths inside the inherited-fsspec coordinator seam."""
-        expanded = await AsyncFileSystem._expand_path(  # noqa: SLF001 - inherited seam
-            self._adapter,
-            coordination.normalize_hook_paths(path),
-            recursive=recursive,
-            maxdepth=maxdepth,
-            assume_literal=assume_literal,
-        )
-        return [coordination.canonical_path(item) for item in expanded]
 
     async def _find(
         self,
@@ -540,70 +584,14 @@ class VOSpaceFileSystem(AsyncFileSystem):
         withdirs: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
         **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
     ) -> list[str] | dict[str, dict[str, Any]]:
-        """Find paths with a concurrent breadth-first walk inside the seam."""
-        result = await self._adapter._find(  # noqa: SLF001 - inherited seam
-            coordination.normalize_hook_path(path),
+        """Find paths with a concurrent breadth-first walk."""
+        return await coordination.find_concurrently(
+            self,
+            path,
             maxdepth=maxdepth,
             withdirs=withdirs,
             **kwargs,
         )
-        return _canonical_result(result)
-
-    async def _glob(
-        self,
-        path: str,
-        maxdepth: int | None = None,
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> list[str] | dict[str, dict[str, Any]]:
-        """Expand glob patterns inside the inherited-fsspec coordinator seam."""
-        result = await AsyncFileSystem._glob(  # noqa: SLF001 - inherited seam
-            self._adapter,
-            coordination.normalize_hook_path(path),
-            maxdepth=maxdepth,
-            **kwargs,
-        )
-        return _canonical_result(result)
-
-    async def _walk(
-        self,
-        path: str,
-        maxdepth: int | None = None,
-        on_error: Any = "omit",  # noqa: ANN401 - fsspec accepts a callable
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> AsyncIterator[Any]:
-        """Walk paths inside the inherited-fsspec coordinator seam."""
-        async for item in self._adapter._walk(  # noqa: SLF001 - inherited seam
-            coordination.normalize_hook_path(path),
-            maxdepth=maxdepth,
-            on_error=on_error,
-            **kwargs,
-        ):
-            root, directories, files = item
-            if isinstance(directories, dict):
-                directories = {name: coordination.canonical_info(info) for name, info in directories.items()}
-                files = {name: coordination.canonical_info(info) for name, info in files.items()}
-            yield coordination.canonical_path(root), directories, files
-
-    async def _cat(
-        self,
-        path: str | list[str],
-        recursive: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
-        on_error: str = "raise",
-        batch_size: int | None = None,
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> bytes | dict[str, bytes | BaseException]:
-        """Read paths inside the inherited-fsspec coordinator seam."""
-        result = await AsyncFileSystem._cat(  # noqa: SLF001 - inherited seam
-            self._adapter,
-            coordination.normalize_hook_paths(path),
-            recursive=recursive,
-            on_error=on_error,
-            batch_size=batch_size,
-            **kwargs,
-        )
-        if isinstance(result, dict):
-            return {coordination.canonical_path(key): value for key, value in result.items()}
-        return result
 
     async def _du(
         self,
@@ -621,8 +609,8 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """
         found = cast(
             "dict[str, dict[str, Any]]",
-            await self._adapter._find(  # noqa: SLF001 - inherited seam
-                coordination.normalize_hook_path(path),
+            await self._find(
+                path,
                 maxdepth=maxdepth,
                 detail=True,
                 **kwargs,
@@ -630,8 +618,8 @@ class VOSpaceFileSystem(AsyncFileSystem):
         )
         sizes: dict[str, int] = {}
         for name, info in found.items():
-            described = info if "size" in info else await self._adapter._info(name)  # noqa: SLF001
-            sizes[coordination.canonical_path(described["name"])] = described["size"]
+            described = info if "size" in info else await self._info(name)
+            sizes[str(described["name"])] = described["size"]
         if total:
             return sum(sizes.values())
         return sizes
@@ -798,11 +786,11 @@ class VOSpaceFileSystem(AsyncFileSystem):
         self,
         path: str,
         mode: str = "rb",
-        block_size: int | None = None,  # noqa: ARG002 - accepted, non-behavioural
+        block_size: int | None = None,
         autocommit: bool = True,  # noqa: FBT001, FBT002 - fsspec hook signature
-        cache_options: Any = None,  # noqa: ANN401, ARG002 - accepted, non-behavioural
+        cache_options: Any = None,  # noqa: ANN401 - fsspec hook signature
         **_kwargs: Any,  # noqa: ANN401 - fsspec hook signature
-    ) -> staging.StagedReadFile | staging.StagedWriteFile:
+    ) -> staging.StagedReadFile | staging.StagedWriteFile | _file.VOSFile:
         """Open ``path``, disk-staging the whole object for read or write.
 
         Only binary modes reach here directly; fsspec wraps text mode over the
@@ -815,6 +803,16 @@ class VOSpaceFileSystem(AsyncFileSystem):
             msg = f"append and update modes are unsupported: {mode!r}"
             raise NotImplementedError(msg)
         path = self._strip_protocol(path)
+        cache_type = _kwargs.pop("cache_type", None)
+        if "r" in mode and (block_size is not None or cache_type is not None):
+            return _file.VOSFile(
+                self,
+                path,
+                mode=mode,
+                block_size=block_size if block_size is not None else "default",
+                cache_type=cache_type if isinstance(cache_type, str) else "readahead",
+                cache_options=cache_options,
+            )
         if not autocommit and ("w" in mode or "x" in mode):
             msg = "deferred commit (autocommit=False) is unsupported"
             raise NotImplementedError(msg)
@@ -870,9 +868,9 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """Use fsspec's upload coordinator with one shared parent-creation scope."""
         async with coordination.write_scope(self):
             return await AsyncFileSystem._put(  # noqa: SLF001 - inherited seam
-                self._adapter,
+                self,
                 lpath,
-                coordination.normalize_hook_paths(rpath),
+                rpath,
                 recursive=recursive,
                 callback=cast("Callback", coordination.DeferredBranchCallback(callback, self)),
                 batch_size=batch_size,
@@ -887,19 +885,26 @@ class VOSpaceFileSystem(AsyncFileSystem):
         batch_size: int | None = None,
         **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
     ) -> list[Any] | None:
-        """Use fsspec's pipe coordinator with one shared parent-creation scope."""
-        normalized: str | dict[str, bytes]
+        """Pipe bytes with one shared parent-creation scope.
+
+        Each write is created only when fsspec awaits it, so a failure does
+        not leave the remaining writes as never-awaited coroutines.
+        """
         if isinstance(path, str):
-            normalized = coordination.normalize_hook_path(path)
+            mapping: Mapping[str, bytes] = {path: value if value is not None else b""}
         else:
-            normalized = {coordination.normalize_hook_path(key): item for key, item in path.items()}
+            mapping = path
         async with coordination.write_scope(self):
-            return await AsyncFileSystem._pipe(  # noqa: SLF001 - inherited seam
-                self._adapter,
-                normalized,
-                value=value,
-                batch_size=batch_size,
-                **kwargs,
+            return await _run_coros_in_chunks(
+                [
+                    coordination.defer(
+                        self,
+                        functools.partial(self._pipe_file, key, item, **kwargs),
+                    )
+                    for key, item in mapping.items()
+                ],
+                batch_size=batch_size if batch_size is not None else self.batch_size,
+                nofiles=True,
             )
 
     async def _pipe_file(
@@ -911,11 +916,11 @@ class VOSpaceFileSystem(AsyncFileSystem):
     ) -> None:
         """Write ``value`` to ``path`` with one whole PUT (create or overwrite)."""
         path = self._strip_protocol(path)
-        state = coordination.join_write_scope(self)
+        coordination.join_write_scope(self)
         if mode == "create" and await self._exists(path):
             msg = f"path already exists: {path}"
             raise FileExistsError(msg)
-        await self._materialize_write_parent(path, state)
+        await self._ensure_parent(path)
         started = time.monotonic()
         await _transfer.write_whole(
             self,
@@ -937,11 +942,11 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """Stream one local file through one negotiated whole PUT."""
         callback: Callback = kwargs.get("callback", DEFAULT_CALLBACK)
         rpath = self._strip_protocol(rpath)
-        state = coordination.join_write_scope(self)
+        coordination.join_write_scope(self)
         if mode == "create" and await self._exists(rpath):
             msg = f"path already exists: {rpath}"
             raise FileExistsError(msg)
-        await self._materialize_write_parent(rpath, state)
+        await self._ensure_parent(rpath)
         started = time.monotonic()
         size = await self._upload_file(lpath, rpath, callback=callback, content_type=kwargs.get("content_type"))
         _log_transfer("uploaded", lpath, rpath, size, started)
@@ -1020,6 +1025,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
             )
         finally:
             self._invalidate(path)
+            self._forget_containers(path)
         logger.info("removed %s", path, extra={"vosfs_outcome": "removed"})
 
     async def _mkdir(
@@ -1030,59 +1036,65 @@ class VOSpaceFileSystem(AsyncFileSystem):
     ) -> None:
         """Create one ContainerNode, optionally creating missing ancestors."""
         path = self._strip_protocol(path)
-        parent = coordination.canonical_path(paths.parent(path))
+        parent = paths.parent(path)
         if create_parents and parent != path and not await self._exists(parent):
             await self._makedirs(parent, exist_ok=True)
         await self._create_container(path)
 
     async def _makedirs(self, path: str, exist_ok: bool = False) -> None:  # noqa: FBT001, FBT002
-        """Create ``path`` and every missing ancestor, top-down."""
+        """Create ``path`` and every missing ancestor.
+
+        The parent chain is created first. ``_info`` skips a container that
+        already exists, and concurrent callers share one creation task per path.
+        """
         path = self._strip_protocol(path)
-        state = coordination.join_write_scope(self)
+        if path in ("/", ""):
+            return
         if not exist_ok and await self._exists(path):
             msg = f"path already exists: {path}"
             raise FileExistsError(msg)
-        if state is not None:
-            await self._materialize_write_containers(path, state)
+        await self._materialize_container(path)
+
+    async def _ensure_parent(self, path: str) -> None:
+        """Create ``path``'s parent containers when they are missing."""
+        parent = paths.parent(path)
+        if parent not in ("/", path):
+            await self._makedirs(parent, exist_ok=True)
+
+    async def _materialize_container(self, path: str) -> None:
+        """Share creation; a cancelled waiter cannot cancel the creator's state."""
+        containers = self._runtimes.current().containers
+        existing = containers.get(path)
+        if existing is not None:
+            await asyncio.shield(existing)
             return
-        for ancestor in _ancestors_top_down(path):
-            await self._ensure_container(ancestor)
+        future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        containers[path] = future
+        try:
+            await self._create_missing_container(path)
+        except BaseException as exc:
+            if containers.get(path) is future:
+                containers.pop(path, None)
+            if not future.done():
+                future.set_exception(exc)
+                future.exception()
+            raise
+        if not future.done():
+            future.set_result(None)
 
-    async def _materialize_write_parent(
-        self,
-        path: str,
-        state: coordination.WriteState | None,
-    ) -> None:
-        """Materialize one coordinated write's missing parent containers."""
-        parent = coordination.canonical_path(paths.parent(path))
-        if state is not None and parent not in ("/", path):
-            await self._materialize_write_containers(parent, state)
-
-    async def _materialize_write_containers(
-        self,
-        path: str,
-        state: coordination.WriteState,
-    ) -> None:
-        """Create required containers top-down at most once in one operation."""
-        async with state.lock:
-            if state.failure is not None:
-                raise state.failure
-            try:
-                for ancestor in _ancestors_top_down(path):
-                    if ancestor in state.materialized:
-                        continue
-                    try:
-                        info = await self._info(ancestor)
-                    except FileNotFoundError:
-                        await self._ensure_container(ancestor)
-                    else:
-                        if info["type"] != "directory":
-                            msg = f"write parent is not a directory: {ancestor}"
-                            raise FileExistsError(msg)
-                    state.materialized.add(ancestor)
-            except Exception as exc:
-                state.failure = exc
-                raise
+    async def _create_missing_container(self, path: str) -> None:
+        """Create ``path`` after its parent, unless it is already a container."""
+        parent = paths.parent(path)
+        if parent not in ("/", path):
+            await self._materialize_container(parent)
+        try:
+            info = await self._info(path)
+        except FileNotFoundError:
+            await self._ensure_container(path)
+            return
+        if info["type"] != "directory":
+            msg = f"write parent is not a directory: {path}"
+            raise FileExistsError(msg)
 
     async def _ensure_container(self, path: str) -> None:
         """Create a container, tolerating a concurrently-created container."""
@@ -1107,9 +1119,20 @@ class VOSpaceFileSystem(AsyncFileSystem):
         await self._delete_node(path)
 
     async def _rmdir(self, path: str) -> None:
-        """Delete an empty container after proving it empty (non-atomic)."""
+        """Delete an empty container after proving it empty (non-atomic).
+
+        A cached listing is reused. Otherwise one page with ``limit=1`` is
+        enough to prove a container empty or occupied, without downloading a
+        large listing.
+        """
         path = self._strip_protocol(path)
-        if await self._ls(path, detail=False):
+        cached = self.dircache.get(path)
+        if cached is None:
+            node, children = await self._read_listing_page(path, resume=None, limit=1)
+            occupied = node.node_type != "container" or bool(children)
+        else:
+            occupied = bool(cached)
+        if occupied:
             raise OSError(errno.ENOTEMPTY, "directory not empty", path)
         await self._delete_node(path)
 
@@ -1118,7 +1141,8 @@ class VOSpaceFileSystem(AsyncFileSystem):
         path: str | list[str],
         recursive: bool = False,  # noqa: FBT001, FBT002 - fsspec hook signature
         batch_size: int | None = None,
-        **kwargs: Any,  # noqa: ANN401 - fsspec hook signature
+        maxdepth: int | None = None,
+        **kwargs: Any,  # noqa: ANN401, ARG002 - fsspec hook signature
     ) -> None:
         """Delete files and, with ``recursive``, empty-check or leaves-first trees.
 
@@ -1127,7 +1151,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
         target, in argument order, is raised. Nested or repeated targets keep
         the sequential order.
         """
-        if kwargs.get("maxdepth") is not None:
+        if maxdepth is not None:
             msg = "rm(maxdepth=...) is unsupported"
             raise NotImplementedError(msg)
         targets = [self._strip_protocol(target) for target in (path if isinstance(path, list) else [path])]
@@ -1177,22 +1201,25 @@ class VOSpaceFileSystem(AsyncFileSystem):
         # ContainerNode.
         # Inside a bulk copy the parents are materialized once per operation;
         # otherwise every concurrent sibling copy would race to create them.
-        state = coordination.join_write_scope(self)
-        if state is not None:
-            if source_is_dir:
-                await self._materialize_write_containers(path2, state)
-                return
-            await self._materialize_write_parent(path2, state)
-        else:
-            parent = coordination.canonical_path(paths.parent(path2))
-            if parent not in ("/", path2) and not await self._exists(parent):
-                await self._makedirs(parent, exist_ok=True)
-            if source_is_dir:
-                await self._ensure_container(path2)
-                return
-        # Relay through a disk-staged temporary file so an arbitrarily large
-        # object is never held whole in memory; the staged PUT still validates
-        # the round-trip md5.
+        coordination.join_write_scope(self)
+        if source_is_dir:
+            await self._makedirs(path2, exist_ok=True)
+            return
+        await self._ensure_parent(path2)
+        size = _transfer.byte_size(source)
+        source_md5 = source.get("md5")
+        if size is not None and self.max_connections >= _transfer.COPY_CONNECTIONS:
+            started = time.monotonic()
+            await _transfer.copy_stream(
+                self,
+                path1,
+                path2,
+                size=size,
+                source_md5=source_md5 if type(source_md5) is str else None,
+            )
+            _log_transfer("copied", path1, path2, size, started)
+            return
+        # Staging supplies Content-Length and needs only one connection at a time.
         temp_path = staging.new_temp_path()
         started = time.monotonic()
         try:
@@ -1227,9 +1254,9 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """
         async with coordination.write_scope(self):
             await AsyncFileSystem._copy(  # noqa: SLF001 - inherited seam
-                self._adapter,
-                coordination.normalize_hook_paths(path1),
-                coordination.normalize_hook_paths(path2),
+                self,
+                path1,
+                path2,
                 recursive=recursive,
                 on_error=on_error,
                 maxdepth=maxdepth,
@@ -1294,6 +1321,18 @@ class VOSpaceFileSystem(AsyncFileSystem):
                 extra={"vosfs_outcome": "moved"},
             )
 
+    def _forget_containers(self, path: str) -> None:
+        """Drop remembered container creations at ``path`` and below.
+
+        A delete must be able to recreate the same container. Creations stay
+        remembered until then so a service that still answers ``404`` for a
+        container this process just created is not created again.
+        """
+        containers = self._runtimes.current().containers
+        prefix = "/" if path == "/" else f"{path}/"
+        for key in [key for key in containers if key == path or key.startswith(prefix)]:
+            containers.pop(key, None)
+
     def _invalidate(self, path: str) -> None:
         """Invalidate the directory cache for ``path``, its subtree, and parent.
 
@@ -1304,7 +1343,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
         cache is pruned directly.
         """
         prefix = "/" if path == "/" else f"{path}/"
-        parent = coordination.canonical_path(paths.parent(path))
+        parent = paths.parent(path)
         stale = [entry for entry in list(self.dircache) if entry in (path, parent) or entry.startswith(prefix)]
         for entry in stale:
             self.dircache.pop(entry, None)
@@ -1324,6 +1363,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
         """
         if self._pid != os.getpid():
             self._ensure_usable()
+        self._closed = True
         await self._pool.aclose()
         # Evict just this instance; fsspec's public API only clears the whole cache.
         type(self)._cache.pop(self._fs_token, None)  # noqa: SLF001
@@ -1374,15 +1414,6 @@ def _overlapping(targets: list[str]) -> bool:
     )
 
 
-def _canonical_result(
-    result: list[str] | dict[str, dict[str, Any]],
-) -> list[str] | dict[str, dict[str, Any]]:
-    """Retain canonical-path provenance across a find or glob result."""
-    if isinstance(result, dict):
-        return {coordination.canonical_path(key): coordination.canonical_info(info) for key, info in result.items()}
-    return [coordination.canonical_path(item) for item in result]
-
-
 def _broadcast(value: int | Sequence[int | None] | None, count: int) -> list[int | None]:
     """Broadcast a scalar range bound to every path, or return the sequence."""
     if value is None or isinstance(value, int):
@@ -1409,6 +1440,6 @@ def _ancestors_top_down(path: str) -> list[str]:
     result: list[str] = []
     current = ""
     for segment in paths.segments(path):
-        current = coordination.canonical_path(f"{current}/{segment}")
+        current = f"{current}/{segment}"
         result.append(current)
     return result

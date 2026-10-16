@@ -188,17 +188,19 @@ def test_cp_reuses_destination_directory_info_for_multi_source_parents() -> None
         "",
         _cp_verified("memory:/target/first.txt", "copied", 5) + _cp_verified("memory:/target/second.txt", "copied", 6),
     )
-    assert [event[2] for event in events if event[0] == "info"] == [
-        "/target",
-        "/docs/first.txt",
-        "/target",
-        "/target/first.txt",
-        "/target/first.txt",
-        "/docs/second.txt",
-        "/target",
-        "/target/second.txt",
-        "/target/second.txt",
-    ]
+    assert sorted(event[2] for event in events if event[0] == "info") == sorted(
+        [
+            "/target",
+            "/docs/first.txt",
+            "/target",
+            "/target/first.txt",
+            "/target/first.txt",
+            "/docs/second.txt",
+            "/target",
+            "/target/second.txt",
+            "/target/second.txt",
+        ]
+    )
 
 
 def test_cp_acquires_multi_source_names_once_in_argv_order() -> None:
@@ -1613,7 +1615,7 @@ def test_cp_reports_cross_source_temporary_cleanup_failure(monkeypatch) -> None:
         Path(path).unlink(missing_ok=True)
         return OSError("unlink-denied")
 
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     result = _invoke(
         "cp",
@@ -1657,7 +1659,7 @@ def test_cp_cleanup_failure_does_not_mask_verification_failure(
         Path(path).unlink(missing_ok=True)
         return OSError("unlink-denied")
 
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     result = _invoke(
         "cp",
@@ -1704,8 +1706,8 @@ def test_cp_propagates_cleanup_control_flow_after_descriptor_close_error(
         Path(path).unlink(missing_ok=True)
         raise cleanup_control
 
-    monkeypatch.setattr("fss_cli._cp.os.close", fail_close)
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.os.close", fail_close)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     with pytest.raises(_SecondaryControlFlow) as caught:
         _invoke(
@@ -1741,7 +1743,7 @@ def test_cp_propagates_cleanup_control_flow_after_staging_download_error(
         parent="/out",
         directories={"/", "/out"},
     )
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     with pytest.raises(_SecondaryControlFlow) as caught:
         _invoke(
@@ -1782,8 +1784,8 @@ def test_cp_preserves_descriptor_close_control_flow_over_cleanup_failure(
         Path(path).unlink(missing_ok=True)
         raise secondary
 
-    monkeypatch.setattr("fss_cli._cp.os", SimpleNamespace(close=fail_close))
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.os", SimpleNamespace(close=fail_close))
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(
@@ -1819,7 +1821,7 @@ def test_cp_preserves_staging_download_control_flow_over_cleanup_failure(
         parent="/out",
         directories={"/", "/out"},
     )
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(
@@ -1856,7 +1858,7 @@ def test_cp_preserves_post_staging_control_flow_over_cleanup_failure(
         put_file_by_path=({"/out/copy.txt": primary} if boundary == "upload" else None),
         post_info_by_path=({"/out/copy.txt": primary} if boundary == "verification" else None),
     )
-    monkeypatch.setattr("fss_cli._cp._remove_temporary", fail_cleanup)
+    monkeypatch.setattr("fss_cli._copy_file.remove_staging", fail_cleanup)
 
     with pytest.raises(_ControlFlow) as caught:
         _invoke(

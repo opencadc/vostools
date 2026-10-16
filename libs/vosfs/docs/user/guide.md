@@ -25,8 +25,16 @@ uv add "git+https://github.com/opencadc/vostools@main#subdirectory=libs/vosfs"
 ```python
 import fsspec
 
-fs = fsspec.filesystem("vos", endpoint_url="https://staging.canfar.net/arc")
+fs = fsspec.filesystem(
+    "vos",
+    endpoint_url="https://staging.canfar.net/arc",
+    max_connections=100,
+)
 ```
+
+`max_connections` (default 100) is the number of HTTP requests, including
+streamed bodies, that one filesystem will run at once. A caller that omits it
+gets that default. The value is part of the filesystem's stored settings.
 
 The apparent authority after the `vos://` protocol marker is part of the
 filesystem path, not a service selector: `vos://a/b`, `vos:///a/b`, `/a/b`, and
@@ -52,9 +60,9 @@ whenever a credential is configured.
 
 !!! note "Serialization"
 
-    A literal `token` is included in fsspec pickle and JSON serialization.
-    Prefer `tokenfile` or an environment source when the filesystem may be
-    serialized.
+    A literal `token` is kept for pickle and for `to_json()` / `to_dict()`.
+    `to_json(include_password=False)` omits it. Prefer `tokenfile` or an
+    environment source when the filesystem may be serialized.
 
 ```python
 fs = fsspec.filesystem(
@@ -134,11 +142,22 @@ dispatched `PUT` remains uncertain, so `vosfs` invalidates cached destination
 and parent state without attempting rollback.
 
 `open("rb")` downloads once into a disk-backed temporary file and then provides
-local `read`/`readinto`/`readline`/iteration/`tell`/`seek`. `open("wb")` and
+local `read`/`readinto`/`readline`/iteration/`tell`/`seek`. Pass `block_size`
+or `cache_type` to open a ranged file instead: that open negotiates one byte
+endpoint and reads it with `Range`. A `206` is accepted only when its interval
+and byte count match the request. A `200` stages that response and later reads
+of the same open stay local. An unknown byte length also uses staging; a link's
+metadata size does not describe the bytes of its target. `open("wb")` and
 `open("w")` disk-stage writes and upload once only after a successful close or
 clean context exit. A write-block exception or local close failure before `PUT`
 uploads nothing. Once `PUT` begins, failure is uncertain and may have truncated
 the destination.
+
+Same-service moves can use a server job when available. If the operation is
+unsupported, vosfs copies through the client and verifies the destination
+before deleting the source. Cancelling or timing out a server job requests its
+abort; an uncertain outcome does not start another transfer. Client copies
+also work with `max_connections=1` by staging the download before uploading.
 
 ## Scientific Python stack
 
@@ -245,10 +264,12 @@ write `vos://` URLs directly. Pass the endpoint (and at most one credential) as
 
 !!! note "Whole-object staged ``open``"
 
-    Staged ``open`` still downloads whole objects. Formats that rely on random
-    access work by staging locally. Partial ``cat_file`` / ``cat_ranges`` may
-    use HTTP ``Range`` when the byte endpoint returns ``206``. For Dask over
-    staged files, pass ``blocksize=None`` so each file is a single partition.
+    The default ``open`` still downloads whole objects. Pass ``block_size`` or
+    ``cache_type`` for ranged reads of one open file. Formats that rely on
+    random access work by staging locally. Partial ``cat_file`` /
+    ``cat_ranges`` may use HTTP ``Range`` when the byte endpoint returns
+    ``206``. For Dask over staged files, pass ``blocksize=None`` so each file
+    is a single partition.
 
 ## Capability summary
 

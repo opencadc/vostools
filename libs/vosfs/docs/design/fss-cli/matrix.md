@@ -55,6 +55,7 @@ transcribed here.
 | Cross-source `cp` | source pair | `local`↔`memory` | `pass` | `test_cp.py`, `test_command_matrix.py` |
 | Multi-source `cp` | source | `local`, `memory` | `pass` | `test_cp.py`, `test_command_matrix.py` |
 | Reduced `stat` | source | `local` | `pass` | `test_stat.py`, `test_command_matrix.py` |
+| Same-source file `mv` | source | `memory` | `pass` | `test_mv.py` — overridden `_mv_file`, else class-declared `_mv` |
 
 ### Proven rejections
 
@@ -63,8 +64,8 @@ transcribed here.
 | `rmdir -p` | command preflight | `unsupported` | `test_rmdir.py` |
 | `cat -u` | command preflight | `unsupported` | `test_cat.py` |
 | Base `rm` option rejection | command preflight | `unsupported` | `test_rm.py` |
-| Same-source directory `mv` | source | `unsupported` | `test_mv.py` — `_info` only; no target resolution, staging, or `_mv` |
-| Same-source multi-file `mv` shape | command preflight | `unsupported` | `test_mv.py` |
+| Same-source directory `mv` | source | `unsupported` | `test_mv.py` — `_info` only; no target resolution, staging, `_mv_file`, or `_mv` |
+| Same-source multi-file `mv` into a non-directory | command preflight | `unsupported` | `test_mv.py` |
 | Cross-source `mv` | command preflight | `unsupported` | `test_mv.py` — see [`lessons.md` §5](lessons.md#5-cross-source-mv-is-rejected-because-deletion-cannot-be-proven) |
 | Reduced `stat` option and operand forms | command preflight | `unsupported` | `test_stat.py`, `test_command_matrix.py` |
 | `cp -R` / `rm -R` when the capability is disabled | command preflight | `unsupported` | `test_typed_cp.py`, `test_typed_rm.py` |

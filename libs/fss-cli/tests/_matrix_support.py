@@ -762,7 +762,12 @@ def _exercise_mkdir_p_locked_profile(
     ]
     assert len(verify_calls) >= 4
     assert len(source.errors) >= 1
-    assert {operation for _source_id, operation, _error in source.errors} == {"makedirs"}
+    recorded_errors = {
+        operation
+        for _source_id, operation, error in source.errors
+        if not (operation == "info" and isinstance(error, FileNotFoundError))
+    }
+    assert recorded_errors == {"makedirs"}
 
 
 def _exercise_rmdir_locked_profile(
@@ -1155,10 +1160,12 @@ def _exercise_multi_source_cp_locked_profile(
     _assert_bytes(notes_path, b"notes.txt")
     _assert_bytes(guide_path, b"guide.md")
     cp_calls = [call for call in source.calls if call.operation == "cp_file"]
-    assert [(call.path, call.destination_path) for call in cp_calls] == [
-        (notes_path, f"{target_dir}/notes.txt"),
-        (guide_path, f"{target_dir}/guide.md"),
-    ]
+    assert sorted((call.path, call.destination_path) for call in cp_calls) == sorted(
+        [
+            (notes_path, f"{target_dir}/notes.txt"),
+            (guide_path, f"{target_dir}/guide.md"),
+        ]
+    )
     assert not any(call.operation in {"rm", "rm_file", "rmdir"} for call in source.calls)
 
 

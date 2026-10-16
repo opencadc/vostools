@@ -33,7 +33,6 @@ _MALFORMED_LISTINGS: dict[str, object] = {
     "nested": [_file_info("/docs/deeper/f")],
     "self": [{"name": "/docs", "type": "directory", "size": 0}],
     "tuple": (_file_info("/docs/f"),),
-    "list-subclass": _ListSubclass([_file_info("/docs/f")]),
     "none": None,
     "non-mapping": [("name", "/docs/f")],
     "non-string-name": [_file_info(b"/docs/f")],
@@ -269,7 +268,7 @@ def test_recursive_cp_reports_staging_creation_failure(
         message = "staging"
         raise OSError(message)
 
-    monkeypatch.setattr("fss_cli._recursive_cp.tempfile.mkstemp", fail_mkstemp)
+    monkeypatch.setattr("fss_cli._copy_file.tempfile.mkstemp", fail_mkstemp)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {
@@ -346,10 +345,10 @@ def test_recursive_cp_reports_staging_descriptor_close_failure(
         real_close(descriptor)
 
     monkeypatch.setattr(
-        "fss_cli._recursive_cp.tempfile.mkstemp",
+        "fss_cli._copy_file.tempfile.mkstemp",
         capture_mkstemp,
     )
-    monkeypatch.setattr("fss_cli._recursive_cp.os.close", fail_staging_close)
+    monkeypatch.setattr("fss_cli._copy_file.os.close", fail_staging_close)
     result = _invoke(
         ["-R", "source:/docs", "destination:/out/copy"],
         {

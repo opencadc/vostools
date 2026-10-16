@@ -1020,7 +1020,8 @@ def test_adapted_local_stat_profile_uses_native_temporary_storage(
 
     previous = os.environ.get("TZ")
     os.environ["TZ"] = "UTC"
-    time.tzset()
+    if hasattr(time, "tzset"):
+        time.tzset()
     try:
         root = tmp_path / "docs"
         root.mkdir()
@@ -1050,7 +1051,8 @@ def test_adapted_local_stat_profile_uses_native_temporary_storage(
             os.environ.pop("TZ", None)
         else:
             os.environ["TZ"] = previous
-        time.tzset()
+        if hasattr(time, "tzset"):
+            time.tzset()
 
 
 def test_adapted_memory_stat_profile_fails_closed_on_incomplete_info(

@@ -70,10 +70,16 @@ def test_recursive_get_materializes_tree_without_container_byte_negotiation(
         assert (target / "root.bin").read_bytes() == b"root-bytes"
         assert (target / "nested" / "leaf.bin").read_bytes() == b"leaf-bytes"
 
+        def negotiated_target(call: httpx.Request) -> str:
+            target = call.url.params.get("TARGET")
+            if target:
+                return "/" + target.split("://", 1)[-1].split("/", 1)[-1]
+            return target_path(call.content)
+
         negotiations = Counter(
-            target_path(call.request.content)
+            negotiated_target(call.request)
             for call in router.calls
-            if call.request.method == "POST" and str(call.request.url) == SYNC_URL
+            if call.request.method == "POST" and str(call.request.url).startswith(SYNC_URL)
         )
         byte_gets = Counter(
             call.request.url.params["p"]

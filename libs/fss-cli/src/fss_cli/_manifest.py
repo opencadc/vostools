@@ -105,7 +105,7 @@ def _entry(
     if not isinstance(info, Mapping):
         raise _IncompatibleResultError
     name = info.get("name")
-    if type(name) is not str or not _same_lexical_path(name, path):
+    if not isinstance(name, str) or not _same_lexical_path(name, path):
         raise _IncompatibleResultError
     try:
         typed_info = snapshot_mapping(cast("Mapping[object, object]", info))
@@ -115,7 +115,7 @@ def _entry(
     if type(islink) is not bool:
         raise _IncompatibleResultError
     kind = typed_info.get("type")
-    if type(kind) is not str:
+    if not isinstance(kind, str):
         raise _IncompatibleResultError
     if islink or kind not in {"directory", "file"}:
         raise _UnsupportedEntryError
@@ -124,7 +124,7 @@ def _entry(
     size = None
     if kind == "file":
         size = typed_info.get("size")
-        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        if type(size) is not int or size < 0:
             raise _IncompatibleResultError
     return _ManifestEntry(relative, path, kind, size, _tokens(typed_info))
 

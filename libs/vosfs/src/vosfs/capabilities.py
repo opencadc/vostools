@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 # Exact capability identifiers fixed by the contract (section 5).
 NODES_STANDARD_ID = "ivo://ivoa.net/std/VOSpace/v2.0#nodes"
 SYNC_STANDARD_ID = "ivo://ivoa.net/std/VOSpace#sync-2.1"
+TRANSFERS_STANDARD_ID = "ivo://ivoa.net/std/VOSpace/v2.0#transfers"
 
 # Supported security-method identifiers. The empty string is the anonymous
 # method (an interface with no ``securityMethod`` children). These are IVOA
@@ -50,6 +51,7 @@ class ServiceBindings:
     sync_url: str | None
     endpoint_url: str = ""
     security_method: str = ""
+    transfers_url: str | None = None
 
     def require_nodes(self) -> str:
         """Return the node binding URL or raise naming the missing capability."""
@@ -108,7 +110,16 @@ def parse_bindings(data: bytes, *, security_method: str, endpoint_url: str = "")
         sync_url=_resolve(root, SYNC_STANDARD_ID, security_method, use="full"),
         endpoint_url=endpoint_url,
         security_method=security_method,
+        transfers_url=_optional_resolve(root, TRANSFERS_STANDARD_ID, security_method),
     )
+
+
+def _optional_resolve(root: ET.Element, standard_id: str, security_method: str) -> str | None:
+    """Return a transfers binding, or ``None`` when it is absent or unusable."""
+    try:
+        return _resolve(root, standard_id, security_method, use="base")
+    except PermissionError:
+        return None
 
 
 def _resolve(root: ET.Element, standard_id: str, security_method: str, *, use: str) -> str | None:

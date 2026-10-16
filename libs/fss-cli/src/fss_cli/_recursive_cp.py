@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 import time
 from collections.abc import Mapping
 from contextlib import suppress
@@ -14,6 +12,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, cast
 
+from . import _copy_file
 from ._command import (
     _backend_category,
     _call,
@@ -22,8 +21,9 @@ from ._command import (
     _render_operand_diagnostic,
     _usage_error,
 )
-from ._concurrent import _outcome_value, _run_bounded
-from ._content import describe_checksums, matching_checksum, same_contents
+from ._concurrent import _run_bounded
+from ._content import checksum_relation, describe_checksums, matching_checksum, same_contents
+from ._copy_file import copy_on_backend, create_staging
 from ._diagnostics import _render_diagnostic_value
 from ._logging import _location, _log_file_operation, _redact
 from ._manifest import (
@@ -47,13 +47,14 @@ from ._path import (
 )
 from ._post_copy import (
     _DEFAULT_METADATA_WAIT_SECONDS,
-    _await_verified,
     _PreviousFile,
     _report,
     _resolved_operand,
     _TransferProof,
+    report_verified,
 )
 from ._progress import _NO_DISPLAY, _TransferDisplay
+from ._results import info_or_missing, infos_for_paths
 
 if TYPE_CHECKING:
     from fsspec.asyn import AsyncFileSystem
@@ -137,16 +138,14 @@ def _staging_failure(source: _MappedOperand, error: Exception) -> _RecursiveCpFa
     )
 
 
-async def _optional_info(
-    filesystem: AsyncFileSystem,
-    path: str,
-) -> tuple[object | None, Exception | None]:
-    try:
-        return await _call(filesystem, "_info", path), None
-    except FileNotFoundError:
-        return None, None
-    except Exception as error:  # noqa: BLE001 - classify read boundary.
-        return None, error
+def _needs_local_compare(
+    source_entry: _ManifestEntry,
+    existing: _ManifestEntry | None,
+) -> bool:
+    """A same-size pair with no MD5 still needs a staged SHA-256 compare."""
+    if existing is None or existing.size != source_entry.size:
+        return False
+    return checksum_relation(source_entry.tokens, existing.tokens) is None
 
 
 def _classify_source_info(
@@ -173,7 +172,7 @@ def _classify_existing(  # noqa: PLR0911 - stable metadata categories.
             return _RecursiveCpFailure(operand, "incompatible result")
         typed_info = cast("Mapping[object, object]", info)
         kind = typed_info.get("type")
-        if type(kind) is not str:
+        if not isinstance(kind, str):
             return _RecursiveCpFailure(operand, "incompatible result")
         islink = typed_info.get("islink", False)
         if type(islink) is not bool:
@@ -194,14 +193,6 @@ def _destination_path(root: str, relative: str) -> str:
     return root if not relative else _lexical_join(root, relative)
 
 
-def _remove_staging(path: str) -> Exception | None:
-    try:
-        Path(path).unlink(missing_ok=True)
-    except Exception as error:  # noqa: BLE001 - diagnostic boundary.
-        return error
-    return None
-
-
 def _render_cleanup_failure(
     command: str,
     source: _MappedOperand,
@@ -220,7 +211,7 @@ def _cleanup_staging(
     source: _MappedOperand,
     path: str,
 ) -> Exception | None:
-    error = _remove_staging(path)
+    error = _copy_file.remove_staging(path)
     if error is not None:
         _render_cleanup_failure(command, source, error)
     return error
@@ -252,7 +243,7 @@ class _RecursiveCopy:
     async def _resolve_target(  # noqa: C901, PLR0911, PLR0912
         self,
     ) -> tuple[str, object | None, _RecursiveCpFailure | None]:
-        destination_info, error = await _optional_info(
+        destination_info, error = await info_or_missing(
             self.destination_filesystem,
             self.destination.path,
         )
@@ -277,7 +268,7 @@ class _RecursiveCopy:
                     self.destination.path,
                     _lexical_basename(self.source.path),
                 )
-                resolved_info, error = await _optional_info(
+                resolved_info, error = await info_or_missing(
                     self.destination_filesystem,
                     resolved,
                 )
@@ -286,7 +277,7 @@ class _RecursiveCopy:
 
         parent = _lexical_parent(resolved)
         if parent != known_parent:
-            parent_info, error = await _optional_info(
+            parent_info, error = await info_or_missing(
                 self.destination_filesystem,
                 parent,
             )
@@ -369,23 +360,18 @@ class _RecursiveCopy:
             missing = tuple(entry for entry in manifest if entry.kind == "directory")
             return _DestinationPlan(missing, MappingProxyType({})), None
         paths = [_destination_path(root, entry.relative) for entry in manifest]
-
-        async def read(path: str) -> tuple[object | None, Exception | None]:
-            if path == root:
-                return root_info, None
-            return await _optional_info(self.destination_filesystem, path)
-
-        outcomes = await _run_bounded(
-            [partial(read, path) for path in paths],
-            stop=lambda result: result[1] is not None,
+        found, error = await infos_for_paths(
+            self.destination_filesystem,
+            [path for path in paths if path != root],
+            missing_ok=True,
         )
         missing: list[_ManifestEntry] = []
         files: dict[str, _ManifestEntry] = {}
         empty = _DestinationPlan((), MappingProxyType({}))
-        for entry, path, outcome in zip(manifest, paths, outcomes, strict=True):
-            info, error = _outcome_value(outcome)
-            if error is not None:
-                return empty, _read_failure(self.destination, error)
+        if error is not None:
+            return empty, _read_failure(self.destination, error)
+        for entry, path in zip(manifest, paths, strict=True):
+            info = root_info if path == root else found[path]
             if info is None:
                 if entry.kind == "directory":
                     missing.append(entry)
@@ -466,9 +452,18 @@ class _RecursiveCopy:
                 started,
             )
             return _TransferResult(skipped=existing)
-        temporary = None
+        if self.source.name == self.destination.name and not _needs_local_compare(source_entry, existing):
+            result = await self._copy_on_backend(
+                source_entry,
+                destination_path,
+                existing,
+                transfer,
+                started,
+            )
+            if result is not None:
+                return result
         try:
-            descriptor, temporary = tempfile.mkstemp(prefix="fss-cli-cp-recursive-")
+            temporary = create_staging("fss-cli-cp-recursive-")
         except Exception as error:  # noqa: BLE001 - staging creation boundary.
             return _TransferResult(_staging_failure(self.source, error))
         _LOGGER.debug("staging %s through %s", source_location, _redact(temporary))
@@ -476,26 +471,20 @@ class _RecursiveCopy:
         failure = None
         try:
             try:
-                os.close(descriptor)
-            except Exception as error:  # noqa: BLE001 - descriptor boundary.
-                failure = _staging_failure(self.source, error)
-
-            if failure is None:
-                try:
-                    await _call(
-                        self.source_filesystem,
-                        "_get_file",
-                        source_entry.path,
-                        temporary,
-                        callback=transfer.phase("download", f"{self.source.name}:{source_entry.path}"),
-                    )
-                except Exception as error:  # noqa: BLE001 - stable transfer category.
-                    failure = _RecursiveCpFailure(
-                        self.source,
-                        "transfer failure",
-                        backend_error=error,
-                        residue=True,
-                    )
+                await _call(
+                    self.source_filesystem,
+                    "_get_file",
+                    source_entry.path,
+                    temporary,
+                    callback=transfer.phase("download", f"{self.source.name}:{source_entry.path}"),
+                )
+            except Exception as error:  # noqa: BLE001 - stable transfer category.
+                failure = _RecursiveCpFailure(
+                    self.source,
+                    "transfer failure",
+                    backend_error=error,
+                    residue=True,
+                )
 
             if failure is None:
                 try:
@@ -512,22 +501,30 @@ class _RecursiveCopy:
 
             identical = False
             if failure is None and existing is not None and existing.size == source_entry.size:
-                try:
-                    identical = await same_contents(self.destination_filesystem, destination_path, temporary)
-                except Exception as error:  # noqa: BLE001 - content verification boundary.
-                    failure = _RecursiveCpFailure(
-                        self.destination,
-                        "verification failure",
-                        backend_error=error,
-                        residue=True,
-                    )
+                relation = checksum_relation(source_entry.tokens, existing.tokens)
+                if relation is None:
+                    try:
+                        identical = await same_contents(
+                            self.destination_filesystem,
+                            destination_path,
+                            temporary,
+                        )
+                    except Exception as error:  # noqa: BLE001 - content verification boundary.
+                        failure = _RecursiveCpFailure(
+                            self.destination,
+                            "verification failure",
+                            backend_error=error,
+                            residue=True,
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "content identity %s -> %s: SHA-256 of staged contents %s",
+                            source_location,
+                            destination_location,
+                            "equal" if identical else "differ",
+                        )
                 else:
-                    _LOGGER.debug(
-                        "content identity %s -> %s: SHA-256 of staged contents %s",
-                        source_location,
-                        destination_location,
-                        "equal" if identical else "differ",
-                    )
+                    identical = relation
 
             uploaded = False
             if failure is None and not identical:
@@ -557,7 +554,7 @@ class _RecursiveCopy:
             _cleanup_under_control(self.command, self.source, temporary)
             raise
 
-        cleanup_error = _remove_staging(temporary)
+        cleanup_error = _copy_file.remove_staging(temporary)
         if failure is not None or cleanup_error is not None:
             return _TransferResult(failure, cleanup_error)
         _log_file_operation(
@@ -570,26 +567,83 @@ class _RecursiveCopy:
         )
         return _TransferResult(skipped=existing if identical else None)
 
+    async def _copy_on_backend(
+        self,
+        source_entry: _ManifestEntry,
+        destination_path: str,
+        existing: _ManifestEntry | None,
+        transfer: _Transfer,
+        started: float,
+    ) -> _TransferResult | None:
+        """Copy one file with ``_cp_file`` after a fresh size check."""
+        try:
+            info = await _call(self.source_filesystem, "_info", source_entry.path)
+            current = _entry(source_entry.relative, source_entry.path, info, expected_kind="file")
+        except Exception as error:  # noqa: BLE001 - stable revalidation category.
+            return _TransferResult(
+                _RecursiveCpFailure(
+                    self.source,
+                    "source revalidation failure",
+                    backend_error=error,
+                    residue=True,
+                )
+            )
+        if current.size != source_entry.size:
+            return _TransferResult(_RecursiveCpFailure(self.source, "source changed", residue=True))
+        target = _resolved_operand(self.destination, destination_path)
+        try:
+            copied = await copy_on_backend(
+                self.source_filesystem,
+                source_entry.path,
+                destination_path,
+                partial(transfer.phase, "copy", target.spelling),
+            )
+        except Exception as error:  # noqa: BLE001 - stable mutation category.
+            return _TransferResult(
+                _RecursiveCpFailure(
+                    self.destination,
+                    "mutation failure",
+                    backend_error=error,
+                    residue=True,
+                )
+            )
+        if not copied:
+            return None
+        transfer.finish()
+        failure = await self._report_upload(source_entry, destination_path, existing, verb="copied")
+        if failure is not None:
+            return _TransferResult(failure)
+        _log_file_operation(
+            _LOGGER,
+            "copied",
+            _location(self.source.name, source_entry.path),
+            _location(self.destination.name, destination_path),
+            source_entry.size,
+            started,
+        )
+        return _TransferResult()
+
     async def _report_upload(
         self,
         source_entry: _ManifestEntry,
         destination_path: str,
         existing: _ManifestEntry | None,
+        *,
+        verb: str = "uploaded",
     ) -> _RecursiveCpFailure | None:
-        """Print one uploaded file's two outcome lines once its destination ``_info`` settles."""
+        """Print one file's two outcome lines once its destination ``_info`` settles."""
         target = _resolved_operand(self.destination, destination_path)
         size = source_entry.size or 0
-        _report(self.command, target, f"uploaded {size} bytes")
-        unverified = await _await_verified(
+        unverified = await report_verified(
+            self.command,
             self.destination_filesystem,
-            destination_path,
+            target,
             _TransferProof(size, tuple(_frozen_tokens(source_entry).items())),
             None if existing is None else _PreviousFile(existing.size, _frozen_tokens(existing)),
-            mutation="upload",
+            mutation="copy" if verb == "copied" else "upload",
             wait=self.metadata_wait,
         )
         if unverified is None:
-            _report(self.command, target, f"verified {size} bytes")
             return None
         _report(self.command, target, f"{unverified.text}; destination residue may remain")
         return _RecursiveCpFailure(
@@ -728,13 +782,20 @@ class _RecursiveCopy:
         skipped: Mapping[str, _ManifestEntry],
     ) -> _RecursiveCpFailure | None:
         paths = [_destination_path(root, entry.relative) for entry in manifest]
-        outcomes = await _run_bounded([partial(_call, self.destination_filesystem, "_info", path) for path in paths])
+        found, error = await infos_for_paths(self.destination_filesystem, paths, missing_ok=False)
+        if error is not None:
+            return _RecursiveCpFailure(
+                self.destination,
+                "verification failure",
+                backend_error=error,
+                residue=True,
+            )
         try:
-            for source_entry, path, outcome in zip(manifest, paths, outcomes, strict=True):
+            for source_entry, path in zip(manifest, paths, strict=True):
                 destination_entry = _entry(
                     source_entry.relative,
                     path,
-                    _outcome_value(outcome),
+                    found[path],
                     expected_kind=source_entry.kind,
                 )
                 proof = skipped.get(source_entry.relative)

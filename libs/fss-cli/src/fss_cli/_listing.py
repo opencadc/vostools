@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import math
 import re
 import stat
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal
 
 from ._accounts import group_name, owner_name
+from ._metadata import normalize_time as _normalize_time
 from ._metadata import snapshot_mapping, valid_display_text
 from ._path import _lexical_basename
 
@@ -127,45 +126,6 @@ def _permissions(info: Mapping[str, object]) -> str | None:
         message = "invalid access summary"
         raise ValueError(message)
     return value
-
-
-def _supported_time(normalized: float) -> float | None:
-    if not math.isfinite(normalized):
-        return None
-    try:
-        datetime.fromtimestamp(normalized, tz=timezone.utc)
-    except (OverflowError, OSError, ValueError):
-        return None
-    return normalized
-
-
-def _datetime_time(value: datetime) -> float | None:
-    if value.tzinfo is None or value.utcoffset() is None:
-        value = value.replace(tzinfo=timezone.utc)
-    try:
-        return _supported_time(value.timestamp())
-    except (OverflowError, OSError, ValueError):
-        return None
-
-
-def _normalize_time(value: object) -> float | None:
-    if type(value) is int or type(value) is float:
-        try:
-            normalized = float(value)
-        except OverflowError:
-            return None
-        return _supported_time(normalized)
-    if isinstance(value, datetime):
-        return _datetime_time(value)
-    if type(value) is not str:
-        return None
-
-    spelling = value[:-1] + "+00:00" if value.endswith(("Z", "z")) else value
-    try:
-        parsed = datetime.fromisoformat(spelling)
-    except ValueError:
-        return None
-    return _datetime_time(parsed)
 
 
 def _mtime(info: Mapping[str, object]) -> float | None:

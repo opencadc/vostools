@@ -1,5 +1,8 @@
 """Move behavior for the VOSpace namespace contract."""
 
+import asyncio
+from dataclasses import replace
+
 import httpx
 import pytest
 import respx
@@ -16,7 +19,8 @@ from conftest import (
 from namespace_support import _install_percent_mutation_routes
 from vospace_sim import VOSpaceSim
 
-from vosfs import errors
+from vosfs import errors, nodes
+from vosfs.xmlio import safe_parse
 
 
 async def test_mv_file_copies_then_deletes_data(router: respx.Router) -> None:
@@ -167,7 +171,7 @@ def test_move_preserves_literal_percent_destination_before_source_delete(
     _created, deleted = _install_percent_mutation_routes(router, files)
     fs = make_fs(router)
 
-    fs.mv("/move-source", "vos://moved%2541")
+    fs.mv("/move-source", "vos://moved%41")
 
     assert files == {"/moved%41": b"moved"}
     assert deleted == ["/move-source"]
@@ -337,3 +341,104 @@ def test_move_empty_directory_creates_destination(router: respx.Router) -> None:
     assert "/emptydir" not in sim.nodes
     assert sim.nodes["/dest"] == "container"
     fs.close()
+
+
+async def test_server_move_renames_without_copying_bytes(router: respx.Router) -> None:
+    sim = VOSpaceSim().add_file("/src", b"moved")
+    fs = make_sim_fs(router, sim)
+    fs._bindings = replace(await fs._get_bindings(), transfers_url=f"{BASE_URL}/transfers")
+    job = f"{BASE_URL}/transfers/job-1"
+
+    def submit(request: httpx.Request) -> httpx.Response:
+        document = safe_parse(request.content)
+        assert document.findtext(f"{{{nodes.VOSPACE_NS}}}target") == f"vos://{AUTHORITY}/src"
+        assert document.findtext(f"{{{nodes.VOSPACE_NS}}}direction") == f"vos://{AUTHORITY}/dst"
+        assert document.findtext(f"{{{nodes.VOSPACE_NS}}}keepBytes") == "false"
+        assert document.find(f"{{{nodes.VOSPACE_NS}}}protocol") is None
+        return httpx.Response(303, headers={"Location": job})
+
+    def run(request: httpx.Request) -> httpx.Response:
+        assert request.content == b"PHASE=RUN"
+        content = sim.blobs["/src"]
+        sim._transition_node("/src", wire_type=None)
+        sim.add_file("/dst", content)
+        return httpx.Response(303, headers={"Location": job})
+
+    router.post(f"{BASE_URL}/transfers").mock(side_effect=submit)
+    start = router.post(f"{job}/phase").mock(side_effect=run)
+    router.get(url__regex=rf"^{job}").mock(
+        return_value=httpx.Response(
+            200,
+            content=(
+                b"<uws:job xmlns:uws='http://www.ivoa.net/xml/UWS/v1.0'><uws:phase>COMPLETED</uws:phase></uws:job>"
+            ),
+        )
+    )
+    await fs._mv_file("/src", "/dst")
+    assert "/src" not in sim.nodes
+    assert sim.blobs["/dst"] == b"moved"
+    assert start.called
+    assert not any("/files" in str(call.request.url) for call in router.calls)
+    await fs.aclose()
+
+
+async def test_cancelled_server_move_aborts_the_job(router: respx.Router) -> None:
+    sim = VOSpaceSim().add_file("/src", b"moved")
+    fs = make_sim_fs(router, sim)
+    fs._bindings = replace(await fs._get_bindings(), transfers_url=f"{BASE_URL}/transfers")
+    job = f"{BASE_URL}/transfers/job-1"
+    aborted = asyncio.Event()
+    polling = asyncio.Event()
+    router.post(f"{BASE_URL}/transfers").mock(return_value=httpx.Response(303, headers={"Location": job}))
+
+    async def job_get(_request: httpx.Request) -> httpx.Response:
+        polling.set()
+        await aborted.wait()
+        return httpx.Response(
+            200,
+            content=b"<uws:job xmlns:uws='http://www.ivoa.net/xml/UWS/v1.0'><uws:phase>ABORTED</uws:phase></uws:job>",
+        )
+
+    def phase(request: httpx.Request) -> httpx.Response:
+        if request.content == b"PHASE=ABORT":
+            aborted.set()
+        else:
+            assert request.content == b"PHASE=RUN"
+        return httpx.Response(303, headers={"Location": job})
+
+    router.get(url__regex=rf"^{job}").mock(side_effect=job_get)
+    router.post(f"{job}/phase").mock(side_effect=phase)
+    task = asyncio.create_task(fs._mv_file("/src", "/dst"))
+    await asyncio.wait_for(polling.wait(), timeout=1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert aborted.is_set()
+    assert sim.blobs["/src"] == b"moved"
+    await fs.aclose()
+
+
+@pytest.mark.parametrize("rejection", ["absent", "http", "job"])
+async def test_unsupported_move_job_keeps_client_transfer_fallback(router: respx.Router, rejection: str) -> None:
+    sim = VOSpaceSim().add_file("/src", b"moved")
+    fs = make_sim_fs(router, sim)
+    if rejection != "absent":
+        fs._bindings = replace(await fs._get_bindings(), transfers_url=f"{BASE_URL}/transfers")
+        if rejection == "http":
+            router.post(f"{BASE_URL}/transfers").mock(return_value=httpx.Response(501))
+        else:
+            job = f"{BASE_URL}/transfers/unsupported"
+            router.post(f"{BASE_URL}/transfers").mock(return_value=httpx.Response(303, headers={"Location": job}))
+            router.post(f"{job}/phase").mock(return_value=httpx.Response(303, headers={"Location": job}))
+            router.get(url__regex=rf"^{job}").mock(
+                return_value=httpx.Response(
+                    200, content=b"<job><phase>ERROR</phase><errorSummary>moveNode not implemented</errorSummary></job>"
+                )
+            )
+    try:
+        await fs._mv_file("/src", "/dst")
+        assert sim.blobs["/dst"] == b"moved"
+        assert "/src" not in sim.nodes
+        assert sim.byte_requests
+    finally:
+        await fs.aclose()

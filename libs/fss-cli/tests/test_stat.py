@@ -20,7 +20,8 @@ def _pin_utc_timezone() -> None:
 
     previous = os.environ.get("TZ")
     os.environ["TZ"] = "UTC"
-    time.tzset()
+    if hasattr(time, "tzset"):
+        time.tzset()
     try:
         yield
     finally:
@@ -28,7 +29,8 @@ def _pin_utc_timezone() -> None:
             os.environ.pop("TZ", None)
         else:
             os.environ["TZ"] = previous
-        time.tzset()
+        if hasattr(time, "tzset"):
+            time.tzset()
 
 
 @pytest.fixture(autouse=True)
@@ -191,6 +193,19 @@ def test_stat_rejects_incomplete_memory_shape() -> None:
     assert result.stderr == "stat: memory:/file.txt: incompatible result\n"
 
 
+def test_stat_renders_an_iso8601_mtime() -> None:
+    source = _RecordingSource(
+        [],
+        info_result={**_RICH_FILE, "mtime": "2026-07-17T00:00:00Z"},
+    )
+
+    result = _invoke("stat", ["memory:/stat-file"], sources={"memory": source})
+
+    assert result.exit_code == 0
+    assert result.stderr == ""
+    assert result.stdout == '-rw-r--r-- 1 424242 424242 3 "Jul 17 00:00:00 2026" /stat-file\n'
+
+
 @pytest.mark.parametrize(
     "info",
     [
@@ -201,7 +216,6 @@ def test_stat_rejects_incomplete_memory_shape() -> None:
         {**_RICH_FILE, "nlink": True},
         {**_RICH_FILE, "gid": False},
         {**_RICH_FILE, "mtime": True},
-        {**_RICH_FILE, "mtime": "2026-07-17T00:00:00Z"},
         {**_RICH_FILE, "mode": "33188"},
         {**_RICH_FILE, "type": "other"},
         {**_RICH_FILE, "nlink": 0},

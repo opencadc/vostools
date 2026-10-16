@@ -109,9 +109,9 @@ def validate_redirect(location: str | None, *, base: str, sending_bearer: bool) 
 
 
 def is_direct_byte_endpoint(url: str) -> bool:
-    """Return whether ``url`` is an OpenCADC ``/files/*`` byte location."""
+    """Return whether ``url`` is an OpenCADC ``/files`` byte location."""
     segments = [segment for segment in urlsplit(url).path.split("/") if segment]
-    return "files" in segments[:-1]
+    return "files" in segments[:-1] or (bool(segments) and segments[-1] == "files")
 
 
 def _endpoint_of(protocol: ET.Element) -> str | None:

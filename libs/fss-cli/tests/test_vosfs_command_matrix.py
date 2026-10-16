@@ -7,6 +7,7 @@ from urllib.parse import quote, unquote
 
 import httpx
 import pytest
+from fsspec.asyn import AsyncFileSystem
 from vosfs import VOSpaceFileSystem
 
 from fss_cli import App
@@ -640,10 +641,11 @@ def test_native_vosfs_same_source_cp_profile_uses_only_mocked_transport() -> Non
     assert transports[1].blobs["/docs/notes.txt"] == b"notes.txt"
 
 
-def test_native_vosfs_mv_remains_unverified_without_exact_operation() -> None:
-    """No source-form `_mv`; matrix row must remain unverified."""
+def test_native_vosfs_mv_uses_mv_file() -> None:
+    """vosfs declares fsspec's async hook, not a private `_mv`."""
+    assert inspect.iscoroutinefunction(VOSpaceFileSystem._mv_file)
+    assert VOSpaceFileSystem._mv_file is not AsyncFileSystem._mv_file
     assert "_mv" not in VOSpaceFileSystem.__dict__
-    assert not inspect.iscoroutinefunction(getattr(VOSpaceFileSystem, "_mv", None))
 
 
 def test_native_vosfs_stat_profile_fails_closed_on_incomplete_info() -> None:

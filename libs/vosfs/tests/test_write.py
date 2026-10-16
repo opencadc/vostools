@@ -185,7 +185,7 @@ def test_open_w_text_infers_compression_from_normalized_path(
     mock_transfers(router, files)
     fs = make_fs(router)
     with fs.open(
-        "/encoded%2Egz",
+        "/encoded.gz",
         "w",
         encoding="utf-8",
         compression="infer",
@@ -288,7 +288,7 @@ def test_put_preserves_literal_percent_after_destination_remapping(
     router.get(f"{NODES_URL}/100%2541").mock(return_value=httpx.Response(404))
     fs = make_fs(router)
 
-    fs.put(str(source), "vos://100%2541")
+    fs.put(str(source), "vos://100%41")
 
     assert files == {"/100%41": b"literal-percent"}
     byte_urls = call_urls(router, "PUT", f"{BASE_URL}/files")
@@ -396,7 +396,7 @@ def test_recursive_put_preserves_literal_percent_in_remapped_containers(
     router.route(url__regex=rf"^{NODES_URL}/").mock(side_effect=node_op)
     fs = make_fs(router)
 
-    fs.put(str(source), "vos://dest%2541/", recursive=True)
+    fs.put(str(source), "vos://dest%41/", recursive=True)
 
     node_put_urls = call_urls(router, "PUT", f"{NODES_URL}/")
     assert node_put_urls == [

@@ -156,6 +156,40 @@ def test_mv_freezes_source_metadata_before_mutation() -> None:
     assert not source.get_file_paths
 
 
+def test_mv_calls_inherited_mv_file_override() -> None:
+    class MoveFileFileSystem(_RecordingFileSystem):
+        async def _mv_file(self, path1: str, path2: str, **kwargs: object) -> None:
+            await _RecordingFileSystem._mv(self, path1, path2, **kwargs)
+
+    class InheritedMoveFileFileSystem(MoveFileFileSystem):
+        pass
+
+    class InheritedMoveFileContext(_RecordingContext):
+        def __init__(self, source: _RecordingSource, source_id: int) -> None:
+            super().__init__(source, source_id)
+            self.filesystem = InheritedMoveFileFileSystem(source, source_id)
+
+    class InheritedMoveFileSource(_RecordingSource):
+        def __call__(self) -> InheritedMoveFileContext:
+            self.call_count += 1
+            self.events.append(("factory", self.call_count))
+            context = InheritedMoveFileContext(self, self.call_count)
+            self.contexts.append(context)
+            return context
+
+    source = InheritedMoveFileSource(
+        [],
+        file_contents={"/docs/notes.txt": b"payload"},
+        directories={"/", "/docs"},
+    )
+
+    result = _invoke(source, "memory:/docs/notes.txt", "memory:/docs/moved.txt")
+
+    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert source.file_contents == {"/docs/moved.txt": b"payload"}
+    assert [event[0] for event in source.events if event[0] == "mv"] == ["mv"]
+
+
 def test_mv_rejects_inherited_async_move_operation() -> None:
     class InheritedMoveFileSystem(_RecordingFileSystem):
         pass

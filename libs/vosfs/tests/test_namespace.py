@@ -90,6 +90,47 @@ async def test_rmdir_non_empty_fails(router: respx.Router) -> None:
     with pytest.raises(OSError, match="not empty"):
         await fs._rmdir("/d")
     assert "/d" in sim.nodes  # not deleted
+    listing_calls = [call for call in router.calls if "limit=1" in str(call.request.url)]
+    assert listing_calls
+    await fs.aclose()
+
+
+async def test_ls_refresh_and_returned_copies(router: respx.Router) -> None:
+    sim = VOSpaceSim().add_container("/d").add_file("/d/f", b"x")
+    fs = make_sim_fs(router, sim)
+    listing = await fs._ls("/d", detail=True)
+    assert listing[0]["name"] == "/d/f"
+    listing.clear()
+    listing_again = await fs._ls("/d", detail=True)
+    assert [entry["name"] for entry in listing_again] == ["/d/f"]
+    listing_again[0]["name"] = "mutated"
+    assert (await fs._ls("/d", detail=True))[0]["name"] == "/d/f"
+
+    before = len(router.calls)
+    assert (await fs._info("/d/f"))["size"] == 1
+    assert len(router.calls) == before
+
+    sim.add_file("/d/g", b"yy")
+    assert [entry["name"] for entry in await fs._ls("/d")] == ["/d/f"]
+    refreshed = [entry["name"] for entry in await fs._ls("/d", refresh=True)]
+    assert refreshed == ["/d/f", "/d/g"]
+    await fs.aclose()
+
+
+async def test_walk_bottom_up(router: respx.Router) -> None:
+    sim = (
+        VOSpaceSim()
+        .add_container("/tree")
+        .add_container("/tree/sub")
+        .add_file("/tree/sub/a", b"a")
+        .add_file("/tree/b", b"b")
+    )
+    fs = make_sim_fs(router, sim)
+    topdown = [root async for root, _dirs, _files in fs._walk("/tree")]
+    bottomup = [root async for root, _dirs, _files in fs._walk("/tree", topdown=False)]
+    assert topdown[0] == "/tree"
+    assert bottomup[-1] == "/tree"
+    assert bottomup.index("/tree/sub") < bottomup.index("/tree")
     await fs.aclose()
 
 
@@ -174,7 +215,7 @@ def test_mkdir_preserves_literal_percent_parent(router: respx.Router) -> None:
     created, _deleted = _install_percent_mutation_routes(router, {})
     fs = make_fs(router)
 
-    fs.mkdir("vos://root/100%2541/new", create_parents=True)
+    fs.mkdir("vos://root/100%41/new", create_parents=True)
 
     assert "/root/100%2541" in created
     assert "/root/100%2541/new" in created

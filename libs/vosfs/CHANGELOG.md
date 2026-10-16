@@ -1,5 +1,33 @@
 # Changelog
 
+## [Unreleased]
+
+### ⚠ BREAKING CHANGES
+
+* User paths are literal. `strip_protocol` no longer percent-decodes them.
+  `?` and `#` are allowed in a name. A node URI from the service is still
+  decoded once. See ADR 0013.
+
+### Features
+
+* Drop a literal token from `to_dict` / `to_json` when `include_password` is
+  false. Pickle still carries the token.
+* Read pulls try `REQUEST=redirect` and remember a service that does not
+  support it. A cached listing answers the external-link check.
+* Same-service move starts a VOSpace `moveNode` job and requests its abort
+  on cancellation or timeout. Explicit unsupported-job errors retain the
+  client-side copy, verify, and delete fallback.
+* `open("rb", block_size=...)` or `cache_type` reads with one negotiated
+  endpoint with the same partial-response validation as `cat_file`. A `200`
+  stages that response; unknown byte lengths also use staging.
+* One connection budget per event loop (`max_connections`, default 100).
+  Listing and removal concurrency follow `batch_size`.
+  Copies stage with a one-connection budget and release connections before
+  failure cleanup. Cancelling queued requests or parent creation cannot leave
+  later operations waiting on orphaned state.
+* Parse XML with the standard library. `defusedxml` is no longer a dependency.
+* Rebuild loop-bound HTTP clients when the running event loop changes.
+
 ## [0.11.0](https://github.com/shinybrar/vosfs/compare/v0.10.0...v0.11.0) (2026-10-03)
 
 

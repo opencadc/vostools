@@ -136,11 +136,13 @@ def _exercise_profiles(
 
     assert (head.exit_code, head.stdout_bytes, head.stderr) == (0, _PAYLOAD[:4], "")
     assert (tail.exit_code, tail.stdout_bytes, tail.stderr) == (0, _PAYLOAD[-3:], "")
-    assert source.calls == [
+    assert [call for call in source.calls if call.operation == "cat_file"] == [
         _ReadHookCall("cat_file", path, 0, 4),
-        _ReadHookCall("info", path),
-        _ReadHookCall("cat_file", path, len(_PAYLOAD) - 3, None),
+        _ReadHookCall("cat_file", path, -3, None),
     ]
+    info_calls = [call for call in source.calls if call.operation == "info"]
+    assert info_calls
+    assert all(call == _ReadHookCall("info", path) for call in info_calls)
     assert source.exit_calls == [(None, None, None), (None, None, None)]
 
 
@@ -195,7 +197,7 @@ class _StrictReadTransport(httpx.MockTransport):
         self.closed = False
         super().__init__(self._respond)
 
-    async def _respond(self, request: httpx.Request) -> httpx.Response:
+    async def _respond(self, request: httpx.Request) -> httpx.Response:  # noqa: PLR0911 - one response per mocked route.
         call = (request.method, request.url.path)
         self.requests.append(call)
         if call == ("GET", "/arc/capabilities"):
@@ -205,6 +207,13 @@ class _StrictReadTransport(httpx.MockTransport):
         if call == ("GET", "/arc/nodes/blob.bin"):
             return httpx.Response(200, content=_NODE)
         if call == ("POST", "/arc/synctrans"):
+            # A redirect-form pull returns the byte URL. The XML form still
+            # returns transfer details, which the client follows.
+            if request.url.params.get("REQUEST") == "redirect":
+                return httpx.Response(
+                    303,
+                    headers={"Location": f"{_BASE_URL}/files/blob.bin"},
+                )
             return httpx.Response(
                 303,
                 headers={"Location": f"{_BASE_URL}/details"},
@@ -287,14 +296,13 @@ def test_native_vosfs_head_and_tail_profiles_observe_ranged_gets() -> None:
         # The target node GET records the VOSpace authority, so no root GET.
         ("GET", "/arc/nodes/blob.bin"),
         ("POST", "/arc/synctrans"),
-        ("GET", "/arc/details"),
         ("GET", "/arc/files/blob.bin"),
     ]
     assert transports[1].requests == [
         ("GET", "/arc/capabilities"),
         ("GET", "/arc/nodes/blob.bin"),
         ("GET", "/arc/nodes/blob.bin"),
+        ("GET", "/arc/nodes/blob.bin"),
         ("POST", "/arc/synctrans"),
-        ("GET", "/arc/details"),
         ("GET", "/arc/files/blob.bin"),
     ]

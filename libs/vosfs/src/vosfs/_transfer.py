@@ -15,12 +15,13 @@ adapter in :mod:`vosfs.filesystem`.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, cast
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 import httpx
 
@@ -28,7 +29,7 @@ from vosfs import _coordination as coordination
 from vosfs import _integrity, capabilities, errors, negotiate, nodes, staging, transport
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 
     from vosfs.filesystem import VOSpaceFileSystem
     from vosfs.negotiate import NegotiatedEndpoint
@@ -38,8 +39,13 @@ DEFAULT_CONTENT_TYPE = "application/octet-stream"
 _CONTENT_RANGE = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)\s*$", re.IGNORECASE)
 #: Ranged GETs issued together for one object once the endpoint has proven 206.
 RANGE_CONCURRENCY = 8
+COPY_CONNECTIONS = 2
 
 logger = logging.getLogger(__name__)
+
+
+class _RedirectFormUnsupportedError(Exception):
+    """The service did not answer a read with a direct byte redirect."""
 
 
 async def negotiate_endpoint(
@@ -47,12 +53,63 @@ async def negotiate_endpoint(
 ) -> NegotiatedEndpoint:
     """Negotiate a byte endpoint for one logical transfer of ``path``.
 
-    Builds a VOSpace 2.1 transfer document with one authority-qualified
-    target, POSTs it to the discovered sync binding with redirects disabled,
-    follows the approved 303 chain to the transfer-details document, and
-    chooses a protocol whose security method is compatible with the
-    configured credential. Redirect loops and more than five hops fail.
+    A pull tries the URL-parameter ``REQUEST=redirect`` form first. A service
+    that answers with an error, an XML body, or a redirect to transfer details
+    is remembered, and later pulls use the XML document. A push always uses
+    the XML document. Redirect loops and more than five hops fail.
     """
+    if direction == negotiate.DIRECTION_PULL and not filesystem._redirect_reads_unsupported:
+        try:
+            return await _negotiate_redirect_read(filesystem, path, protocol_uri=protocol_uri)
+        except _RedirectFormUnsupportedError:
+            filesystem._redirect_reads_unsupported = True
+    return await _negotiate_document(filesystem, path, direction=direction, protocol_uri=protocol_uri)
+
+
+async def _negotiate_redirect_read(
+    filesystem: VOSpaceFileSystem,
+    path: str,
+    *,
+    protocol_uri: str,
+) -> NegotiatedEndpoint:
+    """POST the URL-parameter pull form and accept only a direct byte redirect."""
+    bindings = await filesystem._get_bindings()
+    sync_url = bindings.require_sync()
+    authority = await filesystem._require_authority()
+    target = f"vos://{authority}{path}"
+    query = urlencode(
+        {
+            "TARGET": target,
+            "DIRECTION": negotiate.DIRECTION_PULL,
+            "PROTOCOL": protocol_uri,
+            "SECURITYMETHOD": filesystem._security_method(),
+            "REQUEST": "redirect",
+        },
+        quote_via=quote,
+    )
+    post = await filesystem._send_to_service("POST", f"{sync_url}?{query}", content=b"", headers=nodes.XML_HEADERS)
+    if post.status_code >= transport.HTTP_BAD_REQUEST or post.status_code == transport.HTTP_OK:
+        raise _RedirectFormUnsupportedError
+    if post.status_code != transport.HTTP_SEE_OTHER:
+        raise _RedirectFormUnsupportedError
+    location = negotiate.validate_redirect(
+        post.headers.get("location"),
+        base=sync_url,
+        sending_bearer=False,
+    )
+    if not negotiate.is_direct_byte_endpoint(location):
+        raise _RedirectFormUnsupportedError
+    return _negotiated(
+        path,
+        negotiate.DIRECTION_PULL,
+        negotiate.NegotiatedEndpoint(location, capabilities.ANONYMOUS_METHOD),
+    )
+
+
+async def _negotiate_document(
+    filesystem: VOSpaceFileSystem, path: str, *, direction: str, protocol_uri: str
+) -> NegotiatedEndpoint:
+    """POST an XML transfer document and follow its 303 chain."""
     bindings = await filesystem._get_bindings()
     sync_url = bindings.require_sync()
     authority = await filesystem._require_authority()
@@ -164,6 +221,7 @@ async def byte_send(  # noqa: PLR0913 - one parameter per HTTP request element.
     content: bytes | None = None,
     headers: Mapping[str, str] | None = None,
     stream: bool = False,
+    accounted: bool = False,
 ) -> httpx.Response:
     """Perform the one byte GET/HEAD/PUT against a negotiated endpoint.
 
@@ -175,7 +233,12 @@ async def byte_send(  # noqa: PLR0913 - one parameter per HTTP request element.
     request_headers.update(headers or {})
     request = httpx.Request(method, endpoint.url, headers=request_headers, content=content)
     try:
-        response = await filesystem._pool.send(request, use_cert=use_cert, stream=stream)
+        response = await filesystem._pool.send(
+            request,
+            use_cert=use_cert,
+            stream=stream,
+            accounted=accounted,
+        )
     except httpx.HTTPError as exc:
         raise errors.transport_exception(exc, path=endpoint.url) from exc
     if response.is_redirect:
@@ -216,9 +279,17 @@ async def reject_external_link(filesystem: VOSpaceFileSystem, target: str) -> No
         raise NotImplementedError(msg)
 
 
-async def preflight_read_target(filesystem: VOSpaceFileSystem, path: str) -> Node:
-    """Validate byte-read capability and LinkNode target before staging."""
+async def preflight_read_target(filesystem: VOSpaceFileSystem, path: str) -> Node | None:
+    """Validate byte-read capability and LinkNode target before staging.
+
+    A cached listing entry is enough to reject an external link, so a read
+    after ``ls`` does not fetch the node again.
+    """
     (await filesystem._get_bindings()).require_sync()
+    cached = filesystem._cached_info(path)
+    if cached is not None:
+        await reject_external_link_info(filesystem, cached)
+        return None
     return await validate_read_target(filesystem, path)
 
 
@@ -228,7 +299,7 @@ async def open_read_stream(
     """Negotiate a read and return the open, streaming byte response."""
     (await filesystem._get_bindings()).require_sync()
     if not target_validated:
-        await validate_read_target(filesystem, path)
+        await preflight_read_target(filesystem, path)
     endpoint = await negotiate_endpoint(
         filesystem,
         path,
@@ -277,6 +348,42 @@ def http_range_header(start: int | None, end: int | None) -> str | None:
     return f"bytes={first}-{end - 1}"
 
 
+def byte_size(info: Mapping[str, Any]) -> int | None:
+    """Return a declared data length, never a link's or missing property's zero."""
+    if info.get("type") != "file" or nodes.LENGTH_PROPERTY_URI not in info.get("properties", {}):
+        return None
+    size = info.get("size")
+    if type(size) is int and size >= 0:
+        return size
+    return None
+
+
+def _absolute_bound(bound: int | None, size: int) -> int | None:
+    """Resolve one Python slice bound against ``size``."""
+    if bound is None or bound >= 0:
+        return bound
+    return max(size + bound, 0)
+
+
+async def _concrete_bounds(
+    filesystem: VOSpaceFileSystem,
+    path: str,
+    start: int | None,
+    end: int | None,
+) -> tuple[int | None, int | None]:
+    """Turn negative slice bounds into absolute bounds using ``_info`` size.
+
+    Unknown size leaves the bounds unchanged, so the caller keeps today's
+    whole-object fallback.
+    """
+    if not ((start is not None and start < 0) or (end is not None and end < 0)):
+        return start, end
+    size = byte_size(await filesystem._info(path))
+    if size is None:
+        return start, end
+    return _absolute_bound(start, size), _absolute_bound(end, size)
+
+
 async def read_slice(
     filesystem: VOSpaceFileSystem,
     path: str,
@@ -284,6 +391,10 @@ async def read_slice(
     end: int | None = None,
 ) -> bytes:
     """Return one object slice, using ``Range`` when the byte endpoint agrees."""
+    if _is_empty_slice(start, end):
+        await preflight_read_target(filesystem, path)
+        return b""
+    start, end = await _concrete_bounds(filesystem, path, start, end)
     if _is_empty_slice(start, end):
         await preflight_read_target(filesystem, path)
         return b""
@@ -310,6 +421,11 @@ async def read_grouped_ranges(
     await preflight_read_target(filesystem, path)
     if not ranges:
         return []
+    concrete: list[tuple[int, int | None, int | None]] = []
+    for index, raw_start, raw_end in ranges:
+        bounded_start, bounded_end = await _concrete_bounds(filesystem, path, raw_start, raw_end)
+        concrete.append((index, bounded_start, bounded_end))
+    ranges = concrete
 
     async def download(temp_path: str) -> None:
         await filesystem._download_file(path, temp_path, target_validated=True)
@@ -325,16 +441,12 @@ async def read_grouped_ranges(
         direction=negotiate.DIRECTION_PULL,
         protocol_uri=negotiate.PROTOCOL_HTTPS_GET,
     )
-    first = await _ranged_get(filesystem, endpoint, path, headers[0])
+    first = await read_range(filesystem, endpoint, path, headers[0])
     if isinstance(first, httpx.Response):
-        try:
-            # Whole-object fallback wins for every range on this object.
-            return await _slice_streamed_object(first, ranges)
-        finally:
-            await first.aclose()
+        return await _slice_streamed_object(first, ranges)
 
     async def fetch(range_header: str) -> bytes | None:
-        result = await _ranged_get(filesystem, endpoint, path, range_header)
+        result = await read_range(filesystem, endpoint, path, range_header)
         if isinstance(result, httpx.Response):
             await result.aclose()
             return None
@@ -351,7 +463,7 @@ async def read_grouped_ranges(
     return [(index, body) for (index, _s, _e), body in zip(ranges, bodies, strict=True)]
 
 
-async def _ranged_get(
+async def read_range(
     filesystem: VOSpaceFileSystem,
     endpoint: NegotiatedEndpoint,
     path: str,
@@ -450,14 +562,32 @@ async def _slice_streamed_object(
     ranges: Sequence[tuple[int, int | None, int | None]],
 ) -> list[tuple[int, bytes]]:
     """Stage one whole-object response to disk and return local slices."""
+    with await stage_response(response) as local:
+        values = []
+        for index, start, end in ranges:
+            first, stop, _step = slice(start, end).indices(local.size)
+            local.seek(first)
+            values.append((index, local.read(max(0, stop - first))))
+        return values
 
-    async def download(temp_path: str) -> None:
-        with Path(temp_path).open("wb") as local:  # noqa: ASYNC230 - disk-backed staging
-            if response.status_code != transport.HTTP_NO_CONTENT:
-                async for chunk in response.aiter_raw(_integrity.READ_CHUNK):
-                    local.write(chunk)
 
-    return await staging.read_ranges(download, ranges)
+async def stage_response(response: httpx.Response) -> staging.StagedReadFile:
+    """Consume and close a whole-object response into an owned seekable file."""
+    temp_path = None
+    try:
+        try:
+            temp_path = staging.new_temp_path()
+            with Path(temp_path).open("wb") as local:  # noqa: ASYNC230 - disk-backed staging
+                if response.status_code != transport.HTTP_NO_CONTENT:
+                    async for chunk in response.aiter_raw(_integrity.READ_CHUNK):
+                        local.write(chunk)
+        finally:
+            await response.aclose()
+        return staging.StagedReadFile(temp_path)
+    except BaseException:
+        if temp_path is not None:
+            staging.unlink_temp_path(temp_path)
+        raise
 
 
 # -- writing bytes -------------------------------------------------------
@@ -471,18 +601,22 @@ async def write_whole(  # noqa: PLR0913 - one parameter per PUT request element.
     size: int | None,
     content_type: str | None,
     expected_digest: bytes | Callable[[], bytes] | None,
+    accounted: bool = False,
+    endpoint: NegotiatedEndpoint | None = None,
 ) -> None:
     """Perform one negotiated whole PUT, validating status and integrity.
 
     ``expected_digest`` may be a callable resolved only after the PUT returns,
     so a digest accumulated while the body streams is compared once complete.
+    ``endpoint`` skips a second negotiation when the caller already has one.
     """
-    endpoint = await negotiate_endpoint(
-        filesystem,
-        path,
-        direction=negotiate.DIRECTION_PUSH,
-        protocol_uri=negotiate.PROTOCOL_HTTPS_PUT,
-    )
+    if endpoint is None:
+        endpoint = await negotiate_endpoint(
+            filesystem,
+            path,
+            direction=negotiate.DIRECTION_PUSH,
+            protocol_uri=negotiate.PROTOCOL_HTTPS_PUT,
+        )
     headers = {"Content-Type": content_type or DEFAULT_CONTENT_TYPE}
     if size is not None:
         headers["Content-Length"] = str(size)
@@ -493,6 +627,7 @@ async def write_whole(  # noqa: PLR0913 - one parameter per PUT request element.
             "PUT",
             content=body,
             headers=headers,
+            accounted=accounted,
         )
         if response.status_code == transport.HTTP_PRECONDITION_FAILED:
             msg = f"integrity check failed for {path}"
@@ -511,3 +646,78 @@ async def write_whole(  # noqa: PLR0913 - one parameter per PUT request element.
         # Once PUT dispatch begins, success, failure, and cancellation can all
         # leave remote state changed. Never promise rollback; evict stale views.
         filesystem._invalidate(path)
+
+
+async def copy_stream(
+    filesystem: VOSpaceFileSystem,
+    source: str,
+    destination: str,
+    *,
+    size: int,
+    source_md5: str | None,
+) -> None:
+    """Stream one object from a negotiated GET into a negotiated PUT.
+
+    Both endpoints are negotiated before two connection slots are taken, so
+    the copy cannot hold a download while waiting for an upload slot. The
+    streamed MD5 is checked against the source ``contentMD5`` when the source
+    has one, and against the digest the server returns. A destination this
+    call created is deleted if the copy fails.
+    """
+    pull = await negotiate_endpoint(
+        filesystem,
+        source,
+        direction=negotiate.DIRECTION_PULL,
+        protocol_uri=negotiate.PROTOCOL_HTTPS_GET,
+    )
+    push = await negotiate_endpoint(
+        filesystem,
+        destination,
+        direction=negotiate.DIRECTION_PUSH,
+        protocol_uri=negotiate.PROTOCOL_HTTPS_PUT,
+    )
+    existed = await filesystem._exists(destination)
+    digest = _integrity.new_md5()
+    mutation_started = False
+
+    async def chunks() -> AsyncIterator[bytes]:
+        if response.status_code == transport.HTTP_NO_CONTENT:
+            return
+        async for chunk in response.aiter_raw(_integrity.READ_CHUNK):
+            digest.update(chunk)
+            yield chunk
+
+    try:
+        async with filesystem._pool.reserve(COPY_CONNECTIONS):
+            response = await byte_send(
+                filesystem,
+                pull,
+                "GET",
+                headers=transport.IDENTITY_ENCODING,
+                stream=True,
+                accounted=True,
+            )
+            try:
+                if response.status_code not in (transport.HTTP_OK, transport.HTTP_NO_CONTENT):
+                    await _raise_byte_error(response, source)
+                mutation_started = True
+                await write_whole(
+                    filesystem,
+                    destination,
+                    chunks(),
+                    size=size,
+                    content_type=None,
+                    expected_digest=digest.digest,
+                    accounted=True,
+                    endpoint=push,
+                )
+            finally:
+                await response.aclose()
+        if source_md5 is not None and digest.hexdigest() != source_md5.lower():
+            msg = f"MD5 mismatch after copying {source} to {destination}"
+            raise errors.VOSpaceError(msg)  # noqa: TRY301 - the shared cleanup owns both integrity and PUT failure.
+    except BaseException:
+        if mutation_started and not existed:
+            with contextlib.suppress(OSError):
+                await filesystem._delete_node(destination)
+        raise

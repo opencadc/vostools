@@ -16,18 +16,17 @@ needed to form a row is checked here; callers validate the rest.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
 from ._command import _call
 from ._concurrent import _outcome_value, _run_bounded
-from ._metadata import snapshot_mapping
-from ._path import _has_dot_segment, _lexical_parent, _same_lexical_path
+from ._path import _same_lexical_path
+from ._results import _BadResultError, snapshot_listing
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from fsspec.asyn import AsyncFileSystem
 
@@ -49,20 +48,6 @@ class _ListedRow:
     files: Mapping[str, Mapping[object, object]]
 
 
-def _info_fields(value: object) -> tuple[Mapping[object, object], str, str]:
-    if not isinstance(value, Mapping):
-        raise _IncompatibleListingError
-    try:
-        info = snapshot_mapping(cast("Mapping[object, object]", value))
-    except Exception as error:
-        raise _IncompatibleListingError from error
-    name = info.get("name")
-    kind = info.get("type")
-    if type(name) is not str or type(kind) is not str:
-        raise _IncompatibleListingError
-    return info, name, kind
-
-
 def _listed_row(
     root: str,
     listing: object,
@@ -73,32 +58,28 @@ def _listed_row(
     The listing length is checked against ``capacity`` before any entry is
     read, so an oversized listing is refused without materializing it.
     """
-    if type(listing) is not list:
+    if not isinstance(listing, list):
         raise _IncompatibleListingError
     if capacity is not None and len(listing) > capacity:
         raise _ListingLimitError
-    expected_length = len(listing)
-    stripped_root = root.rstrip("/")
+    try:
+        indexed = snapshot_listing(root, listing)
+    except _BadResultError as error:
+        raise _IncompatibleListingError from error
     directories: dict[str, Mapping[object, object]] = {}
     files: dict[str, Mapping[object, object]] = {}
     children: list[str] = []
-    for value in listing:
-        info, name, kind = _info_fields(value)
-        pathname = name.rstrip("/")
-        if pathname == stripped_root:
+    for value in indexed.values():
+        info = cast("Mapping[object, object]", value)
+        pathname = cast("str", info["name"]).rstrip("/")
+        if _same_lexical_path(pathname, root):
             collection, key = files, ""
-        elif _has_dot_segment(pathname) or not _same_lexical_path(_lexical_parent(pathname), root):
-            raise _IncompatibleListingError
         else:
             key = pathname.rsplit("/", 1)[-1]
-            collection = directories if kind == "directory" else files
-        if key in directories or key in files:
-            raise _IncompatibleListingError
+            collection = directories if info["type"] == "directory" else files
         collection[key] = info
         if collection is directories:
             children.append(pathname)
-    if len(listing) != expected_length:
-        raise _IncompatibleListingError
     return _ListedRow(root, directories, files), tuple(children)
 
 

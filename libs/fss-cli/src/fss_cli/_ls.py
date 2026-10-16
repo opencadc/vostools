@@ -218,29 +218,60 @@ async def _classify_operand(
     return cast("Mapping[str, object]", info)
 
 
+def _file_result_from_info(
+    operand: _MappedOperand,
+    info: Mapping[str, object],
+    *,
+    long_listing: bool,
+) -> _PlainResult | _LongResult | _Failure:
+    if not long_listing:
+        return _FileResult(operand=operand, value=_PlainName(operand.spelling))
+    row = _listing_row(info)
+    if row is None or not row.name or "\0" in row.name or "\n" in row.name:
+        return _Failure(operand)
+    return _FileResult(operand=operand, value=row)
+
+
+async def _read_operand(
+    operand: _MappedOperand,
+    filesystem: AsyncFileSystem,
+    *,
+    include_almost_all: bool,
+    long_listing: bool,
+) -> _PlainResult | _LongResult | _Failure:
+    """Preserve operand identity before listing a directory's children."""
+    info = await _classify_operand(operand, filesystem)
+    if isinstance(info, _Failure):
+        return info
+    if info["type"] != "directory" or info.get("islink") is True:
+        return _file_result_from_info(operand, cast("Mapping[str, object]", info), long_listing=long_listing)
+    listing = await _list_directory(operand, filesystem, detail=True)
+    if isinstance(listing, list):
+        if long_listing:
+            rows = _directory_rows(operand.path, listing, include_almost_all=include_almost_all)
+            if rows is not None:
+                return _DirectoryResult(operand=operand, values=rows)
+        elif (children := _directory_lines(operand.path, listing, include_almost_all=include_almost_all)) is not None:
+            return _DirectoryResult(operand=operand, values=children)
+
+    if isinstance(listing, _Failure):
+        return listing
+    return _Failure(operand)
+
+
 async def _read_plain_operand(
     operand: _MappedOperand,
     filesystem: AsyncFileSystem,
     *,
     include_almost_all: bool,
 ) -> _PlainResult | _Failure:
-    info = await _classify_operand(operand, filesystem)
-    if isinstance(info, _Failure):
-        return info
-    if info["type"] != "directory" or info.get("islink") is True:
-        return _FileResult(operand=operand, value=_PlainName(operand.spelling))
-
-    listing = await _list_directory(operand, filesystem, detail=True)
-    if isinstance(listing, _Failure):
-        return listing
-    children = _directory_lines(
-        operand.path,
-        listing,
+    result = await _read_operand(
+        operand,
+        filesystem,
         include_almost_all=include_almost_all,
+        long_listing=False,
     )
-    if children is None:
-        return _Failure(operand)
-    return _DirectoryResult(operand=operand, values=children)
+    return cast("_PlainResult | _Failure", result)
 
 
 async def _read_long_operand(
@@ -249,26 +280,13 @@ async def _read_long_operand(
     *,
     include_almost_all: bool,
 ) -> _LongResult | _Failure:
-    info = await _classify_operand(operand, filesystem)
-    if isinstance(info, _Failure):
-        return info
-    if info["type"] != "directory" or info.get("islink") is True:
-        row = _listing_row(info)
-        if row is None or not row.name or "\0" in row.name or "\n" in row.name:
-            return _Failure(operand)
-        return _FileResult(operand=operand, value=row)
-
-    listing = await _list_directory(operand, filesystem, detail=True)
-    if isinstance(listing, _Failure):
-        return listing
-    rows = _directory_rows(
-        operand.path,
-        listing,
+    result = await _read_operand(
+        operand,
+        filesystem,
         include_almost_all=include_almost_all,
+        long_listing=True,
     )
-    if rows is None:
-        return _Failure(operand)
-    return _DirectoryResult(operand=operand, values=rows)
+    return cast("_LongResult | _Failure", result)
 
 
 def _listing_row(info: Mapping[str, object]) -> ListingRow | None:
