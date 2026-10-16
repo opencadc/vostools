@@ -120,7 +120,9 @@ async def test_find_respects_maxdepth_and_withdirs(router: respx.Router) -> None
 
 
 def _deny_listing(router: respx.Router, path: str) -> None:
-    router.get(url__regex=rf"^{re.escape(NODES_URL + path)}$").mock(return_value=httpx.Response(403, text="denied"))
+    router.get(url__regex=rf"^{re.escape(NODES_URL + path)}(?:\?.*)?$").mock(
+        return_value=httpx.Response(403, text="denied")
+    )
 
 
 async def test_find_raise_applies_to_nested_containers(router: respx.Router) -> None:

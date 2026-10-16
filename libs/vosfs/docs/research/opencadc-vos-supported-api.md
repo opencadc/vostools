@@ -80,7 +80,7 @@ standard IDs in the source. ([constants](https://github.com/opencadc/vos/blob/cf
 | Operation or behavior | Status | Pinned evidence | `vosfs` boundary |
 |---|---|---|---|
 | Get node metadata | **Supported** | GET returns XML by default and can render JSON for `Accept: application/json`; `detail=min` suppresses properties, while `detail=max` adds readable/writable tags. ([GET action](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/GetNodeAction.java#L120-L250), [media types](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/NodeAction.java#L208-L229)) | XML is the stable baseline; JSON need not be required. |
-| List direct children | **Supported, unpaged** | Container GET attaches an iterator; Cavern returns all children unless `limit=0`. A resume `uri` is rejected and positive limits are otherwise ignored by persistence. ([GET listing](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/GetNodeAction.java#L151-L213), [persistence](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cavern/src/main/java/org/opencadc/cavern/nodes/FileSystemNodePersistence.java#L325-L344), [Cavern test flags](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cavern/src/intTest/java/org/opencadc/cavern/NodesTest.java#L95-L104)) | `ls` must consume the unpaged response; no pagination promise. |
+| List direct children | **Supported; Cavern ignores paging** | Container GET attaches an iterator; Cavern returns all children unless `limit=0`. A resume `uri` is rejected and positive limits are otherwise ignored by persistence. ([GET listing](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/GetNodeAction.java#L151-L213), [persistence](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cavern/src/main/java/org/opencadc/cavern/nodes/FileSystemNodePersistence.java#L325-L344), [Cavern test flags](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cavern/src/intTest/java/org/opencadc/cavern/NodesTest.java#L95-L104)) | Listings request a fixed `limit` and an inclusive `uri` cursor. A service that ignores `limit` and returns one document under the XML parse cap is the whole listing. Cavern still does not resume. |
 | Sort/order listing | **Unsupported** | Any `sort` or `order` parameter throws `UnsupportedOperationException`. ([source](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/GetNodeAction.java#L151-L163)) | Sort client-side when needed. |
 | Create node | **Supported** | PUT creates and returns 201; normal creation assigns caller ownership and inherits configured parent permissions. ([create](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/CreateNodeAction.java#L125-L228)) | Supports ContainerNode and DataNode creation used by v0.3.0; public link creation is outside scope. |
 | Update metadata | **Supported** | POST merges mutable properties and permission fields, forbids type changes, and returns 200. ([update](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/UpdateNodeAction.java#L96-L145), [merge](https://github.com/opencadc/vos/blob/cf976ce8141dd3341631b7f3e07aa38443d42f58/cadc-vos-server/src/main/java/org/opencadc/vospace/server/actions/UpdateNodeAction.java#L147-L196)) | v0.3.0 keeps a private primitive restricted to explicitly supplied mutable, non-administrative properties; there is no public metadata or permission mutation surface. |
@@ -182,7 +182,7 @@ standard IDs in the source. ([constants](https://github.com/opencadc/vos/blob/cf
 
 For the approved `vosfs` v0.3.0 contract scoped to this Cavern surface:
 
-- include unpaged node metadata/listing, ContainerNode/DataNode creation, a
+- include node metadata and paged immediate-child listings, ContainerNode/DataNode creation, a
   private constrained POST update primitive, single node deletion,
   capabilities discovery, synchronous push/pull negotiation, and negotiated
   whole-byte reads/writes;
@@ -191,7 +191,7 @@ For the approved `vosfs` v0.3.0 contract scoped to this Cavern surface:
   non-atomic copy/recreate then delete; reject LinkNode move with
   `NotImplementedError` before mutation;
 - exclude service-initiated pull-to/push-from transfers, persistent
-  Structured/Unstructured subtype semantics, node locking, paging, server-side
+  Structured/Unstructured subtype semantics, node locking, server-side
   sort/search, general views, SSHFS/bidirectional mounts, and `/protocols`,
   `/views`, `/properties`, all asynchronous UWS resources, native move, public
   link creation, and public property or permission mutation;

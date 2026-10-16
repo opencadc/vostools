@@ -217,7 +217,7 @@ when OpenCADC implements them:
 - `/async-delete` and `/async-setprops` jobs;
 - `/pkg` package downloads;
 - `/protocols`, `/views`, and `/properties` metadata resources;
-- search, server-side sort, and paginated listing;
+- search and server-side sort;
 - `copyNode`, `pullToVoSpace`, `pushFromVoSpace`, and bidirectional mounts; and
 - every UWS phase-start, poll, abort, or cleanup lifecycle.
 
@@ -265,7 +265,11 @@ properties, including unknown properties, **MUST** be preserved in a read-only
 `StructuredDataNode` and `UnstructuredDataNode` **MUST** be exposed as opaque
 files. v0.3.0 provides no structured-view or representation-selection API.
 
-Listings contain immediate children only and are unpaged. Client traversal
+Listings contain immediate children only and are read in pages. Each container
+listing GET sends a fixed ``limit``. A further page sends ``uri`` set to the
+previous page's last child, and that inclusive cursor child is not repeated.
+A page shorter or longer than the limit is the remainder of the listing.
+Metadata lookups stay on ``limit=0``. Client traversal
 **MUST NOT** follow LinkNodes. Byte reads MAY follow an internal LinkNode whose
 target has the discovered VOSpace authority; an external LinkNode **MUST**
 raise `NotImplementedError`.
@@ -456,13 +460,13 @@ the directory cache.
 | Public API or hook | Class | v0.3.0 behavior |
 | --- | --- | --- |
 | `info`, `stat` / `_info` | Native | Node metadata mapping in section 6. Missing paths raise `FileNotFoundError`. |
-| `ls`, `listdir` / `_ls` | Native | Immediate unpaged children with detailed and path-only forms. |
+| `ls`, `listdir` / `_ls` | Native | Immediate children read in `limit` pages, with detailed and path-only forms. |
 | `exists`, `lexists`, `isfile`, `isdir`, `size`, `sizes` | Client-derived | Derived from `_info`; `lexists` does not dereference links. |
 | `modified` | Client-derived | Return the OpenCADC modification date. |
 | `created` | Unsupported | Raise `NotImplementedError`; no creation timestamp is fabricated. |
 | `walk`, `find`, `glob`, `expand_path` | Client-derived | Client traversal with fsspec `maxdepth`, detail, and error semantics. Glob supports `*`, `[]`, and `**`. Traversal never follows links. |
 | Question-mark glob paths | Unsupported | `?` is the existing path grammar's query delimiter, so these patterns cannot be expressed without a new grammar. |
-| `du`, `disk_usage`, `tree` | Client-derived | Unpaged client traversal; potentially expensive. |
+| `du`, `disk_usage`, `tree` | Client-derived | Client traversal over paged listings; potentially expensive. |
 | `checksum`, `ukey` | Client-derived | fsspec metadata token; no separate public content-checksum API. |
 | `cat_file` | Client-derived | Ranged GET when bounds allow; `206` returns the partial body, `200`/`204` whole-object slice locally. |
 | `cat_ranges` | Client-derived | Per-object negotiation; ranged GETs while `206`, else one whole-object stage and local slices. |

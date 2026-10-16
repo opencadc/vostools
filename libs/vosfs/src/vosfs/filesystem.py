@@ -18,7 +18,7 @@ import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast, overload
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 import httpx
 from fsspec.asyn import AsyncFileSystem, _run_coros_in_chunks, sync
@@ -65,8 +65,40 @@ _GET_CONTAINER_MARKER = "_vosfs_materialize_get_container"
 #: limit (often thousands), far beyond the HTTP pool: queued transfers then wait
 #: on the pool past its timeout and fail spuriously with ``PoolTimeout``.
 DEFAULT_BATCH_SIZE = 32
+#: Immediate children requested per container-listing GET. Vault's resume cursor
+#: is inclusive, so a page of one child cannot advance. Two thousand ordinary
+#: children stay under the 8 MiB XML parse cap.
+LISTING_PAGE_SIZE = 2000
 
 logger = logging.getLogger(__name__)
+
+
+def _query(params: dict[str, str]) -> str:
+    """Percent-encode ``params`` so a resume URI is one query value.
+
+    ``quote`` leaves a space as ``%20``. ``urlencode``'s default ``quote_plus`` would emit ``+``.
+    """
+    return urlencode(params, quote_via=quote)
+
+
+def _resume_page(
+    raw: list[nodes.Node],
+    *,
+    resume: str,
+    first_uri: str,
+) -> tuple[list[nodes.Node], str, bool]:
+    """Return new children from one later page, the next cursor, and whether to stop.
+
+    Vault's cursor is inclusive. A page that restarts at the first child ignored
+    the cursor. A page that starts somewhere else treated the cursor as exclusive.
+    """
+    if not raw or (raw[0].uri == first_uri and raw[0].uri != resume):
+        return [], resume, True
+    new_children = raw[1:] if raw[0].uri == resume else list(raw)
+    next_resume = raw[-1].uri
+    if not new_children or next_resume == resume:
+        return [], resume, True
+    return new_children, next_resume, len(raw) != LISTING_PAGE_SIZE
 
 
 class VOSpaceFileSystem(AsyncFileSystem):
@@ -290,7 +322,7 @@ class VOSpaceFileSystem(AsyncFileSystem):
         bindings = await self._get_bindings()
         url = bindings.require_nodes() + paths.encode_url_path(path)
         if not children:
-            url += "?limit=0"
+            url += "?" + _query({"limit": "0"})
         response = await self._send_to_service("GET", url, headers=nodes.XML_HEADERS)
         self._raise_for_status(response, path=path, allowed=(transport.HTTP_OK,))
         return response.content
@@ -344,8 +376,9 @@ class VOSpaceFileSystem(AsyncFileSystem):
     async def _ls(self, path: str, detail: bool = True, **_kwargs: Any) -> list[Any]:  # noqa: ANN401, FBT001, FBT002 - fsspec hook signature
         """List the immediate children of ``path`` (or the node itself if a file).
 
-        Container listings are served from and stored in the standard fsspec
-        directory cache; mutations invalidate the affected entries.
+        Container listings are assembled from ``limit`` pages and then served
+        from and stored in the standard fsspec directory cache; mutations
+        invalidate the affected entries.
         """
         self._ensure_usable()
         path = self._strip_protocol(path)
@@ -358,22 +391,57 @@ class VOSpaceFileSystem(AsyncFileSystem):
         return [entry["name"] for entry in entries]
 
     async def _fetch_listing(self, path: str) -> list[dict[str, Any]]:
-        """Fetch a listing, caching a container's immediate children.
-
-        The document is parsed once for both the node and its children.
-        """
+        """Fetch a listing, caching a container only after every page succeeds."""
         try:
-            node, children = nodes.parse_container(await self._get_node_document(path))
-            self._note_authority(node.uri)
-            if node.node_type != "container":
-                entries = [nodes.to_info(node, path)]
-            else:
-                entries = [self._child_info(path, child) for child in children]
-                self.dircache[path] = entries
+            return await self._load_listing(path)
         except BaseException:
             self.dircache.pop(path, None)
             raise
+
+    async def _load_listing(self, path: str) -> list[dict[str, Any]]:
+        """Read immediate children in pages, or the node itself when it is a file."""
+        node, children = await self._read_listing_page(path, resume=None)
+        if node.node_type != "container":
+            return [nodes.to_info(node, path)]
+        collected = list(children)
+        if len(children) == LISTING_PAGE_SIZE:
+            collected.extend(await self._remaining_pages(path, children))
+        entries = [self._child_info(path, child) for child in collected]
+        self.dircache[path] = entries
         return entries
+
+    async def _remaining_pages(self, path: str, first_page: list[nodes.Node]) -> list[nodes.Node]:
+        """Return children after the first full page, without repeating the cursor."""
+        collected: list[nodes.Node] = []
+        first_uri = first_page[0].uri
+        resume = first_page[-1].uri
+        while True:
+            page_node, raw = await self._read_listing_page(path, resume=resume)
+            if page_node.node_type != "container":
+                message = f"listing page for {path} is not a container"
+                raise errors.VOSpaceError(message)
+            new_children, resume, done = _resume_page(raw, resume=resume, first_uri=first_uri)
+            collected.extend(new_children)
+            if done:
+                return collected
+
+    async def _read_listing_page(self, path: str, *, resume: str | None) -> tuple[nodes.Node, list[nodes.Node]]:
+        """GET and parse one listing page, recording its VOSpace authority."""
+        node, children = nodes.parse_container(await self._get_listing_page(path, resume=resume))
+        self._note_authority(node.uri)
+        return node, children
+
+    async def _get_listing_page(self, path: str, *, resume: str | None) -> bytes:
+        """GET one bounded container page, resuming at ``resume`` when given."""
+        bindings = await self._get_bindings()
+        url = bindings.require_nodes() + paths.encode_url_path(path)
+        params = {"limit": str(LISTING_PAGE_SIZE)}
+        if resume is not None:
+            params["uri"] = resume
+        url += "?" + _query(params)
+        response = await self._send_to_service("GET", url, headers=nodes.XML_HEADERS)
+        self._raise_for_status(response, path=path, allowed=(transport.HTTP_OK,))
+        return response.content
 
     def _child_info(self, parent: str, child: Node) -> dict[str, Any]:
         """Build the info dict for a listing child under ``parent``."""
