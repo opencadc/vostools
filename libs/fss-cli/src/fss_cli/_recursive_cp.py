@@ -45,11 +45,21 @@ from ._path import (
     _lexical_join,
     _lexical_parent,
 )
+from ._post_copy import (
+    _DEFAULT_METADATA_WAIT_SECONDS,
+    _await_verified,
+    _PreviousFile,
+    _report,
+    _resolved_operand,
+    _TransferProof,
+)
+from ._progress import _NO_DISPLAY, _TransferDisplay
 
 if TYPE_CHECKING:
     from fsspec.asyn import AsyncFileSystem
 
     from ._concurrent import _Outcome
+    from ._progress import _Transfer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -216,6 +226,10 @@ def _cleanup_staging(
     return error
 
 
+def _frozen_tokens(entry: _ManifestEntry) -> dict[str, frozenset[str | bytes]]:
+    return {name: frozenset({value}) for name, value in entry.tokens}
+
+
 def _directory_depth(entry: _ManifestEntry) -> int:
     return 0 if not entry.relative else entry.relative.count("/") + 1
 
@@ -232,6 +246,8 @@ class _RecursiveCopy:
     destination: _MappedOperand
     source_filesystem: AsyncFileSystem
     destination_filesystem: AsyncFileSystem
+    display: _TransferDisplay = _NO_DISPLAY
+    metadata_wait: int = _DEFAULT_METADATA_WAIT_SECONDS
 
     async def _resolve_target(  # noqa: C901, PLR0911, PLR0912
         self,
@@ -415,11 +431,21 @@ class _RecursiveCopy:
             basis,
         )
 
-    async def _transfer(  # noqa: C901, PLR0912
+    async def _tracked_transfer(
         self,
         source_entry: _ManifestEntry,
         destination_path: str,
         existing: _ManifestEntry | None,
+    ) -> _TransferResult:
+        with self.display.transfer() as transfer:
+            return await self._transfer(source_entry, destination_path, existing, transfer)
+
+    async def _transfer(  # noqa: C901, PLR0912, PLR0915
+        self,
+        source_entry: _ManifestEntry,
+        destination_path: str,
+        existing: _ManifestEntry | None,
+        transfer: _Transfer,
     ) -> _TransferResult:
         started = time.monotonic()
         source_location = _location(self.source.name, source_entry.path)
@@ -461,6 +487,7 @@ class _RecursiveCopy:
                         "_get_file",
                         source_entry.path,
                         temporary,
+                        callback=transfer.phase("download", f"{self.source.name}:{source_entry.path}"),
                     )
                 except Exception as error:  # noqa: BLE001 - stable transfer category.
                     failure = _RecursiveCpFailure(
@@ -502,6 +529,7 @@ class _RecursiveCopy:
                         "equal" if identical else "differ",
                     )
 
+            uploaded = False
             if failure is None and not identical:
                 try:
                     await _call(
@@ -510,6 +538,7 @@ class _RecursiveCopy:
                         temporary,
                         destination_path,
                         mode="overwrite",
+                        callback=transfer.phase("upload", f"{self.destination.name}:{destination_path}"),
                     )
                 except Exception as error:  # noqa: BLE001 - stable mutation category.
                     failure = _RecursiveCpFailure(
@@ -518,6 +547,12 @@ class _RecursiveCopy:
                         backend_error=error,
                         residue=True,
                     )
+                else:
+                    uploaded = True
+
+            transfer.finish()
+            if uploaded:
+                failure = await self._report_upload(source_entry, destination_path, existing)
         except BaseException:
             _cleanup_under_control(self.command, self.source, temporary)
             raise
@@ -534,6 +569,36 @@ class _RecursiveCopy:
             started,
         )
         return _TransferResult(skipped=existing if identical else None)
+
+    async def _report_upload(
+        self,
+        source_entry: _ManifestEntry,
+        destination_path: str,
+        existing: _ManifestEntry | None,
+    ) -> _RecursiveCpFailure | None:
+        """Print one uploaded file's two outcome lines once its destination ``_info`` settles."""
+        target = _resolved_operand(self.destination, destination_path)
+        size = source_entry.size or 0
+        _report(self.command, target, f"uploaded {size} bytes")
+        unverified = await _await_verified(
+            self.destination_filesystem,
+            destination_path,
+            _TransferProof(size, tuple(_frozen_tokens(source_entry).items())),
+            None if existing is None else _PreviousFile(existing.size, _frozen_tokens(existing)),
+            mutation="upload",
+            wait=self.metadata_wait,
+        )
+        if unverified is None:
+            _report(self.command, target, f"verified {size} bytes")
+            return None
+        _report(self.command, target, f"{unverified.text}; destination residue may remain")
+        return _RecursiveCpFailure(
+            target,
+            unverified.text,
+            backend_error=unverified.error,
+            residue=True,
+            rendered=True,
+        )
 
     async def _create_directories(
         self,
@@ -622,7 +687,7 @@ class _RecursiveCopy:
         outcomes = await _run_bounded(
             [
                 partial(
-                    self._transfer,
+                    self._tracked_transfer,
                     entry,
                     _destination_path(root, entry.relative),
                     plan.files.get(_destination_path(root, entry.relative)),
@@ -752,11 +817,14 @@ class _RecursiveCopy:
         return failure
 
 
-async def _run_recursive_cp(
+async def _run_recursive_cp(  # noqa: PLR0913 - operands plus the shared display.
     command: str,
     source_operand: _MappedOperand,
     destination_operand: _MappedOperand,
     filesystems: Mapping[str, AsyncFileSystem],
+    *,
+    display: _TransferDisplay = _NO_DISPLAY,
+    metadata_wait: int = _DEFAULT_METADATA_WAIT_SECONDS,
 ) -> None:
     failure = await _RecursiveCopy(
         command,
@@ -764,6 +832,8 @@ async def _run_recursive_cp(
         destination_operand,
         filesystems[source_operand.name],
         filesystems[destination_operand.name],
+        display,
+        metadata_wait,
     ).run()
     if failure is not None:
         try:

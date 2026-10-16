@@ -235,11 +235,101 @@ destination directory.
 If both configured names resolve to the same filesystem object *and* the same
 path, the command rejects `same path` **before** staging or upload.
 
+```text
+cp [--metadata-wait SECONDS] SOURCE... DESTINATION
+```
+
+`--metadata-wait` (default `60`, minimum `0`) bounds how long `cp` polls
+destination `_info` after each successful file write. It applies to every file
+`cp -R` uploads too.
+
+#### Progress
+
+One `rich.progress.Progress` is shared by the whole invocation and drawn on
+stderr:
+
+```python
+rich_progress.Progress(
+    rich_progress.TextColumn("[bold blue]{task.description}"),
+    rich_progress.BarColumn(bar_width=None),
+    rich_progress.TimeRemainingColumn(),
+)
+```
+
+It exists only when stderr is a terminal (`isatty()`) and `NO_COLOR` is unset
+or empty. Otherwise no `Progress` is constructed, every hook receives fsspec's
+`DEFAULT_CALLBACK`, and redirected stderr receives no bar bytes. Rich's own
+terminal detection is not consulted, because `FORCE_COLOR` makes it treat a
+pipe as a terminal. The display is transient: it is erased when `cp` ends.
+
+Each file gets at most one task. A small `fsspec.callbacks.Callback` subclass
+turns the backend's `set_size` and `relative_update` calls into the task's
+total and completed bytes:
+
+| Route | Hooks that receive the callback | Task description |
+| --- | --- | --- |
+| Cross-source file | `_get_file`, then `_put_file` | `download <source operand>`, then `upload <resolved destination>` on the same task |
+| Same-source file | `_cp_file`, only when it declares a `callback` parameter | `copy <resolved destination>` |
+| Same-source file, no `callback` parameter | none | no task |
+| `cp -R`, each file | `_get_file`, then `_put_file` | `download <name>:<source file>`, then `upload <name>:<destination file>` |
+
+A task stays hidden until its backend first reports through the callback, so
+a backend that never calls it shows no bar, and no byte progress is invented.
+Moving to the upload resets the task and hides it again. The task is removed
+when the file's transfer ends, before that file's outcome lines. Paths get the
+usual diagnostic escaping and then `rich.markup.escape`: the description is
+markup, and a `[` in a path is data.
+
+While the display is live, stderr is routed through Rich's line proxy, so
+outcome lines and diagnostics print above the bars instead of through them.
+Stdout stays empty.
+
+#### Outcome lines
+
+After the write hook returns, `cp` writes two stderr lines per file. The
+operand is the resolved file (`<name>:<path>`), not the typed directory, and
+`<n>` is the frozen source size:
+
+```text
+cp: <name>:<resolved>: uploaded <n> bytes     # cross-source, after _put_file
+cp: <name>:<resolved>: copied <n> bytes       # same-source, after _cp_file
+```
+
+The second line is the verification outcome:
+
+| Outcome | Status | Second line |
+| --- | ---: | --- |
+| File, size matches, shared tokens match | `0` | `verified <n> bytes` |
+| Still stale when the wait ends (size) | `1` | `not yet verified (size <observed>, expected <n>); destination residue may remain` |
+| Still stale when the wait ends (token) | `1` | `not yet verified (<token> unchanged); destination residue may remain` |
+| Size is any other value | `1` | `size mismatch (expected <n>, observed <observed>); destination residue may remain` |
+| Size matches, a shared token differs | `1` | `metadata mismatch (<token>); destination residue may remain` |
+| `_info` raises | `1` | `verification failure (<ClassName>); destination residue may remain` |
+| Not a file | `1` | `not a file after upload` (cross-source) or `not a file after copy` (same-source), then `; destination residue may remain` |
+| Not a mapping, no string `type`, or an invalid `size` | `1` | `verification failure; destination residue may remain` |
+
+`cp -R` writes the same two lines for every file it uploads. The first is
+always `uploaded`, because each recursive write is `_put_file`. A file's lines
+print as soon as its own write and wait finish, so the lines of parallel files
+interleave while each file's two lines stay in order. A skipped identical file
+prints nothing.
+
+`<token>` is the normalized name that differed: `etag`, `md5`, `content-md5`,
+or `checksum`. A raising write hook prints neither line and keeps
+`uncertain mutation state; destination residue may remain` against the typed
+destination operand.
+
+`not yet verified` says only that the reported metadata had not caught up when
+the wait ended. `size mismatch` and `metadata mismatch` are disagreements in
+the reported metadata. No line claims the bytes are missing or corrupt.
+
 #### The metadata verification proof
 
 Expected size and recognized source tokens are frozen into an immutable proof
 immediately after source validation, before destination resolution or mutation.
-After the transfer, the shared verifier requires:
+The destination `_info` that resolution already reads is kept too: if the
+resolved path was a file, its size and tokens are the *previous* state. After
+the transfer, the verifier requires:
 
 1. the staged source size matches the pre-transfer source `_info`;
 2. the destination is a file of that exact size; and
@@ -249,7 +339,23 @@ After the transfer, the shared verifier requires:
 
 With no shared recognized token, exact type and size are the truthful proof.
 **No cryptographic strength is claimed** — this is an agreement check on
-whatever both ends happen to report, not a content hash.
+whatever both ends happen to report, not a content hash. An ETag is compared as
+an opaque string: a multipart `<md5>-<parts>` ETag is not stripped or treated
+as an MD5.
+
+`_info` is read immediately after the write returns, then every 5 seconds until
+the proof matches, the result stops being stale, or `--metadata-wait` seconds
+have passed. `0` reads once and never sleeps. A result is **stale**, and is
+polled, only when:
+
+- the observed size is `0` and the frozen size is not;
+- a file existed before the copy and the observed size is still its size; or
+- the size matches and every differing shared token still equals the value the
+  previous file reported.
+
+A frozen size of `0` with an observed size of `0` is verified. Every other
+outcome in the table above is final on the first read that produces it.
+Interrupting the wait leaves the destination in place.
 
 The source temporary is the transfer bridge, **not** a verification download.
 There is no destination download, FIFO, pipe, worker thread, synchronous open,
@@ -263,7 +369,8 @@ Staging errors disclose only the error class — never local temporary paths or
 source content.
 
 Status `0` proves source retention, destination type and byte count, and
-agreement of every shared recognized token. A failed upload or later
+agreement of every shared recognized token, and is returned only after a
+`verified` line. A stale `_info` is never success. A failed upload or later
 verification reports that **destination residue may remain**. The command never
 deletes the destination to simulate rollback and never claims atomicity.
 
@@ -308,6 +415,22 @@ Dot segments and a source root operand are rejected up front:
 ```text
 cp: <operand>: dot segment unsupported
 cp: <operand>: source root unsupported
+```
+
+Up to 16 files transfer at once. Each in-flight file holds one live task on
+the invocation's shared display (see [Progress](#progress)), and the task is
+removed when that file finishes, so a large tree shows only the files that are
+moving. After each upload, the file's `uploaded` line prints, its destination
+`_info` is polled under the same rules and `--metadata-wait` budget as a file
+copy, and the file's second line prints: `verified <n> bytes` or the verdict
+from [Outcome lines](#outcome-lines). The first file that fails to verify
+stops new transfers; files already in flight finish and print their own lines,
+and the command exits `1`. After every file verifies, the source is
+revalidated and the whole destination tree is checked once more before status
+`0`.
+
+```text
+cp -R [--metadata-wait SECONDS] SOURCE DESTINATION
 ```
 
 It does **not** promise a snapshot, transaction, rollback, exact mirror, or

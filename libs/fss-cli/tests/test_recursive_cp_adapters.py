@@ -17,6 +17,8 @@ from typer.testing import CliRunner
 
 from fss_cli import App
 
+from ._support import _cp_verified
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable
 
@@ -335,7 +337,11 @@ def test_backend_neutral_harness_copies_between_minimal_adapters(
         ["cp", "-R", "nebula:/dataset", "quartz:/landing/copy"],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("quartz:/landing/copy/file.bin", "uploaded", 7),
+    )
     assert destination_entries["/landing/copy/file.bin"] == b"payload"
     assert destination_entries["/landing/copy/empty"] is None
     assert not [event for event in source_events if event[0] in {"mkdir", "put_file"}]
@@ -369,7 +375,11 @@ def test_backend_neutral_harness_accepts_awaitable_returning_listing() -> None:
         ],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("arbitrary-target:/landing/copy/file.bin", "uploaded", 7),
+    )
     assert destination_entries["/landing/copy/file.bin"] == b"payload"
 
 
@@ -395,7 +405,11 @@ def test_listing_metadata_is_frozen_before_requesting_the_next_listing() -> None
         ["cp", "-R", "source:/dataset", "destination:/landing/copy"],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/landing/copy/file.bin", "uploaded", 7),
+    )
     assert destination_entries["/landing/copy/file.bin"] == b"payload"
 
 
@@ -548,6 +562,8 @@ def test_recursive_copy_production_has_no_backend_dispatch_or_sync_facades() -> 
         "destination",
         "source_filesystem",
         "destination_filesystem",
+        "display",
+        "metadata_wait",
     ]
     assert runner.__dataclass_params__.frozen is True
     assert [name for name, member in runner.__dict__.items() if callable(member) and not name.startswith("_")] == [

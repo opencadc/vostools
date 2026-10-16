@@ -18,7 +18,7 @@ from ._command import (
     _parse_mapped_operand,
     _usage_error,
 )
-from ._cp import _cp_plan, _run_cp
+from ._cp import _DEFAULT_METADATA_WAIT_SECONDS, _cp_plan, _run_cp
 from ._diagnostics import _render_diagnostic_prefix, _render_diagnostic_value
 from ._du import _DuRequest, _run_du
 from ._find import _FindRequest, _run_find
@@ -132,6 +132,18 @@ _CreateParents: TypeAlias = Annotated[
 _CopyRecursive: TypeAlias = Annotated[
     bool,
     typer.Option("-R", "-r", help="Copy one directory and its descendants."),
+]
+_MetadataWait: TypeAlias = Annotated[
+    int,
+    typer.Option(
+        "--metadata-wait",
+        metavar="SECONDS",
+        min=0,
+        help=(
+            "Seconds to poll after each successful file copy while destination info "
+            "still shows no size, or the size from before this copy."
+        ),
+    ),
 ]
 _TestExists: TypeAlias = Annotated[
     bool,
@@ -493,16 +505,25 @@ class App:
         if self._capabilities.recursive_copy:
 
             @self.typer_app.command()
-            def cp(operands: _CpOperands, *, recursive: _CopyRecursive = False) -> None:
+            def cp(
+                operands: _CpOperands,
+                *,
+                recursive: _CopyRecursive = False,
+                metadata_wait: _MetadataWait = _DEFAULT_METADATA_WAIT_SECONDS,
+            ) -> None:
                 """Copy files or one directory."""
-                self._copy(operands, recursive=recursive)
+                self._copy(operands, recursive=recursive, metadata_wait=metadata_wait)
 
         else:
 
             @self.typer_app.command()
-            def cp(operands: _CpOperands) -> None:
+            def cp(
+                operands: _CpOperands,
+                *,
+                metadata_wait: _MetadataWait = _DEFAULT_METADATA_WAIT_SECONDS,
+            ) -> None:
                 """Copy one or more files."""
-                self._copy(operands, recursive=False)
+                self._copy(operands, recursive=False, metadata_wait=metadata_wait)
 
         @self.typer_app.command()
         def mv(operands: _MvOperands) -> None:
@@ -516,9 +537,15 @@ class App:
                 lambda: _run_mv("mv", plan, self._sources),
             )
 
-    def _copy(self, operands: Sequence[str], *, recursive: bool) -> None:
+    def _copy(self, operands: Sequence[str], *, recursive: bool, metadata_wait: int) -> None:
         """Preflight and run one shared ``cp`` invocation."""
-        plan = _cp_plan("cp", tuple(operands), self._sources, recursive=recursive)
+        plan = _cp_plan(
+            "cp",
+            tuple(operands),
+            self._sources,
+            recursive=recursive,
+            metadata_wait=metadata_wait,
+        )
         _run_async_command("cp", lambda: _run_cp("cp", plan, self._sources))
 
     def _register_mutation_commands(self) -> None:

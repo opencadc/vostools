@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 from fss_cli import App
 
 from ._support import (
+    _cp_verified,
     _invoke,
     _RecordingFileSystem,
     _RecordingSource,
@@ -60,7 +61,7 @@ def test_cp_copies_one_file_without_stdout() -> None:
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("memory:/docs/copy.txt", "copied", 7)
     assert source.file_contents["/docs/copy.txt"] == b"payload"
     assert source.file_contents["/docs/notes.txt"] == b"payload"
     cp_events = [event for event in events if event[0] == "cp_file"]
@@ -116,7 +117,11 @@ def test_cp_reuses_destination_directory_info_for_same_source_parent() -> None:
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/notes.txt", "copied", 7),
+    )
     assert [event[2] for event in events if event[0] == "info"] == [
         "/docs/notes.txt",
         "/target",
@@ -144,7 +149,11 @@ def test_cp_copies_multiple_files_into_existing_directory_in_argv_order() -> Non
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/first.txt", "copied", 5) + _cp_verified("memory:/target/second.txt", "copied", 6),
+    )
     assert source.file_contents["/target/first.txt"] == b"first"
     assert source.file_contents["/target/second.txt"] == b"second"
     assert [event[2:4] for event in source.events if event[0] == "cp_file"] == [
@@ -174,7 +183,11 @@ def test_cp_reuses_destination_directory_info_for_multi_source_parents() -> None
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/first.txt", "copied", 5) + _cp_verified("memory:/target/second.txt", "copied", 6),
+    )
     assert [event[2] for event in events if event[0] == "info"] == [
         "/target",
         "/docs/first.txt",
@@ -228,7 +241,12 @@ def test_cp_acquires_multi_source_names_once_in_argv_order() -> None:
         },
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/target/first.txt", "uploaded", 5)
+        + _cp_verified("destination:/target/second.txt", "uploaded", 6),
+    )
     assert acquisition == ["first", "second", "destination"]
     assert first.call_count == second.call_count == destination.call_count == 1
     assert destination.file_contents["/target/first.txt"] == b"first"
@@ -261,7 +279,12 @@ def test_cp_replaces_duplicate_basenames_in_argv_order() -> None:
         sources={"first": first, "second": second, "destination": destination},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/target/item.txt", "uploaded", 5)
+        + _cp_verified("destination:/target/item.txt", "uploaded", 6),
+    )
     assert destination.file_contents["/target/item.txt"] == b"second"
 
 
@@ -319,7 +342,7 @@ def test_cp_rejects_other_source_type_mid_multi_source_sequence() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/docs/other: incompatible result\n",
+        _cp_verified("memory:/target/first.txt", "copied", 5) + "cp: memory:/docs/other: incompatible result\n",
     )
     assert source.file_contents["/target/first.txt"] == b"first"
     assert "/target/other" not in source.file_contents
@@ -345,7 +368,7 @@ def test_cp_rejects_directory_source_mid_multi_source_sequence() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/docs/nested: is a directory\n",
+        _cp_verified("memory:/target/first.txt", "copied", 5) + "cp: memory:/docs/nested: is a directory\n",
     )
     assert source.file_contents["/target/first.txt"] == b"first"
     assert "/target/nested" not in source.file_contents
@@ -373,7 +396,11 @@ def test_cp_replaces_existing_multi_source_target_file() -> None:
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/first.txt", "copied", 5) + _cp_verified("memory:/target/second.txt", "copied", 6),
+    )
     assert source.file_contents["/target/first.txt"] == b"first"
     assert source.file_contents["/target/second.txt"] == b"second"
     assert source.file_contents["/docs/first.txt"] == b"first"
@@ -411,7 +438,12 @@ def test_cp_copies_empty_binary_and_large_multi_source_payloads(
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified(f"memory:/target/{label}-a.bin", "copied", len(payload))
+        + _cp_verified(f"memory:/target/{label}-b.bin", "copied", len(payload)),
+    )
     assert source.file_contents[f"/target/{label}-a.bin"] == payload
     assert source.file_contents[f"/target/{label}-b.bin"] == payload
     assert source.file_contents[f"/docs/{label}-a.bin"] == payload
@@ -448,7 +480,7 @@ def test_cp_rejects_other_cross_source_type_mid_multi_source_sequence() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: other:/docs/other: incompatible result\n",
+        _cp_verified("destination:/target/first.txt", "uploaded", 5) + "cp: other:/docs/other: incompatible result\n",
     )
     assert destination.file_contents["/target/first.txt"] == b"first"
     assert "/target/other" not in destination.file_contents
@@ -504,7 +536,13 @@ def test_cp_reuses_configured_name_for_mixed_multi_source_sequence() -> None:
         sources={"shared": shared, "other": other},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("shared:/target/first.txt", "copied", 5)
+        + _cp_verified("shared:/target/second.txt", "uploaded", 6)
+        + _cp_verified("shared:/target/third.txt", "copied", 5),
+    )
     assert shared.call_count == other.call_count == 1
     assert shared.file_contents["/target/first.txt"] == b"first"
     assert shared.file_contents["/target/second.txt"] == b"second"
@@ -549,7 +587,9 @@ def test_cp_keeps_verified_target_after_later_multi_source_verification_failure(
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: destination:/target: verification failure; destination residue may remain\n",
+        _cp_verified("destination:/target/first.txt", "uploaded", 5)
+        + "cp: destination:/target/second.txt: uploaded 6 bytes\n"
+        + "cp: destination:/target/second.txt: metadata mismatch (checksum); destination residue may remain\n",
     )
     assert destination.file_contents["/target/first.txt"] == b"first"
     assert destination.file_contents["/target/second.txt"] == b"wrong!"
@@ -704,7 +744,7 @@ def test_cp_copies_payload_between_distinct_configured_sources(payload: bytes) -
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("destination:/out/copy.txt", "uploaded", len(payload))
     assert source.file_contents["/docs/notes.txt"] == payload
     assert destination.file_contents["/out/copy.txt"] == payload
     assert [event[0] for event in source.events].count("get_file") == 1
@@ -725,7 +765,11 @@ def test_cp_reuses_destination_directory_info_for_cross_source_parent() -> None:
         sources={"source": source, "destination": destination},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/target/notes.txt", "uploaded", 7),
+    )
     assert [event[2] for event in destination.events if event[0] == "info"] == [
         "/target",
         "/target/notes.txt",
@@ -777,7 +821,7 @@ def test_cp_accepts_same_size_cross_source_destination_without_shared_token() ->
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("destination:/out/copy.txt", "uploaded", 7)
     assert source.file_contents["/docs/notes.txt"] == b"correct"
     assert destination.file_contents["/out/copy.txt"] == b"corrupt"
     assert [event[0] for event in source.events].count("get_file") == 1
@@ -811,15 +855,16 @@ def test_cp_hides_local_temporary_path_in_cross_source_staging_diagnostic() -> N
 
 
 @pytest.mark.parametrize(
-    "destination_info",
+    ("destination_info", "verdict"),
     [
-        MappingProxyType({"type": "directory", "size": 0}),
-        MappingProxyType({"type": "file", "size": 3}),
+        (MappingProxyType({"type": "directory", "size": 0}), "not a file after upload"),
+        (MappingProxyType({"type": "file", "size": 3}), "size mismatch (expected 6, observed 3)"),
     ],
     ids=["wrong-type", "truncated"],
 )
 def test_cp_rejects_invalid_cross_source_destination_after_upload(
     destination_info: MappingProxyType,
+    verdict: str,
 ) -> None:
     source = _file_source(content=b"abcdef")
     destination = _file_source(
@@ -836,7 +881,10 @@ def test_cp_rejects_invalid_cross_source_destination_after_upload(
     )
 
     assert result.exit_code == 1
-    assert result.stderr == ("cp: destination:/out/copy.txt: verification failure; destination residue may remain\n")
+    assert result.stderr == (
+        "cp: destination:/out/copy.txt: uploaded 6 bytes\n"
+        f"cp: destination:/out/copy.txt: {verdict}; destination residue may remain\n"
+    )
 
 
 def test_cp_appends_basename_when_destination_is_directory() -> None:
@@ -871,7 +919,11 @@ def test_cp_preserves_root_source_destination(source_path: str) -> None:
         sources={"source": source, "destination": destination},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/out/", "uploaded", 7),
+    )
     put_events = [event for event in destination.events if event[0] == "put_file"]
     assert put_events[0][2] == "/out/"
 
@@ -1016,7 +1068,7 @@ def test_cp_uses_distinct_names_even_when_backends_are_similar() -> None:
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("beta:/docs/copy.txt", "uploaded", 7)
     assert left.call_count == 1
     assert right.call_count == 1
     assert right.file_contents["/docs/copy.txt"] == b"payload"
@@ -1068,7 +1120,7 @@ def test_cp_accepts_operands_after_option_terminator() -> None:
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("memory:/docs/copy.txt", "copied", 7)
 
 
 @pytest.mark.parametrize(
@@ -1113,13 +1165,13 @@ def test_cp_uses_pre_copy_metadata_snapshot_without_redownloading_source() -> No
 
     assert result.exit_code == 0
     assert result.stdout == ""
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("memory:/docs/copy.txt", "copied", 8)
     assert source.file_contents["/docs/notes.txt"] == b"changed-after-copy"
     assert source.file_contents["/docs/copy.txt"] == b"original"
     assert not [event for event in source.events if event[0] == "get_file"]
 
 
-def test_cp_reports_truncated_destination_as_verification_failure() -> None:
+def test_cp_reports_truncated_destination_as_size_mismatch() -> None:
     source = _file_source(content=b"abcdef")
 
     def truncate_destination(path1: str, path2: str) -> None:
@@ -1137,7 +1189,10 @@ def test_cp_reports_truncated_destination_as_verification_failure() -> None:
     )
 
     assert result.exit_code == 1
-    assert result.stderr == ("cp: memory:/docs/copy.txt: verification failure; destination residue may remain\n")
+    assert result.stderr == (
+        "cp: memory:/docs/copy.txt: copied 6 bytes\n"
+        "cp: memory:/docs/copy.txt: size mismatch (expected 6, observed 3); destination residue may remain\n"
+    )
 
 
 def test_cp_reports_copy_exception_as_uncertain_residue() -> None:
@@ -1294,7 +1349,7 @@ def test_cp_accepts_same_size_destination_without_shared_token() -> None:
     )
 
     assert result.exit_code == 0
-    assert result.stderr == ""
+    assert result.stderr == _cp_verified("memory:/docs/copy.txt", "copied", 6)
     assert source.file_contents["/docs/copy.txt"] == b"xxxxxx"
     assert not [event for event in source.events if event[0] == "get_file"]
 
@@ -1334,7 +1389,11 @@ def test_cp_accepts_matching_normalized_metadata_tokens() -> None:
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/docs/copy.txt", "copied", 6),
+    )
     assert not [event for event in source.events if event[0] == "get_file"]
     mutation_index = next(index for index, event in enumerate(source.events) if event[0] == "cp_file")
     assert [event[:3] for event in source.events[mutation_index + 1 :] if event[0] == "info"] == [
@@ -1376,7 +1435,8 @@ def test_cp_rejects_when_any_shared_metadata_token_mismatches() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/docs/copy.txt: verification failure; destination residue may remain\n",
+        "cp: memory:/docs/copy.txt: copied 6 bytes\n"
+        "cp: memory:/docs/copy.txt: metadata mismatch (content-md5); destination residue may remain\n",
     )
     assert not [event for event in source.events if event[0] == "get_file"]
 
@@ -1411,7 +1471,8 @@ def test_cp_freezes_source_metadata_before_same_source_mutation() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/docs/copy.txt: verification failure; destination residue may remain\n",
+        "cp: memory:/docs/copy.txt: copied 7 bytes\n"
+        "cp: memory:/docs/copy.txt: metadata mismatch (checksum); destination residue may remain\n",
     )
 
 
@@ -1449,7 +1510,8 @@ def test_cp_freezes_source_metadata_before_cross_source_mutation() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: destination:/out/copy.txt: verification failure; destination residue may remain\n",
+        "cp: destination:/out/copy.txt: uploaded 7 bytes\n"
+        "cp: destination:/out/copy.txt: metadata mismatch (checksum); destination residue may remain\n",
     )
     assert len(source.get_file_paths) == 1
     assert not [event for event in destination.events if event[0] == "get_file"]
@@ -1490,7 +1552,11 @@ def test_cp_ignores_str_and_bytes_subclass_tokens_after_mutation(
         sources={"memory": source},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/docs/copy.txt", "copied", 7),
+    )
     assert source.file_contents["/docs/copy.txt"] == b"payload"
     assert not [event for event in source.events if event[0] == "get_file"]
 
@@ -1507,7 +1573,10 @@ def test_cp_reports_post_copy_destination_type_mismatch() -> None:
     )
 
     assert result.exit_code == 1
-    assert result.stderr == ("cp: memory:/docs/copy.txt: verification failure; destination residue may remain\n")
+    assert result.stderr == (
+        "cp: memory:/docs/copy.txt: copied 7 bytes\n"
+        "cp: memory:/docs/copy.txt: not a file after copy; destination residue may remain\n"
+    )
 
 
 def test_cp_reports_post_copy_destination_info_failure() -> None:
@@ -1524,7 +1593,10 @@ def test_cp_reports_post_copy_destination_info_failure() -> None:
     )
 
     assert result.exit_code == 1
-    assert result.stderr == ("cp: memory:/docs/copy.txt: verification failure; destination residue may remain\n")
+    assert result.stderr == (
+        "cp: memory:/docs/copy.txt: copied 7 bytes\n"
+        "cp: memory:/docs/copy.txt: verification failure (PermissionError); destination residue may remain\n"
+    )
 
 
 def test_cp_reports_cross_source_temporary_cleanup_failure(monkeypatch) -> None:
@@ -1551,7 +1623,8 @@ def test_cp_reports_cross_source_temporary_cleanup_failure(monkeypatch) -> None:
 
     assert result.exit_code == 1
     assert result.stderr == (
-        "cp: destination:/out/copy.txt: staging failure (OSError); destination residue may remain\n"
+        _cp_verified("destination:/out/copy.txt", "uploaded", 7)
+        + "cp: destination:/out/copy.txt: staging failure (OSError); destination residue may remain\n"
     )
     assert len(cleaned) == 1
     assert not Path(cleaned[0]).exists()
@@ -1595,7 +1668,8 @@ def test_cp_cleanup_failure_does_not_mask_verification_failure(
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: destination:/out/copy.txt: verification failure; destination residue may remain\n",
+        "cp: destination:/out/copy.txt: uploaded 7 bytes\n"
+        "cp: destination:/out/copy.txt: metadata mismatch (checksum); destination residue may remain\n",
     )
     assert len(cleaned) == 1
     assert not Path(cleaned[0]).exists()

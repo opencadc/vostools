@@ -17,6 +17,8 @@ from typer.testing import CliRunner
 
 from fss_cli import App
 
+from ._support import _cp_verified, _outcomes_by_file
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -426,7 +428,8 @@ def test_recursive_cp_reports_source_exit_failure_after_verified_copy() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory: source exit failure (OSError): cleanup\n",
+        _cp_verified("memory:/out/docs/notes.txt", "uploaded", 5)
+        + "cp: memory: source exit failure (OSError): cleanup\n",
     )
     assert entries["/out/docs/notes.txt"] == b"notes"
 
@@ -447,7 +450,11 @@ def test_recursive_cp_copies_nested_and_empty_directories_through_host_staging()
         {"memory": _source(entries, calls)},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/docs/nested/notes.txt", "uploaded", 5),
+    )
     assert entries["/target/docs/empty"] is None
     assert entries["/target/docs/nested/notes.txt"] == b"notes"
     # One breadth-first listing per directory, for the manifest and again for
@@ -491,7 +498,11 @@ def test_recursive_cp_supports_distinct_configured_sources() -> None:
         },
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/out/copy/notes.txt", "uploaded", 5),
+    )
     assert source_entries["/docs/notes.txt"] == b"notes"
     assert destination_entries["/out/copy/notes.txt"] == b"notes"
 
@@ -650,7 +661,11 @@ def test_recursive_cp_merges_existing_tree_and_replaces_files() -> None:
         {"memory": _source(entries, calls)},
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("memory:/target/docs/notes.txt", "uploaded", 3),
+    )
     assert entries["/target/docs/notes.txt"] == b"new"
     assert entries["/target/docs/extra.txt"] == b"keep"
     assert entries["/target/docs/empty"] is None
@@ -784,7 +799,8 @@ def test_recursive_cp_reports_source_change_after_transfer() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/docs: source changed; destination residue may remain\n",
+        _cp_verified("memory:/out/copy/notes.txt", "uploaded", 5)
+        + "cp: memory:/docs: source changed; destination residue may remain\n",
     )
     assert entries["/out/copy/notes.txt"] == b"notes"
 
@@ -876,7 +892,8 @@ def test_recursive_cp_reports_partial_destination_residue_after_upload_failure()
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: destination:/out/copy: mutation failure; destination residue may remain\n",
+        _cp_verified("destination:/out/copy/first.txt", "uploaded", 5)
+        + "cp: destination:/out/copy: mutation failure; destination residue may remain\n",
     )
     assert destination_entries["/out/copy/first.txt"] == b"first"
     assert "/out/copy/second.txt" not in destination_entries
@@ -1005,7 +1022,7 @@ def test_recursive_cp_enforces_exact_manifest_entry_limit(
         assert [call for call in calls if call[0] == "ls"] == [("ls", "/source")]
 
 
-def test_recursive_cp_rejects_shared_token_mismatch_during_final_proof() -> None:
+def test_recursive_cp_reports_an_unchanged_shared_token_as_not_yet_verified() -> None:
     entries: dict[str, bytes | None] = {
         "/": None,
         "/source": None,
@@ -1031,14 +1048,16 @@ def test_recursive_cp_rejects_shared_token_mismatch_during_final_proof() -> None
     }
 
     result = _invoke(
-        ["-R", "memory:/source", "memory:/out/copy"],
+        ["-R", "--metadata-wait", "0", "memory:/source", "memory:/out/copy"],
         {"memory": _source(entries, [], metadata=metadata)},
     )
 
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: memory:/out/copy: verification failure; destination residue may remain\n",
+        "cp: memory:/out/copy/source/notes.txt: uploaded 5 bytes\n"
+        "cp: memory:/out/copy/source/notes.txt: not yet verified (checksum unchanged); "
+        "destination residue may remain\n",
     )
 
 
@@ -1115,7 +1134,11 @@ def test_recursive_cp_skips_entry_preflight_when_destination_root_is_missing() -
         },
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout) == (0, "")
+    assert _outcomes_by_file(result.stderr) == {
+        "destination:/out/copy/nested/notes.txt": ["uploaded 5 bytes", "verified 5 bytes"],
+        "destination:/out/copy/top.txt": ["uploaded 3 bytes", "verified 3 bytes"],
+    }
     first_mutation = next(index for index, call in enumerate(destination_calls) if call[0] == "mkdir")
     # Only target resolution reads metadata before mutation: nothing under the
     # missing root can exist, so no per-entry preflight is issued.
@@ -1123,7 +1146,8 @@ def test_recursive_cp_skips_entry_preflight_when_destination_root_is_missing() -
         ("info", "/out/copy"),
         ("info", "/out"),
     ]
-    # Each entry is read exactly once, by the final destination proof.
+    # Each file is read by its post-upload check and again by the final
+    # destination proof; each directory only by the final proof.
     assert sorted(
         call[1] for call in destination_calls if call[0] == "info" and str(call[1]).startswith("/out/copy")
     ) == [
@@ -1131,6 +1155,8 @@ def test_recursive_cp_skips_entry_preflight_when_destination_root_is_missing() -
         "/out/copy",
         "/out/copy/nested",
         "/out/copy/nested/notes.txt",
+        "/out/copy/nested/notes.txt",
+        "/out/copy/top.txt",
         "/out/copy/top.txt",
     ]
 
@@ -1171,7 +1197,10 @@ def test_recursive_cp_overlaps_transfers_within_the_concurrency_bound() -> None:
         },
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout) == (0, "")
+    assert _outcomes_by_file(result.stderr) == {
+        f"destination:/out/copy/f{index:02d}": ["uploaded 10 bytes", "verified 10 bytes"] for index in range(20)
+    }
     assert peak == 16
     for index in range(20):
         assert destination_entries[f"/out/copy/f{index:02d}"] == (f"payload-{index:02d}".encode())

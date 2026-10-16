@@ -791,6 +791,7 @@ version = "0.10.0"
 source = { editable = "libs/fss-cli" }
 dependencies = [
     { name = "fsspec" },
+    { name = "rich" },
     { name = "typer" },
 ]
 
@@ -806,6 +807,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fsspec", specifier = ">=2026.6.0" },
+    { name = "rich", specifier = ">=13.8.0" },
     { name = "typer", specifier = ">=0.27.0" },
 ]
 

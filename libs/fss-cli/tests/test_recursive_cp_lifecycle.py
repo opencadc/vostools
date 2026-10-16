@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NoReturn
 
 import pytest
 
+from ._support import _cp_verified
 from .test_recursive_cp import _invoke, _source, _TreeFileSystem
 
 if TYPE_CHECKING:
@@ -435,7 +436,7 @@ def test_recursive_cp_reports_reverse_source_exit_failures() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: beta: source exit failure (RuntimeError): beta exit\n"
+        _cp_verified("beta:/out/copy/file", "uploaded", 1) + "cp: beta: source exit failure (RuntimeError): beta exit\n"
         "cp: alpha: source exit failure (OSError): alpha exit\n",
     )
     assert destination_entries["/out/copy/file"] == b"x"

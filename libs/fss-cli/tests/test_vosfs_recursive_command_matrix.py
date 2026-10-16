@@ -18,6 +18,7 @@ from ._matrix_support import (
     _invoke,
     _ProbedSource,
 )
+from ._support import _verified_uploads
 from ._vosfs_matrix_support import (
     _AUTHORITY,
     _BASE_URL,
@@ -305,7 +306,12 @@ def test_native_vosfs_recursive_cp_profile_uses_only_mocked_transport() -> None:
         ["cp", "-R", "vos:/docs", "vos:/copy"],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout) == (0, "")
+    assert _verified_uploads(result.stderr) == {
+        "vos:/copy/.hidden": 7,
+        "vos:/copy/guide.md": 8,
+        "vos:/copy/notes.txt": 9,
+    }
     assert transports[0].blobs["/copy/notes.txt"] == b"notes.txt"
     assert transports[0].nodes["/copy/empty"] == "container"
     assert transports[0].blobs["/docs/notes.txt"] == b"notes.txt"
@@ -420,7 +426,11 @@ def test_recursive_cp_between_distinct_native_vosfs_and_adapted_sources(
         ],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout) == (0, "")
+    files = {".hidden": 7, "guide.md": 8, "notes.txt": 9} if source_form == "vos" else {"notes.txt": 9}
+    assert _verified_uploads(result.stderr) == {
+        f"destination:{destination_path}/{name}": size for name, size in files.items()
+    }
     if destination_form == "vos":
         destination_transport = transports[-1]
         assert destination_transport.blobs["/copy/notes.txt"] == b"notes.txt"

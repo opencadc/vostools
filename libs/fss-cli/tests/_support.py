@@ -16,6 +16,33 @@ def _source_must_not_run() -> NoReturn:
     raise AssertionError
 
 
+def _cp_verified(operand: str, verb: str, size: int) -> str:
+    """Return the two stderr lines ``cp`` writes for one verified file."""
+    return f"cp: {operand}: {verb} {size} bytes\ncp: {operand}: verified {size} bytes\n"
+
+
+def _outcomes_by_file(stderr: str) -> dict[str, list[str]]:
+    """Group ``cp: <operand>: <outcome>`` lines by operand, keeping each file's own order.
+
+    Parallel ``cp -R`` transfers interleave their lines across files.
+    """
+    grouped: dict[str, list[str]] = {}
+    for line in stderr.splitlines():
+        operand, _, outcome = line.removeprefix("cp: ").partition(": ")
+        grouped.setdefault(operand, []).append(outcome)
+    return grouped
+
+
+def _verified_uploads(stderr: str) -> dict[str, int]:
+    """Map each ``cp -R`` file operand to its verified size; fail on any other outcome."""
+    sizes: dict[str, int] = {}
+    for operand, outcomes in _outcomes_by_file(stderr).items():
+        size = outcomes[0].removeprefix("uploaded ").removesuffix(" bytes")
+        assert outcomes == [f"uploaded {size} bytes", f"verified {size} bytes"], (operand, outcomes)
+        sizes[operand] = int(size)
+    return sizes
+
+
 def _invoke(
     command: str,
     arguments: list[str],

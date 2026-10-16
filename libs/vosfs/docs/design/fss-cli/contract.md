@@ -4,7 +4,7 @@ Status: **Normative.** Every command in
 [`commands.md`](commands.md) inherits this document. A command section states
 only its *delta* from these rules.
 
-Client baseline: **fsspec 2026.6.0**, **Typer 0.27.0**.
+Client baseline: **fsspec 2026.6.0**, **Typer 0.27.0**, **Rich 13.8.0**.
 
 The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT**,
 and **MAY** are interpreted as described by
@@ -107,6 +107,11 @@ Output failures use the operand-free form:
 ```text
 <command>: output: output failure (<ClassName>): <message>
 ```
+
+stderr is otherwise reserved for diagnostics, with one exception: `cp` and
+`cp -R` write per-file outcome lines in the same per-operand form, and draw
+byte progress bars only when stderr is a terminal and `NO_COLOR` is unset or
+empty. See [`commands.md`](commands.md#cp-files).
 
 ## 5. Result validation
 

@@ -58,7 +58,7 @@ async def _confirmed_mv_file(request: _CpRequest, filesystem: AsyncFileSystem) -
     prepared = await _prepare_transfer(request, filesystem, filesystem)
     if isinstance(prepared, _CpFailure):
         return prepared
-    proof, resolved = prepared
+    proof, resolved = prepared.proof, prepared.resolved
     if request.source.path == resolved:
         return None
     declared_operation = type(filesystem).__dict__.get("_mv")

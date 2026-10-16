@@ -9,6 +9,10 @@
 > **Partially superseded by
 > [Rename fsspec-cli to fss-cli](./0010-rename-fsspec-cli-to-fss-cli.md):**
 > the PyPI deferral is replaced; the package is now `fss-cli`.
+>
+> **Partially superseded by
+> [Report `cp` progress and wait for destination metadata](./0011-report-cp-progress-and-wait-for-destination-metadata.md):**
+> `fss-cli` also requires `rich` at runtime.
 
 To support co-development now without coupling future extraction to `vosfs`,
 `fsspec-cli` will be a self-contained uv workspace member at `src/fsspec-cli`

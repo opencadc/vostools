@@ -16,6 +16,8 @@ from typer.testing import CliRunner, Result
 
 from fss_cli import App
 
+from ._support import _cp_verified
+
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -1055,7 +1057,11 @@ def _exercise_cp_locked_profile(  # noqa: PLR0913 - matrix probe knobs.
         "cp",
         [f"{source_name}:{file_path}", f"{source_name}:{copy_path}"],
     )
-    assert (success.exit_code, success.stdout, success.stderr) == (0, "", "")
+    assert (success.exit_code, success.stdout, success.stderr) == (
+        0,
+        "",
+        _cp_verified(f"{source_name}:{copy_path}", "copied", len(expected)),
+    )
     _assert_bytes(copy_path, expected)
     _assert_bytes(file_path, expected)
 
@@ -1064,7 +1070,11 @@ def _exercise_cp_locked_profile(  # noqa: PLR0913 - matrix probe knobs.
         "cp",
         [f"{source_name}:{file_path}", f"{source_name}:{target_dir}"],
     )
-    assert (into_dir.exit_code, into_dir.stdout, into_dir.stderr) == (0, "", "")
+    assert (into_dir.exit_code, into_dir.stdout, into_dir.stderr) == (
+        0,
+        "",
+        _cp_verified(f"{source_name}:{target_dir}/{file_name}", "copied", len(expected)),
+    )
     _assert_bytes(f"{target_dir}/{file_name}", expected)
     _assert_bytes(file_path, expected)
 
@@ -1132,7 +1142,12 @@ def _exercise_multi_source_cp_locked_profile(
         ],
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified(f"{source_name}:{target_dir}/notes.txt", "copied", len(b"notes.txt"))
+        + _cp_verified(f"{source_name}:{target_dir}/guide.md", "copied", len(b"guide.md")),
+    )
     _assert_bytes(f"{target_dir}/notes.txt", b"notes.txt")
     _assert_bytes(f"{target_dir}/guide.md", b"guide.md")
     _assert_bytes(notes_path, b"notes.txt")

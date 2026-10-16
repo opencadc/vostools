@@ -11,6 +11,7 @@ from typing import NoReturn
 
 import pytest
 
+from ._support import _cp_verified, _outcomes_by_file
 from .test_recursive_cp import _invoke, _source, _TreeFileSystem
 
 
@@ -432,7 +433,8 @@ def test_recursive_cp_reports_cleanup_failure_after_success(
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: source:/docs: staging cleanup failure (OSError); "
+        _cp_verified("destination:/out/copy/file", "uploaded", 1)
+        + "cp: source:/docs: staging cleanup failure (OSError); "
         "host staging residue may remain; destination residue may remain\n",
     )
     assert destination_entries["/out/copy/file"] == b"x"
@@ -739,7 +741,8 @@ def test_recursive_cp_classifies_final_source_listing_failure() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: source:/docs: source revalidation failure; destination residue may remain\n",
+        _cp_verified("destination:/out/copy/file", "uploaded", 1)
+        + "cp: source:/docs: source revalidation failure; destination residue may remain\n",
     )
     assert destination_entries["/out/copy/file"] == b"x"
 
@@ -778,7 +781,8 @@ def test_recursive_cp_classifies_destination_proof_failure() -> None:
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
         "",
-        "cp: destination:/out/copy: verification failure; destination residue may remain\n",
+        "cp: destination:/out/copy/file: uploaded 1 bytes\n"
+        "cp: destination:/out/copy/file: verification failure (OSError); destination residue may remain\n",
     )
     assert destination_entries["/out/copy/file"] == b"x"
 
@@ -824,7 +828,11 @@ def test_recursive_cp_accepts_matching_shared_tokens() -> None:
         },
     )
 
-    assert (result.exit_code, result.stdout, result.stderr) == (0, "", "")
+    assert (result.exit_code, result.stdout, result.stderr) == (
+        0,
+        "",
+        _cp_verified("destination:/out/copy/docs/file", "uploaded", 1),
+    )
     assert destination_entries["/out/copy/file"] == b"x"
 
 
@@ -897,12 +905,18 @@ def test_recursive_cp_reports_first_failure_in_manifest_order() -> None:  # noqa
     )
 
     assert events == ["f05 failed", "f03 failed"]
-    # f03 precedes f05 in the manifest, so its category is the one rendered.
-    assert (result.exit_code, result.stdout, result.stderr) == (
-        1,
-        "",
-        "cp: source:/docs: transfer failure; destination residue may remain\n",
-    )
+    # f03 precedes f05 in the manifest, so its category is the one rendered,
+    # after the outcome lines of every transfer that was already in flight.
+    assert (result.exit_code, result.stdout) == (1, "")
+    assert result.stderr.endswith("cp: source:/docs: transfer failure; destination residue may remain\n")
+    assert _outcomes_by_file(result.stderr) == {
+        **{
+            f"destination:/out/copy/f{index:02d}": ["uploaded 1 bytes", "verified 1 bytes"]
+            for index in range(16)
+            if index not in {3, 5}
+        },
+        "source:/docs": ["transfer failure; destination residue may remain"],
+    }
     # Only the first bound's worth of transfers ever started: none began
     # after the f05 failure was observed, and in-flight ones finished.
     assert started == [f"/docs/f{index:02d}" for index in range(16)]
