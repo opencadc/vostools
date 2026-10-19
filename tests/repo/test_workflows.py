@@ -46,8 +46,13 @@ def test_third_party_actions_are_pinned_to_a_commit(path: Path) -> None:
 
 
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda path: path.name)
-def test_workflows_default_to_read_only_contents(path: Path) -> None:
-    assert load(path)["permissions"] == {"contents": "read"}
+def test_workflows_declare_expected_default_permissions(path: Path) -> None:
+    expected = (
+        {"contents": "write", "issues": "write", "pull-requests": "write"}
+        if path.name == "cd.yml"
+        else {"contents": "read"}
+    )
+    assert load(path)["permissions"] == expected
 
 
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda path: path.name)

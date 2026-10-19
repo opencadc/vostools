@@ -79,7 +79,16 @@ def test_release_workflow_dispatches_one_package_path_and_one_docs_event() -> No
     assert "docs-publish" in text
     assert "client_payload:{path:$path, package:$package, tag_name:$tag, sha:$sha}" in text
     assert text.count('event_type:"docs-publish"') == 1
-    assert "RELEASE_PLEASE_TOKEN" in text
+
+
+def test_release_workflow_uses_the_builtin_token() -> None:
+    job = workflow("cd.yml")["jobs"]["release-please"]
+    release = next(step for step in job["steps"] if step.get("id") == "release")
+    dispatch = next(step for step in job["steps"] if step.get("run"))
+
+    assert "token" not in release["with"]
+    assert dispatch["env"]["GH_TOKEN"] == "${{ secrets.GITHUB_TOKEN }}"
+    assert job["permissions"] == {"contents": "write", "pull-requests": "write", "issues": "write"}
 
 
 def test_pypi_workflow_publishes_only_the_dispatched_package() -> None:
