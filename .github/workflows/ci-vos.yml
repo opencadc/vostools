@@ -1,0 +1,42 @@
+# Test vos when its tree or shared workspace files change.
+name: vos
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "libs/vos/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".pre-commit-config.yaml"
+      - ".github/**"
+      - "tests/repo/**"
+  push:
+    branches: [main]
+    paths:
+      - "libs/vos/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".pre-commit-config.yaml"
+      - ".github/**"
+      - "tests/repo/**"
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Tests
+    uses: ./.github/workflows/reusable-package.yml
+    with:
+      package: vos
+      distribution: vos
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

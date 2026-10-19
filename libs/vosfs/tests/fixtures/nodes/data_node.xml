@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vos:node xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:type="vos:DataNode"
+          uri="vos://cadc.nrc.ca!vault/user/report.fits"
+          version="2.1"
+          busy="false">
+  <vos:properties>
+    <vos:property uri="ivo://ivoa.net/vospace/core#length">10485760</vos:property>
+    <vos:property uri="ivo://ivoa.net/vospace/core#MD5">d41d8cd98f00b204e9800998ecf8427e</vos:property>
+    <vos:property uri="ivo://ivoa.net/vospace/core#date">2024-05-01T12:34:56.000</vos:property>
+    <vos:property uri="ivo://ivoa.net/vospace/core#contenttype">application/fits</vos:property>
+    <vos:property uri="ivo://ivoa.net/vospace/core#quota">53687091200</vos:property>
+    <vos:property uri="ivo://cadc.nrc.ca/vospace/custom#experiment">orion-survey</vos:property>
+  </vos:properties>
+</vos:node>

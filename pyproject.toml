@@ -1,0 +1,129 @@
+[project]
+name = "vostools-workspace"
+version = "0"
+description = "uv workspace for the vos, vosfs and fss-cli packages; not published"
+requires-python = ">=3.10"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["libs/*"]
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.19.2,<5",
+    "mkdocstrings-python>=2.0.5",
+    "pre-commit>=4.6.2",
+    "pymarkdownlnt>=0.9.40",
+    "pytest>=9.1.1",
+    "pyyaml>=6.0.2",
+    "ruff>=0.16.10",
+    "ty>=0.0.85",
+    "zensical>=0.0.50",
+]
+
+# Repository contract tests only; each package configures pytest in its own pyproject.toml.
+[tool.pytest]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+testpaths = ["tests/repo"]
+
+# Repository policy. A package that is not yet clean extends this table with a narrower
+# select (see libs/vos/pyproject.toml) and drops the override once it complies.
+[tool.ruff]
+line-length = 120
+per-file-target-version = { "tests/repo/*.py" = "py312" } # Contract tests use tomllib; CI runs them on 3.12.
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # Conflicts with the formatter.
+    "CPY001", # Each package's LICENSE file is authoritative; no per-file headers.
+    "ISC001", # Conflicts with the formatter.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = [
+    "ANN",     # Tests are outside the ty gate.
+    "D",       # Tests describe behavior through their names.
+    "INP001",  # Tests do not need to form a Python package.
+    "S101",    # pytest assertions are expected.
+    "S105",    # Literal token/secret values are fixtures, not real credentials.
+    "S106",    # Literal token/secret arguments are fixtures, not real credentials.
+    "SLF001",  # Tests exercise internal seams by design.
+    "PLR2004", # Status codes and sizes are self-evident magic values in tests.
+    "FBT001",  # Parametrized tests pass boolean cases positionally.
+    "PLC0415", # Optional-dependency imports are local, guarded by importorskip.
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ty.src]
+include = ["libs/*/src"]
+
+# vos type checking ratchet: these rules report as warnings in vos until its findings are
+# fixed; every other rule is an error. Remove a rule from the list once vos is clean for it.
+[[tool.ty.overrides]]
+include = ["libs/vos/src/**"]
+rules = { invalid-argument-type = "warn", no-matching-overload = "warn", unresolved-attribute = "warn", unsupported-operator = "warn" }
+
+[tool.ty.terminal]
+error-on-warning = false
+
+[tool.commitizen]
+name = "cz_customize"
+
+[tool.commitizen.customize]
+message_template = "{{change_type}}{% if scope %}({{scope}}){% endif %}{% if breaking %}!{% endif %}: {{subject}}{% if body %}\n\n{{body}}{% endif %}{% if breaking %}\n\nBREAKING CHANGE: {{breaking}}{% endif %}{% if footer %}\n\n{{footer}}{% endif %}"
+example = "fix(vos): handle missing node properties"
+schema = "<type>(<scope>): <description>, scope one or more of vos, vosfs, fss-cli, repo"
+schema_pattern = "(?s)^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\((vos|vosfs|fss-cli|repo)(,(vos|vosfs|fss-cli|repo))*\\))?!?: [^\\r\\n]+((\\r?\\n\\r?\\n.*)|(\\s*))?$"
+
+[[tool.commitizen.customize.questions]]
+type = "list"
+name = "change_type"
+message = "Select the type of change"
+choices = [
+    { value = "feat", name = "feat: A new feature" },
+    { value = "fix", name = "fix: A bug fix" },
+    { value = "docs", name = "docs: Documentation only" },
+    { value = "style", name = "style: Formatting without behavior changes" },
+    { value = "refactor", name = "refactor: Neither a feature nor a fix" },
+    { value = "perf", name = "perf: A performance improvement" },
+    { value = "test", name = "test: Add or correct tests" },
+    { value = "build", name = "build: Build system or dependencies" },
+    { value = "ci", name = "ci: Continuous integration" },
+    { value = "chore", name = "chore: Maintenance" },
+    { value = "revert", name = "revert: Revert a previous change" },
+]
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "scope"
+message = "Scope (optional): vos, vosfs, fss-cli or repo; comma-separate several"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "subject"
+message = "Imperative description"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "body"
+message = "Body (optional)"
+multiline = true
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "breaking"
+message = "Breaking change description (optional)"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "footer"
+message = "Footer (optional)"
+multiline = true

@@ -1,0 +1,157 @@
+"""Contracts for release-please and the guarded publication workflows."""
+
+import json
+from pathlib import Path
+
+import pytest
+import yaml
+
+ROOT = Path(__file__).resolve().parents[2]
+CONFIG = json.loads((ROOT / "release-please-config.json").read_text())
+MANIFEST = json.loads((ROOT / ".release-please-manifest.json").read_text())
+PACKAGES = {"libs/vos": "vos", "libs/vosfs": "vosfs", "libs/fss-cli": "fss-cli"}
+UPSTREAM_GUARD = "github.repository == 'opencadc/vostools'"
+RELEASE_GUARD = "github.repository == 'shinybrar/vostools' || github.repository == 'opencadc/vostools'"
+BASELINE = "e96b7630e1af4286afd7b57ff14ed34ea4b8e3a7"
+
+
+def workflow(name: str) -> dict:
+    return yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text())
+
+
+def triggers(loaded: dict) -> dict:
+    return loaded.get("on", loaded.get(True))
+
+
+def test_manifest_records_only_released_versions() -> None:
+    assert set(MANIFEST) == set(PACKAGES)
+    assert MANIFEST == {"libs/vos": "3.7.0", "libs/vosfs": "0.11.0", "libs/fss-cli": "0.10.0"}
+    assert "packages" not in MANIFEST
+    assert "release-type" not in MANIFEST
+
+
+def test_release_please_config_is_separate_from_the_manifest() -> None:
+    assert CONFIG["separate-pull-requests"] is True
+    assert CONFIG["include-component-in-tag"] is True
+    assert CONFIG["include-v-in-tag"] is True
+    assert CONFIG["draft"] is True
+    assert CONFIG["last-release-sha"] == BASELINE
+    assert set(CONFIG["packages"]) == set(PACKAGES)
+
+
+@pytest.mark.parametrize(("path", "component"), PACKAGES.items())
+def test_each_package_bumps_its_own_pyproject_and_lock_entry(path: str, component: str) -> None:
+    package = CONFIG["packages"][path]
+
+    assert package["release-type"] == "python"
+    assert package["component"] == component
+    assert package["package-name"] == component
+    assert package["changelog-path"] == "CHANGELOG.md"
+    assert package["extra-files"] == [
+        {
+            "type": "toml",
+            "path": "/uv.lock",
+            "jsonpath": f"$.package[?(@.name.value=='{component}')].version",
+        }
+    ]
+
+
+def test_pre_1_0_packages_bump_minor_for_a_breaking_change() -> None:
+    for path in ("libs/vosfs", "libs/fss-cli"):
+        package = CONFIG["packages"][path]
+        assert package["bump-minor-pre-major"] is True
+        assert package["bump-patch-for-minor-pre-major"] is False
+
+
+def test_release_workflow_dispatches_one_package_path_and_one_docs_event() -> None:
+    text = (ROOT / ".github" / "workflows" / "cd.yml").read_text()
+    loaded = workflow("cd.yml")
+    job = loaded["jobs"]["release-please"]
+    dispatch = next(step for step in job["steps"] if step.get("run"))
+
+    assert triggers(loaded)["push"]["branches"] == ["main"]
+    assert job["if"] == RELEASE_GUARD
+    assert dispatch["if"] == f"success() && {UPSTREAM_GUARD}"
+    assert 'if [[ "$GITHUB_REPOSITORY" != "opencadc/vostools" ]]; then' in dispatch["run"]
+    assert "exit 1" in dispatch["run"].split("pypi-release", 1)[0]
+    assert "shinybrar/vostools" not in dispatch["run"]
+    assert "pypi-release" in text
+    assert "docs-publish" in text
+    assert "client_payload:{path:$path, package:$package, tag_name:$tag, sha:$sha}" in text
+    assert text.count('event_type:"docs-publish"') == 1
+
+
+def test_release_workflow_uses_the_builtin_token() -> None:
+    job = workflow("cd.yml")["jobs"]["release-please"]
+    release = next(step for step in job["steps"] if step.get("id") == "release")
+    dispatch = next(step for step in job["steps"] if step.get("run"))
+
+    assert "token" not in release["with"]
+    assert dispatch["env"]["GH_TOKEN"] == "${{ secrets.GITHUB_TOKEN }}"
+    assert job["permissions"] == {"contents": "write", "pull-requests": "write", "issues": "write"}
+
+
+def test_pypi_workflow_publishes_only_the_dispatched_package() -> None:
+    text = (ROOT / ".github" / "workflows" / "pypi.yml").read_text()
+    loaded = workflow("pypi.yml")
+    jobs = loaded["jobs"]
+
+    assert triggers(loaded)["repository_dispatch"]["types"] == ["pypi-release"]
+    assert 'uv build --no-sources --package "$PACKAGE"' in text
+    assert "environment" in jobs["publish"]
+    assert jobs["publish"]["environment"]["name"] == "pypi-${{ needs.build.outputs.package }}"
+    assert jobs["publish"]["permissions"]["id-token"] == "write"
+    assert "--draft=false" in text
+    assert text.index("gh-action-pypi-publish@") < text.index("--draft=false")
+    for name, job in jobs.items():
+        assert UPSTREAM_GUARD in job["if"], name
+        assert "shinybrar/vostools" not in job["if"]
+    assert 'echo "refusing to publish from $GITHUB_REPOSITORY"' in text
+
+
+def test_docs_workflow_builds_one_site() -> None:
+    names = sorted(path.name for path in (ROOT / ".github" / "workflows").glob("docs*.yml"))
+    text = (ROOT / ".github" / "workflows" / "docs.yml").read_text()
+
+    assert names == ["docs.yml"]
+    assert triggers(workflow("docs.yml"))["repository_dispatch"]["types"] == ["docs-publish"]
+    assert "zensical build --strict" in text
+    assert workflow("docs.yml")["jobs"]["docs"]["if"] == UPSTREAM_GUARD
+    assert "libs/vos" not in text
+    assert "libs/fss-cli" not in text
+
+
+def test_legacy_vos_publisher_stays_until_cutover() -> None:
+    text = (ROOT / ".github" / "workflows" / "cibuild.yml").read_text()
+    loaded = workflow("cibuild.yml")
+
+    assert "vos=<version>" in text
+    assert "pypi.yml" in text
+    publish_if = loaded["jobs"]["build-n-publish"]["if"]
+    assert publish_if == f"{UPSTREAM_GUARD} && contains(github.ref, '=')"
+    assert "shinybrar/vostools" not in publish_if
+
+
+def test_privileged_jobs_stay_on_upstream_except_release_please() -> None:
+    for path in (ROOT / ".github" / "workflows").glob("*.yml"):
+        for name, job in workflow(path.name)["jobs"].items():
+            permissions = job.get("permissions", {})
+            steps = job.get("steps", [])
+            privileged = (
+                permissions.get("id-token") == "write"
+                or permissions.get("contents") == "write"
+                or permissions.get("pull-requests") == "write"
+                or any(
+                    "release-please-action@" in step.get("uses", "")
+                    or step.get("uses", "").startswith("pypa/gh-action-pypi-publish@")
+                    for step in steps
+                )
+            )
+            if not privileged:
+                continue
+            condition = job.get("if", "")
+            if path.name == "cd.yml" and name == "release-please":
+                assert condition == RELEASE_GUARD
+                continue
+            assert condition == UPSTREAM_GUARD or condition.startswith(f"{UPSTREAM_GUARD} && "), f"{path.name}:{name}"
+            assert "shinybrar/vostools" not in condition

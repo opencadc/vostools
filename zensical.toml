@@ -1,0 +1,42 @@
+[project]
+site_name = "vosfs"
+site_description = "Public documentation for the vosfs Python package."
+site_author = "vosfs contributors"
+site_url = "https://opencadc.github.io/vostools/"
+docs_dir = "libs/vosfs/docs/user"
+site_dir = "site"
+repo_url = "https://github.com/opencadc/vostools"
+nav = [
+    { "Home" = "index.md" },
+    { "User Guide" = "guide.md" },
+    { "Recipes" = "recipes.md" },
+    { "Troubleshooting" = "troubleshooting.md" },
+    { "API Reference" = "api-reference.md" },
+    { "fss-cli" = [
+        { "Overview" = "cli/index.md" },
+        { "Integration" = "cli/integration.md" },
+        { "Command Reference" = "cli/commands.md" },
+        { "API Reference" = "cli/api-reference.md" },
+    ] },
+    { "Releases" = "https://github.com/opencadc/vostools/releases" },
+    { "Contributing" = "https://github.com/opencadc/vostools/blob/main/CONTRIBUTING.md" },
+]
+
+[project.theme]
+variant = "modern"
+language = "en"
+
+[project.extra.version]
+provider = "mike"
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["libs/vosfs/src", "libs/fss-cli/src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+filters = ["!^_"]
+members_order = "source"
+show_object_full_path = false
+show_root_heading = true
+show_root_full_path = false
+show_source = true

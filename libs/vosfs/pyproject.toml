@@ -1,0 +1,99 @@
+[project]
+name = "vosfs"
+version = "0.11.0"
+description = "An asynchronous fsspec filesystem for the OpenCADC VOSpace profile"
+readme = "README.md"
+authors = [
+    { name = "Shiny Brar  (he/il)", email = "charanjotbrar@gmail.com" }
+]
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+keywords = ["fsspec", "vospace", "opencadc", "cavern", "canfar", "filesystem", "astronomy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: System :: Filesystems",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fsspec>=2026.6.0",
+    "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/opencadc/vostools"
+Documentation = "https://opencadc.github.io/vostools/"
+Repository = "https://github.com/opencadc/vostools"
+Issues = "https://github.com/opencadc/vostools/issues"
+Changelog = "https://github.com/opencadc/vostools/blob/main/libs/vosfs/CHANGELOG.md"
+
+[project.entry-points."fsspec.specs"]
+vos = "vosfs:VOSpaceFileSystem"
+
+[build-system]
+requires = ["uv_build>=0.11.29,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "dask[dataframe]>=2026.7.1",
+    "lxml>=5",
+    "numpy>=1.26",
+    "pandas>=2",
+    "pyarrow>=15",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=7.1.0",
+    "respx>=0.21",
+    "zarr>=3 ; python_full_version >= '3.11'",
+]
+[tool.pytest]
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+    "--cov=vosfs",
+    "--cov-report=term-missing",
+]
+testpaths = ["tests"]
+norecursedirs = ["integration"]
+asyncio_mode = "auto"
+markers = [
+    "integration: live tests against arc and vault; run explicitly",
+]
+[tool.coverage.run]
+branch = true
+source = ["vosfs"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+# Lint ratchet: rules that are new since the import and not yet fixed here. Remove a
+# code once the package is clean for it.
+[tool.ruff.lint]
+ignore = [
+    "PLR0917", # Positional fsspec signatures; needs keyword-only parameters.
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"src/vosfs/_{moving,removal,transfer}.py" = [
+    # These modules are VOSpaceFileSystem's own implementation, split out of
+    # filesystem.py for size. Reaching the filesystem's internal seams is
+    # intra-implementation access, not a crossing of the public boundary.
+    "SLF001",
+]
